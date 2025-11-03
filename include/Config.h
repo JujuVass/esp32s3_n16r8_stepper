@@ -25,8 +25,7 @@ const char* otaPassword = "REDACTED_OTA_PASSWORD";  // OTA password protection
 // ============================================================================
 // Motor driver pins (HSS86 stepper driver)
 // Cable colors: Yellow=PULSE, Orange=DIR, Red=ENABLE
-const int PIN_LED = 48;
-const int PIN_START_CONTACT = 20;  // Pull-up
+const int PIN_START_CONTACT = 47;  // Pull-up
 const int PIN_END_CONTACT = 21;    // Pull-up
 const int PIN_PULSE = 12;          // Cable jaune
 const int PIN_DIR = 13;            // Cable orange
@@ -169,8 +168,8 @@ const float OSC_MAX_SPEED_MM_S = MAX_SPEED_LEVEL * 10.0;  // Maximum oscillation
 // ============================================================================
 // CONFIGURATION - Loop Timing
 // ============================================================================
-const unsigned long WEBSERVICE_INTERVAL_US = 5000;    // Service WebSocket every 5ms
-const unsigned long STATUS_UPDATE_INTERVAL_MS = 150;  // Send status every 100ms
+const unsigned long WEBSERVICE_INTERVAL_US = 3000;    // Service WebSocket every 3ms
+const unsigned long STATUS_UPDATE_INTERVAL_MS = 80;  // Send status every 80ms
 const unsigned long SUMMARY_LOG_INTERVAL_MS = 60000;  // Print summary every 60s
 
 // ============================================================================

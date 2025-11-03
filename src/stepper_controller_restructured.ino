@@ -25,7 +25,7 @@
 #include "ChaosPatterns.h"    // Chaos pattern configurations
 #include "FilesystemManager.h"  // Filesystem browser API
 #include "UtilityEngine.h"     // Unified logging, WebSocket, LittleFS manager
-#include "APIRoutes.h"        // Phase 3.4 - API routes module (extracted from main)
+#include "APIRoutes.h"        // API routes module (extracted from main)
 
 // ============================================================================
 // LOGGING SYSTEM - Managed by UtilityEngine
@@ -316,19 +316,6 @@ void serviceWebSocketFor(unsigned long durationMs) {
   }
 }
 
-// ============================================================================
-// ============================================================================
-// JSON RESPONSE HELPERS (moved to APIRoutes.h for Phase 3.4)
-// ============================================================================
-// All JSON helper functions (sendJsonError, sendJsonSuccess, etc.) are now
-// defined in APIRoutes.h to avoid duplication and keep main .ino clean
-
-// ============================================================================
-// HELPER FUNCTIONS & VALIDATION (moved to APIRoutes.h for Phase 3.4)
-// ============================================================================
-
-// Note: sendEmptyPlaylistStructure() moved to APIRoutes.h
-
 // Error notification helper
 void sendError(String message);
 
@@ -392,14 +379,12 @@ void setup() {
   engine->info("\n=== ESP32-S3 Stepper Controller ===");
   
   // Initialize GPIO pins
-  pinMode(PIN_LED, OUTPUT);
   pinMode(PIN_START_CONTACT, INPUT_PULLUP);
   pinMode(PIN_END_CONTACT, INPUT_PULLUP);
   pinMode(PIN_PULSE, OUTPUT);
   pinMode(PIN_DIR, OUTPUT);
   pinMode(PIN_ENABLE, OUTPUT);
   
-  digitalWrite(PIN_LED, LOW);
   digitalWrite(PIN_PULSE, LOW);
   setMotorDirection(false);  // Initialize direction to backward
   digitalWrite(PIN_ENABLE, HIGH); // Disable motor initially
@@ -505,10 +490,9 @@ void setup() {
   engine->printStatus();
   
   // ============================================================================
-  // HTTP SERVER CONFIGURATION - PHASE 3.4
+  // HTTP SERVER CONFIGURATION
   // ============================================================================
   // All HTTP routes are now managed in APIRoutes.h (setupAPIRoutes())
-  // This reduces main .ino file size by ~550 lines
   // ============================================================================
   
   server.begin();
@@ -601,12 +585,12 @@ void loop() {
   if (needsInitialCalibration && !calibrationStarted) {
     if (calibrationDelayStart == 0) {
       calibrationDelayStart = millis();
-      engine->info("=== Web interface ready - Calibration will start in 2 seconds ===");
+      engine->info("=== Web interface ready - Calibration will start in 1 second ===");
       engine->info("Connect now to see calibration overlay!");
     }
-    
-    // Wait 2 seconds to allow users to connect
-    if (millis() - calibrationDelayStart >= 2000) {
+
+    // Wait 1 second to allow users to connect
+    if (millis() - calibrationDelayStart >= 1000) {
       calibrationStarted = true;
       engine->info("=== Starting automatic calibration ===");
       delay(100);
@@ -1529,7 +1513,7 @@ void startMovement(float distMM, float speedLevel) {
   
   calculateStepDelay();
   
-  digitalWrite(PIN_ENABLE, LOW);
+  // digitalWrite(PIN_ENABLE, LOW);
   
   // CRITICAL: Initialize step timing BEFORE setting STATE_RUNNING
   lastStepMicros = micros();
