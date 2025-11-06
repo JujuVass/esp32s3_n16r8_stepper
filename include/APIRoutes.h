@@ -318,17 +318,20 @@ void setupAPIRoutes() {
     // If file doesn't exist or is empty, initialize empty structure
     if (!fileLoaded) {
       engine->info("📋 Playlist file not found, creating new structure");
-      playlistDoc["simple"] = JsonArray();
-      playlistDoc["oscillation"] = JsonArray();
-      playlistDoc["chaos"] = JsonArray();
+      // Create empty arrays properly attached to document
+      playlistDoc["simple"].to<JsonArray>();
+      playlistDoc["oscillation"].to<JsonArray>();
+      playlistDoc["chaos"].to<JsonArray>();
     }
     
-    // Initialize mode array if doesn't exist
+    // Get or create mode array
     JsonArray modeArray;
-    if (!playlistDoc[mode].is<JsonArray>() || playlistDoc[mode].isNull()) {
-      modeArray = playlistDoc.to<JsonObject>()[mode].to<JsonArray>();
+    if (playlistDoc[mode].isNull() || !playlistDoc[mode].is<JsonArray>()) {
+      // Mode doesn't exist yet, create it
+      modeArray = playlistDoc[mode].to<JsonArray>();
       engine->debug("📋 Created new array for mode: " + String(mode));
     } else {
+      // Mode exists, use it
       modeArray = playlistDoc[mode].as<JsonArray>();
       engine->debug("📋 Using existing array for mode: " + String(mode) + ", size: " + String(modeArray.size()));
     }
