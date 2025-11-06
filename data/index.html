@@ -3863,11 +3863,18 @@
         newLine.distanceMM = config.distanceMM || 50;
         newLine.speedForward = config.speedLevelForward || 5;
         newLine.speedBackward = config.speedLevelBackward || 5;
-        newLine.decelStartEnabled = false;
-        newLine.decelEndEnabled = true;
-        newLine.decelZoneMM = 20;
-        newLine.decelEffectPercent = 50;
-        newLine.decelMode = 1;
+        newLine.decelStartEnabled = config.decelStartEnabled || false;
+        newLine.decelEndEnabled = config.decelEndEnabled !== undefined ? config.decelEndEnabled : true;
+        newLine.decelZoneMM = config.decelZoneMM || 20;
+        newLine.decelEffectPercent = config.decelEffectPercent || 50;
+        newLine.decelMode = config.decelMode || 1;
+        
+        // VA-ET-VIENT Cycle Pause (from preset config)
+        newLine.vaetCyclePauseEnabled = config.cyclePauseEnabled || false;
+        newLine.vaetCyclePauseIsRandom = config.cyclePauseIsRandom || false;
+        newLine.vaetCyclePauseDurationSec = config.cyclePauseDurationSec || 0.0;
+        newLine.vaetCyclePauseMinSec = config.cyclePauseMinSec || 0.5;
+        newLine.vaetCyclePauseMaxSec = config.cyclePauseMaxSec || 3.0;
         
         // Default oscillation fields
         newLine.oscCenterPositionMM = center;
@@ -3899,6 +3906,13 @@
         newLine.oscRampInDurationMs = config.rampInDurationMs || 1000;
         newLine.oscRampOutDurationMs = config.rampOutDurationMs || 1000;
         newLine.cycleCount = config.cycleCount || 1;
+        
+        // OSCILLATION Cycle Pause (from preset config)
+        newLine.oscCyclePauseEnabled = config.cyclePauseEnabled || false;
+        newLine.oscCyclePauseIsRandom = config.cyclePauseIsRandom || false;
+        newLine.oscCyclePauseDurationSec = config.cyclePauseDurationSec || 0.0;
+        newLine.oscCyclePauseMinSec = config.cyclePauseMinSec || 0.5;
+        newLine.oscCyclePauseMaxSec = config.cyclePauseMaxSec || 3.0;
         
         // Default VA-ET-VIENT fields
         newLine.startPositionMM = 0;

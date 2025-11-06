@@ -324,6 +324,11 @@ void setupAPIRoutes() {
       playlistDoc["chaos"].to<JsonArray>();
     }
     
+    // Debug: Check what's in the loaded document
+    engine->debug("📋 Loaded doc - simple: " + String(playlistDoc["simple"].isNull() ? "null" : (playlistDoc["simple"].is<JsonArray>() ? "array" : "other")));
+    engine->debug("📋 Loaded doc - oscillation: " + String(playlistDoc["oscillation"].isNull() ? "null" : (playlistDoc["oscillation"].is<JsonArray>() ? "array" : "other")));
+    engine->debug("📋 Loaded doc - chaos: " + String(playlistDoc["chaos"].isNull() ? "null" : (playlistDoc["chaos"].is<JsonArray>() ? "array" : "other")));
+    
     // Get or create mode array
     JsonArray modeArray;
     if (playlistDoc[mode].isNull() || !playlistDoc[mode].is<JsonArray>()) {
