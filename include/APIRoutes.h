@@ -313,7 +313,15 @@ void setupAPIRoutes() {
     
     // Load existing playlists using UtilityEngine (Phase 3.1 - JSON Manager)
     JsonDocument playlistDoc;
-    engine->loadJsonFile(PLAYLIST_FILE_PATH, playlistDoc);
+    bool fileLoaded = engine->loadJsonFile(PLAYLIST_FILE_PATH, playlistDoc);
+    
+    // If file doesn't exist or is empty, initialize empty structure
+    if (!fileLoaded) {
+      engine->info("📋 Playlist file not found, creating new structure");
+      playlistDoc["simple"] = JsonArray();
+      playlistDoc["oscillation"] = JsonArray();
+      playlistDoc["chaos"] = JsonArray();
+    }
     
     // Initialize mode array if doesn't exist
     JsonArray modeArray;
