@@ -15,6 +15,7 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <ArduinoOTA.h>  // OTA (Over-The-Air) updates
+#include <ESPmDNS.h>     // mDNS for local domain name (esp32-stepper.local)
 #include <functional>     // For std::function (recursive directory listing)
 
 // ============================================================================
@@ -405,6 +406,16 @@ void setup() {
     engine->info("✅ WiFi connected!");
     engine->info("🌐 IP Address: " + WiFi.localIP().toString());
     engine->info("🔄 OTA Mode: ACTIVE - Updates via WiFi enabled!");
+    
+    // ============================================================================
+    // mDNS (Multicast DNS) - Access via http://esp32-stepper.local
+    // ============================================================================
+    if (MDNS.begin(otaHostname)) {
+      engine->info("✅ mDNS responder started: http://" + String(otaHostname) + ".local");
+      MDNS.addService("http", "tcp", 80);  // Announce HTTP service on port 80
+    } else {
+      engine->error("❌ Error starting mDNS responder");
+    }
     
     // Configure time with NTP (GMT+1 = 3600 seconds, daylight saving = 0)
     // Date: October 22, 2025

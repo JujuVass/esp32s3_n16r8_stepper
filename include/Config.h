@@ -17,7 +17,7 @@ const char* password = "REDACTED_WIFI_PASSWORD";
 // ============================================================================
 // CONFIGURATION - OTA (Over-The-Air Updates)
 // ============================================================================
-const char* otaHostname = "esp32s3";
+const char* otaHostname = "esp32-stepper";  // Also used for mDNS (http://esp32-stepper.local)
 const char* otaPassword = "REDACTED_OTA_PASSWORD";  // OTA password protection
 
 // ============================================================================
