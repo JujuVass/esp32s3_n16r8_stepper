@@ -848,6 +848,45 @@ bool returnToStartContact() {
 
   engine->debug("Expected steps to return: ~" + String(config.maxStep));
   
+  // ============================================================================
+  // SAFETY CHECK: Detect if stuck at END contact (recovery from ERROR state)
+  // ============================================================================
+  if (readContactDebounced(PIN_END_CONTACT, LOW, 3, 50)) {
+    engine->warn("⚠️ Détection contact END actif - Déblocage automatique...");
+    sendStatus();  // Show "Décollement en cours..."
+    
+    setMotorDirection(false);  // Backward (away from END)
+    
+    // Emergency decontact: Move backward until END contact releases
+    int emergencySteps = 0;
+    const int MAX_EMERGENCY_STEPS = 300;  // ~50mm safety margin
+    
+    while (readContactDebounced(PIN_END_CONTACT, LOW, 3, 50) && emergencySteps < MAX_EMERGENCY_STEPS) {
+      stepMotor();
+      currentStep--;
+      emergencySteps++;
+      delayMicroseconds(CALIB_DELAY);  // Slow speed for safety
+      
+      // Service WebSocket every 50 steps
+      if (emergencySteps % 50 == 0) {
+        yield();
+        webSocket.loop();
+        server.handleClient();
+      }
+    }
+    
+    if (emergencySteps >= MAX_EMERGENCY_STEPS) {
+      sendError("❌ ERREUR: Impossible de décoller du contact END - Vérifiez mécaniquement");
+      digitalWrite(PIN_ENABLE, HIGH);
+      config.currentState = STATE_ERROR;
+      return false;
+    }
+    
+    engine->info("✓ Décollement réussi (" + String(emergencySteps) + " steps, " + 
+                 String(emergencySteps / STEPS_PER_MM, 1) + " mm)");
+    delay(200);  // Let mechanics settle
+  }
+  
   setMotorDirection(false);  // Backward to START contact
   
   // Search for START contact with debouncing (3 checks, 100µs interval)

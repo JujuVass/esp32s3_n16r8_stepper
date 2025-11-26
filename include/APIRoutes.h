@@ -209,9 +209,16 @@ void setupAPIRoutes() {
     JsonDocument statsDoc;
     engine->loadJsonFile("/stats.json", statsDoc);
     
-    // Find or create today's entry
-    JsonArray statsArray = statsDoc.as<JsonArray>();
-    if (statsArray.isNull()) {
+    // Handle both old format (direct array) and new format (object with "stats" key)
+    JsonArray statsArray;
+    if (statsDoc.is<JsonArray>()) {
+      // OLD FORMAT: Direct array
+      statsArray = statsDoc.as<JsonArray>();
+    } else if (statsDoc["stats"].is<JsonArray>()) {
+      // NEW FORMAT: Object with "stats" key - extract the array
+      statsArray = statsDoc["stats"].as<JsonArray>();
+    } else {
+      // Neither format - create new array (old format for backward compatibility)
       statsArray = statsDoc.to<JsonArray>();
     }
     
@@ -231,8 +238,21 @@ void setupAPIRoutes() {
       newEntry["distanceMM"] = distanceMM;
     }
     
+    // ============================================================================
+    // IMPORTANT: Always save as OLD FORMAT (direct array) to /stats.json
+    // The NEW FORMAT (object with metadata) is only used for exports
+    // This ensures compatibility and avoids format confusion during increments
+    // ============================================================================
+    JsonDocument saveDoc;
+    JsonArray saveArray = saveDoc.to<JsonArray>();
+    
+    // Copy all entries to the save document (ensures clean array format)
+    for (JsonVariant entry : statsArray) {
+      saveArray.add(entry);
+    }
+    
     // Save back to file using UtilityEngine (Phase 3.1 - JSON Manager)
-    if (!engine->saveJsonFile("/stats.json", statsDoc)) {
+    if (!engine->saveJsonFile("/stats.json", saveDoc)) {
       sendJsonError(500, "Failed to write stats");
       return;
     }
@@ -360,13 +380,17 @@ void setupAPIRoutes() {
       }
     }
     
-    // Create new stats file (overwrite existing)
-    JsonDocument newStatsDoc;
-    JsonArray newStatsArray = newStatsDoc["stats"].to<JsonArray>();
+    // ============================================================================
+    // IMPORTANT: Always save as OLD FORMAT (direct array) to /stats.json
+    // The NEW FORMAT (object with metadata) is only used for exports
+    // This ensures compatibility and avoids format confusion during increments
+    // ============================================================================
+    JsonDocument saveDoc;
+    JsonArray saveArray = saveDoc.to<JsonArray>();
     
     float totalMM = 0;
     for (JsonVariant entry : importStats) {
-      newStatsArray.add(entry);
+      saveArray.add(entry);
       totalMM += entry["distanceMM"].as<float>();
     }
     
@@ -377,16 +401,16 @@ void setupAPIRoutes() {
       return;
     }
     
-    serializeJson(newStatsDoc, file);
+    serializeJson(saveDoc, file);
     file.close();
     
-    engine->info("📤 Stats imported: " + String(newStatsArray.size()) + " entries, " + 
+    engine->info("📤 Stats imported: " + String(saveArray.size()) + " entries, " + 
                  String(totalMM / 1000000.0, 3) + " km total");
     
     // Return success response with import summary
     JsonDocument responseDoc;
     responseDoc["success"] = true;
-    responseDoc["entriesImported"] = newStatsArray.size();
+    responseDoc["entriesImported"] = saveArray.size();
     responseDoc["totalDistanceMM"] = totalMM;
     
     String json;
