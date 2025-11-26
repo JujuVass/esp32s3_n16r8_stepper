@@ -2177,6 +2177,10 @@ void resetTotalDistance() {
  * Increment daily statistics with distance traveled
  * Called automatically when a standalone movement is completed
  */
+// ============================================================================
+// STATISTICS
+// ============================================================================
+
 void incrementDailyStats(float distanceMM) {
   if (distanceMM <= 0) return;
   
@@ -4136,6 +4140,17 @@ void startChaos() {
     
     if (currentStep != targetStep) {
       engine->warn("⚠️ Timeout lors du positionnement au centre");
+      engine->error("❌ Chaos mode aborted - failed to reach center position");
+      
+      // CRITICAL: Reset state properly to avoid "system not ready" errors
+      chaosState.isRunning = false;
+      config.currentState = STATE_READY;
+      digitalWrite(PIN_ENABLE, HIGH);  // Disable motor
+      
+      // Send error to frontend
+      sendError("Impossible d'atteindre le centre - timeout après 30s. Vérifiez que le moteur peut bouger librement.");
+      
+      return;  // Abort chaos start
     }
   }
   

@@ -21,6 +21,23 @@ extern UtilityEngine* engine;
 // Forward declaration for sequence import function (defined in main .ino)
 int importSequenceFromJson(String jsonData);
 
+// Date/Time helpers (for stats export)
+inline String getFormattedDate() {
+  time_t now = time(nullptr);
+  struct tm* timeinfo = localtime(&now);
+  char dateStr[11];
+  strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", timeinfo);
+  return String(dateStr);
+}
+
+inline String getFormattedTime() {
+  time_t now = time(nullptr);
+  struct tm* timeinfo = localtime(&now);
+  char timeStr[9];
+  strftime(timeStr, sizeof(timeStr), "%H:%M:%S", timeinfo);
+  return String(timeStr);
+}
+
 // ============================================================================
 // HELPER FUNCTIONS (JSON responses)
 // ============================================================================
@@ -134,7 +151,30 @@ void setupAPIRoutes() {
     
     String content = file.readString();
     file.close();
-    server.send(200, "application/json", content);
+    
+    // Parse to detect format
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, content);
+    if (error) {
+      sendJsonError(500, "Stats file corrupted");
+      return;
+    }
+    
+    // Normalize to old format (direct array) for frontend compatibility
+    String response;
+    if (doc.is<JsonArray>()) {
+      // Already old format - send as-is
+      response = content;
+    } else if (doc["stats"].is<JsonArray>()) {
+      // New format - extract stats array and send only that
+      JsonArray statsArray = doc["stats"].as<JsonArray>();
+      serializeJson(statsArray, response);
+    } else {
+      sendJsonError(500, "Invalid stats file structure");
+      return;
+    }
+    
+    server.send(200, "application/json", response);
   });
   
   // POST /api/stats/increment - Add distance to today's stats
@@ -213,6 +253,145 @@ void setupAPIRoutes() {
     } else {
       sendJsonSuccess("No stats to clear");
     }
+  });
+  
+  // GET /api/stats/export - Export all stats as JSON
+  server.on("/api/stats/export", HTTP_GET, []() {
+    if (!LittleFS.exists("/stats.json")) {
+      // Return empty structure if no stats
+      JsonDocument doc;
+      doc["exportDate"] = getFormattedDate();
+      doc["totalDistanceMM"] = 0;
+      JsonArray statsArray = doc["stats"].to<JsonArray>();
+      
+      String json;
+      serializeJson(doc, json);
+      server.send(200, "application/json", json);
+      engine->info("📥 Stats export: empty (no data)");
+      return;
+    }
+    
+    File file = LittleFS.open("/stats.json", "r");
+    if (!file) {
+      sendJsonError(500, "Failed to open stats file");
+      return;
+    }
+    
+    // Read existing stats
+    String content = file.readString();
+    file.close();
+    
+    JsonDocument statsDoc;
+    DeserializationError error = deserializeJson(statsDoc, content);
+    if (error) {
+      sendJsonError(500, "Stats file corrupted");
+      return;
+    }
+    
+    // Build export structure with metadata
+    JsonDocument exportDoc;
+    exportDoc["exportDate"] = getFormattedDate();
+    exportDoc["exportTime"] = getFormattedTime();
+    exportDoc["version"] = "1.0";
+    
+    // Copy stats array - Handle both old format (direct array) and new format (object with "stats" key)
+    JsonArray statsArray = exportDoc["stats"].to<JsonArray>();
+    JsonArray sourceStats;
+    
+    // Check if old format (direct array) or new format (object with "stats")
+    if (statsDoc.is<JsonArray>()) {
+      // OLD FORMAT: Direct array [{"date":"2025-11-02","distanceMM":15489.83}, ...]
+      engine->debug("📥 Detected OLD stats format (direct array) - migrating...");
+      sourceStats = statsDoc.as<JsonArray>();
+    } else if (statsDoc["stats"].is<JsonArray>()) {
+      // NEW FORMAT: {"stats": [...]}
+      sourceStats = statsDoc["stats"].as<JsonArray>();
+    } else {
+      sendJsonError(500, "Invalid stats file structure");
+      return;
+    }
+    
+    float totalMM = 0;
+    for (JsonVariant entry : sourceStats) {
+      statsArray.add(entry);
+      totalMM += entry["distanceMM"].as<float>();
+    }
+    
+    exportDoc["totalDistanceMM"] = totalMM;
+    exportDoc["entriesCount"] = statsArray.size();
+    
+    String json;
+    serializeJson(exportDoc, json);
+    server.send(200, "application/json", json);
+    
+    engine->info("📥 Stats exported: " + String(statsArray.size()) + " entries, " + 
+                 String(totalMM / 1000000.0, 3) + " km total");
+  });
+  
+  // POST /api/stats/import - Import stats from JSON
+  server.on("/api/stats/import", HTTP_POST, []() {
+    String body = server.arg("plain");
+    
+    JsonDocument importDoc;
+    DeserializationError error = deserializeJson(importDoc, body);
+    
+    if (error) {
+      sendJsonApiError(400, "Invalid JSON format");
+      return;
+    }
+    
+    // Validate structure
+    if (!importDoc["stats"].is<JsonArray>()) {
+      sendJsonApiError(400, "Missing or invalid 'stats' array in import data");
+      return;
+    }
+    
+    JsonArray importStats = importDoc["stats"].as<JsonArray>();
+    if (importStats.size() == 0) {
+      sendJsonApiError(400, "No stats to import");
+      return;
+    }
+    
+    // Validate each entry has required fields
+    for (JsonVariant entry : importStats) {
+      if (!entry["date"].is<const char*>() || !entry["distanceMM"].is<float>()) {
+        sendJsonApiError(400, "Invalid entry format (missing date or distanceMM)");
+        return;
+      }
+    }
+    
+    // Create new stats file (overwrite existing)
+    JsonDocument newStatsDoc;
+    JsonArray newStatsArray = newStatsDoc["stats"].to<JsonArray>();
+    
+    float totalMM = 0;
+    for (JsonVariant entry : importStats) {
+      newStatsArray.add(entry);
+      totalMM += entry["distanceMM"].as<float>();
+    }
+    
+    // Save to file
+    File file = LittleFS.open("/stats.json", "w");
+    if (!file) {
+      sendJsonApiError(500, "Failed to create stats file");
+      return;
+    }
+    
+    serializeJson(newStatsDoc, file);
+    file.close();
+    
+    engine->info("📤 Stats imported: " + String(newStatsArray.size()) + " entries, " + 
+                 String(totalMM / 1000000.0, 3) + " km total");
+    
+    // Return success response with import summary
+    JsonDocument responseDoc;
+    responseDoc["success"] = true;
+    responseDoc["entriesImported"] = newStatsArray.size();
+    responseDoc["totalDistanceMM"] = totalMM;
+    
+    String json;
+    serializeJson(responseDoc, json);
+    server.send(200, "application/json", json);
   });
 
   // ============================================================================

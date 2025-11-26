@@ -1309,12 +1309,21 @@
         </table>
       </div>
 
-      <!-- Clear Stats Button -->
-      <div style="margin-bottom: 20px; text-align: center;">
+      <!-- Stats Action Buttons -->
+      <div style="margin-bottom: 20px; text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+        <button id="btnExportStats" class="button" style="padding: 8px 20px; font-size: 13px; background: #4CAF50; color: white;">
+          📥 Exporter
+        </button>
+        <button id="btnImportStats" class="button" style="padding: 8px 20px; font-size: 13px; background: #2196F3; color: white;">
+          📤 Importer
+        </button>
         <button id="btnClearStats" class="button btn-danger" style="padding: 8px 20px; font-size: 13px;">
-          🗑️ Effacer toutes les statistiques
+          🗑️ Effacer tout
         </button>
       </div>
+      
+      <!-- Hidden file input for import -->
+      <input type="file" id="statsFileInput" accept=".json" style="display: none;">
 
       <!-- Histogram -->
       <div style="background: #f9f9f9; padding: 12px; border-radius: 6px; border: 1px solid #ddd;">
@@ -8835,6 +8844,112 @@ Détecte la limite physique`;
             alert('❌ Erreur réseau: ' + error);
           });
       }
+    });
+
+    // Export Stats Button
+    document.getElementById('btnExportStats').addEventListener('click', function() {
+      fetch('/api/stats/export')
+        .then(response => {
+          if (!response.ok) throw new Error('Export failed');
+          return response.json();
+        })
+        .then(data => {
+          // Create JSON file and download
+          const jsonStr = JSON.stringify(data, null, 2);
+          const blob = new Blob([jsonStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          
+          // Generate filename with current date
+          const now = new Date();
+          const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+          const filename = `stepper_stats_${dateStr}.json`;
+          
+          // Trigger download
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          
+          URL.revokeObjectURL(url);
+          console.log(`✅ Stats exported: ${filename}`);
+        })
+        .catch(error => {
+          alert('❌ Erreur export: ' + error.message);
+          console.error('Export error:', error);
+        });
+    });
+
+    // Import Stats Button
+    document.getElementById('btnImportStats').addEventListener('click', function() {
+      document.getElementById('statsFileInput').click();
+    });
+
+    // File input handler
+    document.getElementById('statsFileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      if (!file.name.endsWith('.json')) {
+        alert('❌ Fichier invalide. Utilisez un fichier JSON exporté.');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const importData = JSON.parse(event.target.result);
+          
+          // Validate structure
+          if (!importData.stats || !Array.isArray(importData.stats)) {
+            throw new Error('Format JSON invalide (manque "stats" array)');
+          }
+          
+          // Confirm import (show preview)
+          const entryCount = importData.stats.length;
+          const exportDate = importData.exportDate || 'inconnu';
+          const totalKm = importData.totalDistanceMM ? (importData.totalDistanceMM / 1000000).toFixed(3) : '?';
+          
+          const confirmMsg = `📤 Importer les statistiques?\n\n` +
+                           `📅 Date export: ${exportDate}\n` +
+                           `📊 Entrées: ${entryCount}\n` +
+                           `📏 Distance totale: ${totalKm} km\n\n` +
+                           `⚠️ Ceci va ÉCRASER les statistiques actuelles!`;
+          
+          if (!confirm(confirmMsg)) {
+            e.target.value = ''; // Reset file input
+            return;
+          }
+          
+          // Send to backend
+          fetch('/api/stats/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(importData)
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert(`✅ Import réussi!\n\n📊 ${data.entriesImported} entrées importées\n📏 Total: ${(data.totalDistanceMM / 1000000).toFixed(3)} km`);
+              loadStatsData();  // Refresh display
+            } else {
+              alert('❌ Erreur import: ' + (data.error || 'Unknown'));
+            }
+            e.target.value = ''; // Reset file input
+          })
+          .catch(error => {
+            alert('❌ Erreur réseau: ' + error.message);
+            console.error('Import error:', error);
+            e.target.value = ''; // Reset file input
+          });
+          
+        } catch (error) {
+          alert('❌ Erreur parsing JSON: ' + error.message);
+          console.error('JSON parse error:', error);
+          e.target.value = ''; // Reset file input
+        }
+      };
+      
+      reader.readAsText(file);
     });
 
     function loadStatsData() {
