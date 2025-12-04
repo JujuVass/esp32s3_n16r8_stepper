@@ -1,9 +1,9 @@
 # 📊 Analyse Architecture Backend - 4 Décembre 2025
 
-## 📁 Structure Actuelle (Post-Modularisation Phase 1)
+## 📁 Structure Actuelle (Post-Modularisation Phase 1-3)
 
 ```
-stepper_controller_restructured.ino (6454 lignes)   ← Principal
+stepper_controller_restructured.ino (6122 lignes)   ← Principal (réduit de 6660)
 ├── include/
 │   ├── Config.h                  (~200 lignes)     ← Constantes, GPIO, timing
 │   ├── Types.h                   (~400 lignes)     ← Structs, enums
@@ -11,28 +11,29 @@ stepper_controller_restructured.ino (6454 lignes)   ← Principal
 │   ├── APIRoutes.h               (~150 lignes)     ← Routes HTTP
 │   ├── FilesystemManager.h       (~100 lignes)     ← Gestion fichiers
 │   ├── UtilityEngine.h           (~530 lignes)     ← Logging, FS, JSON, Config
+│   ├── Validators.h              (~310 lignes)     ✅ NEW - Validation params
 │   ├── hardware/
-│   │   ├── MotorDriver.h         (~100 lignes)     ✅ NEW
-│   │   └── ContactSensors.h      (~120 lignes)     ✅ NEW
+│   │   ├── MotorDriver.h         (~100 lignes)     ✅ Motor abstraction
+│   │   └── ContactSensors.h      (~120 lignes)     ✅ Contact abstraction
 │   └── controllers/
-│       └── CalibrationManager.h  (~220 lignes)     ✅ NEW
+│       └── CalibrationManager.h  (~220 lignes)     ✅ Calibration controller
 └── src/
-    ├── Config.cpp                (~20 lignes)      ✅ NEW
-    ├── UtilityEngine.cpp         (~950 lignes)     ← Implémentation logging
+    ├── Config.cpp                (~20 lignes)      ✅ String definitions
+    ├── UtilityEngine.cpp         (~950 lignes)     ← Logging implementation
     ├── hardware/
-    │   ├── MotorDriver.cpp       (~80 lignes)      ✅ NEW
-    │   └── ContactSensors.cpp    (~60 lignes)      ✅ NEW
+    │   ├── MotorDriver.cpp       (~80 lignes)      ✅ Motor implementation
+    │   └── ContactSensors.cpp    (~60 lignes)      ✅ Contact implementation
     └── controllers/
-        └── CalibrationManager.cpp (~400 lignes)    ✅ NEW
+        └── CalibrationManager.cpp (~400 lignes)    ✅ Calibration implementation
 ```
 
-**Total**: ~9100 lignes backend (vs 10000+ avant modularisation)
+**Total**: ~9000 lignes backend (vs 10000+ avant modularisation)
 
 ---
 
 ## 📈 Catégorisation des Fonctions (.ino)
 
-### 🟢 MIGRÉ vers Modules (~600 lignes extraites)
+### 🟢 MIGRÉ vers Modules (~900 lignes extraites)
 | Fonction | Module | Status |
 |----------|--------|--------|
 | `Motor.step()` | MotorDriver | ✅ |
@@ -41,16 +42,23 @@ stepper_controller_restructured.ino (6454 lignes)   ← Principal
 | `Contacts.readDebounced()` | ContactSensors | ✅ |
 | `Contacts.isStartContactActive()` | ContactSensors | ✅ |
 | `Calibration.startCalibration()` | CalibrationManager | ✅ |
+| `Validators::distance()` | Validators.h | ✅ |
+| `Validators::speed()` | Validators.h | ✅ |
+| `Validators::position()` | Validators.h | ✅ |
+| `Validators::motionRange()` | Validators.h | ✅ |
+| `Validators::chaosParams()` | Validators.h | ✅ |
+| `Validators::oscillationParams()` | Validators.h | ✅ |
 
-### 🟡 PEUT MIGRER vers UtilityEngine (~200 lignes)
+### 🟡 PEUT MIGRER vers UtilityEngine (~80 lignes restantes)
 | Fonction | Lignes | Raison |
 |----------|--------|--------|
 | `serviceWebSocketFor()` | ~8 | Utilitaire WebSocket générique |
 | `sendError()` | ~15 | Déjà utilise engine->error(), peut être intégré |
-| `sendJsonResponse()` | ~10 | Pattern JSON response |
-| `incrementDailyStats()` | ~45 | Gestion stats/fichiers → UtilityEngine |
-| `saveCurrentSessionStats()` | ~25 | Gestion stats/fichiers → UtilityEngine |
-| `resetTotalDistance()` | ~10 | Lié aux stats |
+| `incrementDailyStats()` | ~30 | Gestion stats/fichiers → UtilityEngine |
+| `saveCurrentSessionStats()` | ~15 | Gestion stats/fichiers → UtilityEngine |
+
+### 🟠 VALIDATEURS ✅ COMPLÉTÉ
+Tous migrés vers `include/Validators.h` (310 lignes)
 
 ### 🔵 PEUT CRÉER NOUVEAUX MODULES (~3500 lignes)
 | Module Proposé | Fonctions | Lignes | Priorité |
@@ -63,19 +71,6 @@ stepper_controller_restructured.ino (6454 lignes)   ← Principal
 | **SequenceLineManager** | addSequenceLine, updateSequenceLine, deleteSequenceLine, moveSequenceLine, duplicateSequenceLine, clearSequenceTable, import/exportSequence | ~300 | ⭐⭐ |
 | **CommandDispatcher** | handleBasicCommands, handleConfigCommands, handleDecelZoneCommands, handleCyclePauseCommands, handlePursuitCommands, handleChaosCommands, handleOscillationCommands, handleSequencerCommands | ~800 | ⭐⭐⭐⭐ |
 | **StatusBroadcaster** | sendStatus, sendSequenceStatus, broadcastSequenceTable | ~300 | ⭐⭐ |
-
-### 🟠 VALIDATEURS (~200 lignes) → Peut rester ou migrer
-| Fonction | Lignes | Option |
-|----------|--------|--------|
-| validateDistance() | ~20 | → UtilityEngine ou Validators.h |
-| validateSpeed() | ~15 | → UtilityEngine ou Validators.h |
-| validatePosition() | ~25 | → UtilityEngine ou Validators.h |
-| validateMotionRange() | ~30 | → UtilityEngine ou Validators.h |
-| validateChaosParams() | ~40 | → ChaosController |
-| validateOscillationParams() | ~35 | → OscillationController |
-| validateOscillationAmplitude() | ~25 | → OscillationController |
-| validateDecelZone() | ~35 | → VaetController ou Config |
-| validateAndReport() | ~8 | Helper générique → UtilityEngine |
 
 ### ⚪ DOIT RESTER DANS MAIN (~1000 lignes)
 | Section | Lignes | Raison |
@@ -130,10 +125,10 @@ Extraire les 8 handlers de webSocketEvent dans un module dédié:
 
 | Métrique | Valeur |
 |----------|--------|
-| Lignes .ino | 6454 |
-| Fonctions dans .ino | ~70 |
-| Modules extraits | 3 (Motor, Contacts, Calibration) |
-| Lignes extraites | ~600 |
+| Lignes .ino | 6122 |
+| Fonctions dans .ino | ~60 |
+| Modules extraits | 4 (Motor, Contacts, Calibration, Validators) |
+| Lignes extraites | ~900 |
 | RAM usage | 18.2% |
 | Flash usage | 32.4% |
 

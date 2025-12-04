@@ -27,6 +27,7 @@
 #include "FilesystemManager.h"  // Filesystem browser API
 #include "UtilityEngine.h"     // Unified logging, WebSocket, LittleFS manager
 #include "APIRoutes.h"        // API routes module (extracted from main)
+#include "Validators.h"       // Parameter validation functions
 
 // Hardware abstraction layer (modular architecture)
 #include "hardware/MotorDriver.h"    // Motor control abstraction (Motor.step(), Motor.enable()...)
@@ -1134,13 +1135,13 @@ void sendError(String message) {
 // ============================================================================
 // VALIDATION HELPERS
 // ============================================================================
+// NOTE: Main validation logic moved to include/Validators.h
+// These wrappers provide backward compatibility with existing code
+// ============================================================================
 
 /**
  * Helper function to validate and report errors
- * 
- * @param isValid Result of validation function
- * @param errorMsg Error message to send if validation failed
- * @return true if validation passed, false if failed (error already sent)
+ * Sends error to WebSocket if validation fails
  */
 bool validateAndReport(bool isValid, const String& errorMsg) {
   if (!isValid) {
@@ -1149,193 +1150,29 @@ bool validateAndReport(bool isValid, const String& errorMsg) {
   return isValid;
 }
 
-/**
- * Validate distance parameter
- * Returns true if valid, false otherwise (with error message)
- */
-bool validateDistance(float distMM, String& errorMsg) {
-  if (distMM < 0) {
-    errorMsg = "Distance négative invalide: " + String(distMM, 1) + " mm";
-    return false;
-  }
-  
-  // Use effective max distance (with limitation factor applied)
-  float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
-  
-  if (maxAllowed > 0 && distMM > maxAllowed) {
-    errorMsg = "Distance dépasse limite: " + String(distMM, 1) + " > " + String(maxAllowed, 1) + " mm";
-    if (maxDistanceLimitPercent < 100.0) {
-      errorMsg += " (limite " + String(maxDistanceLimitPercent, 0) + "%)";
-    }
-    return false;
-  }
-  
-  return true;
+// Legacy wrappers - delegate to Validators namespace
+inline bool validateDistance(float distMM, String& errorMsg) {
+  return Validators::distance(distMM, errorMsg);
 }
 
-/**
- * Validate speed level parameter (0.1 - MAX_SPEED_LEVEL)
- * Returns true if valid, false otherwise (with error message)
- */
-bool validateSpeed(float speedLevel, String& errorMsg) {
-  if (speedLevel < 0.1) {
-    errorMsg = "Vitesse trop faible: " + String(speedLevel, 1) + " (min: 0.1)";
-    return false;
-  }
-  
-  if (speedLevel > MAX_SPEED_LEVEL) {
-    errorMsg = "Vitesse trop élevée: " + String(speedLevel, 1) + " (max: " + String(MAX_SPEED_LEVEL, 1) + ")";
-    return false;
-  }
-  
-  return true;
+inline bool validateSpeed(float speedLevel, String& errorMsg) {
+  return Validators::speed(speedLevel, errorMsg);
 }
 
-/**
- * Validate position parameter
- * Returns true if valid, false otherwise (with error message)
- */
-bool validatePosition(float positionMM, String& errorMsg) {
-  if (positionMM < 0) {
-    errorMsg = "Position négative invalide: " + String(positionMM, 1) + " mm";
-    return false;
-  }
-  
-  // Use effective max distance (with limitation factor applied)
-  float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
-  
-  if (maxAllowed > 0 && positionMM > maxAllowed) {
-    errorMsg = "Position dépasse limite: " + String(positionMM, 1) + " > " + String(maxAllowed, 1) + " mm";
-    if (maxDistanceLimitPercent < 100.0) {
-      errorMsg += " (limite " + String(maxDistanceLimitPercent, 0) + "%)";
-    }
-    return false;
-  }
-  
-  return true;
+inline bool validatePosition(float positionMM, String& errorMsg) {
+  return Validators::position(positionMM, errorMsg);
 }
 
-/**
- * Validate start position + distance (combined range check)
- * Returns true if valid, false otherwise (with error message)
- */
-bool validateMotionRange(float startMM, float distMM, String& errorMsg) {
-  // Validate start position alone
-  if (!validatePosition(startMM, errorMsg)) {
-    return false;
-  }
-  
-  // Validate distance alone
-  if (!validateDistance(distMM, errorMsg)) {
-    return false;
-  }
-  
-  // Validate combined range
-  float endPositionMM = startMM + distMM;
-  float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
-  
-  if (maxAllowed > 0 && endPositionMM > maxAllowed) {
-    errorMsg = "Position finale dépasse limite: " + String(endPositionMM, 1) + " mm (start " + 
-               String(startMM, 1) + " + distance " + String(distMM, 1) + ") > " + 
-               String(maxAllowed, 1) + " mm";
-    if (maxDistanceLimitPercent < 100.0) {
-      errorMsg += " (limite " + String(maxDistanceLimitPercent, 0) + "%)";
-    }
-    return false;
-  }
-  
-  return true;
+inline bool validateMotionRange(float startMM, float distMM, String& errorMsg) {
+  return Validators::motionRange(startMM, distMM, errorMsg);
 }
 
-/**
- * Validate Chaos mode parameters
- */
-bool validateChaosParams(float centerMM, float amplitudeMM, float maxSpeed, float craziness, String& errorMsg) {
-  // Validate center position
-  if (!validatePosition(centerMM, errorMsg)) {
-    return false;
-  }
-  
-  // Validate amplitude
-  if (amplitudeMM <= 0) {
-    errorMsg = "Amplitude doit être > 0 mm";
-    return false;
-  }
-  
-  float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
-  
-  if (amplitudeMM > maxAllowed / 2.0) {
-    errorMsg = "Amplitude trop grande: " + String(amplitudeMM, 1) + " > " + String(maxAllowed / 2.0, 1) + " mm (max)";
-    return false;
-  }
-  
-  // Validate that center ± amplitude stays within bounds
-  if (centerMM - amplitudeMM < 0) {
-    errorMsg = "Centre - amplitude < 0 mm (centre=" + String(centerMM, 1) + ", amplitude=" + String(amplitudeMM, 1) + ")";
-    return false;
-  }
-  
-  if (centerMM + amplitudeMM > maxAllowed) {
-    errorMsg = "Centre + amplitude > " + String(maxAllowed, 1) + " mm limite";
-    if (maxDistanceLimitPercent < 100.0) {
-      errorMsg += " (" + String(maxDistanceLimitPercent, 0) + "%)";
-    }
-    return false;
-  }
-  
-  // Validate speed
-  if (!validateSpeed(maxSpeed, errorMsg)) {
-    return false;
-  }
-  
-  // Validate craziness (0-100%)
-  if (craziness < 0 || craziness > 100) {
-    errorMsg = "Craziness doit être 0-100% (reçu: " + String(craziness, 1) + ")";
-    return false;
-  }
-  
-  return true;
+inline bool validateChaosParams(float centerMM, float amplitudeMM, float maxSpeed, float craziness, String& errorMsg) {
+  return Validators::chaosParams(centerMM, amplitudeMM, maxSpeed, craziness, errorMsg);
 }
 
-/**
- * Validate Oscillation mode parameters
- */
-bool validateOscillationParams(float centerMM, float amplitudeMM, float frequency, String& errorMsg) {
-  // Validate center position
-  if (!validatePosition(centerMM, errorMsg)) {
-    return false;
-  }
-  
-  // Validate amplitude
-  if (amplitudeMM <= 0) {
-    errorMsg = "Amplitude doit être > 0 mm";
-    return false;
-  }
-  
-  // Use effective max distance (respects limitation percentage)
-  float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
-  
-  // Validate bounds (center ± amplitude must stay within limits)
-  if (centerMM - amplitudeMM < 0) {
-    errorMsg = "Centre - amplitude < 0 mm (centre=" + String(centerMM, 1) + ", amplitude=" + String(amplitudeMM, 1) + ")";
-    return false;
-  }
-  
-  if (centerMM + amplitudeMM > maxAllowed) {
-    errorMsg = "Centre + amplitude > " + String(maxAllowed, 1) + " mm limite (centre=" + String(centerMM, 1) + ", amplitude=" + String(amplitudeMM, 1) + ")";
-    if (maxDistanceLimitPercent < 100.0) {
-      errorMsg += " [Limitation " + String(maxDistanceLimitPercent, 0) + "%]";
-    }
-    return false;
-  }
-  
-  // Validate frequency (0.1 to 10 Hz)
-  if (frequency < 0.1 || frequency > 10.0) {
-    errorMsg = "Fréquence doit être 0.1-10 Hz (reçu: " + String(frequency, 1) + ")";
-    return false;
-  }
-  
-  return true;
+inline bool validateOscillationParams(float centerMM, float amplitudeMM, float frequency, String& errorMsg) {
+  return Validators::oscillationParams(centerMM, amplitudeMM, frequency, errorMsg);
 }
 
 // ============================================================================

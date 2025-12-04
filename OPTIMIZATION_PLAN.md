@@ -76,16 +76,17 @@
 - [x] `src/controllers/CalibrationManager.cpp` - Implementation (~400 lignes)
 - [x] Intégration dans main .ino - Migration `startCalibration()` → `Calibration.startCalibration()` (4 occurrences)
 
-#### Étape 3: Quick Wins UtilityEngine 🔄 À FAIRE
-Fonctions à migrer vers UtilityEngine (~100 lignes):
-- [ ] `serviceWebSocketFor()` → `engine->serviceFor(durationMs)` - Helper WebSocket
-- [ ] `incrementDailyStats()` → Déjà utilise engine JSON methods
-- [ ] `saveCurrentSessionStats()` → Déjà utilise engine JSON methods
-- [ ] Considérer `sendError()` unification avec engine->error()
+#### Étape 3: Validators.h ✅ COMPLÉTÉ
+- [x] `include/Validators.h` - Namespace avec fonctions de validation (~310 lignes)
+- [x] Validation distance, speed, position, motionRange
+- [x] Validation chaosParams, oscillationParams, oscillationAmplitude
+- [x] Helpers: percentage, positive, range
+- [x] Legacy wrappers dans main .ino pour compatibilité
 
-#### Étape 4: Validators Module (OPTIONNEL)
-- [ ] `include/Validators.h` - Namespace avec validateDistance/Speed/Position/MotionRange
-- [ ] Utiliser dans controllers et main
+#### Étape 4: Prochaines Optimisations (À FAIRE)
+- [ ] Migration stats functions vers UtilityEngine
+- [ ] CommandDispatcher module
+- [ ] VaetController, OscillationController, ChaosController
 
 ---
 
@@ -93,9 +94,9 @@ Fonctions à migrer vers UtilityEngine (~100 lignes):
 
 | Métrique | Avant | Après | Gain |
 |----------|-------|-------|------|
-| Lignes .ino | 6660 | 6454 | -206 |
-| Modules créés | 0 | 3 | +3 |
-| Lignes extraites | 0 | ~600 | +600 |
+| Lignes .ino | 6660 | 6122 | -538 |
+| Modules créés | 0 | 4 | +4 |
+| Lignes extraites | 0 | ~900 | +900 |
 | Flash usage | 32.4% | 32.4% | = |
 | RAM usage | 18.2% | 18.2% | = |
 
