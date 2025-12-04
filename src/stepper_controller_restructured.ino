@@ -32,6 +32,9 @@
 #include "hardware/MotorDriver.h"    // Motor control abstraction (Motor.step(), Motor.enable()...)
 #include "hardware/ContactSensors.h" // Contact sensors abstraction (Contacts.isStartContactActive()...)
 
+// Controllers (modular architecture)
+#include "controllers/CalibrationManager.h" // Calibration controller (Calibration.startCalibration()...)
+
 // ============================================================================
 // LOGGING SYSTEM - Managed by UtilityEngine
 // ============================================================================
@@ -369,6 +372,14 @@ void setup() {
   Contacts.init();   // Initializes PIN_START_CONTACT, PIN_END_CONTACT
   engine->info("✅ Hardware abstraction layer initialized (Motor + Contacts)");
   
+  // ============================================================================
+  // CALIBRATION MANAGER INITIALIZATION
+  // ============================================================================
+  // Initialize CalibrationManager with WebSocket and Server references
+  // Callbacks will be set after WebSocket is fully initialized
+  Calibration.init(&webSocket, &server);
+  engine->info("✅ CalibrationManager initialized");
+  
   // Legacy compatibility: ensure direction tracking variable is in sync
   Motor.setDirection(false);  // Initialize direction to backward
   
@@ -560,6 +571,15 @@ void setup() {
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
   engine->info("WebSocket server started on port 81");
+  
+  // ============================================================================
+  // CALIBRATION MANAGER CALLBACKS
+  // ============================================================================
+  // Set callbacks now that sendStatus() and sendError() are available
+  Calibration.setStatusCallback(sendStatus);
+  Calibration.setErrorCallback([](const String& msg) { sendError(msg); });
+  Calibration.setCompletionCallback(onMovementComplete);
+  engine->info("✅ CalibrationManager callbacks configured");
   
   // ============================================================================
   // INITIALIZE SINE LOOKUP TABLE (Optional)

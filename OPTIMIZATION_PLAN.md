@@ -2,20 +2,23 @@
 
 > **Date**: 4 décembre 2025  
 > **Backup commit**: `f2c9d37` - "BACKUP: Pre-optimization state"  
-> **État actuel**: Fonctionnel, 6660 lignes backend + 9887 lignes frontend
+> **État actuel**: Fonctionnel, 6626 lignes backend + 9887 lignes frontend
 > 
-> **Mise à jour**: 4 décembre 2025 - Analyse architecturale complète
+> **Mise à jour**: 4 décembre 2025 - Modularisation Backend Phase 1 & 2
 > **Commits optimisations**: 
 > - `405eac0` - "Phase 1 Optimizations" (Config.h, CSS, WS_CMD)
 > - `268b038` - "Phase 2.4 COMPLETE: All sendCommand migrated to WS_CMD constants"
+> - `8e298eb` - "Step 1: Hardware Abstraction Layer (MotorDriver, ContactSensors)"
+> - `368665d` - "Step 1: Complete Motor.enable()/disable() migration"
+> - `f555273` - "Step 2: Add CalibrationManager module"
 
 ---
 
-## 🎯 PRIORITÉ ACTUELLE: MODULARISATION BACKEND
+## 🎯 PRIORITÉ ACTUELLE: INTÉGRATION CalibrationManager
 
-> **Objectif**: Découper `stepper_controller_restructured.ino` (6660 lignes) en modules maintenables
+> **Objectif**: Découper `stepper_controller_restructured.ino` (6626 lignes) en modules maintenables
 > **Impact attendu**: Maintenabilité +60%, Compilation incrémentale, Tests unitaires possibles
-> **Durée estimée**: 3-4 jours
+> **Durée estimée**: 2-3 jours restants
 
 ---
 
@@ -52,6 +55,23 @@
 - [x] Commandes Sequence: ADD/DELETE/UPDATE/MOVE/DUPLICATE/TOGGLE/CLEAR/EXPORT/GET_SEQUENCE_*
 - [x] Commandes Pursuit: PURSUIT_MOVE, ENABLE/DISABLE_PURSUIT_MODE
 - [x] Commandes Config: SET_DECEL_ZONE, SET_CYCLE_PAUSE, UPDATE_CYCLE_PAUSE*, SET_MAX_DISTANCE_LIMIT
+
+### Phase 2.1 - Modularisation Backend 🔄 EN COURS
+
+#### Étape 1: Hardware Abstraction Layer ✅ COMPLÉTÉ
+- [x] `include/hardware/MotorDriver.h` - Singleton abstraction HSS86 (~90 lignes)
+- [x] `src/hardware/MotorDriver.cpp` - Implementation step(), setDirection(), enable(), disable()
+- [x] `include/hardware/ContactSensors.h` - Singleton abstraction contacts (~100 lignes)
+- [x] `src/hardware/ContactSensors.cpp` - Implementation readDebounced(), isStartContactActive()
+- [x] `src/Config.cpp` - Définitions extern pour variables const char*
+- [x] Migration complète `digitalWrite(PIN_ENABLE)` → `Motor.enable()/disable()`
+- [x] Migration complète `stepMotor()` → `Motor.step()` (via wrapper legacy)
+- [x] Migration complète `readContactDebounced()` → `Contacts.readDebounced()` (via wrapper legacy)
+
+#### Étape 2: CalibrationManager 🔄 INTÉGRATION
+- [x] `include/controllers/CalibrationManager.h` - Singleton pattern (~200 lignes)
+- [x] `src/controllers/CalibrationManager.cpp` - Implementation (~400 lignes)
+- [ ] Intégration dans main .ino (remplacer anciennes fonctions)
 
 ---
 
