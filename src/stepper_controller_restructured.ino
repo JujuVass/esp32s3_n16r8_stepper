@@ -28,6 +28,10 @@
 #include "UtilityEngine.h"     // Unified logging, WebSocket, LittleFS manager
 #include "APIRoutes.h"        // API routes module (extracted from main)
 
+// Hardware abstraction layer (modular architecture)
+#include "hardware/MotorDriver.h"    // Motor control abstraction (Motor.step(), Motor.enable()...)
+#include "hardware/ContactSensors.h" // Contact sensors abstraction (Contacts.isStartContactActive()...)
+
 // ============================================================================
 // LOGGING SYSTEM - Managed by UtilityEngine
 // ============================================================================
@@ -269,28 +273,12 @@ inline const char* boolToJson(bool value) {
  * @param checks Number of checks (default: 3, requires 2/3 majority)
  * @param delayMicros Microseconds between checks (default: 100µs)
  * @return true if majority of checks confirm expectedState
+ * 
+ * NOTE: Now delegates to Contacts.readDebounced() from hardware/ContactSensors.h
  */
 inline bool readContactDebounced(int pin, int expectedState, int checks = 3, int delayMicros = 100) {
-  int validCount = 0;
-  int requiredValid = (checks + 1) / 2;  // Majorité: 2/3 ou 3/5
-  
-  for (int i = 0; i < checks; i++) {
-    if (digitalRead(pin) == expectedState) {
-      validCount++;
-      
-      // Majorité atteinte = confirmation immédiate
-      if (validCount >= requiredValid) {
-        return true;
-      }
-    }
-    
-    if (i < checks - 1) {
-      delayMicroseconds(delayMicros);
-    }
-  }
-  
-  // Pas assez de lectures valides
-  return false;
+  // Delegate to modular ContactSensors
+  return Contacts.readDebounced(pin, expectedState, checks, delayMicros);
 }
 
 /**
@@ -373,16 +361,16 @@ void setup() {
   
   engine->info("\n=== ESP32-S3 Stepper Controller ===");
   
-  // Initialize GPIO pins
-  pinMode(PIN_START_CONTACT, INPUT_PULLUP);
-  pinMode(PIN_END_CONTACT, INPUT_PULLUP);
-  pinMode(PIN_PULSE, OUTPUT);
-  pinMode(PIN_DIR, OUTPUT);
-  pinMode(PIN_ENABLE, OUTPUT);
+  // ============================================================================
+  // HARDWARE ABSTRACTION LAYER INITIALIZATION
+  // ============================================================================
+  // Initialize modular hardware drivers (MotorDriver + ContactSensors)
+  Motor.init();      // Initializes PIN_PULSE, PIN_DIR, PIN_ENABLE
+  Contacts.init();   // Initializes PIN_START_CONTACT, PIN_END_CONTACT
+  engine->info("✅ Hardware abstraction layer initialized (Motor + Contacts)");
   
-  digitalWrite(PIN_PULSE, LOW);
+  // Legacy compatibility: ensure direction tracking variable is in sync
   setMotorDirection(false);  // Initialize direction to backward
-  digitalWrite(PIN_ENABLE, HIGH); // Disable motor initially
   
   // Connect to WiFi
   WiFi.mode(WIFI_STA);
@@ -452,7 +440,7 @@ void setup() {
       
       // CRITICAL: Stop all movements and disable motor during OTA
       stopMovement();
-      digitalWrite(PIN_ENABLE, HIGH);  // Disable motor
+      Motor.disable();  // Disable motor for safety during OTA
       
       // Stop sequencer if running
       if (seqState.isRunning) {
@@ -761,32 +749,34 @@ void loop() {
 }
 
 // ============================================================================
-// MOTOR CONTROL - Low Level
+// MOTOR CONTROL - Low Level (Delegating to MotorDriver module)
+// ============================================================================
+// These wrapper functions maintain backward compatibility while delegating
+// to the new modular MotorDriver class. This allows incremental migration.
 // ============================================================================
 
 /**
  * Set motor direction with automatic delay for driver processing
  * HSS86 driver requires minimum 50µs to process direction changes
  * @param forward true = forward (HIGH), false = backward (LOW)
+ * 
+ * NOTE: Now delegates to Motor.setDirection() from hardware/MotorDriver.h
  */
 inline void setMotorDirection(bool forward) {
-  bool newDirection = forward ? HIGH : LOW;
+  // Delegate to modular MotorDriver
+  Motor.setDirection(forward);
   
-  // Only change direction if it's different (avoids unnecessary delays)
-  if (newDirection != currentMotorDirection) {
-    digitalWrite(PIN_DIR, newDirection);
-    delayMicroseconds(DIR_CHANGE_DELAY_MICROS);
-    currentMotorDirection = newDirection;
-  }
+  // Keep legacy variable in sync for any code that reads it directly
+  currentMotorDirection = forward ? HIGH : LOW;
 }
 
+/**
+ * Execute a single step pulse on the motor
+ * 
+ * NOTE: Now delegates to Motor.step() from hardware/MotorDriver.h
+ */
 void stepMotor() {
-  // HSS86 requires minimum 2.5µs pulse width
-  // Total step time (HIGH + LOW) is accounted for in calculateStepDelay()
-  digitalWrite(PIN_PULSE, HIGH);
-  delayMicroseconds(STEP_PULSE_MICROS);
-  digitalWrite(PIN_PULSE, LOW);
-  delayMicroseconds(STEP_PULSE_MICROS);
+  Motor.step();
 }
 
 // ============================================================================
@@ -802,6 +792,7 @@ bool findContactWithService(int dirPin, int contactPin, const char* contactName)
 
   // Search for contact with debouncing (3 checks, 25µs interval)
   // Fast debounce during search phase (non-critical)
+  // NOTE: Using Contacts.readDebounced() via readContactDebounced wrapper
   while (readContactDebounced(contactPin, HIGH, 3, 25)) {
     stepMotor();
     currentStep += inDir ? 1 : -1;
@@ -819,7 +810,7 @@ bool findContactWithService(int dirPin, int contactPin, const char* contactName)
       errorMsg += contactName;
       errorMsg += " introuvable";
       sendError(errorMsg);
-      digitalWrite(PIN_ENABLE, HIGH);
+      Motor.disable();  // Safety: disable motor on calibration failure
       config.currentState = STATE_ERROR;
       return false;
     }
@@ -877,7 +868,7 @@ bool returnToStartContact() {
     
     if (emergencySteps >= MAX_EMERGENCY_STEPS) {
       sendError("❌ ERREUR: Impossible de décoller du contact END - Vérifiez mécaniquement");
-      digitalWrite(PIN_ENABLE, HIGH);
+      Motor.disable();  // Safety: disable motor on error
       config.currentState = STATE_ERROR;
       return false;
     }
@@ -902,7 +893,7 @@ bool returnToStartContact() {
     }
     if (currentStep < -CALIBRATION_ERROR_MARGIN_STEPS) {
       sendError("❌ ERROR: Impossible de retourner au contact START!");
-      digitalWrite(PIN_ENABLE, HIGH);
+      Motor.disable();  // Safety: disable motor on error
       config.currentState = STATE_ERROR;
       return false;
     }
@@ -953,7 +944,7 @@ float validateCalibrationAccuracy() {
 // ============================================================================
 
 void handleCalibrationFailure(int& attempt) {
-  digitalWrite(PIN_ENABLE, HIGH);  // Disable on error is safe
+  Motor.disable();  // Safety: disable motor on calibration failure
   config.currentState = STATE_ERROR;
   
   attempt++;
@@ -1135,7 +1126,7 @@ void startCalibration() {
     serviceWebSocketFor(20);
   }
   
-  digitalWrite(PIN_ENABLE, LOW);
+  Motor.enable();  // Enable motor for calibration
   // Motor enable settling time (service WebSocket)
   serviceWebSocketFor(200);
 
@@ -1222,7 +1213,7 @@ void startCalibration() {
       sendError("❌ ERROR: Distance calibrée trop courte (" + String(config.totalDistanceMM, 1) + 
                 " mm < " + String(HARD_MIN_DISTANCE_MM, 1) + " mm) après 3 tentatives - " +
                 "Vérifiez les contacts, la mécanique (courroie, poulies) et le câblage");
-      digitalWrite(PIN_ENABLE, HIGH);
+      Motor.disable();  // Safety: disable motor on error
       config.currentState = STATE_ERROR;
       calibrationAttempt = 0;
       return;
@@ -1266,7 +1257,7 @@ void startCalibration() {
     
     if (calibrationAttempt >= MAX_CALIBRATION_RETRIES) {
       sendError("❌ ERROR: Calibration échouée après 3 tentatives - Vérifiez la mécanique (tension courroie, blocages, config driver)");
-      digitalWrite(PIN_ENABLE, HIGH);
+      Motor.disable();  // Safety: disable motor on error
       config.currentState = STATE_ERROR;
       calibrationAttempt = 0;
       return;
@@ -1783,7 +1774,7 @@ void doStep() {
         
         stopMovement();
         config.currentState = STATE_ERROR;
-        digitalWrite(PIN_ENABLE, HIGH);
+        Motor.disable();  // Safety: disable motor on critical error
         return;
       }
     }
@@ -1861,7 +1852,7 @@ void doStep() {
         
         stopMovement();
         config.currentState = STATE_ERROR;
-        digitalWrite(PIN_ENABLE, HIGH);
+        Motor.disable();  // Safety: disable motor on critical error
         return;
       }
     }
@@ -2443,7 +2434,7 @@ void pursuitMove(float targetPositionMM, float maxSpeedLevel) {
   setMotorDirection(moveForward);
   
   // Ensure motor is enabled (should already be, but ensure on first call)
-  digitalWrite(PIN_ENABLE, LOW);
+  Motor.enable();
   pursuit.isMoving = true;
 }
 
@@ -3126,7 +3117,7 @@ void returnToStart() {
     engine->info("   → Recovering from ERROR state");
   }
   
-  digitalWrite(PIN_ENABLE, LOW);  // Enable motor
+  Motor.enable();  // Enable motor
   config.currentState = STATE_CALIBRATING;
   sendStatus();  // Show calibration overlay
   delay(50);
@@ -4259,7 +4250,7 @@ void startChaos() {
     targetStep = (long)(chaos.centerPositionMM * STEPS_PER_MM);
     
     // Wait until reached center (blocking for initial positioning)
-    digitalWrite(PIN_ENABLE, LOW);
+    Motor.enable();
     unsigned long positioningStart = millis();
     unsigned long lastWsService = millis();
     while (currentStep != targetStep && (millis() - positioningStart < 30000)) {  // 30s timeout
@@ -4282,7 +4273,7 @@ void startChaos() {
       // CRITICAL: Reset state properly to avoid "system not ready" errors
       chaosState.isRunning = false;
       config.currentState = STATE_READY;
-      digitalWrite(PIN_ENABLE, HIGH);  // Disable motor
+      Motor.disable();  // Disable motor
       
       // Send error to frontend
       sendError("Impossible d'atteindre le centre - timeout après 30s. Vérifiez que le moteur peut bouger librement.");
@@ -4311,7 +4302,7 @@ void startChaos() {
   // Set movement type (config.executionContext remains unchanged - can be STANDALONE or SEQUENCER)
   currentMovement = MOVEMENT_CHAOS;
   
-  digitalWrite(PIN_ENABLE, LOW);  // Enable motor
+  Motor.enable();  // Enable motor
   
   // Log chaos start (avoid String concatenations to prevent memory issues)
   engine->info("🎲 Chaos mode started");
@@ -6226,7 +6217,7 @@ void processSequenceExecution() {
         // Calculate step delays and start movement
         calculateStepDelay();
         
-        digitalWrite(PIN_ENABLE, LOW);
+        Motor.enable();
         lastStepMicros = micros();
         
         // Calculate step positions
