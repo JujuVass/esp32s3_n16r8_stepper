@@ -2414,12 +2414,12 @@
         return;
       }
       
-      sendCommand('addSequenceLine', newLine);
+      sendCommand(WS_CMD.ADD_SEQUENCE_LINE, newLine);
     }
     
     function deleteSequenceLine(lineId) {
       if (confirm('Supprimer cette ligne?')) {
-        sendCommand('deleteSequenceLine', { lineId: lineId });
+        sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: lineId });
       }
     }
     
@@ -2613,7 +2613,7 @@
         return; // Don't close modal, let user fix
       }
       
-      sendCommand('updateSequenceLine', updatedLine);
+      sendCommand(WS_CMD.UPDATE_SEQUENCE_LINE, updatedLine);
       closeEditModal();
     }
     
@@ -3165,7 +3165,7 @@
       }
       
       // Send to backend
-      sendCommand('addSequenceLine', newLine);
+      sendCommand(WS_CMD.ADD_SEQUENCE_LINE, newLine);
       showNotification('✅ Ligne ajoutée au séquenceur: ' + preset.name, 'success', 3000);
       
       console.log('✅ Quick Add to sequencer:', preset.name, newLine);
@@ -3237,11 +3237,11 @@
     }
     
     function moveSequenceLine(lineId, direction) {
-      sendCommand('moveSequenceLine', { lineId: lineId, direction: direction });
+      sendCommand(WS_CMD.MOVE_SEQUENCE_LINE, { lineId: lineId, direction: direction });
     }
     
     function duplicateSequenceLine(lineId) {
-      sendCommand('duplicateSequenceLine', { lineId: lineId });
+      sendCommand(WS_CMD.DUPLICATE_SEQUENCE_LINE, { lineId: lineId });
     }
     
     /**
@@ -3276,14 +3276,14 @@
         if (l.lineId === lineId) {
           // Target line: ensure enabled (keep original cycle count - test full line!)
           if (!l.enabled) {
-            sendCommand('toggleSequenceLine', { lineId: l.lineId, enabled: true });
+            sendCommand(WS_CMD.TOGGLE_SEQUENCE_LINE, { lineId: l.lineId, enabled: true });
             l.enabled = true;
           }
           // Don't modify cycleCount - we want to test the line as configured
         } else {
           // Other lines: temporarily disable
           if (l.enabled) {
-            sendCommand('toggleSequenceLine', { lineId: l.lineId, enabled: false });
+            sendCommand(WS_CMD.TOGGLE_SEQUENCE_LINE, { lineId: l.lineId, enabled: false });
             l.enabled = false;
           }
         }
@@ -3338,7 +3338,7 @@
       window.sequenceBackup.forEach(backup => {
         const line = sequenceLines.find(l => l.lineId === backup.lineId);
         if (line && line.enabled !== backup.enabled) {
-          sendCommand('toggleSequenceLine', { lineId: backup.lineId, enabled: backup.enabled });
+          sendCommand(WS_CMD.TOGGLE_SEQUENCE_LINE, { lineId: backup.lineId, enabled: backup.enabled });
           line.enabled = backup.enabled;
         }
       });
@@ -3373,17 +3373,17 @@
     }
     
     function toggleSequenceLine(lineId, enabled) {
-      sendCommand('toggleSequenceLine', { lineId: lineId, enabled: enabled });
+      sendCommand(WS_CMD.TOGGLE_SEQUENCE_LINE, { lineId: lineId, enabled: enabled });
     }
     
     function clearSequence() {
       if (confirm('Effacer toutes les lignes du tableau?')) {
-        sendCommand('clearSequence', {});
+        sendCommand(WS_CMD.CLEAR_SEQUENCE, {});
       }
     }
     
     function exportSequence() {
-      sendCommand('exportSequence', {});
+      sendCommand(WS_CMD.EXPORT_SEQUENCE, {});
     }
     
     function importSequence() {
@@ -3424,7 +3424,7 @@
                 alert('✅ Séquence importée avec succès!');
                 
                 // Refresh sequence table without reloading page
-                sendCommand('getSequenceTable', {});
+                sendCommand(WS_CMD.GET_SEQUENCE_TABLE, {});
               } else {
                 console.error('❌ Import failed:', data.error);
                 alert('❌ Erreur import: ' + (data.error || 'Unknown error'));
@@ -4095,7 +4095,7 @@
             
             const executeMove = () => {
               if (movesRemaining > 0) {
-                sendCommand('moveSequenceLine', { lineId: draggedLineId, direction: moveDirection });
+                sendCommand(WS_CMD.MOVE_SEQUENCE_LINE, { lineId: draggedLineId, direction: moveDirection });
                 movesRemaining--;
                 setTimeout(executeMove, 100); // Wait 100ms between moves
               } else {
@@ -4244,7 +4244,7 @@
         const sortedIds = linesToDelete.sort((a, b) => b - a);
         
         sortedIds.forEach(lineId => {
-          sendCommand('deleteSequenceLine', { lineId: lineId });
+          sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: lineId });
         });
         
         showNotification(`✅ ${count} ligne(s) supprimée(s)`, 'success', 2000);
@@ -4292,7 +4292,7 @@
           const sortedIds = linesToDelete.sort((a, b) => b - a);
           
           sortedIds.forEach(lineId => {
-            sendCommand('deleteSequenceLine', { lineId: lineId });
+            sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: lineId });
           });
           
           showNotification(`✅ ${count} ligne(s) supprimée(s)`, 'success', 2000);
@@ -4339,7 +4339,7 @@
       console.log(`📦 Batch ${enabled ? 'enable' : 'disable'} ${selectedLineIds.size} lines`);
       
       selectedLineIds.forEach(lineId => {
-        sendCommand('toggleSequenceLine', { lineId: lineId, enabled: enabled });
+        sendCommand(WS_CMD.TOGGLE_SEQUENCE_LINE, { lineId: lineId, enabled: enabled });
         
         // Update local state
         const line = sequenceLines.find(l => l.lineId === lineId);
@@ -4371,7 +4371,7 @@
       const lineIdsArray = Array.from(selectedLineIds).sort((a, b) => b - a);
       
       lineIdsArray.forEach(lineId => {
-        sendCommand('deleteSequenceLine', { lineId: lineId });
+        sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: lineId });
       });
       
       showNotification(`✅ ${count} ligne(s) supprimée(s)`, 'success', 2000);
@@ -4487,7 +4487,7 @@
         
         // Request status after a short delay to ensure everything is ready
         setTimeout(function() {
-          sendCommand('getStatus', {});
+          sendCommand(WS_CMD.GET_STATUS, {});
         }, 50);
       };
       
@@ -6243,7 +6243,7 @@ Détecte la limite physique`;
         }
         
         // Send command to backend
-        sendCommand('setOscillation', {
+        sendCommand(WS_CMD.SET_OSCILLATION, {
           centerPositionMM: config.centerPositionMM || 100,
           amplitudeMM: config.amplitudeMM || 20,
           waveform: config.waveform || 0,
@@ -6288,7 +6288,7 @@ Détecte la limite physique`;
         }
         
         // Send command to backend
-        sendCommand('setChaosConfig', {
+        sendCommand(WS_CMD.SET_CHAOS_CONFIG, {
           centerPositionMM: config.centerPositionMM || 100,
           amplitudeMM: config.amplitudeMM || 40,
           maxSpeedLevel: config.maxSpeedLevel || 15,
@@ -6554,7 +6554,7 @@ Détecte la limite physique`;
         if (oscCenterField && effectiveMax > 0) {
           oscCenterField.value = (effectiveMax / 2).toFixed(1);
           // Send to backend to update oscillation config
-          sendCommand('setOscillationConfig', {
+          sendCommand(WS_CMD.SET_OSCILLATION_CONFIG, {
             centerPositionMM: effectiveMax / 2,
             amplitudeMM: parseFloat(document.getElementById('oscAmplitude').value) || 50,
             frequencyHz: parseFloat(document.getElementById('oscFrequency').value) || 1,
@@ -6567,7 +6567,7 @@ Détecte la limite physique`;
           chaosCenterField.value = (effectiveMax / 2).toFixed(1);
         }
         
-        sendCommand('setMaxDistanceLimit', {percent: percent});
+        sendCommand(WS_CMD.SET_MAX_DISTANCE_LIMIT, {percent: percent});
         DOM.maxDistConfigPanel.style.display = 'none';
         isEditingMaxDistLimit = false; // Allow updates after applying
       });
@@ -6593,10 +6593,10 @@ Détecte la limite physique`;
         speedBackward = unifiedSpeed;
       }
       
-      sendCommand('start', {distance: distance, speed: speedForward});
+      sendCommand(WS_CMD.START, {distance: distance, speed: speedForward});
       // Set backward speed separately after start
       setTimeout(() => {
-        sendCommand('setSpeedBackward', {speed: speedBackward});
+        sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: speedBackward});
       }, 100);
     });
     
@@ -6657,7 +6657,7 @@ Détecte la limite physique`;
     });
     document.getElementById('startPosition').addEventListener('change', function() {
       const startPos = parseFloat(this.value);
-      sendCommand('setStartPosition', {startPosition: startPos});
+      sendCommand(WS_CMD.SET_START_POSITION, {startPosition: startPos});
       AppState.editing.input = null;
     });
     
@@ -6673,7 +6673,7 @@ Détecte la limite physique`;
     });
     document.getElementById('distance').addEventListener('change', function() {
       const distance = parseFloat(this.value);
-      sendCommand('setDistance', {distance: distance});
+      sendCommand(WS_CMD.SET_DISTANCE, {distance: distance});
       AppState.editing.input = null;
     });
     
@@ -6696,8 +6696,8 @@ Détecte la limite physique`;
       document.getElementById('speedBackward').value = speed;
       
       // Send both commands to ESP32
-      sendCommand('setSpeedForward', {speed: speed});
-      sendCommand('setSpeedBackward', {speed: speed});
+      sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: speed});
+      sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: speed});
       
       AppState.editing.input = null;
     });
@@ -6715,7 +6715,7 @@ Détecte la limite physique`;
     });
     document.getElementById('speedForward').addEventListener('change', function() {
       const speed = parseFloat(this.value);
-      sendCommand('setSpeedForward', {speed: speed});
+      sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: speed});
       AppState.editing.input = null;
     });
     
@@ -6731,7 +6731,7 @@ Détecte la limite physique`;
     });
     document.getElementById('speedBackward').addEventListener('change', function() {
       const speed = parseFloat(this.value);
-      sendCommand('setSpeedBackward', {speed: speed});
+      sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: speed});
       AppState.editing.input = null;
     });
     
@@ -6751,7 +6751,7 @@ Détecte la limite physique`;
         document.getElementById('cyclePauseMax').value = maxSec;
       }
       
-      sendCommand('setCyclePause', {
+      sendCommand(WS_CMD.SET_CYCLE_PAUSE, {
         mode: 'simple',
         enabled: enabled,
         isRandom: isRandom,
@@ -6784,7 +6784,7 @@ Détecte la limite physique`;
         
         if (startPos <= maxStart) {
           document.getElementById('startPosition').value = startPos;
-          sendCommand('setStartPosition', {startPosition: startPos});
+          sendCommand(WS_CMD.SET_START_POSITION, {startPosition: startPos});
           
           document.querySelectorAll('[data-start]').forEach(b => b.classList.remove('active'));
           this.classList.add('active');
@@ -6799,7 +6799,7 @@ Détecte la limite physique`;
         
         if (distance <= maxDist) {
           document.getElementById('distance').value = distance;
-          sendCommand('setDistance', {distance: distance});
+          sendCommand(WS_CMD.SET_DISTANCE, {distance: distance});
           
           document.querySelectorAll('[data-distance]').forEach(b => b.classList.remove('active'));
           this.classList.add('active');
@@ -6820,8 +6820,8 @@ Détecte la limite physique`;
         document.getElementById('speedBackward').value = speed;
         
         // Send both commands to ESP32
-        sendCommand('setSpeedForward', {speed: speed});
-        sendCommand('setSpeedBackward', {speed: speed});
+        sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: speed});
+        sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: speed});
         
         // Update preset button highlighting
         document.querySelectorAll('[data-speed-unified]').forEach(b => b.classList.remove('active'));
@@ -6834,7 +6834,7 @@ Détecte la limite physique`;
       btn.addEventListener('click', function() {
         const speed = parseFloat(this.getAttribute('data-speed-forward'));
         document.getElementById('speedForward').value = speed;
-        sendCommand('setSpeedForward', {speed: speed});
+        sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: speed});
         
         document.querySelectorAll('[data-speed-forward]').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
@@ -6845,7 +6845,7 @@ Détecte la limite physique`;
       btn.addEventListener('click', function() {
         const speed = parseFloat(this.getAttribute('data-speed-backward'));
         document.getElementById('speedBackward').value = speed;
-        sendCommand('setSpeedBackward', {speed: speed});
+        sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: speed});
         
         document.querySelectorAll('[data-speed-backward]').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
@@ -6869,8 +6869,8 @@ Détecte la limite physique`;
         document.getElementById('speedBackward').value = unifiedSpeed;
         
         // Send both commands to ESP32 to ensure sync
-        sendCommand('setSpeedForward', {speed: unifiedSpeed});
-        sendCommand('setSpeedBackward', {speed: unifiedSpeed});
+        sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: unifiedSpeed});
+        sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: unifiedSpeed});
         
         // Update preset button highlighting
         document.querySelectorAll('[data-speed-forward]').forEach(btn => {
@@ -6904,8 +6904,8 @@ Détecte la limite physique`;
         document.getElementById('speedBackward').value = forwardSpeed;
         
         // Apply forward speed to BOTH directions immediately
-        sendCommand('setSpeedForward', {speed: forwardSpeed});
-        sendCommand('setSpeedBackward', {speed: forwardSpeed});
+        sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: forwardSpeed});
+        sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: forwardSpeed});
         
         // Update preset button highlighting
         document.querySelectorAll('[data-speed-unified]').forEach(btn => {
@@ -7142,7 +7142,7 @@ Détecte la limite physique`;
     
     function switchTab(tabName) {
       // Save statistics before mode change
-      sendCommand('saveStats', {});
+      sendCommand(WS_CMD.SAVE_STATS, {});
       
       // SAFETY: Stop any running movement before switching tabs
       // This prevents confusion when switching modes while paused
@@ -7411,7 +7411,7 @@ Détecte la limite physique`;
       document.getElementById('sequencerLimitModal').classList.remove('active');
       
       // Reset limit to 100%
-      sendCommand('setMaxDistanceLimit', { limitPercent: 100 });
+      sendCommand(WS_CMD.SET_MAX_DISTANCE_LIMIT, { limitPercent: 100 });
       
       // Show confirmation notification
       setTimeout(function() {
@@ -7491,7 +7491,7 @@ Détecte la limite physique`;
       // Request sequence table on load (wait for WebSocket connection)
       function requestSequenceTableWhenReady() {
         if (AppState.ws && AppState.ws.readyState === WebSocket.OPEN) {
-          sendCommand('getSequenceTable', {});
+          sendCommand(WS_CMD.GET_SEQUENCE_TABLE, {});
         } else {
           setTimeout(requestSequenceTableWhenReady, 200);
         }
@@ -7788,7 +7788,7 @@ Détecte la limite physique`;
         }
         
         // Request system status to populate fields
-        sendCommand('getStatus', {});
+        sendCommand(WS_CMD.GET_STATUS, {});
         
         // Load logging preferences when opening
         loadLoggingPreferences();
@@ -8596,7 +8596,7 @@ Détecte la limite physique`;
         cycleCount: parseInt(document.getElementById('oscCycleCount').value) || 0,
         returnToCenter: document.getElementById('oscReturnCenter').checked
       };
-      sendCommand('setOscillation', config);
+      sendCommand(WS_CMD.SET_OSCILLATION, config);
     }
     
     // Oscillation input editing protection + real-time update
@@ -8737,7 +8737,7 @@ Détecte la limite physique`;
         document.getElementById('oscCyclePauseMax').value = maxSec;
       }
       
-      sendCommand('setCyclePause', {
+      sendCommand(WS_CMD.SET_CYCLE_PAUSE, {
         mode: 'oscillation',
         enabled: enabled,
         isRandom: isRandom,
@@ -8913,7 +8913,7 @@ Détecte la limite physique`;
         document.getElementById('patternLiberator').checked
       ];
       
-      sendCommand('setChaosConfig', {
+      sendCommand(WS_CMD.SET_CHAOS_CONFIG, {
         centerPositionMM: centerPos,
         amplitudeMM: amplitude,
         maxSpeedLevel: maxSpeed,
@@ -9275,7 +9275,7 @@ Détecte la limite physique`;
     });
     
     document.getElementById('btnSkipLine').addEventListener('click', function() {
-      sendCommand('skipSequenceLine', {});
+      sendCommand(WS_CMD.SKIP_SEQUENCE_LINE, {});
     });
     
     // Modal handlers
@@ -9473,7 +9473,7 @@ Détecte la limite physique`;
         // Collapsing = deactivating
         headerText.textContent = '🎯 Décélération - désactivée';
         // Send config with zones disabled
-        sendCommand('setDecelZone', {
+        sendCommand(WS_CMD.SET_DECEL_ZONE, {
           enabled: false
         });
       }
@@ -9494,7 +9494,7 @@ Détecte la limite physique`;
       } else {
         // Collapsing = deactivating
         headerText.textContent = '⏸️ Pause entre cycles - désactivée';
-        sendCommand('updateCyclePause', {
+        sendCommand(WS_CMD.UPDATE_CYCLE_PAUSE, {
           enabled: false
         });
       }
@@ -9584,7 +9584,7 @@ Détecte la limite physique`;
         maxPauseSec: parseFloat(document.getElementById('cyclePauseMax').value)
       };
       
-      sendCommand('updateCyclePause', config);
+      sendCommand(WS_CMD.UPDATE_CYCLE_PAUSE, config);
     }
     
     // ===== CYCLE PAUSE SECTION (MODE OSCILLATION) =====
@@ -9602,7 +9602,7 @@ Détecte la limite physique`;
       } else {
         // Collapsing = deactivating
         headerText.textContent = '⏸️ Pause entre cycles - désactivée';
-        sendCommand('updateCyclePauseOsc', {
+        sendCommand(WS_CMD.UPDATE_CYCLE_PAUSE_OSC, {
           enabled: false
         });
       }
@@ -9692,7 +9692,7 @@ Détecte la limite physique`;
         maxPauseSec: parseFloat(document.getElementById('cyclePauseMaxOsc').value)
       };
       
-      sendCommand('updateCyclePauseOsc', config);
+      sendCommand(WS_CMD.UPDATE_CYCLE_PAUSE_OSC, config);
     }
     
     // Decel zone presets
@@ -9759,7 +9759,7 @@ Détecte la limite physique`;
       // Store requested zone value for comparison
       AppState.lastDecelZoneRequest = zoneMM;
       
-      sendCommand('setDecelZone', config);
+      sendCommand(WS_CMD.SET_DECEL_ZONE, config);
     }
     
     // Draw deceleration curve preview on canvas
