@@ -1,0 +1,626 @@
+/**
+ * ============================================================================
+ * OscillationController.cpp - Sinusoidal Oscillation Movement Implementation
+ * ============================================================================
+ * 
+ * Extracted from main stepper_controller_restructured.ino
+ * Original functions: calculateOscillationPosition(), validateOscillationAmplitude(),
+ *                     doOscillationStep(), startOscillation()
+ * 
+ * Created: December 2024
+ * ============================================================================
+ */
+
+#include "movement/OscillationController.h"
+#include "sensors/MotorDriver.h"
+#include "sensors/ContactSensors.h"
+
+// ============================================================================
+// SINGLETON INSTANCE
+// ============================================================================
+
+OscillationControllerClass Osc;
+
+// ============================================================================
+// LIFECYCLE
+// ============================================================================
+
+void OscillationControllerClass::begin() {
+    engine->info("🌊 OscillationController initialized");
+}
+
+// ============================================================================
+// MAIN CONTROL
+// ============================================================================
+
+void OscillationControllerClass::start() {
+    // Validate configuration
+    String errorMsg;
+    if (!validateAmplitude(oscillation.centerPositionMM, oscillation.amplitudeMM, errorMsg)) {
+        sendError("❌ " + errorMsg);
+        config.currentState = STATE_ERROR;
+        return;
+    }
+    
+    // Initialize oscillation state
+    oscillationState.startTimeMs = millis();
+    oscillationState.rampStartMs = millis();
+    oscillationState.currentAmplitude = 0;
+    oscillationState.completedCycles = 0;  // ✅ CRITICAL: Reset cycle counter for sequencer
+    oscillationState.isRampingIn = oscillation.enableRampIn;
+    oscillationState.isRampingOut = false;
+    oscillationState.isReturning = false;
+    oscillationState.isInitialPositioning = true;  // 🚀 Active le positionnement progressif initial
+    
+    // 🎯 RESET PHASE TRACKING for smooth transitions
+    oscillationState.accumulatedPhase = 0.0;
+    oscillationState.lastPhaseUpdateMs = 0;  // Will be initialized on first calculatePosition() call
+    oscillationState.lastPhase = 0.0;  // Reset cycle counter tracking
+    oscillationState.isTransitioning = false;
+    
+    // 🎯 RESET CENTER TRANSITION for fresh start
+    oscillationState.isCenterTransitioning = false;
+    oscillationState.centerTransitionStartMs = 0;
+    oscillationState.oldCenterMM = 0;
+    oscillationState.targetCenterMM = 0;
+    
+    // 🎯 RESET AMPLITUDE TRANSITION for fresh start
+    oscillationState.isAmplitudeTransitioning = false;
+    oscillationState.amplitudeTransitionStartMs = 0;
+    oscillationState.oldAmplitudeMM = 0;
+    oscillationState.targetAmplitudeMM = 0;
+    
+    // 🎯 CALCULATE INITIAL ACTUAL SPEED for display
+    float theoreticalPeakSpeed = 2.0 * PI * oscillation.frequencyHz * oscillation.amplitudeMM;
+    actualSpeedMMS_ = min(theoreticalPeakSpeed, OSC_MAX_SPEED_MM_S);
+    
+    // NOTE: Don't stop sequencer here - start() can be called BY the sequencer (P4 translation)
+    // Conflict safety is handled in WebSocket handlers (startMovement, enablePursuitMode, etc.)
+    
+    // Start movement
+    config.currentState = STATE_RUNNING;
+    ::isPaused = false;
+    
+    // Set movement type (config.executionContext remains unchanged - can be STANDALONE or SEQUENCER)
+    currentMovement = MOVEMENT_OSC;
+    
+    // Reset internal tracking flags
+    firstPositioningCall_ = true;
+    cyclesCompleteLogged_ = false;
+    catchUpWarningLogged_ = false;
+    
+    String waveformName = "SINE";
+    if (oscillation.waveform == OSC_TRIANGLE) waveformName = "TRIANGLE";
+    if (oscillation.waveform == OSC_SQUARE) waveformName = "SQUARE";
+    
+    engine->info(String("✅ Oscillation started:\n") +
+          "   Centre: " + String(oscillation.centerPositionMM, 1) + " mm\n" +
+          "   Amplitude: ±" + String(oscillation.amplitudeMM, 1) + " mm\n" +
+          "   Fréquence: " + String(oscillation.frequencyHz, 3) + " Hz\n" +
+          "   Forme: " + waveformName + "\n" +
+          "   Rampe entrée: " + String(oscillation.enableRampIn ? "OUI" : "NON") + "\n" +
+          "   Rampe sortie: " + String(oscillation.enableRampOut ? "OUI" : "NON"));
+}
+
+void OscillationControllerClass::process() {
+    // 🆕 Handle inter-cycle pause
+    if (handleCyclePause()) {
+        return;  // Still in pause
+    }
+    
+    // Handle initial positioning phase
+    if (oscillationState.isInitialPositioning) {
+        if (handleInitialPositioning()) {
+            return;  // Still positioning
+        }
+    }
+    
+    // Calculate target position FIRST (this updates completedCycles counter)
+    float targetPositionMM = calculatePosition();
+    
+    // THEN check if cycle count reached (after counter update)
+    if (oscillation.cycleCount > 0 && oscillationState.completedCycles >= oscillation.cycleCount) {
+        // Log only once when cycles complete
+        if (!cyclesCompleteLogged_) {
+            engine->debug("✅ OSC: Cycles complete! " + String(oscillationState.completedCycles) + "/" + String(oscillation.cycleCount));
+            cyclesCompleteLogged_ = true;
+        }
+        
+        if (oscillation.enableRampOut && !oscillationState.isRampingOut) {
+            // Start ramp out
+            oscillationState.isRampingOut = true;
+            oscillationState.rampStartMs = millis();
+            cyclesCompleteLogged_ = false;  // Reset for next oscillation
+        } else if (!oscillation.enableRampOut) {
+            // Stop immediately
+            ::isPaused = true;
+            
+            // NEW ARCHITECTURE: Use unified completion handler
+            onMovementComplete();
+            
+            if (oscillation.returnToCenter) {
+                oscillationState.isReturning = true;
+            }
+            cyclesCompleteLogged_ = false;  // Reset for next oscillation
+            return;
+        }
+    }
+    
+    // Convert to steps
+    long targetStep = (long)(targetPositionMM * STEPS_PER_MM);
+    
+    // Safety check contacts near limits
+    if (!checkSafetyContacts(targetStep)) {
+        return;  // Contact hit - stop
+    }
+    
+    // Move towards target position
+    long errorSteps = targetStep - currentStep;
+    
+    if (errorSteps == 0) {
+        return;  // Already at target
+    }
+    
+    // 🚀 SPEED CALCULATION: Calculate effective frequency (capped if exceeds max speed)
+    float effectiveFrequency = oscillation.frequencyHz;
+    if (oscillation.amplitudeMM > 0.0) {
+        float maxAllowedFreq = OSC_MAX_SPEED_MM_S / (2.0 * PI * oscillation.amplitudeMM);
+        if (oscillation.frequencyHz > maxAllowedFreq) {
+            effectiveFrequency = maxAllowedFreq;
+        }
+    }
+    
+    // Calculate actual peak speed using effective frequency
+    actualSpeedMMS_ = 2.0 * PI * effectiveFrequency * oscillation.amplitudeMM;
+    
+    // Use minimum step delay (speed is controlled by effective frequency, not delay)
+    unsigned long currentMicros = micros();
+    unsigned long elapsedMicros = currentMicros - lastStepMicros;
+    
+    if (elapsedMicros < OSC_MIN_STEP_DELAY_MICROS) {
+        return;  // Too early for next step
+    }
+    
+    // 🎯 STRATÉGIE "RALENTIR LA FORMULE": Seulement catch-up si erreur critique (>3mm)
+    // Sinon, 1 step fluide = le moteur suit naturellement la formule sinusoïdale
+    long absErrorSteps = abs(errorSteps);
+    float errorMM = absErrorSteps / STEPS_PER_MM;
+    bool isCatchUp = (errorMM > OSC_CATCH_UP_THRESHOLD_MM);
+    
+    if (isCatchUp && !catchUpWarningLogged_) {
+        engine->warn("⚠️ OSC Catch-up activé: erreur de " + String(errorMM, 1) + "mm (seuil: " + String(OSC_CATCH_UP_THRESHOLD_MM, 1) + "mm)");
+        catchUpWarningLogged_ = true;
+    }
+    
+    // Execute steps
+    executeSteps(targetStep, isCatchUp);
+    
+    lastStepMicros = currentMicros;
+}
+
+// ============================================================================
+// POSITION CALCULATION
+// ============================================================================
+
+float OscillationControllerClass::calculatePosition() {
+    unsigned long currentMs = millis();
+    
+    // 🎯 SMOOTH FREQUENCY TRANSITION: Use accumulated phase for perfect continuity
+    float effectiveFrequency = oscillation.frequencyHz;
+    
+    // 🚀 SPEED LIMIT: Cap frequency if theoretical speed exceeds OSC_MAX_SPEED_MM_S (300 mm/s)
+    if (oscillation.amplitudeMM > 0.0) {
+        float maxAllowedFreq = OSC_MAX_SPEED_MM_S / (2.0 * PI * oscillation.amplitudeMM);
+        if (oscillation.frequencyHz > maxAllowedFreq) {
+            effectiveFrequency = maxAllowedFreq;
+            
+            // Log warning (throttled to avoid spam)
+            static unsigned long lastSpeedLimitLog = 0;
+            if (currentMs - lastSpeedLimitLog > 5000) {
+                engine->warn("⚠️ Fréquence réduite: " + String(oscillation.frequencyHz, 2) + " Hz → " + 
+                      String(effectiveFrequency, 2) + " Hz (vitesse max: " + 
+                      String(OSC_MAX_SPEED_MM_S, 0) + " mm/s)");
+                lastSpeedLimitLog = currentMs;
+            }
+        }
+    }
+    
+    // Initialize phase tracking on first call or after reset
+    if (oscillationState.lastPhaseUpdateMs == 0) {
+        oscillationState.lastPhaseUpdateMs = currentMs;
+        oscillationState.accumulatedPhase = 0.0;
+    }
+    
+    // Calculate time delta since last update
+    unsigned long deltaMs = currentMs - oscillationState.lastPhaseUpdateMs;
+    oscillationState.lastPhaseUpdateMs = currentMs;
+    
+    if (oscillationState.isTransitioning) {
+        unsigned long transitionElapsed = currentMs - oscillationState.transitionStartMs;
+        
+        if (transitionElapsed < OSC_FREQ_TRANSITION_DURATION_MS) {
+            // Linear interpolation of frequency
+            float progress = (float)transitionElapsed / (float)OSC_FREQ_TRANSITION_DURATION_MS;
+            effectiveFrequency = oscillationState.oldFrequencyHz + 
+                                (oscillationState.targetFrequencyHz - oscillationState.oldFrequencyHz) * progress;
+            
+            // Reduced logging: every 200ms (was 100ms)
+            static unsigned long lastTransitionLog = 0;
+            if (currentMs - lastTransitionLog > OSC_TRANSITION_LOG_INTERVAL_MS) {
+                engine->debug("🔄 Transition: " + String(effectiveFrequency, 3) + " Hz (" + String(progress * 100, 0) + "%)");
+                lastTransitionLog = currentMs;
+            }
+        } else {
+            // Transition complete
+            oscillationState.isTransitioning = false;
+            effectiveFrequency = oscillation.frequencyHz;
+            engine->info("✅ Transition terminée: " + String(effectiveFrequency, 3) + " Hz");
+        }
+    }
+    
+    // 🔥 ACCUMULATE PHASE: Add phase increment based on time delta and current frequency
+    // phase increment = frequency (cycles/sec) × time (sec)
+    float phaseIncrement = effectiveFrequency * (deltaMs / 1000.0);
+    oscillationState.accumulatedPhase += phaseIncrement;
+    
+    // Calculate phase (0.0 to 1.0 per cycle) using modulo
+    float phase = fmod(oscillationState.accumulatedPhase, 1.0);
+    
+    // Calculate waveform value (-1.0 to +1.0)
+    float waveValue = 0.0;
+    
+    switch (oscillation.waveform) {
+        case OSC_SINE:
+            // Use -cos to start at maximum (like a wave crest)
+            // cos(0) = 1, cos(PI) = -1, cos(2*PI) = 1
+            #ifdef USE_SINE_LOOKUP_TABLE
+            waveValue = fastSine(phase);  // Lookup table (2µs)
+            #else
+            waveValue = -cos(phase * 2.0 * PI);  // Hardware FPU (15µs)
+            #endif
+            break;
+            
+        case OSC_TRIANGLE:
+            // Symmetric triangle: starts at +1, goes to -1, back to +1
+            if (phase < 0.5) {
+                waveValue = 1.0 - (phase * 4.0);  // Fall: +1 to -1
+            } else {
+                waveValue = -3.0 + (phase * 4.0);  // Rise: -1 to +1
+            }
+            break;
+            
+        case OSC_SQUARE:
+            // Square wave: starts at +1, switches to -1 at halfway
+            waveValue = (phase < 0.5) ? 1.0 : -1.0;
+            break;
+    }
+    
+    // Track completed cycles
+    // ⚠️ Don't increment during ramp out - we've already reached target cycle count
+    if (!oscillationState.isRampingOut && phase < oscillationState.lastPhase) {  // Cycle wrap-around detected
+        oscillationState.completedCycles++;
+        engine->debug("🔄 Cycle " + String(oscillationState.completedCycles) + "/" + String(oscillation.cycleCount));
+        
+        // 🆕 NOUVEAU: Vérifier si pause entre cycles activée
+        if (oscillation.cyclePause.enabled) {
+            // Calculer durée de pause
+            if (oscillation.cyclePause.isRandom) {
+                // 🆕 SÉCURITÉ: Garantir min ≤ max (défense en profondeur)
+                float minVal = min(oscillation.cyclePause.minPauseSec, oscillation.cyclePause.maxPauseSec);
+                float maxVal = max(oscillation.cyclePause.minPauseSec, oscillation.cyclePause.maxPauseSec);
+                float range = maxVal - minVal;
+                float randomOffset = (float)random(0, 10000) / 10000.0;
+                float pauseSec = minVal + (randomOffset * range);
+                oscPauseState.currentPauseDuration = (unsigned long)(pauseSec * 1000);
+            } else {
+                oscPauseState.currentPauseDuration = (unsigned long)(oscillation.cyclePause.pauseDurationSec * 1000);
+            }
+            
+            oscPauseState.isPausing = true;
+            oscPauseState.pauseStartMs = millis();
+            
+            engine->debug("⏸️ Pause cycle OSC: " + String(oscPauseState.currentPauseDuration) + "ms");
+        }
+        
+        // ⚠️ Send status update to frontend when cycle completes (Bug #1 fix)
+        if (config.executionContext == CONTEXT_SEQUENCER) {
+            sendSequenceStatus();
+        }
+    }
+    oscillationState.lastPhase = phase;
+    
+    // Calculate current amplitude with ramping
+    // ✅ PRO MODE: Rampes uniquement au début/fin de TOUTE la ligne (pas entre cycles)
+    float effectiveAmplitude = oscillation.amplitudeMM;
+    
+    // 🎯 SMOOTH AMPLITUDE TRANSITION: Interpolate amplitude when changed during oscillation
+    if (oscillationState.isAmplitudeTransitioning) {
+        unsigned long ampElapsed = currentMs - oscillationState.amplitudeTransitionStartMs;
+        
+        if (ampElapsed < OSC_AMPLITUDE_TRANSITION_DURATION_MS) {
+            // Linear interpolation of amplitude
+            float progress = (float)ampElapsed / (float)OSC_AMPLITUDE_TRANSITION_DURATION_MS;
+            effectiveAmplitude = oscillationState.oldAmplitudeMM + 
+                                (oscillationState.targetAmplitudeMM - oscillationState.oldAmplitudeMM) * progress;
+            
+            // Log transition progress (every 200ms)
+            static unsigned long lastAmpTransitionLog = 0;
+            if (currentMs - lastAmpTransitionLog > OSC_TRANSITION_LOG_INTERVAL_MS) {
+                engine->debug("🔄 Amplitude transition: " + String(effectiveAmplitude, 1) + " mm (" + String(progress * 100, 0) + "%)");
+                lastAmpTransitionLog = currentMs;
+            }
+        } else {
+            // Transition complete
+            oscillationState.isAmplitudeTransitioning = false;
+            effectiveAmplitude = oscillation.amplitudeMM;
+            engine->info("✅ Amplitude transition terminée: " + String(effectiveAmplitude, 1) + " mm");
+        }
+    }
+    
+    // Consolidated debug logging: every 5s (reduced from multiple 2s logs)
+    static unsigned long lastDebugMs = 0;
+    if (currentMs - lastDebugMs > OSC_DEBUG_LOG_INTERVAL_MS) {
+        engine->debug("🌊 OSC: amp=" + String(effectiveAmplitude, 1) + "/" + String(oscillation.amplitudeMM, 1) + 
+              "mm, center=" + String(oscillation.centerPositionMM, 1) + 
+              "mm, rampIn=" + String(oscillationState.isRampingIn) + 
+              ", rampOut=" + String(oscillationState.isRampingOut));
+        lastDebugMs = currentMs;
+    }
+    
+    if (oscillationState.isRampingIn) {
+        unsigned long rampElapsed = currentMs - oscillationState.rampStartMs;
+        
+        if (rampElapsed < OSC_RAMP_START_DELAY_MS) {
+            // Phase de stabilisation : amplitude = 0
+            effectiveAmplitude = 0;
+        } else if (rampElapsed < (oscillation.rampInDurationMs + OSC_RAMP_START_DELAY_MS)) {
+            // Phase de rampe : calculer la progression depuis la fin du délai
+            unsigned long adjustedElapsed = rampElapsed - OSC_RAMP_START_DELAY_MS;
+            float rampProgress = (float)adjustedElapsed / (float)oscillation.rampInDurationMs;
+            effectiveAmplitude = oscillation.amplitudeMM * rampProgress;
+        } else {
+            // Ramp in complete - switch to full amplitude
+            oscillationState.isRampingIn = false;
+            effectiveAmplitude = oscillation.amplitudeMM;
+        }
+    } else if (oscillationState.isRampingOut) {
+        unsigned long rampElapsed = currentMs - oscillationState.rampStartMs;
+        if (rampElapsed < oscillation.rampOutDurationMs) {
+            float rampProgress = 1.0 - ((float)rampElapsed / (float)oscillation.rampOutDurationMs);
+            effectiveAmplitude = oscillation.amplitudeMM * rampProgress;
+        } else {
+            // Ramp out complete, stop oscillation
+            effectiveAmplitude = 0;
+            oscillationState.isRampingOut = false;
+            ::isPaused = true;  // Stop movement
+            
+            // ✅ SEQUENCE MODE: Set state to READY and notify sequencer
+            if (seqState.isRunning) {
+                config.currentState = STATE_READY;
+                currentMovement = MOVEMENT_VAET;  // Reset to VA-ET-VIENT for sequencer
+                onMovementComplete();  // CRITICAL: Notify sequencer that oscillation is complete
+            }
+        }
+    }
+    
+    oscillationState.currentAmplitude = effectiveAmplitude;
+    
+    // 🎯 SMOOTH CENTER TRANSITION: Interpolate center position when changed
+    float effectiveCenterMM = oscillation.centerPositionMM;
+    
+    if (oscillationState.isCenterTransitioning) {
+        unsigned long centerElapsed = currentMs - oscillationState.centerTransitionStartMs;
+        
+        if (centerElapsed < OSC_CENTER_TRANSITION_DURATION_MS) {
+            // Linear interpolation of center position
+            float progress = (float)centerElapsed / (float)OSC_CENTER_TRANSITION_DURATION_MS;
+            effectiveCenterMM = oscillationState.oldCenterMM + 
+                                (oscillationState.targetCenterMM - oscillationState.oldCenterMM) * progress;
+            
+            // Log transition progress (every 200ms)
+            static unsigned long lastCenterTransitionLog = 0;
+            if (currentMs - lastCenterTransitionLog > OSC_TRANSITION_LOG_INTERVAL_MS) {
+                engine->debug("🎯 Centre transition: " + String(effectiveCenterMM, 1) + " mm (" + String(progress * 100, 0) + "%)");
+                lastCenterTransitionLog = currentMs;
+            }
+        } else {
+            // Transition complete
+            oscillationState.isCenterTransitioning = false;
+            effectiveCenterMM = oscillation.centerPositionMM;
+            engine->info("✅ Centre transition terminée: " + String(effectiveCenterMM, 1) + " mm");
+        }
+    }
+    
+    // Calculate final position
+    float targetPositionMM = effectiveCenterMM + (waveValue * effectiveAmplitude);
+    
+    // Clamp to physical limits with warning
+    float minPositionMM = config.minStep / STEPS_PER_MM;
+    float maxPositionMM = config.maxStep / STEPS_PER_MM;
+    
+    if (targetPositionMM < minPositionMM) {
+        engine->warn("⚠️ OSC: Limité par START (" + String(targetPositionMM, 1) + "→" + String(minPositionMM, 1) + "mm)");
+        targetPositionMM = minPositionMM;
+    }
+    
+    if (targetPositionMM > maxPositionMM) {
+        engine->warn("⚠️ OSC: Limité par END (" + String(targetPositionMM, 1) + "→" + String(maxPositionMM, 1) + "mm)");
+        targetPositionMM = maxPositionMM;
+    }
+    
+    return targetPositionMM;
+}
+
+// ============================================================================
+// VALIDATION
+// ============================================================================
+
+bool OscillationControllerClass::validateAmplitude(float centerMM, float amplitudeMM, String& errorMsg) {
+    // Use effective max distance (respects limitation percentage)
+    float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+    
+    float minRequired = centerMM - amplitudeMM;
+    float maxRequired = centerMM + amplitudeMM;
+    
+    if (minRequired < 0) {
+        errorMsg = "Amplitude trop grande: position minimum < 0 mm (" + String(minRequired, 1) + "mm)";
+        return false;
+    }
+    
+    if (maxRequired > maxAllowed) {
+        errorMsg = "Amplitude trop grande: position maximum > " + String(maxAllowed, 1) + " mm (" + String(maxRequired, 1) + "mm)";
+        if (maxDistanceLimitPercent < 100.0) {
+            errorMsg += " [Limitation " + String(maxDistanceLimitPercent, 0) + "%]";
+        }
+        return false;
+    }
+    
+    return true;
+}
+
+// ============================================================================
+// INTERNAL HELPERS
+// ============================================================================
+
+bool OscillationControllerClass::handleCyclePause() {
+    if (!oscPauseState.isPausing) {
+        return false;
+    }
+    
+    unsigned long elapsedMs = millis() - oscPauseState.pauseStartMs;
+    if (elapsedMs >= oscPauseState.currentPauseDuration) {
+        // Pause terminée - AJUSTER le timer pour éviter un "saut" de phase
+        unsigned long pauseDuration = elapsedMs;
+        oscillationState.lastPhaseUpdateMs = millis();  // Reset le timer pour éviter deltaMs énorme
+        
+        oscPauseState.isPausing = false;
+        engine->debug("▶️ Fin pause cycle OSC (" + String(pauseDuration) + "ms) - Phase gelée");
+        return false;  // Pause complete, can continue
+    }
+    
+    return true;  // Still pausing
+}
+
+bool OscillationControllerClass::handleInitialPositioning() {
+    // Cible = centre (pas de sinusoïde pendant le positionnement initial)
+    float targetPositionMM = oscillation.centerPositionMM;
+    long targetStep = (long)(targetPositionMM * STEPS_PER_MM);
+    long errorSteps = targetStep - currentStep;
+    
+    // DEBUG: Log position actuelle au premier appel
+    if (firstPositioningCall_) {
+        float currentMM = currentStep / STEPS_PER_MM;
+        engine->debug("🚀 Début positionnement: Position=" + String(currentMM, 1) + 
+              "mm → Cible=" + String(targetPositionMM, 1) + 
+              "mm (erreur=" + String(errorSteps) + " steps = " + 
+              String(errorSteps / STEPS_PER_MM, 1) + "mm)");
+        firstPositioningCall_ = false;
+    }
+    
+    if (errorSteps == 0) {
+        return true;  // Already at target (but still in positioning mode until tolerance check)
+    }
+    
+    unsigned long currentMicros = micros();
+    unsigned long elapsedMicros = currentMicros - lastStepMicros;
+    
+    if (elapsedMicros < OSC_POSITIONING_STEP_DELAY_MICROS) {
+        return true;  // Trop tôt pour le prochain step
+    }
+    
+    // Mouvement ultra-doux: 1 step à la fois
+    bool moveForward = (errorSteps > 0);
+    Motor.setDirection(moveForward);
+    Motor.step();
+    
+    if (moveForward) {
+        currentStep++;
+        if (currentStep > lastStepForDistance) {
+            totalDistanceTraveled += (currentStep - lastStepForDistance);
+            lastStepForDistance = currentStep;
+        }
+    } else {
+        currentStep--;
+        if (lastStepForDistance > currentStep) {
+            totalDistanceTraveled += (lastStepForDistance - currentStep);
+            lastStepForDistance = currentStep;
+        }
+    }
+    
+    lastStepMicros = currentMicros;
+    
+    // Désactiver le positionnement initial quand on est au centre
+    long absErrorSteps = abs(errorSteps);
+    if (absErrorSteps < (long)(OSC_INITIAL_POSITIONING_TOLERANCE_MM * STEPS_PER_MM)) {
+        oscillationState.isInitialPositioning = false;
+        oscillationState.startTimeMs = millis();  // Reset timer
+        engine->debug("✅ Positionnement terminé");
+        return false;  // Positioning complete
+    }
+    
+    return true;  // Still positioning
+}
+
+bool OscillationControllerClass::checkSafetyContacts(long targetStep) {
+    // 🆕 OPTIMISATION: Safety check contacts - Test UNIQUEMENT si oscillation proche des limites
+    // Calcul des positions extrêmes de l'oscillation
+    float minOscPositionMM = oscillation.centerPositionMM - oscillation.amplitudeMM;
+    float maxOscPositionMM = oscillation.centerPositionMM + oscillation.amplitudeMM;
+    
+    // Test END contact uniquement si oscillation approche de la limite haute
+    float distanceToEndLimitMM = config.totalDistanceMM - maxOscPositionMM;
+    if (distanceToEndLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
+        if (targetStep >= config.maxStep && Contacts.readDebounced(PIN_END_CONTACT, LOW)) {
+            sendError("❌ OSCILLATION: Contact END atteint de manière inattendue (amplitude proche limite)");
+            ::isPaused = true;
+            return false;
+        }
+    }
+
+    // Test START contact uniquement si oscillation approche de la limite basse
+    if (minOscPositionMM <= HARD_DRIFT_TEST_ZONE_MM) {
+        if (targetStep <= config.minStep && readContactDebounced(PIN_START_CONTACT, LOW, 3, 100)) {
+            sendError("❌ OSCILLATION: Contact START atteint de manière inattendue (amplitude proche limite)");
+            ::isPaused = true;
+            return false;
+        }
+    }
+    
+    return true;  // Safe
+}
+
+void OscillationControllerClass::executeSteps(long targetStep, bool isCatchUp) {
+    long errorSteps = targetStep - currentStep;
+    long absErrorSteps = abs(errorSteps);
+    
+    int stepsToExecute;
+    if (isCatchUp) {
+        stepsToExecute = min(absErrorSteps, (long)OSC_MAX_STEPS_PER_CATCH_UP);
+    } else {
+        // OSCILLATION NORMALE: 1 step fluide = suivre naturellement la sinusoïde
+        stepsToExecute = 1;
+    }
+    
+    // Execute steps
+    bool moveForward = (errorSteps > 0);
+    Motor.setDirection(moveForward);
+    
+    for (int i = 0; i < stepsToExecute; i++) {
+        Motor.step();
+        if (moveForward) {
+            currentStep++;
+            // Track distance traveled
+            if (currentStep > lastStepForDistance) {
+                totalDistanceTraveled += (currentStep - lastStepForDistance);
+                lastStepForDistance = currentStep;
+            }
+        } else {
+            currentStep--;
+            // Track distance traveled
+            if (lastStepForDistance > currentStep) {
+                totalDistanceTraveled += (lastStepForDistance - currentStep);
+                lastStepForDistance = currentStep;
+            }
+        }
+    }
+}
