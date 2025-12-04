@@ -3,7 +3,7 @@
 ## 📁 Structure Actuelle (Post-Modularisation Phase 1-3)
 
 ```
-stepper_controller_restructured.ino (6122 lignes)   ← Principal (réduit de 6660)
+stepper_controller_restructured.ino (6064 lignes)   ← Principal (réduit de 6660)
 ├── include/
 │   ├── Config.h                  (~200 lignes)     ← Constantes, GPIO, timing
 │   ├── Types.h                   (~400 lignes)     ← Structs, enums
@@ -33,7 +33,7 @@ stepper_controller_restructured.ino (6122 lignes)   ← Principal (réduit de 66
 
 ## 📈 Catégorisation des Fonctions (.ino)
 
-### 🟢 MIGRÉ vers Modules (~900 lignes extraites)
+### 🟢 MIGRÉ vers Modules (~1000 lignes extraites)
 | Fonction | Module | Status |
 |----------|--------|--------|
 | `Motor.step()` | MotorDriver | ✅ |
@@ -48,17 +48,20 @@ stepper_controller_restructured.ino (6122 lignes)   ← Principal (réduit de 66
 | `Validators::motionRange()` | Validators.h | ✅ |
 | `Validators::chaosParams()` | Validators.h | ✅ |
 | `Validators::oscillationParams()` | Validators.h | ✅ |
+| `engine->incrementDailyStats()` | UtilityEngine | ✅ |
+| `engine->getTodayDistance()` | UtilityEngine | ✅ |
 
-### 🟡 PEUT MIGRER vers UtilityEngine (~80 lignes restantes)
+### 🟡 PEUT MIGRER vers UtilityEngine (~30 lignes restantes)
 | Fonction | Lignes | Raison |
 |----------|--------|--------|
 | `serviceWebSocketFor()` | ~8 | Utilitaire WebSocket générique |
 | `sendError()` | ~15 | Déjà utilise engine->error(), peut être intégré |
-| `incrementDailyStats()` | ~30 | Gestion stats/fichiers → UtilityEngine |
-| `saveCurrentSessionStats()` | ~15 | Gestion stats/fichiers → UtilityEngine |
 
 ### 🟠 VALIDATEURS ✅ COMPLÉTÉ
 Tous migrés vers `include/Validators.h` (310 lignes)
+
+### 🟣 STATS ✅ COMPLÉTÉ  
+Migrés vers `UtilityEngine` (incrementDailyStats, getTodayDistance)
 
 ### 🔵 PEUT CRÉER NOUVEAUX MODULES (~3500 lignes)
 | Module Proposé | Fonctions | Lignes | Priorité |
@@ -125,10 +128,10 @@ Extraire les 8 handlers de webSocketEvent dans un module dédié:
 
 | Métrique | Valeur |
 |----------|--------|
-| Lignes .ino | 6122 |
-| Fonctions dans .ino | ~60 |
-| Modules extraits | 4 (Motor, Contacts, Calibration, Validators) |
-| Lignes extraites | ~900 |
+| Lignes .ino | 6064 |
+| Fonctions dans .ino | ~55 |
+| Modules extraits | 4 (Motor, Contacts, Calibration, Validators) + UtilityEngine extended |
+| Lignes extraites | ~1000 |
 | RAM usage | 18.2% |
 | Flash usage | 32.4% |
 

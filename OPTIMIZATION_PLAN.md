@@ -83,8 +83,12 @@
 - [x] Helpers: percentage, positive, range
 - [x] Legacy wrappers dans main .ino pour compatibilité
 
-#### Étape 4: Prochaines Optimisations (À FAIRE)
-- [ ] Migration stats functions vers UtilityEngine
+#### Étape 4: Stats vers UtilityEngine ✅ COMPLÉTÉ
+- [x] `engine->incrementDailyStats()` - Sauvegarde stats journalières
+- [x] `engine->getTodayDistance()` - Lecture stats du jour
+- [x] Migration de saveCurrentSessionStats() pour utiliser engine->incrementDailyStats()
+
+#### Étape 5: Prochaines Optimisations (À FAIRE)
 - [ ] CommandDispatcher module
 - [ ] VaetController, OscillationController, ChaosController
 
@@ -94,9 +98,9 @@
 
 | Métrique | Avant | Après | Gain |
 |----------|-------|-------|------|
-| Lignes .ino | 6660 | 6122 | -538 |
+| Lignes .ino | 6660 | 6064 | -596 |
 | Modules créés | 0 | 4 | +4 |
-| Lignes extraites | 0 | ~900 | +900 |
+| Lignes extraites | 0 | ~1000 | +1000 |
 | Flash usage | 32.4% | 32.4% | = |
 | RAM usage | 18.2% | 18.2% | = |
 

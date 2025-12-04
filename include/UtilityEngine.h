@@ -420,6 +420,23 @@ public:
   bool hasConnectedClients() const { return getConnectedClients() > 0; }
   
   // ========================================================================
+  // STATISTICS MANAGEMENT
+  // ========================================================================
+  
+  /**
+   * Increment daily statistics with distance traveled
+   * Saves to /stats.json with date as key (YYYY-MM-DD)
+   * @param distanceMM Distance to add in millimeters
+   */
+  void incrementDailyStats(float distanceMM);
+  
+  /**
+   * Get today's total distance from stats
+   * @return Distance in mm for today, 0 if no data
+   */
+  float getTodayDistance();
+  
+  // ========================================================================
   // UTILITY METHODS
   // ========================================================================
   

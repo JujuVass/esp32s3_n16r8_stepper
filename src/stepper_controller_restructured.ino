@@ -240,7 +240,6 @@ void setSpeedBackward(float speedLevel);
 void resetTotalDistance();
 void sendStatus();
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length);
-void incrementDailyStats(float distanceMM);
 void saveCurrentSessionStats();
 
 // Speed conversion utilities
@@ -1900,67 +1899,9 @@ void resetTotalDistance() {
   engine->info("🔄 Total distance counter reset to 0");
 }
 
-/**
- * Increment daily statistics with distance traveled
- * Called automatically when a standalone movement is completed
- */
 // ============================================================================
-// STATISTICS
+// STATISTICS - Delegates to UtilityEngine
 // ============================================================================
-
-void incrementDailyStats(float distanceMM) {
-  if (distanceMM <= 0) return;
-  
-  // Get current date (YYYY-MM-DD format)
-  time_t now = time(nullptr);
-  struct tm* timeinfo = localtime(&now);
-  char dateStr[11];
-  strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", timeinfo);
-  
-  // Load existing stats
-  JsonDocument statsDoc;
-  if (LittleFS.exists("/stats.json")) {
-    File file = LittleFS.open("/stats.json", "r");
-    if (file) {
-      deserializeJson(statsDoc, file);
-      file.close();
-    }
-  }
-  
-  // Find or create today's entry
-  JsonArray statsArray = statsDoc.as<JsonArray>();
-  if (statsArray.isNull()) {
-    statsArray = statsDoc.to<JsonArray>();
-  }
-  
-  bool found = false;
-  for (JsonObject entry : statsArray) {
-    if (strcmp(entry["date"], dateStr) == 0) {
-      float current = entry["distanceMM"] | 0.0;
-      entry["distanceMM"] = current + distanceMM;
-      found = true;
-      break;
-    }
-  }
-  
-  if (!found) {
-    JsonObject newEntry = statsArray.add<JsonObject>();
-    newEntry["date"] = dateStr;
-    newEntry["distanceMM"] = distanceMM;
-  }
-  
-  // Save back to file
-  File file = LittleFS.open("/stats.json", "w");
-  if (!file) {
-    engine->error("Failed to write stats.json");
-    return;
-  }
-  
-  serializeJson(statsDoc, file);
-  file.close();
-  
-  engine->debug(String("📊 Stats: +") + String(distanceMM, 1) + "mm on " + String(dateStr));
-}
 
 /**
  * Save current session's total distance to daily stats
@@ -1984,8 +1925,8 @@ void saveCurrentSessionStats() {
     return;
   }
   
-  // Save increment to daily stats
-  incrementDailyStats(incrementMM);
+  // Save increment to daily stats via UtilityEngine
+  engine->incrementDailyStats(incrementMM);
   
   engine->debug(String("💾 Session stats saved: +") + String(incrementMM, 1) + "mm (total session: " + String(totalDistanceTraveled / STEPS_PER_MM, 1) + "mm)");
   
@@ -5408,7 +5349,7 @@ void onMovementComplete() {
     
     // Auto-increment daily statistics with distance traveled
     if (motion.targetDistanceMM > 0) {
-      incrementDailyStats(motion.targetDistanceMM);
+      engine->incrementDailyStats(motion.targetDistanceMM);
     }
     
     engine->info("✅ Mouvement terminé (STANDALONE)");
