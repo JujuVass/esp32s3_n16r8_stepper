@@ -1765,19 +1765,27 @@ void doStep() {
     }
     
     // HARD DRIFT (Physical contact reached = critical error)
+    // 🆕 OPTIMISATION: Test UNIQUEMENT si proche de config.maxStep (réduit faux positifs + overhead CPU)
     // Action: Emergency stop, ERROR state
-    if (readContactDebounced(PIN_END_CONTACT, LOW, 3, 50)) {
-      float currentPos = currentStep / STEPS_PER_MM;
-      
-      engine->error(String("🔴 Hard drift END! Physical contact at ") + 
-            String(currentPos, 1) + "mm (currentStep: " + String(currentStep) + ")");
-      
-      sendError("❌ ERREUR CRITIQUE: Contact END atteint - Position dérivée au-delà du buffer de sécurité");
-      
-      stopMovement();
-      config.currentState = STATE_ERROR;
-      digitalWrite(PIN_ENABLE, HIGH);
-      return;
+    long stepsToLimit = config.maxStep - currentStep;  // Steps remaining until limit
+    float distanceToLimitMM = stepsToLimit / STEPS_PER_MM;
+    
+    if (distanceToLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
+      // Close to limit → activate physical contact test
+      if (readContactDebounced(PIN_END_CONTACT, LOW, 5, 75)) {
+        float currentPos = currentStep / STEPS_PER_MM;
+        
+        engine->error(String("🔴 Hard drift END! Physical contact at ") + 
+              String(currentPos, 1) + "mm (currentStep: " + String(currentStep) + 
+              " | " + String(distanceToLimitMM, 1) + "mm from limit)");
+        
+        sendError("❌ ERREUR CRITIQUE: Contact END atteint - Position dérivée au-delà du buffer de sécurité");
+        
+        stopMovement();
+        config.currentState = STATE_ERROR;
+        digitalWrite(PIN_ENABLE, HIGH);
+        return;
+      }
     }
     
     // Check if reached target position
@@ -1836,19 +1844,26 @@ void doStep() {
     }
     
     // HARD DRIFT (Physical contact reached = critical error)
+    // 🆕 OPTIMISATION: Test UNIQUEMENT si proche de position 0 (réduit faux positifs + overhead CPU)
     // Action: Emergency stop, ERROR state
-    if (readContactDebounced(PIN_START_CONTACT, LOW, 3, 50)) {
-      float currentPos = currentStep / STEPS_PER_MM;
+    float distanceToStartMM = currentStep / STEPS_PER_MM;
+    
+    if (distanceToStartMM <= HARD_DRIFT_TEST_ZONE_MM) {
+      // Close to start → activate physical contact test
+      if (readContactDebounced(PIN_START_CONTACT, LOW, 5, 75)) {
+        float currentPos = currentStep / STEPS_PER_MM;
 
-      engine->error(String("🔴 Hard drift START! Physical contact at ") +
-            String(currentPos, 1) + "mm (currentStep: " + String(currentStep) + ")");
-      
-      sendError("❌ ERREUR CRITIQUE: Contact START atteint - Position dérivée au-delà du buffer de sécurité");
-      
-      stopMovement();
-      config.currentState = STATE_ERROR;
-      digitalWrite(PIN_ENABLE, HIGH);
-      return;
+        engine->error(String("🔴 Hard drift START! Physical contact at ") +
+              String(currentPos, 1) + "mm (currentStep: " + String(currentStep) + 
+              " | " + String(distanceToStartMM, 1) + "mm from start)");
+        
+        sendError("❌ ERREUR CRITIQUE: Contact START atteint - Position dérivée au-delà du buffer de sécurité");
+        
+        stopMovement();
+        config.currentState = STATE_ERROR;
+        digitalWrite(PIN_ENABLE, HIGH);
+        return;
+      }
     }
     
     // First, execute the step
@@ -1989,10 +2004,15 @@ bool checkChaosLimits() {
   float nextPosMM = movingForward ? (currentStep + 1) * STEPS_PER_MM_INV 
                                    : (currentStep - 1) * STEPS_PER_MM_INV;
   
+  // 🆕 OPTIMISATION: Test contacts physiques UNIQUEMENT si amplitude proche des limites
+  float minChaosPositionMM = chaos.centerPositionMM - chaos.amplitudeMM;
+  float maxChaosPositionMM = chaos.centerPositionMM + chaos.amplitudeMM;
+  
   if (movingForward) {
     // Check upper limit (use effective max distance to respect limitation)
     float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
     float effectiveMaxLimit = min(chaos.centerPositionMM + chaos.amplitudeMM, maxAllowed);
+    
     if (nextPosMM > effectiveMaxLimit) {
       engine->warn(String("🛡️ CHAOS: Hit upper limit! Current: ") + 
             String(currentPosMM, 1) + "mm | Limit: " + String(effectiveMaxLimit, 1) + "mm");
@@ -2000,15 +2020,38 @@ bool checkChaosLimits() {
       movingForward = false;  // CRITICAL: Must reverse to go DOWN
       return false;  // Limit hit
     }
+    
+    // Test END contact si chaos approche de la limite haute
+    float distanceToEndLimitMM = config.totalDistanceMM - maxChaosPositionMM;
+    if (distanceToEndLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
+      if (readContactDebounced(PIN_END_CONTACT, LOW, 3, 50)) {
+        sendError("❌ CHAOS: Contact END atteint - amplitude proche limite");
+        config.currentState = STATE_ERROR;
+        chaosState.isRunning = false;
+        return false;
+      }
+    }
+    
   } else {
     // Check lower limit
     float effectiveMinLimit = max(chaos.centerPositionMM - chaos.amplitudeMM, 0.0f);
+    
     if (nextPosMM < effectiveMinLimit) {
       engine->debug(String("🛡️ CHAOS: Hit lower limit! Current: ") + 
             String(currentPosMM, 1) + "mm | Limit: " + String(effectiveMinLimit, 1) + "mm");
       targetStep = currentStep;
       movingForward = true;  // CRITICAL: Must reverse to go UP
       return false;  // Limit hit
+    }
+    
+    // Test START contact si chaos approche de la limite basse
+    if (minChaosPositionMM <= HARD_DRIFT_TEST_ZONE_MM) {
+      if (readContactDebounced(PIN_START_CONTACT, LOW, 3, 50)) {
+        sendError("❌ CHAOS: Contact START atteint - amplitude proche limite");
+        config.currentState = STATE_ERROR;
+        chaosState.isRunning = false;
+        return false;
+      }
     }
   }
   
@@ -2017,8 +2060,22 @@ bool checkChaosLimits() {
 
 void togglePause() {
   if (config.currentState == STATE_RUNNING || config.currentState == STATE_PAUSED) {
+    // 💾 Save stats BEFORE toggling pause (save accumulated distance)
+    if (!isPaused) {
+      // Going from RUNNING → PAUSED: save current session
+      saveCurrentSessionStats();
+      engine->debug("💾 Stats saved before pause");
+    }
+    
     isPaused = !isPaused;
     config.currentState = isPaused ? STATE_PAUSED : STATE_RUNNING;
+    
+    // 🆕 CORRECTION: Reset timer en mode oscillation pour éviter le saut de phase lors de la reprise
+    if (!isPaused && currentMovement == MOVEMENT_OSC) {
+      oscillationState.lastPhaseUpdateMs = millis();
+      engine->debug("🔄 Phase gelée après pause (évite à-coup)");
+    }
+    
     engine->info(isPaused ? "Paused" : "Resumed");
   }
 }
@@ -2416,6 +2473,36 @@ void doPursuitStep() {
     pursuit.isMoving = false;
     engine->warn("⚠️ Pursuit: reached config.minStep limit");
     return;
+  }
+  
+  // 🆕 OPTIMISATION: HARD DRIFT detection - Test UNIQUEMENT si proche des limites
+  // Test END contact si poursuite vers limite haute
+  if (moveForward) {
+    long stepsToLimit = config.maxStep - currentStep;
+    float distanceToLimitMM = stepsToLimit / STEPS_PER_MM;
+    
+    if (distanceToLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
+      if (readContactDebounced(PIN_END_CONTACT, LOW, 3, 50)) {
+        pursuit.isMoving = false;
+        pursuit.targetStep = currentStep;
+        sendError("❌ PURSUIT: Contact END atteint - arrêt sécurité");
+        config.currentState = STATE_ERROR;
+        return;
+      }
+    }
+  } else {
+    // Test START contact si poursuite vers limite basse
+    float distanceToStartMM = currentStep / STEPS_PER_MM;
+    
+    if (distanceToStartMM <= HARD_DRIFT_TEST_ZONE_MM) {
+      if (readContactDebounced(PIN_START_CONTACT, LOW, 3, 50)) {
+        pursuit.isMoving = false;
+        pursuit.targetStep = currentStep;
+        sendError("❌ PURSUIT: Contact START atteint - arrêt sécurité");
+        config.currentState = STATE_ERROR;
+        return;
+      }
+    }
   }
   
   // Execute one step
@@ -2830,17 +2917,28 @@ void doOscillationStep() {
   // Continue with target position calculation
   long targetStep = (long)(targetPositionMM * STEPS_PER_MM);
   
-  // Safety check contacts
-  if (targetStep >= config.maxStep && readContactDebounced(PIN_END_CONTACT, LOW)) {
-    sendError("❌ OSCILLATION: Contact end atteint de manière inattendue");
-    isPaused = true;
-    return;
+  // 🆕 OPTIMISATION: Safety check contacts - Test UNIQUEMENT si oscillation proche des limites
+  // Calcul des positions extrêmes de l'oscillation
+  float minOscPositionMM = oscillation.centerPositionMM - oscillation.amplitudeMM;
+  float maxOscPositionMM = oscillation.centerPositionMM + oscillation.amplitudeMM;
+  
+  // Test END contact uniquement si oscillation approche de la limite haute
+  float distanceToEndLimitMM = config.totalDistanceMM - maxOscPositionMM;
+  if (distanceToEndLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
+    if (targetStep >= config.maxStep && readContactDebounced(PIN_END_CONTACT, LOW)) {
+      sendError("❌ OSCILLATION: Contact END atteint de manière inattendue (amplitude proche limite)");
+      isPaused = true;
+      return;
+    }
   }
 
-  if (targetStep <= config.minStep && readContactDebounced(PIN_START_CONTACT, LOW)) {
-    sendError("❌ OSCILLATION: Contact start atteint de manière inattendue");
-    isPaused = true;
-    return;
+  // Test START contact uniquement si oscillation approche de la limite basse
+  if (minOscPositionMM <= HARD_DRIFT_TEST_ZONE_MM) {
+    if (targetStep <= config.minStep && readContactDebounced(PIN_START_CONTACT, LOW)) {
+      sendError("❌ OSCILLATION: Contact START atteint de manière inattendue (amplitude proche limite)");
+      isPaused = true;
+      return;
+    }
   }
   
   // Move towards target position
@@ -5051,9 +5149,11 @@ bool handleSequencerCommands(const char* cmd, JsonDocument& doc, const String& m
     
     engine->debug(String("📊 Stats tracking: ") + (enable ? "ENABLED" : "DISABLED"));
     
-    // If enabling, immediately send stats in next status update
+    // 💾 Save current session stats when opening Stats panel
     if (enable) {
-      sendStatus();
+      saveCurrentSessionStats();
+      engine->debug("💾 Stats saved on panel open");
+      sendStatus();  // Immediately send stats in next status update
     }
     
     return true;

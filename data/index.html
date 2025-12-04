@@ -1080,7 +1080,7 @@
       </div>
       <div style="margin: 20px 0; padding: 15px; background: #FFF3E0; border-radius: 5px; border: 2px solid #FF9800;">
         <label style="display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: normal;">
-          <input type="checkbox" id="bypassCalibrationCheckbox" style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;">
+          <input type="checkbox" id="bypassCalibrationCheckbox" checked style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;">
           <span style="color: #FF9800; font-weight: bold;">/!\ Bypasser la calibration complète</span>
         </label>
         <div style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;">
@@ -2837,49 +2837,105 @@
     // MILESTONES - Distance Achievement Tracking
     // ========================================================================
     // Sorted by threshold (meters) ascending for efficient lookup
-    const MILESTONES = [
+  const MILESTONES = [
   { threshold: 0, emoji: "🐜", name: "", location: "Global" },
+  { threshold: 0.008, emoji: "🦄💕", name: "Copulation ventrale (1 rapport) - Hippocampe", location: "Mer" },
   { threshold: 0.65, emoji: "🐕", name: "Chien (berger allemand)", location: "Global" },
   { threshold: 1.8, emoji: "🧍‍♂️", name: "Humain adulte moyen", location: "Global" },
-  { threshold: 3.3, emoji: "🐘", name: "Éléphant d’Afrique", location: "Afrique subsaharienne" },
+  { threshold: 1.92, emoji: "🐇💕", name: "Saut sexuel (1 rapport) - Lapin", location: "Global" },
+  { threshold: 3.3, emoji: "🐘", name: "Éléphant d'Afrique", location: "Afrique subsaharienne" },
   { threshold: 5.5, emoji: "🦒", name: "Girafe", location: "Afrique" },
+  { threshold: 5.76, emoji: "🐒💕", name: "Copulation (1 rapport) - Bonobo", location: "Global" },
   { threshold: 6.5, emoji: "🐍", name: "Serpent (python réticulé)", location: "Asie du Sud-Est" },
   { threshold: 8, emoji: "🏠", name: "Maison standard", location: "-" },
+  { threshold: 8, emoji: "🦄💝", name: "Copulation ventrale (1 mois) - Hippocampe", location: "Mer" },
+  { threshold: 8.64, emoji: "🦁💕", name: "Copulation (1 rapport) - Lion", location: "Afrique" },
   { threshold: 10, emoji: "🏡", name: "Maison avec jardin", location: "-" },
   { threshold: 18, emoji: "🗿", name: "Mont Rushmore", location: "Dakota du Sud, USA" },
   { threshold: 24, emoji: "🏰", name: "Château de Versailles", location: "Versailles, France" },
   { threshold: 26, emoji: "⛲", name: "Fontaine de Trevi", location: "Rome, Italie" },
   { threshold: 30, emoji: "🐋", name: "Baleine bleue", location: "Océans du globe" },
+  { threshold: 30.72, emoji: "🐬💕", name: "Comportement sexuel social (1 rapport) - Dauphin", location: "Ocean" },
   { threshold: 58, emoji: "🏯", name: "Château d'Osaka", location: "Osaka, Japon" },
+  { threshold: 62.4, emoji: "👫💕", name: "Rapport sexuel (1 rapport) - Humain", location: "Global" },
   { threshold: 64, emoji: "🕌", name: "Mosquée Bleue", location: "Istanbul, Turquie" },
   { threshold: 65, emoji: "🛕", name: "Angkor Wat", location: "Cambodge" },
   { threshold: 68, emoji: "🏟️", name: "Stade olympique de Pékin", location: "Pékin, Chine" },
   { threshold: 73, emoji: "✈️", name: "Avion long-courrier (Airbus A380)", location: "Global" },
+  { threshold: 86.4, emoji: "🐘💕", name: "Copulation prolongée (1 rapport) - Éléphant", location: "Global" },
   { threshold: 88, emoji: "🏛️", name: "Capitole des États-Unis", location: "Washington D.C., USA" },
+  { threshold: 88, emoji: "🦄💘", name: "Copulation ventrale (1 an) - Hippocampe", location: "Mer" },
   { threshold: 93, emoji: "🗽", name: "Statue de la Liberté", location: "New York, USA" },
+  { threshold: 115.2, emoji: "🙉💕", name: "Rut semelpare (1 rapport) - Antechinus", location: "Australie" },
   { threshold: 157, emoji: "🕍", name: "Cathédrale de Cologne", location: "Cologne, Allemagne" },
+  { threshold: 160, emoji: "🦄💘", name: "Copulation ventrale (vie) - Hippocampe", location: "Mer" },
   { threshold: 172, emoji: "⛪", name: "Sagrada Família", location: "Barcelone, Espagne" },
+  { threshold: 172.8, emoji: "🐒💝", name: "Copulation (1 mois) - Bonobo", location: "Global" },
+  { threshold: 230.4, emoji: "🐴💕", name: "Monte accouplement (1 rapport) - Cheval", location: "Global" },
   { threshold: 300, emoji: "🗼", name: "Tour Eiffel", location: "Paris, France" },
   { threshold: 321, emoji: "🏨", name: "Burj Al Arab", location: "Dubaï, EAU" },
   { threshold: 360, emoji: "🚢", name: "Navire (porte-conteneurs / paquebot)", location: "Global" },
   { threshold: 367, emoji: "🏦", name: "Banque de Chine", location: "Hong Kong" },
   { threshold: 381, emoji: "🏢", name: "Empire State Building", location: "New York, USA" },
+  { threshold: 499.2, emoji: "👫💝", name: "Rapport sexuel (1 mois) - Humain (normal)", location: "Global" },
   { threshold: 553, emoji: "🏗️", name: "CN Tower", location: "Toronto, Canada" },
   { threshold: 634, emoji: "🗼", name: "Tokyo Skytree", location: "Tokyo, Japon" },
+  { threshold: 748.8, emoji: "👬💝", name: "Rapport anal (1 mois) - Humain (homosexuel)", location: "Global" },
   { threshold: 828, emoji: "🏙️", name: "Burj Khalifa", location: "Dubaï, EAU" },
+  { threshold: 864, emoji: "🦁💝", name: "Copulation (1 mois) - Lion", location: "Afrique" },
+  { threshold: 884, emoji: "🐘💝", name: "Copulation prolongée (1 mois) - Éléphant", location: "Global" },
+  { threshold: 921.6, emoji: "🐬💝", name: "Comportement sexuel social (1 mois) - Dauphin", location: "Ocean" },
+  { threshold: 998.4, emoji: "💏💝", name: "Addiction sexuelle (1 mois) - Humain (hyperactif)", location: "Global" },
   { threshold: 1200, emoji: "🗼🗼🗼🗼", name: "4x Tour Eiffel", location: "Paris, France" },
+  { threshold: 1382.4, emoji: "🐴💝", name: "Monte accouplement (1 mois) - Cheval", location: "Global" },
+  { threshold: 1728, emoji: "🐇💝", name: "Saut sexuel (1 mois) - Lapin", location: "Global" },
+  { threshold: 1900.8, emoji: "🐒💘", name: "Copulation (1 an) - Bonobo", location: "Global" },
+  { threshold: 3120, emoji: "💋💝", name: "Hypersexualité (1 mois) - Humain (nymphomane)", location: "Global" },
+  { threshold: 3456, emoji: "🦁💘", name: "Copulation (1 an) - Lion", location: "Afrique" },
+  { threshold: 3656, emoji: "🙉💝", name: "Rut semelpare (1 mois) - Antechinus (frénésie)", location: "Australie" },
   { threshold: 3911, emoji: "🌉", name: "Pont Akashi Kaikyō", location: "Japon" },
+  { threshold: 4992, emoji: "👫💘", name: "Rapport sexuel (1 an) - Humain (normal)", location: "Global" },
+  { threshold: 5760, emoji: "🙉💘", name: "Rut semelpare (1 an) - Antechinus (frénésie)", location: "Australie" },
+  { threshold: 8236.8, emoji: "👬💘", name: "Rapport anal (1 an) - Humain (homosexuel)", location: "Global" },
   { threshold: 8848, emoji: "🏔️", name: "Mont Everest", location: "Népal / Chine" },
+  { threshold: 9216, emoji: "🐬💘", name: "Comportement sexuel social (1 an) - Dauphin", location: "Ocean" },
+  { threshold: 9504, emoji: "🐘💘", name: "Copulation prolongée (1 an) - Éléphant", location: "Global" },
   { threshold: 9966, emoji: "🌋", name: "Mauna Kea (base-sommet)", location: "Hawaï, USA" },
-  { threshold: 10000, emoji: "🌆", name: "Métropole / Skyline", location: "Variable" },
+  { threshold: 9984, emoji: "💏💘", name: "Addiction sexuelle (1 an) - Humain (hyperactif)", location: "Global" },
+  { threshold: 11059.2, emoji: "🐴💘", name: "Monte accouplement (1 an) - Cheval", location: "Global" },
+  { threshold: 15000, emoji: "🏃", name: "Semi-marathon", location: "Course à pied" },
+  { threshold: 19008, emoji: "🐇💘", name: "Saut sexuel (1 an) - Lapin", location: "Global" },
+  { threshold: 21097, emoji: "🏃‍♂️", name: "Semi-marathon (officiel 21.097 km)", location: "Course à pied" },
+  { threshold: 27648, emoji: "🦁💞", name: "Copulation (vie) - Lion", location: "Afrique" },
+  { threshold: 34320, emoji: "💋💘", name: "Hypersexualité (1 an) - Humain (nymphomane)", location: "Global" },
+  { threshold: 42195, emoji: "🏅", name: "Marathon", location: "Course à pied" },
+  { threshold: 50000, emoji: "🎖️", name: "Ultramarathon 50km", location: "Course extrême" },
+  { threshold: 57024, emoji: "🐒💞", name: "Copulation (vie) - Bonobo", location: "Global" },
+  { threshold: 95040, emoji: "🐇💞", name: "Saut sexuel (vie) - Lapin", location: "Global" },
   { threshold: 100000, emoji: "🚀", name: "Ligne de Kármán (espace)", location: "Espace" },
-  { threshold: 200000, emoji: "🛰️", name: "Satellite orbital (LEO)", location: "Orbite terrestre" },
+  { threshold: 100000, emoji: "💯", name: "100 kilomètres!", location: "Milestone psychologique" },
+  { threshold: 124800, emoji: "👫💞", name: "Rapport sexuel (vie) - Humain (normal)", location: "Global" },
+  { threshold: 164736, emoji: "👬💞", name: "Rapport anal (vie) - Humain (homosexuel)", location: "Global" },
   { threshold: 164800, emoji: "🌉", name: "Pont Danyang–Kunshan", location: "Chine" },
+  { threshold: 172800, emoji: "🐘💞", name: "Copulation prolongée (vie) - Éléphant", location: "Global" },
+  { threshold: 200000, emoji: "🛰️", name: "Satellite orbital (LEO)", location: "Orbite terrestre" },
+  { threshold: 221184, emoji: "🐴💞", name: "Monte accouplement (vie) - Cheval", location: "Global" },
+  { threshold: 249600, emoji: "💏💞", name: "Addiction sexuelle (vie) - Humain (hyperactif)", location: "Global" },
+  { threshold: 368640, emoji: "🐬💞", name: "Comportement sexuel social (vie) - Dauphin", location: "Ocean" },
   { threshold: 425000, emoji: "🚝", name: "Ligne TGV Paris–Lyon", location: "France" },
+  { threshold: 858000, emoji: "💋💞", name: "Hypersexualité (vie) - Humain (nymphomane)", location: "Global" },
+  { threshold: 1000000, emoji: "🎯", name: "1 MILLION DE MÈTRES!", location: "Achievement légendaire" },
+  { threshold: 1224000, emoji: "🌊", name: "Fleuve Rhône", location: "France/Suisse" },
+  { threshold: 1776000, emoji: "🌊", name: "Fleuve Danube", location: "Europe" },
+  { threshold: 2850000, emoji: "🌊", name: "Fleuve Euphrate", location: "Moyen-Orient" },
   { threshold: 3474000, emoji: "🌕", name: "Lune (diamètre)", location: "Système Terre-Lune" },
+  { threshold: 4880000, emoji: "🌊", name: "Fleuve Yangzi Jiang", location: "Chine" },
+  { threshold: 6275000, emoji: "🌊", name: "Fleuve Amazone", location: "Amérique du Sud" },
+  { threshold: 6650000, emoji: "🌊", name: "Fleuve Nil", location: "Afrique" },
   { threshold: 7821000, emoji: "🛣️", name: "Trans-canadienne", location: "Canada" },
-  { threshold: 21196000, emoji: "🧱", name: "Grande Muraille de Chine", location: "Chine" },
   { threshold: 12742000, emoji: "🌍", name: "Terre (diamètre)", location: "Système solaire" },
+  { threshold: 21196000, emoji: "🧱", name: "Grande Muraille de Chine", location: "Chine" },
+  { threshold: 40075000, emoji: "🌎", name: "Tour de la Terre (équateur)", location: "Planète Terre" },
   { threshold: 384400000, emoji: "🌌", name: "Distance Terre–Lune", location: "Espace" },
   { threshold: 1391000000, emoji: "🌞", name: "Soleil (diamètre)", location: "Système solaire" }
 ];
@@ -6184,6 +6240,7 @@
       // Update Pause/Resume buttons for Simple, Oscillation, and Chaos modes
       const isPaused = (data.state === SystemState.PAUSED);
       const isRunningOrPaused = (isRunning || isPaused);
+      const isError = (data.state === SystemState.ERROR);
       
       // Simple mode Pause button
       const btnPause = document.getElementById('btnPause');
@@ -6196,10 +6253,10 @@
         }
       }
       
-      // Simple mode Stop button
+      // Simple mode Stop button - ALSO enabled in ERROR state for recovery
       const btnStop = document.getElementById('btnStop');
       if (btnStop) {
-        btnStop.disabled = !isRunningOrPaused;
+        btnStop.disabled = !(isRunningOrPaused || isError);
       }
       
       // Oscillation mode Pause button
@@ -6213,10 +6270,10 @@
         }
       }
       
-      // Oscillation mode Stop button
+      // Oscillation mode Stop button - ALSO enabled in ERROR state for recovery
       const btnStopOsc = document.getElementById('btnStopOscillation');
       if (btnStopOsc) {
-        btnStopOsc.disabled = !isRunningOrPaused;
+        btnStopOsc.disabled = !(isRunningOrPaused || isError);
       }
       
       // Chaos mode Pause button
@@ -6230,10 +6287,10 @@
         }
       }
       
-      // Chaos mode Stop button
+      // Chaos mode Stop button - ALSO enabled in ERROR state for recovery
       const btnStopChaos = document.getElementById('btnStopChaos');
       if (btnStopChaos) {
-        btnStopChaos.disabled = !isRunningOrPaused;
+        btnStopChaos.disabled = !(isRunningOrPaused || isError);
       }
       
       // Note: Sequence start buttons are NOT managed here anymore
@@ -9114,8 +9171,24 @@ Détecte la limite physique`;
         }
       });
       
-      // Préparer données pour Chart.js
+      // ⭐ Find milestone for each week's distance (not cumulative)
       const sortedWeeks = Object.keys(weeklyData).sort();
+      
+      sortedWeeks.forEach(weekKey => {
+        const week = weeklyData[weekKey];
+        const weekMeters = week.totalMM / 1000;  // mm to meters (distance of this week only)
+        
+        // Find the milestone corresponding to this week's distance
+        week.currentMilestone = null;
+        for (let i = MILESTONES.length - 1; i >= 0; i--) {
+          if (weekMeters >= MILESTONES[i].threshold) {
+            week.currentMilestone = MILESTONES[i];
+            break;
+          }
+        }
+      });
+      
+      // Préparer données pour Chart.js
       const labels = sortedWeeks.map(weekKey => {
         const week = weeklyData[weekKey];
         // Label: "21-27 Oct" (format compact)
@@ -9167,11 +9240,19 @@ Détecte la limite physique`;
                   return value >= 1000 ? `${(value / 1000).toFixed(2)} km` : `${value.toFixed(1)} m`;
                 },
                 afterLabel: function(context) {
-                  if (!context || !context[0] || context[0].dataIndex === undefined) return '';
-                  const weekKey = sortedWeeks[context[0].dataIndex];
+                  const weekKey = sortedWeeks[context.dataIndex];
                   const week = weeklyData[weekKey];
                   if (!week) return '';
-                  return `${week.days.length} jour(s) actif(s)`;
+                  
+                  const lines = [`${week.days.length} jour(s) actif(s)`];
+                  
+                  // ⭐ Show current milestone based on cumulative distance
+                  if (week.currentMilestone) {
+                    lines.push(''); // Empty line for spacing
+                    lines.push(`${week.currentMilestone.emoji} ${week.currentMilestone.name}`);
+                  }
+                  
+                  return lines;
                 }
               }
             }

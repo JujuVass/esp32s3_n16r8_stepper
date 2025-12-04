@@ -47,6 +47,11 @@ const float STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // 6 steps/mm
 // This creates a buffer zone for drift tolerance
 const int SAFETY_OFFSET_STEPS = 10;  // 10 steps = 1.67mm @ 6 steps/mm
 
+// Hard drift detection zone (only test physical contacts when close to limits)
+// Why 20mm? Balance between performance (88% less tests) and safety (120 steps buffer)
+// Reduces false positives and CPU overhead while maintaining excellent protection
+const float HARD_DRIFT_TEST_ZONE_MM = 20.0;  // ~120 steps @ 6 steps/mm
+
 // ============================================================================
 // CONFIGURATION - Step Timing
 // ============================================================================
