@@ -8,28 +8,30 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// ============================================================================
-// CONFIGURATION - WiFi
-// ============================================================================
-const char* ssid = "your_ssid";
-const char* password = "REDACTED_WIFI_PASSWORD";
+#include <cstdint>  // For uint8_t, uint16_t, uint32_t
 
 // ============================================================================
-// CONFIGURATION - OTA (Over-The-Air Updates)
+// CONFIGURATION - WiFi (extern declarations - defined in Config.cpp)
 // ============================================================================
-const char* otaHostname = "esp32-stepper";  // Also used for mDNS (http://esp32-stepper.local)
-const char* otaPassword = "REDACTED_OTA_PASSWORD";  // OTA password protection
+extern const char* ssid;
+extern const char* password;
+
+// ============================================================================
+// CONFIGURATION - OTA (Over-The-Air Updates) (extern declarations)
+// ============================================================================
+extern const char* otaHostname;  // Also used for mDNS (http://esp32-stepper.local)
+extern const char* otaPassword;  // OTA password protection
 
 // ============================================================================
 // CONFIGURATION - GPIO Pins
 // ============================================================================
 // Motor driver pins (HSS86 stepper driver)
 // Cable colors: Yellow=PULSE, Orange=DIR, Red=ENABLE
-const int PIN_START_CONTACT = 47;  // Pull-up
-const int PIN_END_CONTACT = 21;    // Pull-up
-const int PIN_PULSE = 12;          // Cable jaune
-const int PIN_DIR = 13;            // Cable orange
-const int PIN_ENABLE = 14;         // Cable rouge
+constexpr int PIN_START_CONTACT = 47;  // Pull-up
+constexpr int PIN_END_CONTACT = 21;    // Pull-up
+constexpr int PIN_PULSE = 12;          // Cable jaune
+constexpr int PIN_DIR = 13;            // Cable orange
+constexpr int PIN_ENABLE = 14;         // Cable rouge
 
 // ============================================================================
 // CONFIGURATION - Motor Parameters
