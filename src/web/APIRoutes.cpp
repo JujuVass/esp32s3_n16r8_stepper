@@ -207,6 +207,23 @@ void setupAPIRoutes() {
     }
   });
 
+  server.on("/js/milestones.js", HTTP_GET, []() {
+    if (LittleFS.exists("/js/milestones.js")) {
+      File file = LittleFS.open("/js/milestones.js", "r");
+      if (file) {
+        server.sendHeader("Cache-Control", "public, max-age=86400");  // 24h cache (rarely changes)
+        server.streamFile(file, "application/javascript");
+        file.close();
+        engine->debug("✅ Served /js/milestones.js from LittleFS");
+      } else {
+        server.send(500, "text/plain", "❌ Error opening /js/milestones.js");
+      }
+    } else {
+      server.send(404, "text/plain", "❌ File not found: /js/milestones.js");
+      engine->error("❌ /js/milestones.js not found in LittleFS");
+    }
+  });
+
   // ========================================================================
   // STATISTICS API ROUTES
   // ========================================================================
