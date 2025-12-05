@@ -17,6 +17,7 @@
 #include "sequencer/SequenceTableManager.h"
 #include "movement/OscillationController.h"
 #include "movement/PursuitController.h"
+#include "movement/ChaosController.h"  // Phase 4A: Direct access to Chaos singleton
 
 // ============================================================================
 // SINGLETON INSTANCE
@@ -449,12 +450,12 @@ bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, 
               "mm, amplitude=±" + String(chaos.amplitudeMM, 1) + "mm, speed=" + 
               String(chaos.maxSpeedLevel, 1) + ", craziness=" + String(chaos.crazinessPercent, 0) + "%");
         
-        startChaos();
+        Chaos.start();  // Phase 4A: Direct singleton call
         return true;
     }
     
     if (message.indexOf("\"cmd\":\"stopChaos\"") > 0) {
-        stopChaos();
+        Chaos.stop();  // Phase 4A: Direct singleton call
         return true;
     }
     

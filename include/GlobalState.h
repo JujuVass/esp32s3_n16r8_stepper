@@ -130,7 +130,7 @@ extern void sendError(String message);
 extern void sendStatus();
 
 // Movement callbacks
-extern void doStep();
+// doStep() removed - now in VaEtVient.doStep() and Chaos.doStep()
 extern void stopMovement();
 extern void returnToStart();
 
@@ -148,8 +148,6 @@ extern void setStartPosition(float startMM);
 extern void setSpeedForward(float speed);
 extern void setSpeedBackward(float speed);
 
-// Chaos control (wrappers to Chaos singleton)
-extern void startChaos();
-extern void stopChaos();
+// Chaos control - use Chaos.start(), Chaos.stop() directly from ChaosController.h
 
 #endif // GLOBAL_STATE_H

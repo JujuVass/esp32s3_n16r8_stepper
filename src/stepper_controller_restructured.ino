@@ -281,22 +281,7 @@ inline const char* boolToJson(bool value) {
   return value ? "true" : "false";
 }
 
-/**
- * Debounced contact reading with majority voting
- * Tolerates bounce while rejecting false positives
- * 
- * @param pin Contact pin to read (PIN_START_CONTACT or PIN_END_CONTACT)
- * @param expectedState Expected state (LOW = contact engaged, HIGH = not engaged)
- * @param checks Number of checks (default: 3, requires 2/3 majority)
- * @param delayMicros Microseconds between checks (default: 100µs)
- * @return true if majority of checks confirm expectedState
- * 
- * NOTE: Now delegates to Contacts.readDebounced() from hardware/ContactSensors.h
- */
-inline bool readContactDebounced(int pin, int expectedState, int checks = 3, int delayMicros = 100) {
-  // Delegate to modular ContactSensors
-  return Contacts.readDebounced(pin, expectedState, checks, delayMicros);
-}
+// NOTE: readContactDebounced() removed - use Contacts.readDebounced() directly
 
 /**
  * Service WebSocket and HTTP server for specified duration (non-blocking delay)
@@ -319,14 +304,8 @@ void sendError(String message);
 // ============================================================================
 // VALIDATION HELPERS
 // ============================================================================
-// Core parameter validation functions
-bool validateDistance(float distMM, String& errorMsg);
-bool validateSpeed(float speedLevel, String& errorMsg);
-bool validatePosition(float positionMM, String& errorMsg);
-
-// Mode-specific validation functions
-bool validateChaosParams(float centerMM, float amplitudeMM, float maxSpeed, float craziness, String& errorMsg);
-bool validateOscillationParams(float centerMM, float amplitudeMM, float frequencyHz, String& errorMsg);
+// NOTE: All validation functions moved to include/core/Validators.h
+// Use: Validators::distance(), Validators::speed(), etc.
 // validateOscillationAmplitude() now in OscillationController module
 
 // Validation + error reporting helper
@@ -343,11 +322,8 @@ void validateDecelZone();
 // Oscillation mode - delegated to OscillationController module
 // Functions: startOscillation(), doOscillationStep(), calculateOscillationPosition(), validateOscillationAmplitude()
 
-// Chaos mode
-void generateChaosPattern();
-void processChaosExecution();
-void startChaos();
-void stopChaos();
+// Chaos mode - delegated to ChaosController module
+// Functions: Chaos.start(), Chaos.stop(), Chaos.process()
 
 // ============================================================================
 // SETUP - INITIALIZATION
@@ -1149,8 +1125,10 @@ void sendError(String message) {
 // ============================================================================
 // VALIDATION HELPERS
 // ============================================================================
-// NOTE: Main validation logic moved to include/Validators.h
-// These wrappers provide backward compatibility with existing code
+// VALIDATION HELPERS
+// ============================================================================
+// NOTE: All validation logic moved to include/core/Validators.h
+// Use directly: Validators::distance(), Validators::speed(), etc.
 // ============================================================================
 
 /**
@@ -1162,31 +1140,6 @@ bool validateAndReport(bool isValid, const String& errorMsg) {
     sendError("❌ " + errorMsg);
   }
   return isValid;
-}
-
-// Legacy wrappers - delegate to Validators namespace
-inline bool validateDistance(float distMM, String& errorMsg) {
-  return Validators::distance(distMM, errorMsg);
-}
-
-inline bool validateSpeed(float speedLevel, String& errorMsg) {
-  return Validators::speed(speedLevel, errorMsg);
-}
-
-inline bool validatePosition(float positionMM, String& errorMsg) {
-  return Validators::position(positionMM, errorMsg);
-}
-
-inline bool validateMotionRange(float startMM, float distMM, String& errorMsg) {
-  return Validators::motionRange(startMM, distMM, errorMsg);
-}
-
-inline bool validateChaosParams(float centerMM, float amplitudeMM, float maxSpeed, float craziness, String& errorMsg) {
-  return Validators::chaosParams(centerMM, amplitudeMM, maxSpeed, craziness, errorMsg);
-}
-
-inline bool validateOscillationParams(float centerMM, float amplitudeMM, float frequency, String& errorMsg) {
-  return Validators::oscillationParams(centerMM, amplitudeMM, frequency, errorMsg);
 }
 
 // ============================================================================
@@ -1344,22 +1297,10 @@ void returnToStart() {
 }
 
 // ============================================================================
-// CHAOS MODE
+// CHAOS MODE - Delegated to ChaosController module
 // ============================================================================
-
-/**
- * Start chaos mode (wrapper to ChaosController)
- */
-void startChaos() {
-  Chaos.start();
-}
-
-/**
- * Stop chaos mode (wrapper to ChaosController)
- */
-void stopChaos() {
-  Chaos.stop();
-}
+// Functions removed: startChaos(), stopChaos()
+// Use directly: Chaos.start(), Chaos.stop(), Chaos.process()
 
 // ============================================================================
 // NOTE: webSocketEvent moved to CommandDispatcher module
