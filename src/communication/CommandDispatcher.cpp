@@ -852,7 +852,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     if (message.indexOf("\"cmd\":\"requestStats\"") > 0) {
         bool enable = doc["enable"] | false;
         statsRequested = enable;
-        lastStatsRequestTime = millis();
+
         
         engine->debug(String("📊 Stats tracking: ") + (enable ? "ENABLED" : "DISABLED"));
         

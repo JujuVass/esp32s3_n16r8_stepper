@@ -56,15 +56,12 @@ void StatusBroadcaster::send() {
     float positionMM = currentStep / STEPS_PER_MM;
     float totalTraveledMM = totalDistanceTraveled / STEPS_PER_MM;
     
-    // Validation state
-    bool canStart = true;
+    // Validation state - canStart controls UI visibility (tabs shown after calibration)
+    // The actual "can start motion" validation is done when user clicks Start buttons
+    bool canStart = (config.totalDistanceMM > 0);  // Show UI after calibration
     String errorMessage = "";
-    if (config.totalDistanceMM == 0) {
-        canStart = false;
+    if (!canStart) {
         errorMessage = "Recalibration nécessaire";
-    } else if (motion.targetDistanceMM <= 0) {
-        canStart = false;
-        errorMessage = "Définir distance";
     }
     
     bool canCalibrate = (config.currentState == STATE_READY || 
@@ -87,7 +84,7 @@ void StatusBroadcaster::send() {
     doc["canCalibrate"] = canCalibrate;
     doc["errorMessage"] = errorMessage;
     doc["movementType"] = (int)currentMovement;
-    doc["config.executionContext"] = (int)config.executionContext;
+    doc["executionContext"] = (int)config.executionContext;
     doc["operationMode"] = (int)currentMovement;  // Legacy
     doc["pursuitActive"] = pursuit.isMoving;
     

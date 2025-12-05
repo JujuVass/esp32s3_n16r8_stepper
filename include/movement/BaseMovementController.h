@@ -252,8 +252,27 @@ public:
      * Updates totalDistanceTraveled global
      */
     void trackDistance();
+    
+    // ========================================================================
+    // CYCLE COUNTING
+    // ========================================================================
+    
+    /**
+     * Get current cycle count (incremented each time startStep is reached)
+     * @return Number of completed cycles since last reset
+     */
+    unsigned long getCycleCount() const { return _cycleCounter; }
+    
+    /**
+     * Reset cycle counter to zero
+     * Called when movement stops
+     */
+    void resetCycleCount() { _cycleCounter = 0; }
 
 private:
+    // Cycle counting state
+    unsigned long _cycleCounter = 0;
+    
     /**
      * Initialize pending changes struct with current values
      */
