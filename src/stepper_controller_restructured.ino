@@ -77,65 +77,52 @@ const char* movementTypeName(int type);  // Forward declaration
 const char* executionContextName(ExecutionContext ctx);  // Forward declaration
 
 // ============================================================================
-// GLOBAL STATE VARIABLES (now managed in SystemConfig struct)
+// GLOBAL STATE DEFINITIONS (extern declarations in GlobalState.h)
 // ============================================================================
-// SystemConfig config; declared at setup(), loads from config.json
-// Access via: config.currentState, config.executionContext
-SystemConfig config;  // Global instance - loaded from config.json in setup()
 
-// ============================================================================
-// MOTION VARIABLES (VA-ET-VIENT) - Position managed in SystemConfig
-// ============================================================================
+// Core state
+SystemConfig config;
+
+// Position tracking
 volatile long currentStep = 0;
-// config.minStep, config.maxStep, config.totalDistanceMM → config.minStep, config.maxStep, config.totalDistanceMM
-
-// Maximum distance limitation (50-100% of config.totalDistanceMM)
-float maxDistanceLimitPercent = 100.0;  // Default: no limitation
-float effectiveMaxDistanceMM = 0.0;     // Calculated value used for validation
-
-MotionConfig motion;
-PendingMotionConfig pendingMotion;
-
-// Pause state for Simple mode (VAET)
-CyclePauseState motionPauseState;
-
-// Note: isPaused global REMOVED - use config.currentState == STATE_PAUSED instead
-bool movingForward = true;
 long startStep = 0;
 long targetStep = 0;
-bool hasReachedStartStep = false;  // Track if we've reached startStep at least once
+bool movingForward = true;
+bool hasReachedStartStep = false;
 
-// ============================================================================
-// TIMING VARIABLES
-// ============================================================================
+// Motion configuration
+MotionConfig motion;
+PendingMotionConfig pendingMotion;
+CyclePauseState motionPauseState;
+
+// Distance limits
+float maxDistanceLimitPercent = 100.0;
+float effectiveMaxDistanceMM = 0.0;
+
+// Timing
 unsigned long lastStepMicros = 0;
 unsigned long stepDelayMicrosForward = 1000;
 unsigned long stepDelayMicrosBackward = 1000;
-
 unsigned long lastStartContactMillis = 0;
 unsigned long cycleTimeMillis = 0;
 float measuredCyclesPerMinute = 0;
 bool wasAtStart = false;
 
-// ============================================================================
-// PURSUIT & DECELERATION ZONE - Now owned by their modules (Phase 4D migration)
-// ============================================================================
-// Pursuit state - owned by PursuitController
-// Access via: #include "movement/PursuitController.h" → pursuit
+// Statistics
+unsigned long totalDistanceTraveled = 0;
+unsigned long lastSavedDistance = 0;
+long lastStepForDistance = 0;
 
-// Deceleration zone - owned by DecelZoneController
-// Access via: #include "movement/DecelZoneController.h" → decelZone
+// Startup
+bool needsInitialCalibration = true;
 
-// Oscillation state - now owned by OscillationController (Phase 4D migration)
-// Access via: #include "movement/OscillationController.h" → oscillation, oscillationState, oscPauseState, actualOscillationSpeedMMS
-
-// Chaos state - now owned by ChaosController (Phase 4D migration)
-// Access via: #include "movement/ChaosController.h" → chaos, chaosState
+// Stats on-demand tracking
+bool statsRequested = false;
+unsigned long lastStatsRequestTime = 0;
 
 // ============================================================================
-// SEQUENCER
+// DEBUG HELPERS
 // ============================================================================
-// Helper functions for debugging
 const char* movementTypeName(int type) {
   switch((MovementType)type) {
     case MOVEMENT_VAET: return "VAET";
@@ -154,24 +141,6 @@ const char* executionContextName(ExecutionContext ctx) {
     default: return "UNKNOWN";
   }
 }
-
-// Sequence table - now owned by SequenceTableManager (Phase 4D migration)
-// Access via: #include "sequencer/SequenceTableManager.h" → sequenceTable[], sequenceLineCount
-
-// Sequencer state - now owned by SequenceExecutor (Phase 4D migration)
-// Access via: #include "sequencer/SequenceExecutor.h" → seqState, currentMovement
-
-// ============================================================================
-// STATISTICS
-// ============================================================================
-unsigned long totalDistanceTraveled = 0;  // Total distance (all movements, displayed in UI)
-unsigned long lastSavedDistance = 0;      // Last saved value (to calculate increments)
-long lastStepForDistance = 0;
-
-// ============================================================================
-// STARTUP FLAGS
-// ============================================================================
-bool needsInitialCalibration = true;
 
 // ============================================================================
 // SINE LOOKUP TABLE (Optional Performance Optimization)
@@ -228,13 +197,6 @@ FilesystemManager filesystemManager(server);
 void resetTotalDistance();
 void sendStatus();
 void saveCurrentSessionStats();
-
-// ============================================================================
-// STATS ON-DEMAND TRACKING
-// ============================================================================
-// Track if frontend has requested system stats (for optimization)
-bool statsRequested = false;
-unsigned long lastStatsRequestTime = 0;
 
 // ============================================================================
 // UTILITY HELPERS
@@ -368,7 +330,7 @@ void setup() {
   engine->info("   POST /api/fs/clear         - Clear all files");
 
   // ============================================================================
-  // SETUP API ROUTES (Phase 3.4 - extracted from main)
+  // API ROUTES
   // ============================================================================
   setupAPIRoutes();
   engine->info("✅ API Routes initialized :");
