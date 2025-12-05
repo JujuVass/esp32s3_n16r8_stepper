@@ -7771,8 +7771,10 @@ Détecte la limite physique`;
         const totalMilestoneName = totalMilestoneInfo.current ? totalMilestoneInfo.current.name : 'Démarrage';
         
         // Build tooltip with progress to next milestone
-        let totalTooltip = `${totalMilestoneIcon} ${totalMilestoneName} (${totalMilestoneInfo.current.threshold}m)`;
-        if (totalMilestoneInfo.current.location !== "-") {
+        let totalTooltip = totalMilestoneInfo.current 
+          ? `${totalMilestoneIcon} ${totalMilestoneName} (${totalMilestoneInfo.current.threshold}m)`
+          : `${totalMilestoneIcon} ${totalMilestoneName}`;
+        if (totalMilestoneInfo.current && totalMilestoneInfo.current.location !== "-") {
           totalTooltip += ` - ${totalMilestoneInfo.current.location}`;
         }
         
