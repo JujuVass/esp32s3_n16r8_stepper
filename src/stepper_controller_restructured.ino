@@ -42,6 +42,7 @@
 // Communication layer (modular architecture)
 #include "communication/CommandDispatcher.h" // WebSocket command routing
 #include "communication/StatusBroadcaster.h" // Status broadcasting (Status.send()...)
+#include "communication/NetworkManager.h"    // WiFi, OTA, mDNS, NTP (Network.begin()...)
 
 // Movement controllers (modular architecture)
 #include "movement/ChaosController.h"       // Chaos mode controller (Chaos.start(), Chaos.process()...)
@@ -335,114 +336,12 @@ void setup() {
   // Legacy compatibility: ensure direction tracking variable is in sync
   Motor.setDirection(false);  // Initialize direction to backward
   
-  // Connect to WiFi
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
+  // ============================================================================
+  // NETWORK INITIALIZATION (WiFi + mDNS + NTP + OTA)
+  // ============================================================================
+  Network.begin();
   
-  engine->info("Connecting to WiFi: " + String(ssid));
-  
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 60) {
-    delay(500);  // WiFi connection polling - acceptable
-    Serial.print(".");  // Visual progress indicator (standard Arduino pattern)
-    attempts++;
-    
-    if (attempts % 10 == 0) {
-      engine->info(String("\n[") + String(attempts) + "/60] WiFi connecting...");
-    }
-  }
-  Serial.println();  // Newline after dots (keep for visual formatting)
-  
-  if (WiFi.status() == WL_CONNECTED) {
-    engine->info("✅ WiFi connected!");
-    engine->info("🌐 IP Address: " + WiFi.localIP().toString());
-    engine->info("🔄 OTA Mode: ACTIVE - Updates via WiFi enabled!");
-    
-    // ============================================================================
-    // mDNS (Multicast DNS) - Access via http://esp32-stepper.local
-    // ============================================================================
-    if (MDNS.begin(otaHostname)) {
-      engine->info("✅ mDNS responder started: http://" + String(otaHostname) + ".local");
-      MDNS.addService("http", "tcp", 80);  // Announce HTTP service on port 80
-    } else {
-      engine->error("❌ Error starting mDNS responder");
-    }
-    
-    // Configure time with NTP (GMT+1 = 3600 seconds, daylight saving = 0)
-    // Date: October 22, 2025
-    configTime(3600, 0, "pool.ntp.org", "time.nist.gov");
-    engine->info("⏰ NTP time configured (GMT+1)");
-    
-    // Wait a bit for time sync
-    delay(1000);
-    time_t now = time(nullptr);
-    struct tm *timeinfo = localtime(&now);
-    if (timeinfo->tm_year > (2020 - 1900)) {
-      char timeStr[64];
-      strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", timeinfo);
-      engine->info("✓ Time synchronized: " + String(timeStr));
-    }
-    
-    // ============================================================================
-    // OTA (Over-The-Air) UPDATE CONFIGURATION
-    // ============================================================================
-    ArduinoOTA.setHostname(otaHostname);
-    // No password for now (otaPassword is empty)
-    if (strlen(otaPassword) > 0) {
-      ArduinoOTA.setPassword(otaPassword);
-    }
-    
-    ArduinoOTA.onStart([]() {
-      String type = (ArduinoOTA.getCommand() == U_FLASH) ? "firmware" : "filesystem";
-      engine->info("🔄 OTA Update starting: " + type);
-      
-      // CRITICAL: Flush and close log file before OTA
-      if (engine) {
-        engine->flushLogBuffer(true);  // Force flush pending logs
-      }
-      
-      // CRITICAL: Stop all movements and disable motor during OTA
-      stopMovement();
-      Motor.disable();  // Disable motor for safety during OTA
-      
-      // Stop sequencer if running
-      if (seqState.isRunning) {
-        SeqExecutor.stop();
-      }
-    });
-    
-    ArduinoOTA.onEnd([]() {
-      engine->info("✅ OTA Update complete - Rebooting...");
-    });
-    
-    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-      static unsigned int lastPercent = 0;
-      unsigned int percent = (progress * 100) / total;
-      
-      // Log every 10% to avoid spam
-      if (percent >= lastPercent + 10) {
-        engine->info("📥 OTA Progress: " + String(percent) + "%");
-        lastPercent = percent;
-      }
-    });
-    
-    ArduinoOTA.onError([](ota_error_t error) {
-      engine->error("❌ OTA Error [" + String(error) + "]: ");
-      if (error == OTA_AUTH_ERROR) engine->error("   Authentication Failed");
-      else if (error == OTA_BEGIN_ERROR) engine->error("   Begin Failed");
-      else if (error == OTA_CONNECT_ERROR) engine->error("   Connect Failed");
-      else if (error == OTA_RECEIVE_ERROR) engine->error("   Receive Failed");
-      else if (error == OTA_END_ERROR) engine->error("   End Failed");
-    });
-    
-    ArduinoOTA.begin();
-    engine->info("✅ OTA Ready - Hostname: " + String(otaHostname));
-    
-  } else {
-    engine->error("❌ WiFi connection failed!");
-  }
-  
-  // Print engine status after WiFi setup
+  // Print engine status after network setup
   engine->printStatus();
   
   // ============================================================================
@@ -566,7 +465,7 @@ void loop() {
   // ═══════════════════════════════════════════════════════════════════════════
   // OTA UPDATE HANDLER (Must be called in every loop iteration)
   // ═══════════════════════════════════════════════════════════════════════════
-  ArduinoOTA.handle();
+  Network.handleOTA();
   
   // ═══════════════════════════════════════════════════════════════════════════
   // INITIAL CALIBRATION (with delay for web interface access)
@@ -691,34 +590,6 @@ void loop() {
 }
 
 // ============================================================================
-// MOTOR CONTROL - Low Level (Delegating to MotorDriver module)
-// ============================================================================
-// These wrapper functions maintain backward compatibility while delegating
-// to the new modular MotorDriver class. This allows incremental migration.
-// ============================================================================
-
-
-// ============================================================================
-// CALIBRATION FUNCTIONS - Phase 4B: Moved to CalibrationManager
-// ============================================================================
-// Functions removed:
-//   - findContactWithService() → Use Calibration.findContact()
-//   - returnToStartContact() → Use Calibration.returnToStart()
-//   - validateCalibrationAccuracy() → Use Calibration.validateAccuracy()
-//   - handleCalibrationFailure() → Use CalibrationManager internal handling
-// ============================================================================
-
-// ============================================================================
-// DECELERATION ZONE FUNCTIONS - Phase 4C: Moved to DecelZoneController
-// ============================================================================
-// Functions removed:
-//   - calculateSlowdownFactor() → Internal to DecelZoneController
-//   - calculateAdjustedDelay() → Use DecelZone.calculateAdjustedDelay()
-//   - validateDecelZone() → Use DecelZone.validate()
-// ============================================================================
-
-
-// ============================================================================
 // ERROR NOTIFICATION HELPER
 // ============================================================================
 
@@ -744,11 +615,6 @@ void sendError(String message) {
 
 // ============================================================================
 // VALIDATION HELPERS
-// ============================================================================
-// VALIDATION HELPERS
-// ============================================================================
-// NOTE: All validation logic moved to include/core/Validators.h
-// Use directly: Validators::distance(), Validators::speed(), etc.
 // ============================================================================
 
 /**
@@ -837,23 +703,8 @@ void saveCurrentSessionStats() {
 }
 
 // ============================================================================
-// PURSUIT MODE - Delegated to PursuitController module
+// MOVEMENT CONTROL WRAPPERS
 // ============================================================================
-// Functions moved: pursuitMove(), doPursuitStep()
-// Use: Pursuit.move(), Pursuit.process()
-
-// ============================================================================
-// OSCILLATION MODE - Delegated to OscillationController module
-// ============================================================================
-// Functions moved: calculateOscillationPosition(), validateOscillationAmplitude(),
-//                  doOscillationStep(), startOscillation()
-// Use: Osc.start(), Osc.process(), Osc.calculatePosition(), Osc.validateAmplitude()
-
-// ============================================================================
-// MOVEMENT CONTROL WRAPPERS (kept for cross-module compatibility)
-// ============================================================================
-// These thin wrappers allow modules like ContactSensors, SequenceExecutor
-// to call movement control without direct BaseMovement dependency.
 
 void stopMovement() {
   BaseMovement.stop();
@@ -866,17 +717,6 @@ void togglePause() {
 void returnToStart() {
   BaseMovement.returnToStart();
 }
-
-// ============================================================================
-// CHAOS MODE - Delegated to ChaosController module
-// ============================================================================
-// Functions removed: startChaos(), stopChaos()
-// Use directly: Chaos.start(), Chaos.stop(), Chaos.process()
-
-// ============================================================================
-// NOTE: webSocketEvent moved to CommandDispatcher module
-// See: src/communication/CommandDispatcher.cpp
-// ============================================================================
 
 // ============================================================================
 // JSON PARSING HELPERS (using ArduinoJson for robustness)
@@ -897,44 +737,3 @@ bool parseJsonCommand(const String& jsonStr, JsonDocument& doc) {
   
   return true;
 }
-
-// ============================================================================
-// SEQUENCE TABLE MANAGEMENT FUNCTIONS
-// ============================================================================
-// NOTE: Functions moved to SequenceTableManager module (sequencer/SequenceTableManager.h)
-// Inline wrappers defined above delegate to SeqTable singleton:
-// - addSequenceLine() -> SeqTable.addLine()
-// - deleteSequenceLine() -> SeqTable.deleteLine()
-// - updateSequenceLine() -> SeqTable.updateLine()
-// - moveSequenceLine() -> SeqTable.moveLine()
-// - toggleSequenceLine() -> SeqTable.toggleLine()
-// - duplicateSequenceLine() -> SeqTable.duplicateLine()
-// - clearSequenceTable() -> SeqTable.clear()
-// - exportSequenceToJson() -> SeqTable.exportToJson()
-// - importSequenceFromJson() -> SeqTable.importFromJson()
-// - validateSequenceLinePhysics() -> SeqTable.validatePhysics()
-// - parseSequenceLineFromJson() -> SeqTable.parseFromJson()
-// - broadcastSequenceTable() -> SeqTable.broadcast()
-// - sendJsonResponse() -> SeqTable.sendJsonResponse()
-
-// ============================================================================
-// SEQUENCE EXECUTION FUNCTIONS (Delegated to SequenceExecutor module)
-// ============================================================================
-// Functions extracted to: src/sequencer/SequenceExecutor.cpp
-// 
-// Inline wrappers above provide backward-compatible API:
-// - startSequenceExecution() -> SeqExecutor.start()
-// - stopSequenceExecution() -> SeqExecutor.stop()
-// - toggleSequencePause() -> SeqExecutor.togglePause()
-// - skipToNextSequenceLine() -> SeqExecutor.skipToNextLine()
-// - processSequenceExecution() -> SeqExecutor.process()
-// - sendSequenceStatus() -> SeqExecutor.sendStatus()
-// - onMovementComplete() -> SeqExecutor.onMovementComplete()
-
-// ============================================================================
-// STATUS BROADCASTING (Delegated to StatusBroadcaster module)
-// ============================================================================
-// Functions extracted to: src/communication/StatusBroadcaster.cpp
-// 
-// Inline wrapper above provides backward-compatible API:
-// - sendStatus() -> Status.send()
