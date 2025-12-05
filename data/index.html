@@ -6643,16 +6643,7 @@ Détecte la limite physique`;
     // TAB MANAGEMENT & MODE SWITCHING
     // ============================================================================
     
-    // SYSTEM STATE ENUMERATION - Matches ESP32 backend states
-    const SystemState = {
-      INIT: 0,
-      CALIBRATING: 1,
-      READY: 2,
-      RUNNING: 3,
-      PAUSED: 4,
-      ERROR: 5
-    };
-    
+    // Note: SystemState enum loaded from app.js
     // Note: Mode switching variables now in AppState.system
     // Access via: AppState.system.currentMode, AppState.system.pendingModeSwitch, etc.
     
