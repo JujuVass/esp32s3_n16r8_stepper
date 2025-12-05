@@ -8,7 +8,8 @@ Usage:
     python upload_html.py --watch            # Watch index.html for changes and auto-upload
     python upload_html.py --file filesystem.html   # Upload specific file
     python upload_html.py --watch --file filesystem.html  # Watch specific file
-    python upload_html.py --all              # Upload all HTML files at once
+    python upload_html.py --all              # Upload all HTML/JS/CSS files at once
+    python upload_html.py --js               # Upload only JS files from data/js/
 """
 
 import requests
@@ -23,19 +24,41 @@ ESP32_IP = "192.168.1.81"
 API_UPLOAD_ENDPOINT = f"http://{ESP32_IP}/api/fs/upload"
 DEFAULT_HTML = "data/index.html"
 DEFAULT_FILESYSTEM_HTML = "data/filesystem.html"
+JS_DIR = "data/js"
+CSS_DIR = "data/css"
 
-def upload_file(file_path, esp32_ip=ESP32_IP):
-    """Upload a file to ESP32 via FilesystemManager API"""
+def upload_file(file_path, esp32_ip=ESP32_IP, target_path=None):
+    """Upload a file to ESP32 via FilesystemManager API
+    
+    Args:
+        file_path: Local path to the file
+        esp32_ip: ESP32 IP address
+        target_path: Target path on ESP32 (e.g., '/js/app.js'). If None, uses basename.
+    """
     if not os.path.exists(file_path):
         print(f"❌ Error: File not found: {file_path}")
         return False
     
     file_size = os.path.getsize(file_path)
-    target_filename = os.path.basename(file_path)
+    
+    # Determine target filename/path on ESP32
+    if target_path:
+        target_filename = target_path
+    else:
+        # Check if file is in a subdirectory of data/
+        file_path_obj = Path(file_path)
+        if 'data' in file_path_obj.parts:
+            # Get path relative to data/
+            data_idx = file_path_obj.parts.index('data')
+            relative_parts = file_path_obj.parts[data_idx + 1:]
+            target_filename = '/' + '/'.join(relative_parts)
+        else:
+            target_filename = os.path.basename(file_path)
+    
     endpoint = f"http://{esp32_ip}/api/fs/upload"
     
     try:
-        print(f"📤 Uploading {file_path} ({file_size} bytes) to {esp32_ip}...")
+        print(f"📤 Uploading {file_path} -> {target_filename} ({file_size} bytes)...")
         start_time = time.time()
         
         with open(file_path, 'rb') as f:
@@ -117,7 +140,8 @@ Examples:
   python upload_html.py --watch            # Auto-upload index.html on changes
   python upload_html.py --file filesystem.html   # Upload filesystem.html
   python upload_html.py --watch --file filesystem.html  # Watch filesystem.html
-  python upload_html.py --all              # Upload all HTML files
+  python upload_html.py --all              # Upload all HTML/JS/CSS files
+  python upload_html.py --js               # Upload only JS files from data/js/
   python upload_html.py --ip 192.168.1.100 # Use custom IP
         """
     )
@@ -125,13 +149,33 @@ Examples:
     parser.add_argument('--watch', '-w', action='store_true',
                         help='Watch file for changes and auto-upload')
     parser.add_argument('--file', '-f',
-                        help='File to upload (e.g., index.html, filesystem.html)')
+                        help='File to upload (e.g., index.html, filesystem.html, js/app.js)')
     parser.add_argument('--all', '-a', action='store_true',
-                        help='Upload all files (index.html, filesystem.html, etc)')
+                        help='Upload all files (HTML, JS, CSS)')
+    parser.add_argument('--js', action='store_true',
+                        help='Upload only JS files from data/js/')
     parser.add_argument('--ip', default=ESP32_IP,
                         help=f'ESP32 IP address (default: {ESP32_IP})')
     
     args = parser.parse_args()
+    
+    # Helper to collect JS files
+    def get_js_files():
+        js_files = []
+        if os.path.exists(JS_DIR):
+            for f in os.listdir(JS_DIR):
+                if f.endswith('.js'):
+                    js_files.append(os.path.join(JS_DIR, f))
+        return js_files
+    
+    # Helper to collect CSS files
+    def get_css_files():
+        css_files = []
+        if os.path.exists(CSS_DIR):
+            for f in os.listdir(CSS_DIR):
+                if f.endswith('.css'):
+                    css_files.append(os.path.join(CSS_DIR, f))
+        return css_files
     
     # Determine file(s) to upload
     if args.file:
@@ -140,12 +184,22 @@ Examples:
         if not os.path.exists(file_path) and os.path.exists(f"data/{file_path}"):
             file_path = f"data/{file_path}"
         files_to_upload = [file_path]
+    elif args.js:
+        files_to_upload = get_js_files()
+        if not files_to_upload:
+            print("❌ No JS files found in data/js/")
+            sys.exit(1)
     elif args.all:
         files_to_upload = []
+        # HTML files
         if os.path.exists(DEFAULT_HTML):
             files_to_upload.append(DEFAULT_HTML)
         if os.path.exists(DEFAULT_FILESYSTEM_HTML):
             files_to_upload.append(DEFAULT_FILESYSTEM_HTML)
+        # JS files
+        files_to_upload.extend(get_js_files())
+        # CSS files
+        files_to_upload.extend(get_css_files())
         if not files_to_upload:
             print("❌ No files found to upload")
             sys.exit(1)
