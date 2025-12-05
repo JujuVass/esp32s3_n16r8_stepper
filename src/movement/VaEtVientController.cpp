@@ -12,7 +12,6 @@
 #include "controllers/CalibrationManager.h"
 
 // External functions from main
-extern bool returnToStartContact();
 extern const char* movementTypeName(int type);
 
 // ============================================================================
@@ -448,19 +447,19 @@ void VaEtVientControllerClass::returnToStart() {
     delay(50);
     
     // ============================================================================
-    // Use returnToStartContact() for precise positioning
+    // Use Calibration.returnToStart() for precise positioning
     // This ensures position 0 is IDENTICAL to calibration position 0
     // (contact + decontact + SAFETY_OFFSET_STEPS)
     // ============================================================================
     
-    bool success = ::returnToStartContact();  // Call global function from main
+    bool success = Calibration.returnToStart();  // Phase 4B: Use CalibrationManager
     
     if (!success) {
-        // Error already logged by returnToStartContact()
+        // Error already logged by CalibrationManager
         return;
     }
     
-    // Reset position variables (already done in returnToStartContact, but explicit here)
+    // Reset position variables (already done in returnToStart, but explicit here)
     currentStep = 0;
     config.minStep = 0;
     

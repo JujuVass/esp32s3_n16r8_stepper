@@ -241,7 +241,7 @@ FilesystemManager filesystemManager(server);
 // ============================================================================
 
 // Core functions (defined below in this file)
-void handleCalibrationFailure(int& attempt);
+// handleCalibrationFailure() removed - now in CalibrationManager
 void startMovement(float distMM, float speedLevel);
 void calculateStepDelay();
 // doStep() removed - now delegated to VaEtVient.doStep() and Chaos.doStep()
@@ -768,178 +768,14 @@ void loop() {
 
 
 // ============================================================================
-// MOTOR CONTROL - Calibration Helper Functions
+// CALIBRATION FUNCTIONS - Phase 4B: Moved to CalibrationManager
 // ============================================================================
-
-bool findContactWithService(int dirPin, int contactPin, const char* contactName) {
-  
-  bool inDir = (dirPin == HIGH);
-
-  Motor.setDirection(inDir);
-  unsigned long stepCount = 0;
-
-  // Search for contact with debouncing (3 checks, 25µs interval)
-  // Fast debounce during search phase (non-critical)
-  while (Contacts.readDebounced(contactPin, HIGH, 3, 25)) {
-    Motor.step();
-    currentStep += inDir ? 1 : -1;
-    delayMicroseconds(CALIB_DELAY);
-    stepCount++;
-    
-    if (stepCount % WEBSOCKET_SERVICE_INTERVAL_STEPS == 0) {
-      yield();
-      webSocket.loop();
-      server.handleClient();
-    }
-    
-    if (stepCount > CALIBRATION_MAX_STEPS) {
-      String errorMsg = "❌ ERROR: Contact ";
-      errorMsg += contactName;
-      errorMsg += " introuvable";
-      sendError(errorMsg);
-      Motor.disable();  // Safety: disable motor on calibration failure
-      config.currentState = STATE_ERROR;
-      return false;
-    }
-  }
-
-  // Validate END contact is within expected range (filter mechanical bounces)
-  // If contact detected BEFORE minimum distance → likely false positive
-  if (contactPin == PIN_END_CONTACT) {
-        // Contact detected - Zone validation
-    long detectedSteps = abs(currentStep);
-    long minExpectedSteps = (long)(HARD_MIN_DISTANCE_MM * STEPS_PER_MM);
-    if (detectedSteps < minExpectedSteps) {
-      engine->error("Contact END détecté AVANT zone valide (" + 
-                    String(detectedSteps) + " < " + String(minExpectedSteps) + " steps)");
-      engine->error("→ Rebond mécanique probable - Position ignorée");
-      
-      // Ignore false contact and continue search (recursive retry)
-      return findContactWithService(dirPin, contactPin, contactName);
-    }
-  }
-
-  return true;
-}
-
-bool returnToStartContact() {
-
-  engine->debug("Expected steps to return: ~" + String(config.maxStep));
-  
-  // ============================================================================
-  // SAFETY CHECK: Detect if stuck at END contact (recovery from ERROR state)
-  // ============================================================================
-  if (Contacts.readDebounced(PIN_END_CONTACT, LOW, 3, 50)) {
-    engine->warn("⚠️ Détection contact END actif - Déblocage automatique...");
-    sendStatus();  // Show "Décollement en cours..."
-    
-    Motor.setDirection(false);  // Backward (away from END)
-    
-    // Emergency decontact: Move backward until END contact releases
-    int emergencySteps = 0;
-    const int MAX_EMERGENCY_STEPS = 300;  // ~50mm safety margin
-    
-    while (Contacts.readDebounced(PIN_END_CONTACT, LOW, 3, 50) && emergencySteps < MAX_EMERGENCY_STEPS) {
-      Motor.step();
-      currentStep--;
-      emergencySteps++;
-      delayMicroseconds(CALIB_DELAY);  // Slow speed for safety
-      
-      // Service WebSocket every 50 steps
-      if (emergencySteps % 50 == 0) {
-        yield();
-        webSocket.loop();
-        server.handleClient();
-      }
-    }
-    
-    if (emergencySteps >= MAX_EMERGENCY_STEPS) {
-      sendError("❌ ERREUR: Impossible de décoller du contact END - Vérifiez mécaniquement");
-      Motor.disable();  // Safety: disable motor on error
-      config.currentState = STATE_ERROR;
-      return false;
-    }
-    
-    engine->info("✓ Décollement réussi (" + String(emergencySteps) + " steps, " + 
-                 String(emergencySteps / STEPS_PER_MM, 1) + " mm)");
-    delay(200);  // Let mechanics settle
-  }
-  
-  Motor.setDirection(false);  // Backward to START contact
-  
-  // Search for START contact with debouncing (3 checks, 100µs interval)
-  // Precise value needed for accurate return positioning
-  while (Contacts.readDebounced(PIN_START_CONTACT, HIGH, 3, 100)) {
-    Motor.step();
-    currentStep--;
-    delayMicroseconds(CALIB_DELAY);
-    if (currentStep % WEBSOCKET_SERVICE_INTERVAL_STEPS == 0) {
-      yield();
-      webSocket.loop();
-      server.handleClient();
-    }
-    if (currentStep < -CALIBRATION_ERROR_MARGIN_STEPS) {
-      sendError("❌ ERROR: Impossible de retourner au contact START!");
-      Motor.disable();  // Safety: disable motor on error
-      config.currentState = STATE_ERROR;
-      return false;
-    }
-  }
-  
-  // Contact detected - apply calibration offset directly
-  engine->debug("Start contact detected - applying calibration offset...");
-  
-  // Move forward slowly until contact releases (decontact)
-  // Standard debounce for decontact phase (3 checks, 100µs)
-  Motor.setDirection(true);
-  while (Contacts.readDebounced(PIN_START_CONTACT, LOW, 3, 100)) {
-    Motor.step();
-    delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR * 2);  // Same speed as initial calibration
-  }
-  
-  // Add safety margin (same as initial calibration)
-  for (int i = 0; i < SAFETY_OFFSET_STEPS; i++) {
-    Motor.step();
-    delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR);
-  }
-  
-  // NOW we're at the SAME physical position as initial calibration position 0
-  currentStep = 0;
-  
-  return true;
-}
-
-float validateCalibrationAccuracy() {
-  engine->debug("✓ Returned to start contact - Current position: " + String(currentStep) + " steps (" + String(currentStep / STEPS_PER_MM, 2) + " mm)");
-  
-  long stepDifference = abs(currentStep);
-  float differencePercent = ((float)stepDifference / (float)config.maxStep) * 100.0;
-  
-  if (stepDifference == 0) {
-    engine->debug(" ✓ PERFECT!");
-  } else {
-    engine->warn(" ⚠️ Difference: " + String(stepDifference) + " steps (" + 
-          String((float)stepDifference / STEPS_PER_MM, 2) + " mm, " + 
-          String(differencePercent, 1) + " %)");
-  }
-  
-  return differencePercent;
-}
-
+// Functions removed:
+//   - findContactWithService() → Use Calibration.findContact()
+//   - returnToStartContact() → Use Calibration.returnToStart()
+//   - validateCalibrationAccuracy() → Use Calibration.validateAccuracy()
+//   - handleCalibrationFailure() → Use CalibrationManager internal handling
 // ============================================================================
-// MOTOR CONTROL - Calibration Error Handler
-// ============================================================================
-
-void handleCalibrationFailure(int& attempt) {
-  Motor.disable();  // Safety: disable motor on calibration failure
-  config.currentState = STATE_ERROR;
-  
-  attempt++;
-  if (attempt >= MAX_CALIBRATION_RETRIES) {
-    sendError("❌ ERROR: Calibration échouée après 3 tentatives");
-    attempt = 0;
-  }
-}
 
 // ============================================================================
 // DECELERATION ZONE FUNCTIONS
