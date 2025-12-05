@@ -143,31 +143,6 @@ const char* executionContextName(ExecutionContext ctx) {
 }
 
 // ============================================================================
-// SINE LOOKUP TABLE (Optional Performance Optimization)
-// ============================================================================
-#ifdef USE_SINE_LOOKUP_TABLE
-float sineTable[SINE_TABLE_SIZE];
-
-void initSineTable() {
-  for (int i = 0; i < SINE_TABLE_SIZE; i++) {
-    sineTable[i] = -cos((i / (float)SINE_TABLE_SIZE) * 2.0 * PI);
-  }
-  engine->debug("✅ Sine lookup table initialized (" + String(SINE_TABLE_SIZE) + " points, " + String(SINE_TABLE_SIZE * 4) + " bytes)");
-}
-
-// Fast sine lookup with linear interpolation
-inline float fastSine(float phase) {
-  float indexFloat = phase * SINE_TABLE_SIZE;
-  int index = (int)indexFloat % SINE_TABLE_SIZE;
-  int nextIndex = (index + 1) % SINE_TABLE_SIZE;
-  
-  // Linear interpolation for smooth transitions
-  float fraction = indexFloat - (int)indexFloat;
-  return sineTable[index] + (sineTable[nextIndex] - sineTable[index]) * fraction;
-}
-#endif
-
-// ============================================================================
 // WEB SERVER INSTANCES
 // ============================================================================
 WebServer server(80);
@@ -402,13 +377,6 @@ void setup() {
   Calibration.setErrorCallback([](const String& msg) { sendError(msg); });
   Calibration.setCompletionCallback([]() { SeqExecutor.onMovementComplete(); });
   engine->info("✅ CalibrationManager callbacks configured");
-  
-  // ============================================================================
-  // INITIALIZE SINE LOOKUP TABLE (Optional)
-  // ============================================================================
-  #ifdef USE_SINE_LOOKUP_TABLE
-  initSineTable();
-  #endif
   
   config.currentState = STATE_READY;
   engine->info("\n╔════════════════════════════════════════════════════════╗");
