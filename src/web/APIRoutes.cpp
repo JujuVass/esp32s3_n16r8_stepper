@@ -17,6 +17,21 @@ extern WebSocketsServer webSocket;
 extern UtilityEngine* engine;
 
 // ============================================================================
+// CORS HELPER FUNCTIONS
+// ============================================================================
+
+void sendCORSHeaders() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
+
+void handleCORSPreflight() {
+  sendCORSHeaders();
+  server.send(204);  // No Content
+}
+
+// ============================================================================
 // HELPER FUNCTIONS IMPLEMENTATION
 // ============================================================================
 
@@ -41,6 +56,7 @@ void sendJsonError(int code, const String& message) {
   doc["error"] = message;
   String json;
   serializeJson(doc, json);
+  sendCORSHeaders();
   server.send(code, "application/json", json);
 }
 
@@ -52,6 +68,7 @@ void sendJsonSuccess(const String& message) {
   }
   String json;
   serializeJson(doc, json);
+  sendCORSHeaders();
   server.send(200, "application/json", json);
 }
 
@@ -61,6 +78,7 @@ void sendJsonSuccessWithId(int id) {
   doc["id"] = id;
   String json;
   serializeJson(doc, json);
+  sendCORSHeaders();
   server.send(200, "application/json", json);
 }
 
@@ -84,6 +102,14 @@ void sendEmptyPlaylistStructure() {
 // ============================================================================
 
 void setupAPIRoutes() {
+  // ============================================================================
+  // CORS PREFLIGHT HANDLER - Must be first!
+  // ============================================================================
+  // Handle OPTIONS preflight for all /api/* routes
+  server.on("/api/stats/import", HTTP_OPTIONS, handleCORSPreflight);
+  server.on("/api/playlists", HTTP_OPTIONS, handleCORSPreflight);
+  server.on("/api/command", HTTP_OPTIONS, handleCORSPreflight);
+  
   // Main route: serve index.html from LittleFS
   server.on("/", HTTP_GET, []() {
     if (LittleFS.exists("/index.html")) {
@@ -401,6 +427,14 @@ void setupAPIRoutes() {
   server.on("/api/stats/import", HTTP_POST, []() {
     String body = server.arg("plain");
     
+    engine->info("📥 Stats import request - body size: " + String(body.length()) + " bytes");
+    
+    if (body.length() == 0) {
+      engine->error("❌ Empty body received for stats import");
+      sendJsonApiError(400, "Empty request body");
+      return;
+    }
+    
     JsonDocument importDoc;
     DeserializationError error = deserializeJson(importDoc, body);
     
@@ -464,6 +498,7 @@ void setupAPIRoutes() {
     
     String json;
     serializeJson(responseDoc, json);
+    sendCORSHeaders();
     server.send(200, "application/json", json);
   });
 
