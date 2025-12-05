@@ -529,6 +529,10 @@ void setup() {
   });
   engine->info("WebSocket server started on port 81 (CommandDispatcher routing)");
   
+  // Initialize StatusBroadcaster with WebSocket reference
+  Status.begin(&webSocket);
+  engine->info("✅ StatusBroadcaster initialized");
+  
   // ============================================================================
   // CALIBRATION MANAGER CALLBACKS
   // ============================================================================

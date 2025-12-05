@@ -57,7 +57,6 @@ void StatusBroadcaster::send() {
     float totalTraveledMM = totalDistanceTraveled / STEPS_PER_MM;
     
     // Validation state - canStart controls UI visibility (tabs shown after calibration)
-    // The actual "can start motion" validation is done when user clicks Start buttons
     bool canStart = (config.totalDistanceMM > 0);  // Show UI after calibration
     String errorMessage = "";
     if (!canStart) {
