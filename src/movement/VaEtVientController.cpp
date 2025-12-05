@@ -5,6 +5,13 @@
 #include "movement/VaEtVientController.h"
 #include "GlobalState.h"
 #include "UtilityEngine.h"
+#include "hardware/MotorDriver.h"
+#include "movement/PursuitController.h"
+#include "sequencer/SequenceExecutor.h"
+#include "controllers/CalibrationManager.h"
+
+// External function from main (needed for returnToStart)
+extern bool returnToStartContact();
 
 // ============================================================================
 // SINGLETON INSTANCE
@@ -260,6 +267,205 @@ void VaEtVientControllerClass::resetCycleTiming() {
     cycleTimeMillis = 0;
     measuredCyclesPerMinute = 0;
     wasAtStart = false;
+}
+
+// ============================================================================
+// MOVEMENT CONTROL (Phase 2)
+// ============================================================================
+
+void VaEtVientControllerClass::togglePause() {
+    if (config.currentState == STATE_RUNNING || config.currentState == STATE_PAUSED) {
+        // 💾 Save stats BEFORE toggling pause (save accumulated distance)
+        if (!isPaused) {
+            // Going from RUNNING → PAUSED: save current session
+            saveCurrentSessionStats();
+            engine->debug("💾 Stats saved before pause");
+        }
+        
+        isPaused = !isPaused;
+        config.currentState = isPaused ? STATE_PAUSED : STATE_RUNNING;
+        
+        // 🆕 CORRECTION: Reset timer en mode oscillation pour éviter le saut de phase lors de la reprise
+        if (!isPaused && currentMovement == MOVEMENT_OSC) {
+            oscillationState.lastPhaseUpdateMs = millis();
+            engine->debug("🔄 Phase gelée après pause (évite à-coup)");
+        }
+        
+        engine->info(isPaused ? "Paused" : "Resumed");
+    }
+}
+
+void VaEtVientControllerClass::stop() {
+    if (currentMovement == MOVEMENT_PURSUIT) {
+        Pursuit.stop();  // Delegated to PursuitController
+        // Keep motor enabled - HSS86 needs to stay synchronized
+        
+        // Save session stats before stopping
+        saveCurrentSessionStats();
+        return;
+    }
+    
+    // Stop oscillation if running (important for sequence stop)
+    if (currentMovement == MOVEMENT_OSC) {
+        currentMovement = MOVEMENT_VAET;  // Reset to default mode
+        engine->debug("🌊 Oscillation stopped by stop()");
+    }
+    
+    // Stop chaos if running (important for sequence stop)
+    if (chaosState.isRunning) {
+        chaosState.isRunning = false;
+        engine->debug("⚡ Chaos stopped by stop()");
+    }
+    
+    // Reset pause states
+    motionPauseState.isPausing = false;
+    oscPauseState.isPausing = false;
+    
+    // Stop simple mode
+    if (config.currentState == STATE_RUNNING || config.currentState == STATE_PAUSED) {
+        // CRITICAL: Keep motor enabled to maintain HSS86 synchronization
+        // Disabling and re-enabling causes step loss with startPosition > 0
+        
+        config.currentState = STATE_READY;
+        isPaused = false;
+        
+        pendingMotion.hasChanges = false;
+        
+        // Save session stats before stopping
+        saveCurrentSessionStats();
+    }
+}
+
+void VaEtVientControllerClass::start(float distMM, float speedLevel) {
+    // ✅ Stop sequence if running (user manually starts simple mode)
+    if (seqState.isRunning) {
+        engine->debug("start(): stopping sequence because user manually started movement");
+        SeqExecutor.stop();
+    }
+    
+    // Auto-calibrate if not yet done
+    if (config.totalDistanceMM == 0) {
+        engine->warn("Not calibrated - auto-calibrating...");
+        Calibration.startCalibration();
+        if (config.totalDistanceMM == 0) return;
+    }
+    
+    // Block start if in error state
+    if (config.currentState == STATE_ERROR) {
+        sendError("❌ Impossible de démarrer: Système en état ERREUR - Utilisez 'Retour Départ' ou recalibrez");
+        return;
+    }
+    
+    if (config.currentState != STATE_READY && config.currentState != STATE_PAUSED && config.currentState != STATE_RUNNING) {
+        return;
+    }
+    
+    // Validate and limit distance if needed
+    if (motion.startPositionMM + distMM > config.totalDistanceMM) {
+        if (motion.startPositionMM >= config.totalDistanceMM) {
+            sendError("❌ ERROR: Position de départ dépasse le maximum");
+            return;
+        }
+        distMM = config.totalDistanceMM - motion.startPositionMM;
+    }
+    
+    // If already running, queue changes for next cycle
+    if (config.currentState == STATE_RUNNING) {
+        pendingMotion.startPositionMM = motion.startPositionMM;
+        pendingMotion.distanceMM = distMM;
+        pendingMotion.speedLevelForward = speedLevel;
+        pendingMotion.speedLevelBackward = speedLevel;
+        pendingMotion.hasChanges = true;
+        return;
+    }
+    
+    motion.targetDistanceMM = distMM;
+    motion.speedLevelForward = speedLevel;
+    motion.speedLevelBackward = speedLevel;
+    
+    engine->info("▶ Start movement: " + String(distMM, 1) + " mm @ speed " + 
+          String(speedLevel, 1) + " (" + String(speedLevelToCyclesPerMin(speedLevel), 0) + " c/min)");
+    
+    calculateStepDelay();
+    
+    // CRITICAL: Initialize step timing BEFORE setting STATE_RUNNING
+    lastStepMicros = micros();
+    
+    // Calculate step positions
+    startStep = (long)(motion.startPositionMM * STEPS_PER_MM);
+    targetStep = (long)((motion.startPositionMM + motion.targetDistanceMM) * STEPS_PER_MM);
+    
+    // NOW set running state - lastStepMicros is properly initialized
+    config.currentState = STATE_RUNNING;
+    isPaused = false;
+    currentMovement = MOVEMENT_VAET;  // Reset to Simple mode (va-et-vient)
+    
+    // Determine starting direction based on current position
+    if (currentStep <= startStep) {
+        movingForward = true;  // Need to go forward to start position
+    } else if (currentStep >= targetStep) {
+        movingForward = false;  // Already past target, go backward
+    } else {
+        movingForward = true;  // Continue forward to target
+    }
+    
+    // Initialize PIN_DIR based on starting direction
+    Motor.setDirection(movingForward);
+    
+    // Initialize distance tracking
+    lastStepForDistance = currentStep;
+    
+    // Reset speed measurement
+    resetCycleTiming();
+    
+    // Reset startStep reached flag
+    // If we're already at or past startStep, mark it as reached
+    hasReachedStartStep = (currentStep >= startStep);
+    
+    engine->debug("🚀 Starting movement: currentStep=" + String(currentStep) + 
+          " startStep=" + String(startStep) + " targetStep=" + String(targetStep) + 
+          " movingForward=" + String(movingForward ? "YES" : "NO"));
+}
+
+void VaEtVientControllerClass::returnToStart() {
+    engine->info("🔄 Returning to start...");
+    
+    if (config.currentState == STATE_RUNNING || config.currentState == STATE_PAUSED) {
+        stop();
+        delay(100);
+    }
+    
+    // Allow returnToStart even from ERROR state (recovery mechanism)
+    if (config.currentState == STATE_ERROR) {
+        engine->info("   → Recovering from ERROR state");
+    }
+    
+    Motor.enable();  // Enable motor
+    config.currentState = STATE_CALIBRATING;
+    sendStatus();  // Show calibration overlay
+    delay(50);
+    
+    // ============================================================================
+    // Use returnToStartContact() for precise positioning
+    // This ensures position 0 is IDENTICAL to calibration position 0
+    // (contact + decontact + SAFETY_OFFSET_STEPS)
+    // ============================================================================
+    
+    bool success = ::returnToStartContact();  // Call global function from main
+    
+    if (!success) {
+        // Error already logged by returnToStartContact()
+        return;
+    }
+    
+    // Reset position variables (already done in returnToStartContact, but explicit here)
+    currentStep = 0;
+    config.minStep = 0;
+    
+    engine->info("✓ Return to start complete - Position synchronized with calibration");
+    
+    // Keep motor enabled - HSS86 needs to stay synchronized
+    config.currentState = STATE_READY;
 }
 
 // ============================================================================

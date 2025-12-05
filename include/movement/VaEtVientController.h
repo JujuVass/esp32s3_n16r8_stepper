@@ -149,6 +149,35 @@ public:
      * Reset cycle timing measurements
      */
     void resetCycleTiming();
+    
+    // ========================================================================
+    // MOVEMENT CONTROL (Phase 2)
+    // ========================================================================
+    
+    /**
+     * Toggle pause state
+     * Saves stats before pausing, resets oscillation timer on resume
+     */
+    void togglePause();
+    
+    /**
+     * Stop all movement
+     * Handles all movement types, saves stats, resets states
+     */
+    void stop();
+    
+    /**
+     * Start va-et-vient movement
+     * @param distMM Distance to travel in mm
+     * @param speedLevel Speed level (1-20)
+     */
+    void start(float distMM, float speedLevel);
+    
+    /**
+     * Return motor to start position
+     * Recovery mechanism, works from ERROR state
+     */
+    void returnToStart();
 
 private:
     /**
