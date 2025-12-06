@@ -173,11 +173,12 @@ void setupAPIRoutes() {
   });
 
   // JS routes: serve JavaScript modules from /js/ folder
+  // Cache 24h (86400s) - these files rarely change, reduces ESP32 load
   server.on("/js/app.js", HTTP_GET, []() {
     if (LittleFS.exists("/js/app.js")) {
       File file = LittleFS.open("/js/app.js", "r");
       if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=3600");
+        server.sendHeader("Cache-Control", "public, max-age=86400");
         server.streamFile(file, "application/javascript");
         file.close();
         engine->debug("✅ Served /js/app.js from LittleFS");
@@ -194,7 +195,7 @@ void setupAPIRoutes() {
     if (LittleFS.exists("/js/utils.js")) {
       File file = LittleFS.open("/js/utils.js", "r");
       if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=3600");
+        server.sendHeader("Cache-Control", "public, max-age=86400");
         server.streamFile(file, "application/javascript");
         file.close();
         engine->debug("✅ Served /js/utils.js from LittleFS");
@@ -211,7 +212,7 @@ void setupAPIRoutes() {
     if (LittleFS.exists("/js/milestones.js")) {
       File file = LittleFS.open("/js/milestones.js", "r");
       if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");  // 24h cache (rarely changes)
+        server.sendHeader("Cache-Control", "public, max-age=86400");
         server.streamFile(file, "application/javascript");
         file.close();
         engine->debug("✅ Served /js/milestones.js from LittleFS");
@@ -228,7 +229,7 @@ void setupAPIRoutes() {
     if (LittleFS.exists("/js/websocket.js")) {
       File file = LittleFS.open("/js/websocket.js", "r");
       if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=3600");
+        server.sendHeader("Cache-Control", "public, max-age=86400");
         server.streamFile(file, "application/javascript");
         file.close();
         engine->debug("✅ Served /js/websocket.js from LittleFS");
@@ -238,6 +239,108 @@ void setupAPIRoutes() {
     } else {
       server.send(404, "text/plain", "❌ File not found: /js/websocket.js");
       engine->error("❌ /js/websocket.js not found in LittleFS");
+    }
+  });
+
+  server.on("/js/stats.js", HTTP_GET, []() {
+    if (LittleFS.exists("/js/stats.js")) {
+      File file = LittleFS.open("/js/stats.js", "r");
+      if (file) {
+        server.sendHeader("Cache-Control", "public, max-age=86400");
+        server.streamFile(file, "application/javascript");
+        file.close();
+        engine->debug("✅ Served /js/stats.js from LittleFS");
+      } else {
+        server.send(500, "text/plain", "❌ Error opening /js/stats.js");
+      }
+    } else {
+      server.send(404, "text/plain", "❌ File not found: /js/stats.js");
+      engine->error("❌ /js/stats.js not found in LittleFS");
+    }
+  });
+
+  server.on("/js/context.js", HTTP_GET, []() {
+    if (LittleFS.exists("/js/context.js")) {
+      File file = LittleFS.open("/js/context.js", "r");
+      if (file) {
+        server.sendHeader("Cache-Control", "public, max-age=86400");
+        server.streamFile(file, "application/javascript");
+        file.close();
+        engine->debug("✅ Served /js/context.js from LittleFS");
+      } else {
+        server.send(500, "text/plain", "❌ Error opening /js/context.js");
+      }
+    } else {
+      server.send(404, "text/plain", "❌ File not found: /js/context.js");
+      engine->error("❌ /js/context.js not found in LittleFS");
+    }
+  });
+
+  server.on("/js/chaos.js", HTTP_GET, []() {
+    if (LittleFS.exists("/js/chaos.js")) {
+      File file = LittleFS.open("/js/chaos.js", "r");
+      if (file) {
+        server.sendHeader("Cache-Control", "public, max-age=86400");
+        server.streamFile(file, "application/javascript");
+        file.close();
+        engine->debug("✅ Served /js/chaos.js from LittleFS");
+      } else {
+        server.send(500, "text/plain", "❌ Error opening /js/chaos.js");
+      }
+    } else {
+      server.send(404, "text/plain", "❌ File not found: /js/chaos.js");
+      engine->error("❌ /js/chaos.js not found in LittleFS");
+    }
+  });
+
+  server.on("/js/oscillation.js", HTTP_GET, []() {
+    if (LittleFS.exists("/js/oscillation.js")) {
+      File file = LittleFS.open("/js/oscillation.js", "r");
+      if (file) {
+        server.sendHeader("Cache-Control", "public, max-age=86400");
+        server.streamFile(file, "application/javascript");
+        file.close();
+        engine->debug("✅ Served /js/oscillation.js from LittleFS");
+      } else {
+        server.send(500, "text/plain", "❌ Error opening /js/oscillation.js");
+      }
+    } else {
+      server.send(404, "text/plain", "❌ File not found: /js/oscillation.js");
+      engine->error("❌ /js/oscillation.js not found in LittleFS");
+    }
+  });
+
+  server.on("/js/sequencer.js", HTTP_GET, []() {
+    if (LittleFS.exists("/js/sequencer.js")) {
+      File file = LittleFS.open("/js/sequencer.js", "r");
+      if (file) {
+        server.sendHeader("Cache-Control", "public, max-age=86400");
+        server.streamFile(file, "application/javascript");
+        file.close();
+        engine->debug("✅ Served /js/sequencer.js from LittleFS");
+      } else {
+        server.send(500, "text/plain", "❌ Error opening /js/sequencer.js");
+      }
+    } else {
+      server.send(404, "text/plain", "❌ File not found: /js/sequencer.js");
+      engine->error("❌ /js/sequencer.js not found in LittleFS");
+    }
+  });
+
+  server.on("/js/main.js", HTTP_GET, []() {
+    if (LittleFS.exists("/js/main.js")) {
+      File file = LittleFS.open("/js/main.js", "r");
+      if (file) {
+        server.sendHeader("Cache-Control", "public, max-age=86400");
+        server.streamFile(file, "application/javascript");
+        file.close();
+        engine->debug("✅ Served /js/main.js from LittleFS");
+      } else {
+        server.send(500, "text/plain", "❌ Error opening /js/main.js");
+      }
+    } else {
+      server.send(404, "text/plain", "❌ File not found: /js/main.js");
+      engine->error("❌ /js/main.js not found in LittleFS");
     }
   });
 
