@@ -3539,104 +3539,9 @@
     });
     
     // ============================================================================
-    // MAX DISTANCE LIMIT CONFIGURATION
+    // MAX DISTANCE LIMIT CONFIGURATION - Loaded from PursuitController.js
     // ============================================================================
-    
-    // Max Distance Limit: Helper function to update UI state
-    function updateMaxDistLimitUI() {
-      const isReady = AppState.system.currentState === SystemState.READY;
-      const totalMM = AppState.pursuit.totalDistanceMM || 0;
-      
-      // Get current limit percent from AppState (or default to 100)
-      const currentPercent = AppState.pursuit.maxDistLimitPercent || 100;
-      
-      // Only update slider value if user is NOT currently editing it
-      if (!isEditingMaxDistLimit) {
-        DOM.maxDistLimitSlider.value = currentPercent;
-      }
-      
-      // Enable/disable controls based on state
-      DOM.maxDistLimitSlider.disabled = !isReady;
-      DOM.btnApplyMaxDistLimit.disabled = !isReady;
-      
-      // Show/hide warning
-      DOM.maxDistLimitWarning.style.display = isReady ? 'none' : 'block';
-      
-      // Update slider value and display (only if not editing)
-      if (!isEditingMaxDistLimit) {
-        const effectiveMM = (totalMM * currentPercent / 100).toFixed(1);
-        DOM.maxDistLimitValue.textContent = currentPercent + '%';
-        DOM.maxDistLimitMM.textContent = '(' + effectiveMM + ' mm)';
-      }
-    }
-    
-    // Max Distance Limit: Initialize event listeners (called after initDOMCache)
-    function initMaxDistLimitListeners() {
-      // Toggle configuration panel
-      DOM.btnConfigMaxDist.addEventListener('click', function() {
-        const isVisible = DOM.maxDistConfigPanel.style.display !== 'none';
-        DOM.maxDistConfigPanel.style.display = isVisible ? 'none' : 'block';
-        
-        if (!isVisible) {
-          // Panel just opened - load current value and START blocking updates
-          isEditingMaxDistLimit = true; // Block updates while panel is open
-          updateMaxDistLimitUI();
-        } else {
-          // Panel closed - stop blocking updates
-          isEditingMaxDistLimit = false;
-        }
-      });
-      
-      // Update slider display while dragging
-      DOM.maxDistLimitSlider.addEventListener('input', function() {
-        const percent = parseFloat(this.value);
-        const totalMM = AppState.pursuit.totalDistanceMM || 0;
-        const effectiveMM = (totalMM * percent / 100).toFixed(1);
-        
-        DOM.maxDistLimitValue.textContent = percent + '%';
-        DOM.maxDistLimitMM.textContent = '(' + effectiveMM + ' mm)';
-      });
-      
-      // Apply limit
-      DOM.btnApplyMaxDistLimit.addEventListener('click', function() {
-        const percent = parseFloat(DOM.maxDistLimitSlider.value);
-        
-        // Reset input fields to safe defaults when applying limit
-        document.getElementById('startPosition').value = 0;
-        document.getElementById('distance').value = 0;
-        
-        // Update oscillation and chaos centers with new effective max
-        const totalMM = AppState.pursuit.totalDistanceMM || 0;
-        const effectiveMax = totalMM * percent / 100;
-        
-        const oscCenterField = document.getElementById('oscCenter');
-        if (oscCenterField && effectiveMax > 0) {
-          oscCenterField.value = (effectiveMax / 2).toFixed(1);
-          // Send to backend to update oscillation config
-          sendCommand(WS_CMD.SET_OSCILLATION_CONFIG, {
-            centerPositionMM: effectiveMax / 2,
-            amplitudeMM: parseFloat(document.getElementById('oscAmplitude').value) || 50,
-            frequencyHz: parseFloat(document.getElementById('oscFrequency').value) || 1,
-            waveform: parseInt(document.getElementById('oscWaveform').value) || 0
-          });
-        }
-        
-        const chaosCenterField = document.getElementById('chaosCenterPos');
-        if (chaosCenterField && effectiveMax > 0) {
-          chaosCenterField.value = (effectiveMax / 2).toFixed(1);
-        }
-        
-        sendCommand(WS_CMD.SET_MAX_DISTANCE_LIMIT, {percent: percent});
-        DOM.maxDistConfigPanel.style.display = 'none';
-        isEditingMaxDistLimit = false; // Allow updates after applying
-      });
-      
-      // Cancel
-      DOM.btnCancelMaxDistLimit.addEventListener('click', function() {
-        DOM.maxDistConfigPanel.style.display = 'none';
-        isEditingMaxDistLimit = false; // Allow updates after cancelling
-      });
-    }
+    // Note: updateMaxDistLimitUI(), initMaxDistLimitListeners() in PursuitController.js
     
     document.getElementById('btnStart').addEventListener('click', function() {
       const distance = parseFloat(document.getElementById('distance').value);
@@ -3981,206 +3886,14 @@
     });
 
     // ============================================================================
-    // PURSUIT MODE - Interactive Gauge Control
+    // PURSUIT MODE - Loaded from PursuitController.js
     // ============================================================================
-    
-    let pursuitActive = false;
-    // Pursuit mode constants and local state
-    // Note: pursuitTargetMM migrated to AppState.pursuit.targetMM
-    let pursuitMaxSpeedLevel = 10;
-    const PURSUIT_COMMAND_INTERVAL = 20;  // Send command max every 20ms (50Hz)
-    
-    // Flag to prevent WebSocket updates while user is editing max distance limit
-    let isEditingMaxDistLimit = false;
-    
-    function updateGaugePosition(positionMM) {
-      if (AppState.pursuit.totalDistanceMM <= 0) return;
-      
-      const containerHeight = DOM.gaugeContainer.offsetHeight;
-      
-      // Calculate position (0mm = bottom, totalDistanceMM = top)
-      const percent = positionMM / AppState.pursuit.totalDistanceMM;
-      const pixelPosition = containerHeight - (percent * containerHeight);
-      
-      DOM.gaugePosition.style.top = pixelPosition + 'px';
-      DOM.currentPositionMM.textContent = positionMM.toFixed(1);
-      
-      // Update error
-      const error = Math.abs(AppState.pursuit.targetMM - positionMM);
-      DOM.positionError.textContent = error.toFixed(1);
-    }
-    
-    function setGaugeTarget(positionMM) {
-      if (AppState.pursuit.totalDistanceMM <= 0) return;
-      
-      // Clamp to valid range
-      if (positionMM < 0) positionMM = 0;
-      if (positionMM > AppState.pursuit.totalDistanceMM) positionMM = AppState.pursuit.totalDistanceMM;
-      
-      AppState.pursuit.targetMM = positionMM;
-      
-      const containerHeight = DOM.gaugeContainer.offsetHeight;
-      
-      // Calculate position (0mm = bottom, totalDistanceMM = top)
-      const percent = positionMM / AppState.pursuit.totalDistanceMM;
-      const pixelPosition = containerHeight - (percent * containerHeight);
-      
-      DOM.gaugeCursor.style.top = pixelPosition + 'px';
-      DOM.targetPositionMM.textContent = positionMM.toFixed(1);
-      
-      // Update error
-      const error = Math.abs(AppState.pursuit.targetMM - AppState.pursuit.currentPositionMM);
-      DOM.positionError.textContent = error.toFixed(1);
-      
-      // Send pursuit command if active and enough time has passed
-      if (pursuitActive) {
-        const now = Date.now();
-        if (now - AppState.pursuit.lastCommandTime > PURSUIT_COMMAND_INTERVAL) {
-          sendPursuitCommand();
-          AppState.pursuit.lastCommandTime = now;
-        }
-      }
-    }
-    
-    function sendPursuitCommand() {
-      // Always send command - the ESP32 will handle when to stop (errorSteps == 0)
-      sendCommand(WS_CMD.PURSUIT_MOVE, {
-        targetPosition: AppState.pursuit.targetMM,
-        maxSpeed: pursuitMaxSpeedLevel
-      });
-    }
-    
-    // Gauge mouse interaction
-    document.getElementById('gaugeContainer').addEventListener('mousedown', function(e) {
-      AppState.pursuit.isDragging = true;
-      updateGaugeFromMouse(e);
-    });
-    
-    document.addEventListener('mousemove', function(e) {
-      if (AppState.pursuit.isDragging) {
-        updateGaugeFromMouse(e);
-      }
-    });
-    
-    document.addEventListener('mouseup', function() {
-      AppState.pursuit.isDragging = false;
-    });
-    
-    function updateGaugeFromMouse(e) {
-      const container = document.getElementById('gaugeContainer');
-      const rect = container.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const containerHeight = rect.height;
-      
-      // Convert y position to percentage (top = 100%, bottom = 0%)
-      let percent = 1 - (y / containerHeight);
-      if (percent < 0) percent = 0;
-      if (percent > 1) percent = 1;
-      
-      // Convert to position in mm
-      const positionMM = percent * AppState.pursuit.totalDistanceMM;
-      setGaugeTarget(positionMM);
-    }
-    
-    // Pursuit mode controls
-    document.getElementById('pursuitActiveCheckbox').addEventListener('change', function() {
-      pursuitActive = this.checked;
-      
-      if (pursuitActive) {
-        // Check if system is calibrating
-        if (AppState.system.currentState === SystemState.CALIBRATING) {
-          this.checked = false;
-          pursuitActive = false;
-          alert('Veuillez attendre la fin de la calibration');
-          return;
-        }
-        
-        document.getElementById('btnActivatePursuit').textContent = '⏸ Pause Poursuite';
-        document.getElementById('btnActivatePursuit').classList.remove('btn-success');
-        document.getElementById('btnActivatePursuit').classList.add('btn-warning');
-        
-        // Enable gauge interaction
-        document.getElementById('gaugeContainer').style.opacity = '1';
-        document.getElementById('gaugeContainer').style.cursor = 'crosshair';
-        document.getElementById('gaugeContainer').style.pointerEvents = 'auto';
-        
-        // Use already set target position (from gauge clicks or current position)
-        // Don't reset to current position - keep user's target choice
-        if (AppState.pursuit.targetMM === undefined || isNaN(AppState.pursuit.targetMM)) {
-          // Only initialize if never set before
-          AppState.pursuit.targetMM = AppState.pursuit.currentPositionMM;
-          setGaugeTarget(AppState.pursuit.currentPositionMM);
-        }
-        // else: Keep the target position that was set (even if 0 mm)
-        
-        // Enable pursuit mode on ESP32
-        sendCommand(WS_CMD.ENABLE_PURSUIT_MODE, {});
-        
-        // Send initial position command after ESP32 mode switch completes
-        setTimeout(function() {
-          sendPursuitCommand();
-          setTimeout(startPursuitLoop, PURSUIT_COMMAND_INTERVAL);
-        }, 200);
-      } else {
-        document.getElementById('btnActivatePursuit').textContent = '▶ Démarrer';
-        document.getElementById('btnActivatePursuit').classList.remove('btn-warning');
-        document.getElementById('btnActivatePursuit').classList.add('btn-success');
-        
-        // Disable gauge interaction visually
-        document.getElementById('gaugeContainer').style.opacity = '0.5';
-        document.getElementById('gaugeContainer').style.cursor = 'not-allowed';
-        document.getElementById('gaugeContainer').style.pointerEvents = 'none';
-        
-        // Disable pursuit mode on ESP32
-        sendCommand(WS_CMD.DISABLE_PURSUIT_MODE, {});
-        
-        // NOTE: AppState.pursuit.targetMM is preserved for when user re-enables pursuit mode
-      }
-    });
-    
-    document.getElementById('btnActivatePursuit').addEventListener('click', function() {
-      const checkbox = document.getElementById('pursuitActiveCheckbox');
-      checkbox.checked = !checkbox.checked;
-      checkbox.dispatchEvent(new Event('change'));
-    });
-    
-    document.getElementById('pursuitMaxSpeed').addEventListener('change', function() {
-      pursuitMaxSpeedLevel = parseFloat(this.value);
-    });
-    
-    // Pursuit speed presets
-    document.querySelectorAll('[data-pursuit-speed]').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const speed = parseFloat(this.getAttribute('data-pursuit-speed'));
-        document.getElementById('pursuitMaxSpeed').value = speed;
-        pursuitMaxSpeedLevel = speed;
-        
-        document.querySelectorAll('[data-pursuit-speed]').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-      });
-    });
-    
-    // Pursuit loop - sends commands periodically
-    function startPursuitLoop() {
-      if (!pursuitActive) return;
-      
-      sendPursuitCommand();
-      
-      // Continue loop
-      setTimeout(startPursuitLoop, PURSUIT_COMMAND_INTERVAL);
-    }
-    
-    document.getElementById('btnStopPursuit').addEventListener('click', function() {
-      // Disable pursuit mode
-      document.getElementById('pursuitActiveCheckbox').checked = false;
-      document.getElementById('pursuitActiveCheckbox').dispatchEvent(new Event('change'));
-      
-      // Return to start position to verify contact
-      setTimeout(function() {
-        console.log('Stopping pursuit - returning to start for contact verification');
-        sendCommand(WS_CMD.RETURN_TO_START, {});
-      }, 200);  // Small delay to let pursuit mode disable first
-    });
+    // Note: Pursuit mode functions loaded from external module:
+    // - updateGaugePosition(), setGaugeTarget(), sendPursuitCommand()
+    // - enablePursuitMode(), disablePursuitMode(), togglePursuitMode()
+    // - initPursuitListeners(), initPursuitModeOnLoad()
+    // - updateMaxDistLimitUI(), initMaxDistLimitListeners()
+    // - isPursuitActive(), getPursuitMaxSpeed(), isEditingMaxDistanceLimit()
 
     // ============================================================================
     // TAB MANAGEMENT & MODE SWITCHING
@@ -4258,9 +3971,8 @@
         setGaugeTarget(0);  // Start at 0mm
       } else if (tabName === 'simple') {
         // Switching TO simple mode - disable pursuit if active
-        if (pursuitActive) {
-          document.getElementById('pursuitActiveCheckbox').checked = false;
-          document.getElementById('pursuitActiveCheckbox').dispatchEvent(new Event('change'));
+        if (isPursuitActive()) {
+          disablePursuitMode();
         }
       } else if (tabName === 'oscillation') {
         // Switching TO oscillation mode - always update center with effective max
@@ -4300,10 +4012,10 @@
     
     function isSystemRunning() {
       // State 3 = RUNNING, 4 = PAUSED (for simple mode)
-      // Also check if pursuit mode is active
+      // Also check if pursuit mode is active (isPursuitActive from PursuitController.js)
       return AppState.system.currentState === SystemState.RUNNING || 
              AppState.system.currentState === SystemState.PAUSED || 
-             pursuitActive;
+             isPursuitActive();
     }
     
     function cancelModeChange() {
@@ -4325,10 +4037,9 @@
       document.getElementById('modeChangeModal').classList.remove('active');
       
       // If pursuit is active, disable it first
-      if (pursuitActive) {
+      if (isPursuitActive()) {
         console.log('Mode change: Disabling pursuit mode first');
-        document.getElementById('pursuitActiveCheckbox').checked = false;
-        document.getElementById('pursuitActiveCheckbox').dispatchEvent(new Event('change'));
+        disablePursuitMode();
       }
       
       // Stop movement (for simple mode)
@@ -4488,7 +4199,7 @@
         if (isSystemRunning()) {
           // Update modal message based on current mode
           const modalMessage = document.getElementById('modalMessage');
-          if (pursuitActive) {
+          if (isPursuitActive()) {
             modalMessage.innerHTML = 
               'Le mode poursuite est actuellement actif. Le changement de mode va :<br>' +
               '• Désactiver le mode poursuite<br>' +
@@ -4519,24 +4230,9 @@
       // Initialize speed limits based on maxSpeedLevel constant
       initSpeedLimits();
       
-      // Initialize max distance limit event listeners
-      initMaxDistLimitListeners();
-      
-      // Ensure pursuit checkbox is unchecked on fresh load
-      DOM.pursuitActiveCheckbox.checked = false;
-      pursuitActive = false;
-      
-      // Reset button text
-      DOM.btnActivatePursuit.textContent = '▶ Démarrer';
-      DOM.btnActivatePursuit.classList.remove('btn-warning');
-      DOM.btnActivatePursuit.classList.add('btn-success');
-      
-      // Disable gauge interaction on page load (pursuit mode inactive)
-      if (DOM.gaugeContainer) {
-        DOM.gaugeContainer.style.opacity = '0.5';
-        DOM.gaugeContainer.style.cursor = 'not-allowed';
-        DOM.gaugeContainer.style.pointerEvents = 'none';
-      }
+      // Initialize pursuit mode (from PursuitController.js)
+      initPursuitListeners();
+      initPursuitModeOnLoad();
       
       // Request sequence table on load (wait for WebSocket connection)
       function requestSequenceTableWhenReady() {
