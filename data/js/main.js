@@ -1662,58 +1662,86 @@
         
         // Movement type icon and info
         const movementType = line.movementType !== undefined ? line.movementType : 0;
+        // Movement type display - delegate to pure function if available
         let typeIcon = '';
         let typeInfo = '';
         let typeName = '';
         
-        if (movementType === 0) {
-          // VA-ET-VIENT
-          typeIcon = '🔄';
-          typeName = 'Va-et-vient';
-          typeInfo = `
-            <div style="font-size: 10px; line-height: 1.2;">
-              <div>${line.startPositionMM.toFixed(1)}mm</div>
-              <div>±${line.distanceMM.toFixed(1)}mm</div>
-            </div>
-          `;
-        } else if (movementType === 1) {
-          // OSCILLATION
-          typeIcon = '〰️';
-          typeName = 'Oscillation';
-          const waveformNames = ['SIN', 'TRI', 'SQR'];
-          const waveformName = waveformNames[line.oscWaveform] || '?';
-          typeInfo = `
-            <div style="font-size: 10px; line-height: 1.2;">
-              <div>C:${line.oscCenterPositionMM ? line.oscCenterPositionMM.toFixed(0) : '100'}mm</div>
-              <div>A:±${line.oscAmplitudeMM ? line.oscAmplitudeMM.toFixed(0) : '50'}mm</div>
-              <div>${waveformName} ${line.oscFrequencyHz ? line.oscFrequencyHz.toFixed(2) : '0.5'}Hz</div>
-            </div>
-          `;
-        } else if (movementType === 2) {
-          // CHAOS
-          typeIcon = '🌀';
-          typeName = 'Chaos';
-          typeInfo = `
-            <div style="font-size: 10px; line-height: 1.2;">
-              <div>⏱️${line.chaosDurationSeconds || 30}s</div>
-              <div>🎲${line.chaosCrazinessPercent ? line.chaosCrazinessPercent.toFixed(0) : '50'}%</div>
-            </div>
-          `;
-        } else if (movementType === 4) {
-          // CALIBRATION
-          typeIcon = '📏';
-          typeName = 'Calibration';
-          typeInfo = `
-            <div style="font-size: 10px; line-height: 1.2;">
-              <div>Calibration</div>
-              <div>complète</div>
-            </div>
-          `;
+        if (typeof getMovementTypeDisplayPure === 'function') {
+          const typeDisplay = getMovementTypeDisplayPure(movementType, line);
+          typeIcon = typeDisplay.icon;
+          typeName = typeDisplay.name;
+          // Format info as HTML for table display
+          if (movementType === 0) {
+            typeInfo = `
+              <div style="font-size: 10px; line-height: 1.2;">
+                <div>${line.startPositionMM.toFixed(1)}mm</div>
+                <div>±${line.distanceMM.toFixed(1)}mm</div>
+              </div>
+            `;
+          } else if (movementType === 1) {
+            const waveformNames = ['SIN', 'TRI', 'SQR'];
+            const waveformName = waveformNames[line.oscWaveform] || '?';
+            typeInfo = `
+              <div style="font-size: 10px; line-height: 1.2;">
+                <div>C:${line.oscCenterPositionMM ? line.oscCenterPositionMM.toFixed(0) : '100'}mm</div>
+                <div>A:±${line.oscAmplitudeMM ? line.oscAmplitudeMM.toFixed(0) : '50'}mm</div>
+                <div>${waveformName} ${line.oscFrequencyHz ? line.oscFrequencyHz.toFixed(2) : '0.5'}Hz</div>
+              </div>
+            `;
+          } else if (movementType === 2) {
+            typeInfo = `
+              <div style="font-size: 10px; line-height: 1.2;">
+                <div>⏱️${line.chaosDurationSeconds || 30}s</div>
+                <div>🎲${line.chaosCrazinessPercent ? line.chaosCrazinessPercent.toFixed(0) : '50'}%</div>
+              </div>
+            `;
+          } else if (movementType === 4) {
+            typeInfo = `
+              <div style="font-size: 10px; line-height: 1.2;">
+                <div>Calibration</div>
+                <div>complète</div>
+              </div>
+            `;
+          }
+        } else {
+          // Fallback - inline logic
+          if (movementType === 0) {
+            typeIcon = '�';
+            typeName = 'Va-et-vient';
+            typeInfo = `<div style="font-size: 10px;">${line.startPositionMM.toFixed(1)}mm ±${line.distanceMM.toFixed(1)}mm</div>`;
+          } else if (movementType === 1) {
+            typeIcon = '〰️';
+            typeName = 'Oscillation';
+            typeInfo = `<div style="font-size: 10px;">Osc</div>`;
+          } else if (movementType === 2) {
+            typeIcon = '🌀';
+            typeName = 'Chaos';
+            typeInfo = `<div style="font-size: 10px;">Chaos</div>`;
+          } else if (movementType === 4) {
+            typeIcon = '📏';
+            typeName = 'Calibration';
+            typeInfo = `<div style="font-size: 10px;">Calib</div>`;
+          }
         }
         
-        // Deceleration summary - compact version (only for VAET)
+        // Deceleration summary - delegate to pure function if available
         let decelSummary = '';
-        if (movementType === 0 && (line.decelStartEnabled || line.decelEndEnabled)) {
+        if (typeof getDecelSummaryPure === 'function') {
+          const decel = getDecelSummaryPure(line, movementType);
+          if (decel.enabled) {
+            decelSummary = `
+              <div style="font-size: 10px; line-height: 1.3;">
+                <div style="color: #4CAF50; font-weight: bold;">${decel.partsText}</div>
+                <div>${decel.zoneMM}mm ${decel.effectPercent}%</div>
+                <div>${decel.modeName}</div>
+              </div>
+            `;
+          } else {
+            decelSummary = '<span style="color: #999; font-size: 10px;">--</span>';
+          }
+        } else if (movementType === 0 && (line.decelStartEnabled || line.decelEndEnabled)) {
+          // Fallback
           const parts = [];
           if (line.decelStartEnabled) parts.push('D');
           if (line.decelEndEnabled) parts.push('F');
@@ -1729,31 +1757,69 @@
           decelSummary = '<span style="color: #999; font-size: 10px;">--</span>';
         }
         
-        // Speeds - different display based on type
+        // Speeds - delegate to pure function if available
         let speedsDisplay = '';
-        if (movementType === 0) {
-          // VA-ET-VIENT: Forward/Backward speeds
-          speedsDisplay = `
-            <div style="font-size: 11px; line-height: 1.3;">
-              <div style="color: #2196F3; font-weight: bold;">↗${line.speedForward.toFixed(1)}</div>
-              <div style="color: #FF9800; font-weight: bold;">↙${line.speedBackward.toFixed(1)}</div>
-            </div>
-          `;
-        } else if (movementType === 1) {
-          // OSCILLATION: Calculated speed (2π × f × A)
-          const peakSpeedMMPerSec = 2 * Math.PI * line.oscFrequencyHz * line.oscAmplitudeMM;
-          speedsDisplay = `
-            <div style="font-size: 11px; font-weight: bold; color: #9C27B0;">
-              ${peakSpeedMMPerSec.toFixed(0)} mm/s
-            </div>
-          `;
+        if (typeof getLineSpeedsDisplayPure === 'function') {
+          const speeds = getLineSpeedsDisplayPure(line, movementType);
+          if (speeds.type === 'bidirectional') {
+            speedsDisplay = `
+              <div style="font-size: 11px; line-height: 1.3;">
+                <div style="color: #2196F3; font-weight: bold;">↗${speeds.forward}</div>
+                <div style="color: #FF9800; font-weight: bold;">↙${speeds.backward}</div>
+              </div>
+            `;
+          } else if (speeds.type === 'peak') {
+            speedsDisplay = `
+              <div style="font-size: 11px; font-weight: bold; color: #9C27B0;">
+                ${speeds.peakSpeedDisplay}
+              </div>
+            `;
+          } else if (speeds.type === 'max') {
+            speedsDisplay = `
+              <div style="font-size: 11px; font-weight: bold; color: #E91E63;">
+                ${speeds.maxSpeedDisplay}
+              </div>
+            `;
+          } else if (speeds.type === 'fixed') {
+            speedsDisplay = `<div style="font-size: 11px; color: #999;">${speeds.display}</div>`;
+          }
         } else {
-          // CHAOS: Max speed
-          speedsDisplay = `
-            <div style="font-size: 11px; font-weight: bold; color: #E91E63;">
-              ${line.chaosMaxSpeedLevel ? line.chaosMaxSpeedLevel.toFixed(1) : '10.0'}
-            </div>
-          `;
+          // Fallback - inline logic
+          if (movementType === 0) {
+            speedsDisplay = `
+              <div style="font-size: 11px; line-height: 1.3;">
+                <div style="color: #2196F3; font-weight: bold;">↗${line.speedForward.toFixed(1)}</div>
+                <div style="color: #FF9800; font-weight: bold;">↙${line.speedBackward.toFixed(1)}</div>
+              </div>
+            `;
+          } else if (movementType === 1) {
+            const peakSpeedMMPerSec = 2 * Math.PI * line.oscFrequencyHz * line.oscAmplitudeMM;
+            speedsDisplay = `
+              <div style="font-size: 11px; font-weight: bold; color: #9C27B0;">
+                ${peakSpeedMMPerSec.toFixed(0)} mm/s
+              </div>
+            `;
+          } else {
+            speedsDisplay = `
+              <div style="font-size: 11px; font-weight: bold; color: #E91E63;">
+                ${line.chaosMaxSpeedLevel ? line.chaosMaxSpeedLevel.toFixed(1) : '10.0'}
+              </div>
+            `;
+          }
+        }
+        
+        // Cycles and pause - delegate to pure function if available
+        let cyclesDisplay = line.cycleCount;
+        let pauseDisplay = line.pauseAfterMs > 0 ? (line.pauseAfterMs / 1000).toFixed(1) + 's' : '--';
+        let pauseColor = line.pauseAfterMs > 0 ? '#9C27B0' : '#999';
+        let pauseWeight = line.pauseAfterMs > 0 ? 'bold' : 'normal';
+        
+        if (typeof getLineCyclesPausePure === 'function') {
+          const cyclesPause = getLineCyclesPausePure(line, movementType);
+          cyclesDisplay = cyclesPause.cyclesDisplay;
+          pauseDisplay = cyclesPause.pauseDisplay;
+          pauseColor = cyclesPause.pauseMs > 0 ? '#9C27B0' : '#999';
+          pauseWeight = cyclesPause.pauseMs > 0 ? 'bold' : 'normal';
         }
         
         row.innerHTML = `
@@ -1781,10 +1847,10 @@
             ${decelSummary}
           </td>
           <td style="padding: 4px 2px; text-align: center; font-weight: bold; color: #FF9800; border-right: 1px solid #eee;">
-            ${line.cycleCount}
+            ${cyclesDisplay}
           </td>
-          <td style="padding: 4px 2px; text-align: center; color: ${line.pauseAfterMs > 0 ? '#9C27B0' : '#999'}; font-weight: ${line.pauseAfterMs > 0 ? 'bold' : 'normal'}; border-right: 1px solid #eee; font-size: 10px;">
-            ${line.pauseAfterMs > 0 ? (line.pauseAfterMs / 1000).toFixed(1) + 's' : '--'}
+          <td style="padding: 4px 2px; text-align: center; color: ${pauseColor}; font-weight: ${pauseWeight}; border-right: 1px solid #eee; font-size: 10px;">
+            ${pauseDisplay}
           </td>
           <td style="padding: 4px 2px; text-align: center; white-space: nowrap;">
             <button onclick="testSequenceLine(${line.lineId})" 

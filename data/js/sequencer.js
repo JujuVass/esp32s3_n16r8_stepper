@@ -322,6 +322,175 @@ function generateSequenceLineTooltipPure(line) {
 }
 
 // ============================================================================
+// LINE DISPLAY HELPERS (PURE FUNCTIONS)
+// ============================================================================
+
+/**
+ * Get movement type display info (PURE FUNCTION)
+ * @param {number} movementType - Movement type code
+ * @param {Object} line - Line data
+ * @returns {Object} { icon, name, info }
+ */
+function getMovementTypeDisplayPure(movementType, line) {
+  const WAVEFORM_NAMES_SHORT = ['SIN', 'TRI', 'SQR'];
+  
+  switch (movementType) {
+    case MOVEMENT_TYPE.VAET:
+      return {
+        icon: '🔄',
+        name: 'Va-et-vient',
+        info: `${line.startPositionMM?.toFixed(1) || 0}mm ±${line.distanceMM?.toFixed(1) || 50}mm`
+      };
+      
+    case MOVEMENT_TYPE.OSCILLATION:
+      const waveformName = WAVEFORM_NAMES_SHORT[line.oscWaveform] || 'SIN';
+      return {
+        icon: '〰️',
+        name: 'Oscillation',
+        info: `C:${line.oscCenterPositionMM?.toFixed(0) || 100}mm A:±${line.oscAmplitudeMM?.toFixed(0) || 50}mm ${waveformName} ${line.oscFrequencyHz?.toFixed(2) || 0.5}Hz`
+      };
+      
+    case MOVEMENT_TYPE.CHAOS:
+      return {
+        icon: '🌀',
+        name: 'Chaos',
+        info: `⏱️${line.chaosDurationSeconds || 30}s 🎲${line.chaosCrazinessPercent?.toFixed(0) || 50}%`
+      };
+      
+    case MOVEMENT_TYPE.CALIBRATION:
+      return {
+        icon: '📏',
+        name: 'Calibration',
+        info: 'Calibration complète'
+      };
+      
+    default:
+      return {
+        icon: '❓',
+        name: 'Inconnu',
+        info: `Type ${movementType}`
+      };
+  }
+}
+
+/**
+ * Get deceleration summary for a line (PURE FUNCTION)
+ * @param {Object} line - Line data
+ * @param {number} movementType - Movement type
+ * @returns {Object} { enabled, parts, zoneMM, effectPercent, modeName }
+ */
+function getDecelSummaryPure(line, movementType) {
+  const MODE_LABELS = ['Lin', 'Sin', 'Tri⁻¹', 'Sin⁻¹'];
+  
+  // Only for VAET
+  if (movementType !== MOVEMENT_TYPE.VAET) {
+    return { enabled: false };
+  }
+  
+  if (!line.decelStartEnabled && !line.decelEndEnabled) {
+    return { enabled: false };
+  }
+  
+  const parts = [];
+  if (line.decelStartEnabled) parts.push('D');
+  if (line.decelEndEnabled) parts.push('F');
+  
+  return {
+    enabled: true,
+    parts: parts,
+    partsText: parts.join('/'),
+    zoneMM: line.decelZoneMM || 20,
+    effectPercent: line.decelEffectPercent || 50,
+    modeName: MODE_LABELS[line.decelMode] || 'Lin'
+  };
+}
+
+/**
+ * Get speed display for a line (PURE FUNCTION)
+ * @param {Object} line - Line data
+ * @param {number} movementType - Movement type
+ * @returns {Object} { type, forward, backward, peakSpeed }
+ */
+function getLineSpeedsDisplayPure(line, movementType) {
+  switch (movementType) {
+    case MOVEMENT_TYPE.VAET:
+      return {
+        type: 'bidirectional',
+        forward: line.speedForward?.toFixed(1) || '5.0',
+        backward: line.speedBackward?.toFixed(1) || '5.0'
+      };
+      
+    case MOVEMENT_TYPE.OSCILLATION:
+      // Peak speed = 2π × f × A
+      const freq = line.oscFrequencyHz || 0.5;
+      const amp = line.oscAmplitudeMM || 50;
+      const peakSpeed = 2 * Math.PI * freq * amp;
+      return {
+        type: 'peak',
+        peakSpeedMMPerSec: peakSpeed,
+        peakSpeedDisplay: `${peakSpeed.toFixed(0)} mm/s`
+      };
+      
+    case MOVEMENT_TYPE.CHAOS:
+      return {
+        type: 'max',
+        maxSpeed: line.chaosMaxSpeedLevel || 15,
+        maxSpeedDisplay: `Max: ${line.chaosMaxSpeedLevel || 15}/20`
+      };
+      
+    case MOVEMENT_TYPE.CALIBRATION:
+      return {
+        type: 'fixed',
+        display: 'Auto'
+      };
+      
+    default:
+      return { type: 'unknown' };
+  }
+}
+
+/**
+ * Get cycles and pause display for a line (PURE FUNCTION)
+ * @param {Object} line - Line data
+ * @param {number} movementType - Movement type
+ * @returns {Object} { cycles, pauseMs, pauseSec }
+ */
+function getLineCyclesPausePure(line, movementType) {
+  // Calibration doesn't have cycles
+  if (movementType === MOVEMENT_TYPE.CALIBRATION) {
+    return {
+      cycles: 1,
+      cyclesDisplay: '1',
+      pauseMs: 0,
+      pauseSec: 0,
+      pauseDisplay: '--'
+    };
+  }
+  
+  // Chaos uses duration, not cycles
+  if (movementType === MOVEMENT_TYPE.CHAOS) {
+    return {
+      cycles: 1,
+      cyclesDisplay: `${line.chaosDurationSeconds || 30}s`,
+      pauseMs: line.pauseAfterMs || 0,
+      pauseSec: (line.pauseAfterMs || 0) / 1000,
+      pauseDisplay: line.pauseAfterMs ? `${(line.pauseAfterMs / 1000).toFixed(1)}s` : '--'
+    };
+  }
+  
+  const cycles = line.cycleCount || 1;
+  const pauseMs = line.pauseAfterMs || 0;
+  
+  return {
+    cycles: cycles,
+    cyclesDisplay: cycles === 0 ? '∞' : String(cycles),
+    pauseMs: pauseMs,
+    pauseSec: pauseMs / 1000,
+    pauseDisplay: pauseMs > 0 ? `${(pauseMs / 1000).toFixed(1)}s` : '--'
+  };
+}
+
+// ============================================================================
 // EXPORTS (Browser globals)
 // ============================================================================
 window.SEQUENCER_LIMITS = SEQUENCER_LIMITS;
@@ -332,5 +501,9 @@ window.buildSequenceLineDefaultsPure = buildSequenceLineDefaultsPure;
 window.generateVaetTooltipPure = generateVaetTooltipPure;
 window.generateCalibrationTooltipPure = generateCalibrationTooltipPure;
 window.generateSequenceLineTooltipPure = generateSequenceLineTooltipPure;
+window.getMovementTypeDisplayPure = getMovementTypeDisplayPure;
+window.getDecelSummaryPure = getDecelSummaryPure;
+window.getLineSpeedsDisplayPure = getLineSpeedsDisplayPure;
+window.getLineCyclesPausePure = getLineCyclesPausePure;
 
 console.log('✅ sequencer.js loaded');
