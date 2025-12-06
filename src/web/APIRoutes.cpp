@@ -17,6 +17,65 @@ extern WebSocketsServer webSocket;
 extern UtilityEngine* engine;
 
 // ============================================================================
+// MIME TYPE DETECTION
+// ============================================================================
+
+String getMimeType(const String& path) {
+  if (path.endsWith(".html")) return "text/html";
+  if (path.endsWith(".css"))  return "text/css";
+  if (path.endsWith(".js"))   return "application/javascript";
+  if (path.endsWith(".json")) return "application/json";
+  if (path.endsWith(".png"))  return "image/png";
+  if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
+  if (path.endsWith(".gif"))  return "image/gif";
+  if (path.endsWith(".svg"))  return "image/svg+xml";
+  if (path.endsWith(".ico"))  return "image/x-icon";
+  if (path.endsWith(".txt"))  return "text/plain";
+  return "application/octet-stream";
+}
+
+// ============================================================================
+// STATIC FILE SERVER - Auto-serves any file from LittleFS
+// ============================================================================
+
+bool serveStaticFile(const String& path) {
+  String filePath = path;
+  
+  // Handle root -> index.html
+  if (filePath == "/") filePath = "/index.html";
+  
+  // Check if file exists
+  if (!LittleFS.exists(filePath)) {
+    return false;
+  }
+  
+  File file = LittleFS.open(filePath, "r");
+  if (!file) {
+    engine->error("❌ Error opening: " + filePath);
+    return false;
+  }
+  
+  String mimeType = getMimeType(filePath);
+  
+  // Set cache headers based on file type
+  if (filePath.endsWith(".html")) {
+    // HTML: no cache (always fresh)
+    server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    server.sendHeader("Pragma", "no-cache");
+    server.sendHeader("Expires", "0");
+  } else {
+    // CSS/JS/images: cache 24h
+    server.sendHeader("Cache-Control", "public, max-age=86400");
+  }
+  
+  server.streamFile(file, mimeType);
+  file.close();
+  
+  engine->debug("✅ Served: " + filePath + " (" + mimeType + ")");
+  return true;
+}
+
+// ============================================================================
 // CORS HELPER FUNCTIONS
 // ============================================================================
 
@@ -110,288 +169,20 @@ void setupAPIRoutes() {
   server.on("/api/playlists", HTTP_OPTIONS, handleCORSPreflight);
   server.on("/api/command", HTTP_OPTIONS, handleCORSPreflight);
   
-  // Main route: serve index.html from LittleFS
+  // ============================================================================
+  // AUTOMATIC STATIC FILE SERVING
+  // ============================================================================
+  // Instead of manually declaring each CSS/JS route, we use onNotFound to
+  // automatically serve any file from LittleFS. This means:
+  // - Add/remove/rename JS files freely - no code changes needed
+  // - Subdirectories (js/core/, js/modules/) work automatically
+  // - Only API routes (/api/*) need explicit handlers below
+  // ============================================================================
+  
+  // Root route explicitly for faster response
   server.on("/", HTTP_GET, []() {
-    if (LittleFS.exists("/index.html")) {
-      File file = LittleFS.open("/index.html", "r");
-      if (file) {
-        // Disable browser caching to ensure latest version is always loaded
-        server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        server.sendHeader("Pragma", "no-cache");
-        server.sendHeader("Expires", "0");
-        server.streamFile(file, "text/html");
-        file.close();
-        engine->debug("✅ Served /index.html from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening index.html");
-        engine->error("❌ Error opening /index.html");
-      }
-    } else {
+    if (!serveStaticFile("/index.html")) {
       server.send(404, "text/plain", "❌ File not found: index.html\nPlease upload filesystem using: platformio run --target uploadfs");
-      engine->error("❌ /index.html not found in LittleFS");
-    }
-  });
-  
-  // CSS route: serve style.css from LittleFS with caching
-  server.on("/style.css", HTTP_GET, []() {
-    if (LittleFS.exists("/style.css")) {
-      File file = LittleFS.open("/style.css", "r");
-      if (file) {
-        // Enable browser caching for CSS (24 hours)
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "text/css");
-        file.close();
-        engine->debug("✅ Served /style.css from LittleFS (cached 24h)");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening style.css");
-        engine->error("❌ Error opening /style.css");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: style.css");
-      engine->error("❌ /style.css not found in LittleFS");
-    }
-  });
-  
-  // CSS route: serve /css/styles.css from LittleFS with caching
-  server.on("/css/styles.css", HTTP_GET, []() {
-    if (LittleFS.exists("/css/styles.css")) {
-      File file = LittleFS.open("/css/styles.css", "r");
-      if (file) {
-        // Enable browser caching for CSS (24 hours)
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "text/css");
-        file.close();
-        engine->debug("✅ Served /css/styles.css from LittleFS (cached 24h)");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /css/styles.css");
-        engine->error("❌ Error opening /css/styles.css");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /css/styles.css");
-      engine->error("❌ /css/styles.css not found in LittleFS");
-    }
-  });
-
-  // JS routes: serve JavaScript modules from /js/ folder
-  // Cache 24h (86400s) - these files rarely change, reduces ESP32 load
-  server.on("/js/app.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/app.js")) {
-      File file = LittleFS.open("/js/app.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/app.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/app.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/app.js");
-      engine->error("❌ /js/app.js not found in LittleFS");
-    }
-  });
-
-  server.on("/js/utils.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/utils.js")) {
-      File file = LittleFS.open("/js/utils.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/utils.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/utils.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/utils.js");
-      engine->error("❌ /js/utils.js not found in LittleFS");
-    }
-  });
-
-  server.on("/js/milestones.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/milestones.js")) {
-      File file = LittleFS.open("/js/milestones.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/milestones.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/milestones.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/milestones.js");
-      engine->error("❌ /js/milestones.js not found in LittleFS");
-    }
-  });
-
-  server.on("/js/websocket.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/websocket.js")) {
-      File file = LittleFS.open("/js/websocket.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/websocket.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/websocket.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/websocket.js");
-      engine->error("❌ /js/websocket.js not found in LittleFS");
-    }
-  });
-
-  server.on("/js/stats.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/stats.js")) {
-      File file = LittleFS.open("/js/stats.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/stats.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/stats.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/stats.js");
-      engine->error("❌ /js/stats.js not found in LittleFS");
-    }
-  });
-
-  server.on("/js/context.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/context.js")) {
-      File file = LittleFS.open("/js/context.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/context.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/context.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/context.js");
-      engine->error("❌ /js/context.js not found in LittleFS");
-    }
-  });
-
-  server.on("/js/chaos.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/chaos.js")) {
-      File file = LittleFS.open("/js/chaos.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/chaos.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/chaos.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/chaos.js");
-      engine->error("❌ /js/chaos.js not found in LittleFS");
-    }
-  });
-
-  server.on("/js/oscillation.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/oscillation.js")) {
-      File file = LittleFS.open("/js/oscillation.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/oscillation.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/oscillation.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/oscillation.js");
-      engine->error("❌ /js/oscillation.js not found in LittleFS");
-    }
-  });
-
-  server.on("/js/sequencer.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/sequencer.js")) {
-      File file = LittleFS.open("/js/sequencer.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/sequencer.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/sequencer.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/sequencer.js");
-      engine->error("❌ /js/sequencer.js not found in LittleFS");
-    }
-  });
-
-  server.on("/js/presets.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/presets.js")) {
-      File file = LittleFS.open("/js/presets.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/presets.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/presets.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/presets.js");
-      engine->error("❌ /js/presets.js not found in LittleFS");
-    }
-  });
-
-  server.on("/js/formatting.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/formatting.js")) {
-      File file = LittleFS.open("/js/formatting.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/formatting.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/formatting.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/formatting.js");
-      engine->error("❌ /js/formatting.js not found in LittleFS");
-    }
-  });
-
-  server.on("/js/validation.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/validation.js")) {
-      File file = LittleFS.open("/js/validation.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/validation.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/validation.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/validation.js");
-      engine->error("❌ /js/validation.js not found in LittleFS");
-    }
-  });
-
-  server.on("/js/main.js", HTTP_GET, []() {
-    if (LittleFS.exists("/js/main.js")) {
-      File file = LittleFS.open("/js/main.js", "r");
-      if (file) {
-        server.sendHeader("Cache-Control", "public, max-age=86400");
-        server.streamFile(file, "application/javascript");
-        file.close();
-        engine->debug("✅ Served /js/main.js from LittleFS");
-      } else {
-        server.send(500, "text/plain", "❌ Error opening /js/main.js");
-      }
-    } else {
-      server.send(404, "text/plain", "❌ File not found: /js/main.js");
-      engine->error("❌ /js/main.js not found in LittleFS");
     }
   });
 
@@ -1191,27 +982,24 @@ void setupAPIRoutes() {
     server.send(200, "application/json", "{\"success\":true,\"message\":\"Sequence imported successfully\"}");
   });
 
-  // Handle 404 - try to serve files from LittleFS (including /logs/*)
+  // ========================================================================
+  // FALLBACK - Auto-serve static files from LittleFS
+  // ========================================================================
+  // This handler serves ANY file from LittleFS automatically:
+  // - /css/*.css, /js/*.js, /js/core/*.js, /js/modules/*.js, etc.
+  // - No need to manually add routes when adding/removing JS files
+  // - Just update index.html and upload filesystem
+  // ========================================================================
   server.onNotFound([]() {
     String uri = server.uri();
     
-    // Try to serve the file from LittleFS
-    if (LittleFS.exists(uri)) {
-      File f = LittleFS.open(uri, "r");
-      if (f) {
-        String contentType = "text/plain; charset=UTF-8";
-        if (uri.endsWith(".html")) contentType = "text/html; charset=UTF-8";
-        else if (uri.endsWith(".css")) contentType = "text/css";
-        else if (uri.endsWith(".js")) contentType = "application/javascript";
-        else if (uri.endsWith(".json")) contentType = "application/json";
-        
-        server.streamFile(f, contentType);
-        f.close();
-        return;
-      }
+    // Try to serve the file using our helper (handles caching)
+    if (serveStaticFile(uri)) {
+      return;  // File served successfully
     }
     
     // File not found
+    engine->warn("⚠️ 404: " + uri);
     server.send(404, "text/plain", "Not found: " + uri);
   });
 }
