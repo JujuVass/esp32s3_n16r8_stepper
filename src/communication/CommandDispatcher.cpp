@@ -382,6 +382,16 @@ bool CommandDispatcher::handlePursuitCommands(const char* cmd, JsonDocument& doc
         return true;
     }
     
+    if (strcmp(cmd, "disablePursuitMode") == 0) {
+        if (currentMovement == MOVEMENT_PURSUIT) {
+            currentMovement = MOVEMENT_VAET;  // Return to default mode
+            config.currentState = STATE_READY;
+            engine->debug("✅ Mode Pursuit désactivé");
+            sendStatus();
+        }
+        return true;
+    }
+    
     if (strcmp(cmd, "pursuitMove") == 0) {
         if (currentMovement != MOVEMENT_PURSUIT) {
             engine->warn("pursuitMove ignored: not in PURSUIT mode");
