@@ -28,7 +28,7 @@ const AppState = {
     currentState: 0, canStart: false, currentMode: 'simple', pendingModeSwitch: null
   },
   flags: { patternsInitialized: false, domCacheReady: false },
-  milestone: { current: null, lastThreshold: 0 },
+  milestone: { current: null, lastThreshold: 0, initialized: false },
   statsPanel: { isVisible: false, lastToggle: 0 },
   logging: { enabled: false, debugEnabled: false }
 };

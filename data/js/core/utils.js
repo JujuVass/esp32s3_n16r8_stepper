@@ -16,40 +16,177 @@
 // ============================================================================
 // NOTIFICATION SYSTEM
 // ============================================================================
-function showNotification(message, type = 'info', duration = 3000) {
+
+// Notification state management
+const NotificationManager = {
+  container: null,
+  activeNotifications: [],
+  recentMessages: new Map(), // Anti-duplicate: message -> timestamp
+  MAX_NOTIFICATIONS: 5,
+  DEDUPE_WINDOW_MS: 1000, // Ignore duplicate messages within 1 second
+  
+  init() {
+    if (this.container) return this.container;
+    
+    // Create container for stacking notifications
+    this.container = document.createElement('div');
+    this.container.id = 'notification-container';
+    this.container.style.cssText = `
+      position: fixed; top: 20px; right: 20px; z-index: 10000;
+      display: flex; flex-direction: column; gap: 10px;
+      pointer-events: none;`;
+    document.body.appendChild(this.container);
+    
+    // Add animation styles once
+    if (!document.getElementById('notification-styles')) {
+      const styleEl = document.createElement('style');
+      styleEl.id = 'notification-styles';
+      styleEl.textContent = `
+        @keyframes notifSlideIn { 
+          from { transform: translateX(100%); opacity: 0; } 
+          to { transform: translateX(0); opacity: 1; } 
+        }
+        @keyframes notifSlideOut { 
+          from { transform: translateX(0); opacity: 1; } 
+          to { transform: translateX(100%); opacity: 0; } 
+        }
+        @keyframes notifIconBounce {
+          0%, 100% { transform: scale(1); }
+          20% { transform: scale(1.3); }
+          40% { transform: scale(0.9); }
+          60% { transform: scale(1.15); }
+          80% { transform: scale(0.95); }
+        }
+        @keyframes milestoneIconPop {
+          0% { transform: scale(0) rotate(-45deg); }
+          50% { transform: scale(1.4) rotate(10deg); }
+          70% { transform: scale(0.9) rotate(-5deg); }
+          100% { transform: scale(1) rotate(0deg); }
+        }
+        .notification {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        .notification.slide-out {
+          animation: notifSlideOut 0.3s ease forwards;
+        }
+        .notification .notif-icon {
+          animation: notifIconBounce 0.6s ease-out;
+        }
+        .notification-milestone .notif-icon {
+          animation: milestoneIconPop 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+          font-size: 24px !important;
+        }`;
+      document.head.appendChild(styleEl);
+    }
+    
+    return this.container;
+  },
+  
+  isDuplicate(message) {
+    const now = Date.now();
+    const lastShown = this.recentMessages.get(message);
+    if (lastShown && (now - lastShown) < this.DEDUPE_WINDOW_MS) {
+      return true;
+    }
+    this.recentMessages.set(message, now);
+    // Cleanup old entries
+    if (this.recentMessages.size > 50) {
+      for (const [msg, time] of this.recentMessages) {
+        if (now - time > 5000) this.recentMessages.delete(msg);
+      }
+    }
+    return false;
+  },
+  
+  removeOldest() {
+    if (this.activeNotifications.length >= this.MAX_NOTIFICATIONS) {
+      const oldest = this.activeNotifications.shift();
+      if (oldest && oldest.parentNode) {
+        oldest.remove();
+      }
+    }
+  }
+};
+
+function showNotification(message, type = 'info', duration = null) {
+  // Skip duplicate messages within dedupe window
+  if (NotificationManager.isDuplicate(message)) {
+    return null;
+  }
+  
+  // Default durations per type (longer for important messages)
+  const defaultDurations = {
+    success: 3000, 
+    error: 4000, 
+    warning: 3500,
+    info: 3500,
+    milestone: 4000
+  };
+  
+  // Use provided duration or default based on type
+  const actualDuration = duration !== null ? duration : (defaultDurations[type] || 3500);
+  
+  // Initialize container if needed
+  const container = NotificationManager.init();
+  
+  // Remove oldest if at limit
+  NotificationManager.removeOldest();
+  
   const colors = {
-    success: { bg: '#22c55e', icon: '✅' }, error: { bg: '#ef4444', icon: '❌' },
-    warning: { bg: '#f59e0b', icon: '⚠️' }, info: { bg: '#3b82f6', icon: 'ℹ️' }
+    success: { bg: '#22c55e', icon: '✅', textColor: 'white' }, 
+    error: { bg: '#ef4444', icon: '❌', textColor: 'white' },
+    warning: { bg: '#f59e0b', icon: '⚠️', textColor: 'white' }, 
+    info: { bg: '#3b82f6', icon: 'ℹ️', textColor: 'white' },
+    milestone: { bg: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', icon: '🏅', textColor: '#1a1a1a' }
   };
   const style = colors[type] || colors.info;
+  
   const notification = document.createElement('div');
   notification.className = 'notification notification-' + type;
   notification.style.cssText = `
-    position: fixed; top: 20px; right: 20px; padding: 12px 20px;
-    background: ${style.bg}; color: white; border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000;
-    animation: slideIn 0.3s ease; font-weight: 500; max-width: 350px;
-    display: flex; align-items: center; gap: 10px;`;
-  notification.innerHTML = `<span style="font-size: 18px;">${style.icon}</span><span>${message}</span>`;
-  const style_anim = document.createElement('style');
-  style_anim.textContent = `
-    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }`;
-  if (!document.getElementById('notification-styles')) { style_anim.id = 'notification-styles'; document.head.appendChild(style_anim); }
-  document.body.appendChild(notification);
-  if (duration > 0) {
+    padding: 12px 20px; background: ${style.bg}; color: ${style.textColor};
+    border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-weight: 500; max-width: 350px;
+    display: flex; align-items: center; gap: 10px; pointer-events: auto;
+    cursor: pointer; transform: translateX(0); opacity: 1;`;
+  notification.innerHTML = `<span class="notif-icon" style="font-size: 18px;">${style.icon}</span><span>${message}</span>`;
+  
+  // Store timeout ID to allow cancellation
+  let timeoutId = null;
+  
+  // Function to remove notification with animation
+  const removeNotification = () => {
+    if (timeoutId) clearTimeout(timeoutId);
+    notification.classList.add('slide-out');
     setTimeout(() => {
-      notification.style.animation = 'slideOut 0.3s ease forwards';
-      setTimeout(() => notification.remove(), 300);
-    }, duration);
+      if (notification.parentNode) notification.remove();
+      const idx = NotificationManager.activeNotifications.indexOf(notification);
+      if (idx > -1) NotificationManager.activeNotifications.splice(idx, 1);
+    }, 300);
+  };
+  
+  // Allow click to dismiss early
+  notification.addEventListener('click', removeNotification);
+  
+  container.appendChild(notification);
+  NotificationManager.activeNotifications.push(notification);
+  
+  if (actualDuration > 0) {
+    timeoutId = setTimeout(removeNotification, actualDuration);
   }
+  
   return notification;
 }
 
 // ============================================================================
 // BUTTON STATE MANAGEMENT
 // ============================================================================
-function setButtonState(button, state, labels) {
+
+/**
+ * Set button state with text labels (loading/success/error states)
+ */
+function setButtonStateWithLabels(button, state, labels) {
   if (!button) return;
   const states = {
     loading: { disabled: true, text: labels?.loading || 'Loading...' },
@@ -62,6 +199,16 @@ function setButtonState(button, state, labels) {
   button.textContent = cfg.text;
   if (state === 'loading') button.style.opacity = '0.7';
   else button.style.opacity = '1';
+}
+
+/**
+ * Simple button enabled/disabled state with visual feedback
+ */
+function setButtonState(button, enabled) {
+  if (!button) return;
+  button.disabled = !enabled;
+  button.style.opacity = enabled ? '1' : '0.5';
+  button.style.cursor = enabled ? 'pointer' : 'not-allowed';
 }
 
 function setButtonLoading(button, isLoading, originalText) {
@@ -142,16 +289,6 @@ function getISOWeek(date) {
 function canStartOperation() {
   return AppState.system.canStart && 
          AppState.system.currentState !== SystemState.CALIBRATING;
-}
-
-/**
- * Uniformly set button enabled/disabled state with visual feedback
- */
-function setButtonState(button, enabled) {
-  if (!button) return;
-  button.disabled = !enabled;
-  button.style.opacity = enabled ? '1' : '0.5';
-  button.style.cursor = enabled ? 'pointer' : 'not-allowed';
 }
 
 // ============================================================================

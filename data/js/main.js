@@ -2258,27 +2258,48 @@
           DOM.milestoneIcon.textContent = milestoneInfo.current.emoji;
           DOM.milestoneIcon.title = tooltip;
           
-          // Check if milestone changed (achievement notification)
-          if (AppState.milestone.lastThreshold < milestoneInfo.current.threshold) {
-            // New milestone achieved!
-            AppState.milestone.lastThreshold = milestoneInfo.current.threshold;
-            
-            // Trigger animation
-            DOM.milestoneIcon.classList.remove('milestone-achievement');
-            void DOM.milestoneIcon.offsetWidth; // Force reflow
-            DOM.milestoneIcon.classList.add('milestone-achievement');
-            
-            // Show notification
-            let message = `🎉 Jalon atteint: ${milestoneInfo.current.emoji} ${milestoneInfo.current.name} (${milestoneInfo.current.threshold}m)`;
-            if (milestoneInfo.next) {
-              message += `\n⏭️ Prochain objectif: ${milestoneInfo.next.name} (${milestoneInfo.next.threshold}m) - ${milestoneInfo.progressPercent}%`;
+          // Milestone tracking logic
+          const newThreshold = milestoneInfo.current.threshold;
+          const totalTraveledM = data.totalTraveled / 1000.0;
+          
+          // Handle distance reset (user cleared stats) - reset tracking if distance dropped significantly
+          if (totalTraveledM < AppState.milestone.lastThreshold * 0.9) {
+            AppState.milestone.lastThreshold = 0;
+            AppState.milestone.initialized = false;
+          }
+          
+          // Check for milestone change
+          if (newThreshold > AppState.milestone.lastThreshold) {
+            if (!AppState.milestone.initialized) {
+              // First load - sync without notification
+              AppState.milestone.initialized = true;
+              AppState.milestone.lastThreshold = newThreshold;
+            } else {
+              // New milestone achieved during session!
+              AppState.milestone.lastThreshold = newThreshold;
+              
+              // Trigger icon animation
+              DOM.milestoneIcon.classList.remove('milestone-achievement');
+              void DOM.milestoneIcon.offsetWidth;
+              DOM.milestoneIcon.classList.add('milestone-achievement');
+              
+              // Show celebration notification
+              let message = `🎉 Jalon atteint: ${milestoneInfo.current.emoji} (${newThreshold}m)`;
+              if (milestoneInfo.next) {
+                message += `\n⏭️ Prochain: ${milestoneInfo.next.emoji} (${milestoneInfo.next.threshold}m) - ${milestoneInfo.progressPercent}%`;
+              }
+              showNotification(message, 'milestone');
             }
-            showNotification(message, 'success', 6000);
+          } else if (!AppState.milestone.initialized) {
+            // First load, same milestone - just mark initialized
+            AppState.milestone.initialized = true;
+            AppState.milestone.lastThreshold = newThreshold;
           }
           
           AppState.milestone.current = milestoneInfo.current;
         } else {
-          // No milestone reached yet
+          // No milestone reached yet - mark as initialized anyway
+          AppState.milestone.initialized = true;
           if (milestoneInfo.next) {
             const tooltip = `⏭️ Prochain: ${milestoneInfo.next.emoji} ${milestoneInfo.next.name} (${milestoneInfo.next.threshold}m)\n📊 Progression: ${milestoneInfo.progressPercent}%`;
             DOM.milestoneIcon.textContent = '🐜';
