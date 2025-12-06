@@ -3223,6 +3223,12 @@
     // ============================================================================
     
     function generatePresetName(mode, config) {
+      // Delegate to pure function if available (from presets.js)
+      if (typeof generatePresetNamePure === 'function') {
+        return generatePresetNamePure(mode, config);
+      }
+      
+      // Fallback
       if (mode === 'simple') {
         return `${config.startPositionMM}→${config.startPositionMM + config.distanceMM}mm v:${config.speedLevelForward}/${config.speedLevelBackward}`;
       } else if (mode === 'oscillation') {
@@ -3235,65 +3241,18 @@
     }
     
     function generatePresetTooltip(mode, config) {
+      // Delegate to pure function if available (from presets.js)
+      if (typeof generatePresetTooltipPure === 'function') {
+        return generatePresetTooltipPure(mode, config);
+      }
+      
+      // Fallback - simplified version
       if (mode === 'simple') {
-        // Deceleration info
-        let decelInfo = 'Aucune';
-        if (config && (config.decelStartEnabled || config.decelEndEnabled)) {
-          const parts = [];
-          if (config.decelStartEnabled) parts.push('Départ');
-          if (config.decelEndEnabled) parts.push('Fin');
-          const modeNames = ['Lin', 'Sin', 'Tri⁻¹', 'Sin⁻¹'];
-          decelInfo = parts.join('+') + ` (${config.decelZoneMM || 20}mm, ${config.decelEffectPercent || 50}%, ${modeNames[config.decelMode || 1]})`;
-        }
-        
-        // Cycle pause info
-        let cyclePauseInfo = 'Aucune';
-        if (config && config.cyclePauseEnabled) {
-          if (config.cyclePauseIsRandom) {
-            cyclePauseInfo = `${config.cyclePauseMinSec || 0.5}s-${config.cyclePauseMaxSec || 3.0}s (aléatoire)`;
-          } else {
-            cyclePauseInfo = `${config.cyclePauseDurationSec || 0}s (fixe)`;
-          }
-        }
-        
-        return `📍 Départ: ${config.startPositionMM || 0}mm
-📏 Distance: ${config.distanceMM || 50}mm
-➡️ Vitesse aller: ${config.speedLevelForward || 5}/20
-⬅️ Vitesse retour: ${config.speedLevelBackward || 5}/20
-🛑 Décel: ${decelInfo}
-⏸️ Pause/cycle: ${cyclePauseInfo}
-⏱️ Durée estimée: ${((config.distanceMM / (config.speedLevelForward * 10)) * 60).toFixed(1)}s`;
+        return `📍 Départ: ${config.startPositionMM || 0}mm\n📏 Distance: ${config.distanceMM || 50}mm`;
       } else if (mode === 'oscillation') {
-        const waveNames = ['🌊 Sine', '📐 Triangle', '⬜ Carré'];
-        const ramps = [];
-        if (config.enableRampIn) ramps.push('IN');
-        if (config.enableRampOut) ramps.push('OUT');
-        
-        // Cycle pause info
-        let cyclePauseInfo = 'Aucune';
-        if (config && config.cyclePauseEnabled) {
-          if (config.cyclePauseIsRandom) {
-            cyclePauseInfo = `${config.cyclePauseMinSec || 0.5}s-${config.cyclePauseMaxSec || 3.0}s (aléatoire)`;
-          } else {
-            cyclePauseInfo = `${config.cyclePauseDurationSec || 0}s (fixe)`;
-          }
-        }
-        
-        return `${waveNames[config.waveform] || '🌊 Sine'}
-📍 Centre: ${config.centerPositionMM || 100}mm
-↔️ Amplitude: ±${config.amplitudeMM || 20}mm
-⚡ Fréquence: ${config.frequencyHz || 1}Hz
-🔄 Cycles: ${config.cycleCount === 0 ? '∞' : config.cycleCount}
-${ramps.length > 0 ? '📈 Rampes: ' + ramps.join(', ') : ''}
-⏸️ Pause/cycle: ${cyclePauseInfo}`;
+        return `📍 Centre: ${config.centerPositionMM || 100}mm\n↔️ Amplitude: ±${config.amplitudeMM || 20}mm`;
       } else if (mode === 'chaos') {
-        const enabledCount = config.patternsEnabled ? config.patternsEnabled.filter(p => p).length : 11;
-        return `📍 Centre: ${config.centerPositionMM}mm
-↔️ Amplitude: ±${config.amplitudeMM}mm
-⚡ Vitesse max: ${config.maxSpeedLevel}/20
-🎲 Folie: ${config.crazinessPercent}%
-⏱️ Durée: ${config.durationSeconds === 0 ? '∞' : config.durationSeconds + 's'}
-🎭 Patterns: ${enabledCount}/11 actifs`;
+        return `📍 Centre: ${config.centerPositionMM}mm\n🎲 Folie: ${config.crazinessPercent}%`;
       }
       return 'Preset';
     }
@@ -5749,22 +5708,18 @@ ${ramps.length > 0 ? '📈 Rampes: ' + ramps.join(', ') : ''}
     // Debounce timer for validation
     let validationDebounceTimer = null;
     
-    // Update limit validation on input change (with debouncing)
+    // Update limit validation on input change - delegates to pure function
     function validateOscillationLimits() {
       const center = parseFloat(DOM.oscCenter.value) || 0;
       const amplitude = parseFloat(DOM.oscAmplitude.value) || 0;
-      const minPos = center - amplitude;
-      const maxPos = center + amplitude;
-      
-      const minLimit = 0;
-      const maxLimit = AppState.pursuit.totalDistanceMM || 0;
+      const totalDistMM = AppState.pursuit.totalDistanceMM || 0;
       
       const warning = document.getElementById('oscLimitWarning');
       const statusSpan = document.getElementById('oscLimitStatus');
       const btnStart = DOM.btnStartOscillation;
       
-      // If not calibrated yet (check both canStart and totalDistanceMM), show waiting message
-      if (!AppState.system.canStart || !AppState.pursuit.totalDistanceMM || AppState.pursuit.totalDistanceMM === 0) {
+      // If not calibrated yet, show waiting message
+      if (!AppState.system.canStart || !totalDistMM || totalDistMM === 0) {
         warning.style.display = 'none';
         statusSpan.textContent = '⏳ En attente calibration';
         statusSpan.style.color = '#ff9800';
@@ -5774,7 +5729,19 @@ ${ramps.length > 0 ? '📈 Rampes: ' + ramps.join(', ') : ''}
         return false;
       }
       
-      if (minPos < minLimit || maxPos > maxLimit) {
+      // Use pure function if available (from oscillation.js)
+      let isValid = true;
+      if (typeof validateOscillationLimitsPure === 'function') {
+        const result = validateOscillationLimitsPure(center, amplitude, totalDistMM);
+        isValid = result.valid;
+      } else {
+        // Fallback to inline logic
+        const minPos = center - amplitude;
+        const maxPos = center + amplitude;
+        isValid = minPos >= 0 && maxPos <= totalDistMM;
+      }
+      
+      if (!isValid) {
         warning.style.display = 'block';
         statusSpan.textContent = '❌ Invalide';
         statusSpan.style.color = '#e74c3c';
@@ -6660,37 +6627,15 @@ ${ramps.length > 0 ? '📈 Rampes: ' + ramps.join(', ') : ''}
     // ============================================================================
     
     // JavaScript implementation of C++ calculateSlowdownFactor()
-    // Matches the exact curve formulas from the firmware
+    // Delegates to pure function from presets.js
     function calculateSlowdownFactorJS(zoneProgress, maxSlowdown, mode) {
-      let factor = 1.0;
-      
-      switch(mode) {
-        case 0: // DECEL_LINEAR
-          factor = 1.0 + (1.0 - zoneProgress) * (maxSlowdown - 1.0);
-          break;
-          
-        case 1: // DECEL_SINE
-          const smoothProgress = (1.0 - Math.cos(zoneProgress * Math.PI)) / 2.0;
-          factor = 1.0 + (1.0 - smoothProgress) * (maxSlowdown - 1.0);
-          break;
-          
-        case 2: // DECEL_TRIANGLE_INV
-          const invProgressTri = 1.0 - zoneProgress;
-          const curvedTri = invProgressTri * invProgressTri;
-          factor = 1.0 + curvedTri * (maxSlowdown - 1.0);
-          break;
-          
-        case 3: // DECEL_SINE_INV
-          const invProgressSin = 1.0 - zoneProgress;
-          const curvedSin = Math.sin(invProgressSin * Math.PI / 2.0);
-          factor = 1.0 + curvedSin * (maxSlowdown - 1.0);
-          break;
-          
-        default:
-          factor = 1.0 + (1.0 - zoneProgress) * (maxSlowdown - 1.0);
+      // Delegate to pure function if available
+      if (typeof calculateSlowdownFactorPure === 'function') {
+        return calculateSlowdownFactorPure(zoneProgress, maxSlowdown, mode);
       }
       
-      return factor;
+      // Fallback - linear only
+      return 1.0 + (1.0 - zoneProgress) * (maxSlowdown - 1.0);
     }
     
     // ============================================================================

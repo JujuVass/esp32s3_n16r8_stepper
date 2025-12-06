@@ -327,6 +327,23 @@ void setupAPIRoutes() {
     }
   });
 
+  server.on("/js/presets.js", HTTP_GET, []() {
+    if (LittleFS.exists("/js/presets.js")) {
+      File file = LittleFS.open("/js/presets.js", "r");
+      if (file) {
+        server.sendHeader("Cache-Control", "public, max-age=86400");
+        server.streamFile(file, "application/javascript");
+        file.close();
+        engine->debug("✅ Served /js/presets.js from LittleFS");
+      } else {
+        server.send(500, "text/plain", "❌ Error opening /js/presets.js");
+      }
+    } else {
+      server.send(404, "text/plain", "❌ File not found: /js/presets.js");
+      engine->error("❌ /js/presets.js not found in LittleFS");
+    }
+  });
+
   server.on("/js/main.js", HTTP_GET, []() {
     if (LittleFS.exists("/js/main.js")) {
       File file = LittleFS.open("/js/main.js", "r");

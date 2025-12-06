@@ -17,10 +17,11 @@
 | `websocket.js` | 223 | Connexion WS, handlers | ✅ Stable |
 | `stats.js` | 290 | Statistiques, graphiques Chart.js | ✅ Stable |
 | `context.js` | ~160 | Container DI, fonctions génériques | ✅ Nettoyé |
-| `chaos.js` | ~120 | **NOUVEAU** - Fonctions pures mode Chaos | ✅ Fonctionnel |
-| `oscillation.js` | ~180 | **NOUVEAU** - Fonctions pures mode Oscillation | ✅ Fonctionnel |
+| `chaos.js` | ~120 | Fonctions pures mode Chaos | ✅ Fonctionnel |
+| `oscillation.js` | ~180 | Fonctions pures mode Oscillation | ✅ Fonctionnel |
 | `sequencer.js` | ~330 | Fonctions pures séquenceur + tooltips | ✅ Fonctionnel |
-| `main.js` | ~7020 | Logique principale (wrappers DOM) | 🔄 En cours |
+| `presets.js` | ~220 | **NOUVEAU** - Preset name/tooltip + decel curves | ✅ Fonctionnel |
+| `main.js` | ~6950 | Logique principale (wrappers DOM) | 🔄 En cours |
 
 ### Ordre de chargement dans `index.html`
 ```html
@@ -33,6 +34,7 @@
 <script src="/js/chaos.js"></script>       <!-- Chaos pure functions -->
 <script src="/js/oscillation.js"></script> <!-- Oscillation pure functions -->
 <script src="/js/sequencer.js"></script>   <!-- Sequencer pure functions -->
+<script src="/js/presets.js"></script>     <!-- Preset name/tooltip pure functions -->
 <script src="/js/main.js"></script>
 ```
 
