@@ -5,11 +5,12 @@
  * - Calibration button
  * - Reset distance button
  * - Logs panel (show/hide, clear, file list, debug level)
- * - Stats panel (show/hide, clear, export)
+ * - Stats panel (show/hide, clear, export, import)
  * - System panel (show/hide, WiFi reconnect, reboot)
  * - Logging preferences (enable/disable, debug level)
  * 
- * Dependencies: DOM, AppState, WS_CMD, sendCommand, showNotification, connectWebSocket, loadStatsData
+ * Dependencies: DOM, AppState, WS_CMD, sendCommand, showNotification, connectWebSocket
+ * External: loadStatsData() from stats.js
  */
 
 // ============================================================================
@@ -310,6 +311,85 @@ function exportStats() {
       console.error('❌ Export error:', error);
       alert('❌ Erreur export: ' + error.message);
     });
+}
+
+/**
+ * Trigger stats file import dialog
+ */
+function triggerStatsImport() {
+  document.getElementById('statsFileInput').click();
+}
+
+/**
+ * Handle stats file import
+ * @param {Event} e - File input change event
+ */
+function handleStatsFileImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  if (!file.name.endsWith('.json')) {
+    alert('❌ Fichier invalide. Utilisez un fichier JSON exporté.');
+    e.target.value = ''; // Reset file input
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    try {
+      const importData = JSON.parse(event.target.result);
+      
+      // Validate structure
+      if (!importData.stats || !Array.isArray(importData.stats)) {
+        throw new Error('Format JSON invalide (manque "stats" array)');
+      }
+      
+      // Confirm import (show preview)
+      const entryCount = importData.stats.length;
+      const exportDate = importData.exportDate || 'inconnu';
+      const totalKm = importData.totalDistanceMM ? (importData.totalDistanceMM / 1000000).toFixed(3) : '?';
+      
+      const confirmMsg = `📤 Importer les statistiques?\n\n` +
+                       `📅 Date export: ${exportDate}\n` +
+                       `📊 Entrées: ${entryCount}\n` +
+                       `📏 Distance totale: ${totalKm} km\n\n` +
+                       `⚠️ Ceci va ÉCRASER les statistiques actuelles!`;
+      
+      if (!confirm(confirmMsg)) {
+        e.target.value = ''; // Reset file input
+        return;
+      }
+      
+      // Send to backend
+      fetch('/api/stats/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(importData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert(`✅ Import réussi!\n\n📊 ${data.entriesImported} entrées importées\n📏 Total: ${(data.totalDistanceMM / 1000000).toFixed(3)} km`);
+          loadStatsData();  // Refresh display (from stats.js)
+        } else {
+          alert('❌ Erreur import: ' + (data.error || 'Unknown'));
+        }
+        e.target.value = ''; // Reset file input
+      })
+      .catch(error => {
+        alert('❌ Erreur réseau: ' + error.message);
+        console.error('Import error:', error);
+        e.target.value = ''; // Reset file input
+      });
+      
+    } catch (error) {
+      alert('❌ Erreur parsing JSON: ' + error.message);
+      console.error('JSON parse error:', error);
+      e.target.value = ''; // Reset file input
+    }
+  };
+  
+  reader.readAsText(file);
 }
 
 // ============================================================================
@@ -641,6 +721,8 @@ function initToolsListeners() {
   document.getElementById('btnCloseStats').addEventListener('click', closeStatsPanel);
   document.getElementById('btnClearStats').addEventListener('click', clearAllStats);
   document.getElementById('btnExportStats').addEventListener('click', exportStats);
+  document.getElementById('btnImportStats').addEventListener('click', triggerStatsImport);
+  document.getElementById('statsFileInput').addEventListener('change', handleStatsFileImport);
   
   // ===== SYSTEM PANEL =====
   document.getElementById('btnShowSystem').addEventListener('click', toggleSystemPanel);

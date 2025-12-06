@@ -3997,84 +3997,12 @@
     // Note: Panel management functions loaded from external module:
     // - toggleLogsPanel(), closeLogsPanel(), clearLogsPanel(), loadLogFilesList()
     // - toggleStatsPanel(), closeStatsPanel(), clearAllStats(), exportStats()
+    // - triggerStatsImport(), handleStatsFileImport() (import stats)
     // - toggleSystemPanel(), closeSystemPanel(), refreshWifi(), rebootESP32()
     // - loadLoggingPreferences(), saveLoggingPreferences(), reconnectAfterReboot()
     // Event listeners initialized via initToolsListeners() in window.load
 
-    // Import Stats Button
-    document.getElementById('btnImportStats').addEventListener('click', function() {
-      document.getElementById('statsFileInput').click();
-    });
-
-    // File input handler
-    document.getElementById('statsFileInput').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      if (!file.name.endsWith('.json')) {
-        alert('❌ Fichier invalide. Utilisez un fichier JSON exporté.');
-        return;
-      }
-      
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        try {
-          const importData = JSON.parse(event.target.result);
-          
-          // Validate structure
-          if (!importData.stats || !Array.isArray(importData.stats)) {
-            throw new Error('Format JSON invalide (manque "stats" array)');
-          }
-          
-          // Confirm import (show preview)
-          const entryCount = importData.stats.length;
-          const exportDate = importData.exportDate || 'inconnu';
-          const totalKm = importData.totalDistanceMM ? (importData.totalDistanceMM / 1000000).toFixed(3) : '?';
-          
-          const confirmMsg = `📤 Importer les statistiques?\n\n` +
-                           `📅 Date export: ${exportDate}\n` +
-                           `📊 Entrées: ${entryCount}\n` +
-                           `📏 Distance totale: ${totalKm} km\n\n` +
-                           `⚠️ Ceci va ÉCRASER les statistiques actuelles!`;
-          
-          if (!confirm(confirmMsg)) {
-            e.target.value = ''; // Reset file input
-            return;
-          }
-          
-          // Send to backend
-          fetch('/api/stats/import', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(importData)
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              alert(`✅ Import réussi!\n\n📊 ${data.entriesImported} entrées importées\n📏 Total: ${(data.totalDistanceMM / 1000000).toFixed(3)} km`);
-              loadStatsData();  // Refresh display
-            } else {
-              alert('❌ Erreur import: ' + (data.error || 'Unknown'));
-            }
-            e.target.value = ''; // Reset file input
-          })
-          .catch(error => {
-            alert('❌ Erreur réseau: ' + error.message);
-            console.error('Import error:', error);
-            e.target.value = ''; // Reset file input
-          });
-          
-        } catch (error) {
-          alert('❌ Erreur parsing JSON: ' + error.message);
-          console.error('JSON parse error:', error);
-          e.target.value = ''; // Reset file input
-        }
-      };
-      
-      reader.readAsText(file);
-    });
-
-    // Note: loadStatsData, displayStatsTable, displayStatsChart moved to stats.js
+    // Note: loadStatsData, displayStatsTable, displayStatsChart loaded from stats.js
     
     document.getElementById('btnStartSequence').addEventListener('click', function() {
       // Disable both start buttons immediately (instant feedback)
