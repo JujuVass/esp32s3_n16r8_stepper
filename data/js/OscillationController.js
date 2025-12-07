@@ -262,6 +262,193 @@ function pauseOscillation() {
 }
 
 // ============================================================================
+// OSCILLATION MODE - UI UPDATE (called from main.js updateUI)
+// ============================================================================
+
+/**
+ * Update oscillation mode UI from WebSocket status data
+ * Extracted from main.js updateUI() for better modularity
+ * @param {Object} data - Status data from WebSocket
+ */
+function updateOscillationUI(data) {
+  if (!data) return;
+  
+  const isRunning = data.state === SystemState.RUNNING;
+  const isPaused = data.state === SystemState.PAUSED;
+  const isRunningOrPaused = isRunning || isPaused;
+  const isError = data.state === SystemState.ERROR;
+  
+  // ===== OSCILLATION STATE DISPLAY =====
+  if (data.oscillation && data.oscillationState) {
+    DOM.oscCurrentAmplitude.textContent = 
+      data.oscillationState.currentAmplitude.toFixed(2);
+    DOM.oscCompletedCycles.textContent = 
+      data.oscillationState.completedCycles;
+    
+    let rampStatus = 'Aucune';
+    if (data.oscillationState.isTransitioning) {
+      rampStatus = '🔄 Transition fréquence...';
+    } else if (data.oscillationState.isRampingIn) {
+      rampStatus = '📈 Rampe entrée';
+    } else if (data.oscillationState.isRampingOut) {
+      rampStatus = '📉 Rampe sortie';
+    } else if (data.operationMode === 3 && data.state === SystemState.RUNNING) {
+      rampStatus = '✅ Stabilisé';
+    }
+    DOM.oscRampStatus.textContent = rampStatus;
+    
+    // 🔒 DISABLE frequency controls during transition (500ms smooth change)
+    const isTransitioning = data.oscillationState.isTransitioning || false;
+    DOM.oscFrequency.disabled = isTransitioning;
+    
+    // Apply visual feedback during transition
+    if (isTransitioning) {
+      DOM.oscFrequency.style.backgroundColor = '#fff3cd';
+      DOM.oscFrequency.style.cursor = 'not-allowed';
+    } else {
+      DOM.oscFrequency.style.backgroundColor = '';
+      DOM.oscFrequency.style.cursor = '';
+    }
+    
+    // Also disable preset buttons during transition
+    document.querySelectorAll('[data-osc-frequency]').forEach(btn => {
+      btn.disabled = isTransitioning;
+      btn.style.opacity = isTransitioning ? '0.5' : '1';
+      btn.style.cursor = isTransitioning ? 'not-allowed' : 'pointer';
+    });
+    
+    // Sync oscillation config to UI (skip fields being edited OR having focus)
+    if (AppState.editing.oscField !== 'oscCenter' && document.activeElement !== DOM.oscCenter) {
+      DOM.oscCenter.value = data.oscillation.centerPositionMM.toFixed(1);
+    }
+    
+    if (AppState.editing.oscField !== 'oscAmplitude' && document.activeElement !== DOM.oscAmplitude) {
+      DOM.oscAmplitude.value = data.oscillation.amplitudeMM.toFixed(1);
+    }
+    
+    if (AppState.editing.oscField !== 'oscWaveform' && document.activeElement !== DOM.oscWaveform) {
+      DOM.oscWaveform.value = data.oscillation.waveform;
+    }
+    
+    if (AppState.editing.oscField !== 'oscFrequency' && document.activeElement !== DOM.oscFrequency && !isTransitioning) {
+      // Use effective frequency if available (accounts for speed limiting)
+      const displayFreq = data.oscillation.effectiveFrequencyHz || data.oscillation.frequencyHz;
+      const isFreqLimited = data.oscillation.effectiveFrequencyHz && 
+                            Math.abs(data.oscillation.effectiveFrequencyHz - data.oscillation.frequencyHz) > 0.001;
+      
+      DOM.oscFrequency.value = displayFreq.toFixed(3);
+      
+      // Visual feedback if frequency is limited
+      if (isFreqLimited) {
+        DOM.oscFrequency.style.backgroundColor = '#ffe8e8';
+        DOM.oscFrequency.style.fontWeight = 'bold';
+        DOM.oscFrequency.style.color = '#d32f2f';
+        DOM.oscFrequency.title = `⚠️ Fréquence limitée de ${data.oscillation.frequencyHz.toFixed(2)} Hz à ${displayFreq.toFixed(2)} Hz (vitesse max: 300 mm/s)`;
+      } else {
+        DOM.oscFrequency.style.backgroundColor = '';
+        DOM.oscFrequency.style.fontWeight = '';
+        DOM.oscFrequency.style.color = '';
+        DOM.oscFrequency.title = '';
+      }
+    }
+    
+    if (AppState.editing.oscField !== 'oscRampInDuration' && document.activeElement !== DOM.oscRampInDuration) {
+      DOM.oscRampInDuration.value = data.oscillation.rampInDurationMs;
+    }
+    
+    if (AppState.editing.oscField !== 'oscRampOutDuration' && document.activeElement !== DOM.oscRampOutDuration) {
+      DOM.oscRampOutDuration.value = data.oscillation.rampOutDurationMs;
+    }
+    
+    if (AppState.editing.oscField !== 'oscCycleCount' && document.activeElement !== DOM.oscCycleCount) {
+      DOM.oscCycleCount.value = data.oscillation.cycleCount;
+    }
+    
+    // Checkboxes (not edited via focus)
+    DOM.oscRampInEnable.checked = data.oscillation.enableRampIn;
+    DOM.oscRampOutEnable.checked = data.oscillation.enableRampOut;
+    DOM.oscReturnCenter.checked = data.oscillation.returnToCenter;
+    
+    // Validate limits (only if not editing center or amplitude)
+    if (AppState.editing.oscField !== 'oscCenter' && AppState.editing.oscField !== 'oscAmplitude') {
+      validateOscillationLimits();
+    }
+    
+    // Update preset buttons visual state
+    updateOscillationPresets();
+  }
+  
+  // ===== CYCLE PAUSE DISPLAY (MODE OSCILLATION) =====
+  if (data.oscillation && data.oscillation.cyclePause) {
+    const pauseStatusOsc = document.getElementById('cyclePauseStatusOsc');
+    const pauseRemainingOsc = document.getElementById('cyclePauseRemainingOsc');
+    
+    if (data.oscillation.cyclePause.isPausing && pauseStatusOsc && pauseRemainingOsc) {
+      const remainingSec = (data.oscillation.cyclePause.remainingMs / 1000).toFixed(1);
+      pauseStatusOsc.style.display = 'block';
+      pauseRemainingOsc.textContent = remainingSec + 's';
+    } else if (pauseStatusOsc) {
+      pauseStatusOsc.style.display = 'none';
+    }
+    
+    // Sync UI to backend state (only if section is expanded)
+    const sectionOsc = getCyclePauseOscSection();
+    const headerTextOsc = document.getElementById('cyclePauseOscHeaderText');
+    if (sectionOsc && headerTextOsc) {
+      const isEnabled = data.oscillation.cyclePause.enabled;
+      const isCollapsed = sectionOsc.classList.contains('collapsed');
+      
+      // Sync collapsed state with backend enabled state
+      if (isEnabled && isCollapsed) {
+        sectionOsc.classList.remove('collapsed');
+        headerTextOsc.textContent = '⏸️ Pause entre cycles - activée';
+      } else if (!isEnabled && !isCollapsed) {
+        sectionOsc.classList.add('collapsed');
+        headerTextOsc.textContent = '⏸️ Pause entre cycles - désactivée';
+      }
+      
+      // Sync radio buttons
+      if (data.oscillation.cyclePause.isRandom) {
+        document.getElementById('pauseModeRandomOsc').checked = true;
+        document.getElementById('pauseFixedControlsOsc').style.display = 'none';
+        document.getElementById('pauseRandomControlsOsc').style.display = 'block';
+      } else {
+        document.getElementById('pauseModeFixedOsc').checked = true;
+        document.getElementById('pauseFixedControlsOsc').style.display = 'flex';
+        document.getElementById('pauseRandomControlsOsc').style.display = 'none';
+      }
+      
+      // Sync input values (avoid overwriting if user is editing)
+      if (document.activeElement !== document.getElementById('cyclePauseDurationOsc')) {
+        document.getElementById('cyclePauseDurationOsc').value = data.oscillation.cyclePause.pauseDurationSec.toFixed(1);
+      }
+      if (document.activeElement !== document.getElementById('cyclePauseMinOsc')) {
+        document.getElementById('cyclePauseMinOsc').value = data.oscillation.cyclePause.minPauseSec.toFixed(1);
+      }
+      if (document.activeElement !== document.getElementById('cyclePauseMaxOsc')) {
+        document.getElementById('cyclePauseMaxOsc').value = data.oscillation.cyclePause.maxPauseSec.toFixed(1);
+      }
+    }
+  }
+  
+  // ===== PAUSE/STOP BUTTONS =====
+  const btnPauseOsc = document.getElementById('btnPauseOscillation');
+  if (btnPauseOsc) {
+    btnPauseOsc.disabled = !isRunningOrPaused;
+    if (isPaused) {
+      btnPauseOsc.innerHTML = '▶ Reprendre';
+    } else {
+      btnPauseOsc.innerHTML = '⏸ Pause';
+    }
+  }
+  
+  const btnStopOsc = document.getElementById('btnStopOscillation');
+  if (btnStopOsc) {
+    btnStopOsc.disabled = !(isRunningOrPaused || isError);
+  }
+}
+
+// ============================================================================
 // OSCILLATION MODE - INITIALIZATION
 // ============================================================================
 
@@ -465,4 +652,5 @@ function initOscillationListeners() {
 // - updateOscillationPresets()
 // - sendOscCyclePauseConfig()
 // - startOscillation(), stopOscillation(), pauseOscillation()
+// - updateOscillationUI(data) - Called from main.js updateUI()
 // - initOscillationListeners()
