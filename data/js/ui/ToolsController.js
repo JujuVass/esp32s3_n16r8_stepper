@@ -274,47 +274,82 @@ async function refreshWifi() {
     const btn = document.getElementById('btnRefreshWifi');
     const originalText = btn.innerHTML;
     
+    // Set flag to prevent WebSocket auto-reconnect during WiFi refresh
+    AppState.wifiReconnectInProgress = true;
+    
     // Disable button and show loading
     btn.disabled = true;
     btn.innerHTML = '⏳';
     btn.style.opacity = '0.5';
     
+    // Show persistent modal during reconnection (like calibration)
+    const modal = document.getElementById('unifiedAlertModal');
+    const modalIcon = document.getElementById('unifiedAlertIcon');
+    const modalTitle = document.getElementById('unifiedAlertTitle');
+    const modalMessage = document.getElementById('unifiedAlertMessage');
+    const modalButton = document.getElementById('unifiedAlertOkBtn');
+    
+    modalIcon.textContent = '📶';
+    modalTitle.textContent = 'Reconnexion WiFi';
+    modalMessage.innerHTML = 'Reconnexion en cours...<br><br><span id="wifiReconnectStatus">Envoi de la commande...</span>';
+    modalButton.style.display = 'none'; // Hide button during process
+    modal.classList.add('active');
+    
+    const statusSpan = document.getElementById('wifiReconnectStatus');
+    
     console.log('📶 Sending WiFi reconnect command...');
+    
+    // Close existing WebSocket BEFORE sending command (prevent auto-reconnect spam)
+    if (AppState.ws) {
+      console.log('📶 Closing existing WebSocket for clean reconnect...');
+      AppState.ws.close();
+      AppState.ws = null;
+    }
     
     // Send reconnect command (expect network error as WiFi disconnects)
     fetch('/api/system/wifi/reconnect', { method: 'POST' })
       .then(response => response.json())
       .then(data => {
         console.log('📶 WiFi reconnect command acknowledged:', data);
+        statusSpan.textContent = 'Déconnexion WiFi...';
       })
       .catch(error => {
         // Expected error: network will be interrupted during WiFi reconnect
         console.log('📶 WiFi reconnect in progress (network interruption expected)');
+        statusSpan.textContent = 'Déconnexion WiFi...';
       });
-    
-    // Close existing WebSocket to force clean reconnection
-    if (AppState.ws && AppState.ws.readyState === WebSocket.OPEN) {
-      console.log('📶 Closing existing WebSocket for clean reconnect...');
-      AppState.ws.close();
-    }
     
     // Wait for WiFi to reconnect, then verify connection
     let attempts = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 15;
+    const retryDelay = 2000; // 2 seconds between attempts
     
     const checkConnection = function() {
       attempts++;
       console.log(`📶 Checking connection (attempt ${attempts}/${maxAttempts})...`);
+      statusSpan.textContent = `Vérification connexion (${attempts}/${maxAttempts})...`;
       
-      fetch('/api/status', { method: 'GET' })
+      fetch('/api/ping', { method: 'GET' })
         .then(response => {
           if (response.ok) {
             console.log('✅ WiFi reconnected successfully!');
+            
+            // Re-enable WebSocket auto-reconnect
+            AppState.wifiReconnectInProgress = false;
+            
+            // Update modal to success
+            modalIcon.textContent = '✅';
+            modalTitle.textContent = 'Reconnexion réussie';
+            modalMessage.innerHTML = 'WiFi reconnecté avec succès !';
+            modalButton.textContent = 'OK';
+            modalButton.style.display = '';
+            modalButton.onclick = function() { modal.classList.remove('active'); };
+            
             btn.disabled = false;
             btn.innerHTML = '✅';
             btn.style.opacity = '1';
             
-            // Reconnect WebSocket
+            // Reconnect WebSocket NOW
             if (typeof connectWebSocket === 'function') {
               console.log('📶 Reconnecting WebSocket...');
               connectWebSocket();
@@ -324,19 +359,40 @@ async function refreshWifi() {
             setTimeout(function() {
               btn.innerHTML = originalText;
             }, 2000);
+            
+            // Auto-close modal after 3 seconds
+            setTimeout(function() {
+              modal.classList.remove('active');
+            }, 3000);
           } else {
-            throw new Error('Status check failed');
+            throw new Error('Ping failed');
           }
         })
         .catch(error => {
           if (attempts < maxAttempts) {
-            setTimeout(checkConnection, 500);
+            setTimeout(checkConnection, retryDelay);
           } else {
             console.error('❌ WiFi reconnect verification failed');
+            
+            // Re-enable WebSocket auto-reconnect even on failure
+            AppState.wifiReconnectInProgress = false;
+            
+            // Update modal to error
+            modalIcon.textContent = '❌';
+            modalTitle.textContent = 'Échec de reconnexion';
+            modalMessage.innerHTML = 'La reconnexion WiFi a échoué.<br>Vérifiez votre connexion réseau.';
+            modalButton.textContent = 'Fermer';
+            modalButton.style.display = '';
+            modalButton.onclick = function() { modal.classList.remove('active'); };
+            
             btn.disabled = false;
             btn.innerHTML = '❌';
             btn.style.opacity = '1';
-            showAlert('La reconnexion WiFi a échoué.\nVérifiez votre connexion réseau.', { type: 'error' });
+            
+            // Try to reconnect WebSocket anyway
+            if (typeof connectWebSocket === 'function') {
+              connectWebSocket();
+            }
             
             // Reset button after 3 seconds
             setTimeout(function() {
@@ -346,8 +402,11 @@ async function refreshWifi() {
         });
     };
     
-    // Start checking after 2 seconds (give WiFi time to disconnect/reconnect)
-    setTimeout(checkConnection, 2000);
+    // Start checking after 3 seconds (give WiFi time to disconnect/reconnect)
+    setTimeout(function() {
+      statusSpan.textContent = 'Attente reconnexion WiFi...';
+      setTimeout(checkConnection, 1000);
+    }, 2000);
   }
 }
 
@@ -658,6 +717,27 @@ function updateSystemStats(system) {
           : `${seconds}s`;
     }
     document.getElementById('sysUptime').textContent = uptimeStr;
+  }
+  
+  // Network info (IP addresses, hostname)
+  if (system.ipSta !== undefined) {
+    document.getElementById('sysIpSta').textContent = system.ipSta;
+  }
+  if (system.ipAp !== undefined) {
+    document.getElementById('sysIpAp').textContent = system.ipAp;
+  }
+  if (system.hostname !== undefined) {
+    const hostnameEl = document.getElementById('sysHostname');
+    hostnameEl.textContent = system.hostname + '.local';
+    hostnameEl.title = 'http://' + system.hostname + '.local';
+  }
+  if (system.ssid !== undefined) {
+    document.getElementById('sysSsid').textContent = system.ssid || '(non connecté)';
+  }
+  if (system.apClients !== undefined) {
+    const apClientsEl = document.getElementById('sysApClients');
+    apClientsEl.textContent = system.apClients;
+    apClientsEl.style.color = system.apClients > 0 ? '#4CAF50' : '#999';
   }
 }
 

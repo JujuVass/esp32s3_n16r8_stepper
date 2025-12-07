@@ -70,6 +70,12 @@ function connectWebSocket() {
   // ON CLOSE - Connection lost
   // ========================================================================
   AppState.ws.onclose = function() {
+    // Don't auto-reconnect during WiFi refresh
+    if (AppState.wifiReconnectInProgress) {
+      console.log('📶 WebSocket closed (WiFi reconnect in progress - no auto-reconnect)');
+      return;
+    }
+    
     console.log('❌ WebSocket disconnected. Reconnecting in 2s...');
     
     const stateEl = document.getElementById('state');

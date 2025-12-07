@@ -21,7 +21,10 @@ NetworkManager& NetworkManager::getInstance() {
 // ============================================================================
 
 bool NetworkManager::connectWiFi() {
-    WiFi.mode(WIFI_STA);
+    // AP+STA dual mode: WiFi client + Access Point simultaneously
+    WiFi.mode(WIFI_AP_STA);
+    
+    // Start STA (client) connection
     WiFi.begin(ssid, password);
     
     engine->info("Connecting to WiFi: " + String(ssid));
@@ -42,11 +45,18 @@ bool NetworkManager::connectWiFi() {
     
     if (_wifiConnected) {
         engine->info("✅ WiFi connected!");
-        engine->info("🌐 IP Address: " + WiFi.localIP().toString());
+        engine->info("🌐 STA IP Address: " + WiFi.localIP().toString());
         engine->info("🔄 OTA Mode: ACTIVE - Updates via WiFi enabled!");
     } else {
         engine->error("❌ WiFi connection failed!");
     }
+    
+    // Start AP (Access Point) - always available even if STA fails
+    String apName = String(otaHostname) + "-AP";
+    WiFi.softAP(apName.c_str());  // Open network (no password)
+    
+    engine->info("📡 AP Mode started: " + apName);
+    engine->info("🌐 AP IP Address: " + WiFi.softAPIP().toString());
     
     return _wifiConnected;
 }

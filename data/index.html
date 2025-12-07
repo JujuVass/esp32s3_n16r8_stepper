@@ -450,6 +450,33 @@
         </div>
       </div>
 
+      <!-- Network Info Section -->
+      <div style="margin-top: 15px; background: #e3f2fd; padding: 12px; border-radius: 6px; border-left: 4px solid #2196F3;">
+        <div style="font-weight: bold; color: #1976D2; font-size: 13px; margin-bottom: 10px;">🌐 Réseau</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+          <div>
+            <div style="color: #666; font-size: 10px;">IP STA (WiFi)</div>
+            <div id="sysIpSta" style="font-weight: bold; color: #333; font-family: monospace;">--</div>
+          </div>
+          <div>
+            <div style="color: #666; font-size: 10px;">IP AP (Point d'accès)</div>
+            <div id="sysIpAp" style="font-weight: bold; color: #333; font-family: monospace;">--</div>
+          </div>
+          <div>
+            <div style="color: #666; font-size: 10px;">Hostname (mDNS)</div>
+            <div id="sysHostname" style="font-weight: bold; color: #2196F3; font-family: monospace;">--</div>
+          </div>
+          <div>
+            <div style="color: #666; font-size: 10px;">SSID connecté</div>
+            <div id="sysSsid" style="font-weight: bold; color: #333;">--</div>
+          </div>
+          <div style="grid-column: span 2;">
+            <div style="color: #666; font-size: 10px;">📡 Clients AP connectés</div>
+            <div id="sysApClients" style="font-weight: bold; color: #4CAF50;">0</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Logging Configuration -->
       <div style="margin-top: 15px; background: #f5f5f5; padding: 12px; border-radius: 6px;">
         <div style="font-weight: bold; color: #333; font-size: 13px; margin-bottom: 10px;">📋 Configuration des logs</div>

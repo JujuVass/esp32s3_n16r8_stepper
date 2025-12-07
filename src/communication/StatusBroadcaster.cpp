@@ -311,4 +311,11 @@ void StatusBroadcaster::addSystemStats(JsonDocument& doc) {
     systemObj["wifiRssi"] = WiFi.RSSI();
     systemObj["temperatureC"] = serialized(String(temperatureRead(), 1));
     systemObj["uptimeSeconds"] = millis() / 1000;
+    
+    // Network info (IP addresses, hostname)
+    systemObj["ipSta"] = WiFi.localIP().toString();
+    systemObj["ipAp"] = WiFi.softAPIP().toString();
+    systemObj["hostname"] = String(otaHostname);
+    systemObj["ssid"] = WiFi.SSID();
+    systemObj["apClients"] = WiFi.softAPgetStationNum();
 }
