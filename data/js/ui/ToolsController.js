@@ -733,10 +733,10 @@ function updateSystemStats(system) {
     const hostnameEl = document.getElementById('sysHostname');
     hostnameEl.textContent = system.hostname + '.local';
     hostnameEl.title = 'http://' + system.hostname + '.local';
-    // Disable mDNS link in degraded mode
-    if (system.degradedMode) {
+    // Disable mDNS link in AP mode
+    if (system.apMode) {
       hostnameEl.style.color = '#999';
-      hostnameEl.title = 'mDNS indisponible en mode dégradé';
+      hostnameEl.title = 'mDNS indisponible en mode AP';
     } else {
       hostnameEl.style.color = '#2196F3';
     }
@@ -750,12 +750,13 @@ function updateSystemStats(system) {
     apClientsEl.style.color = system.apClients > 0 ? '#4CAF50' : '#999';
   }
   
-  // Degraded mode indicator
-  if (system.degradedMode !== undefined) {
+  // AP Mode indicator
+  if (system.apMode !== undefined) {
     const badge = document.getElementById('sysDegradedBadge');
     const section = document.getElementById('networkInfoSection');
-    if (system.degradedMode) {
+    if (system.apMode) {
       badge.style.display = '';
+      badge.textContent = '⚠️ Mode AP';
       section.style.borderLeftColor = '#FF9800';
       section.style.background = '#fff3e0';
     } else {

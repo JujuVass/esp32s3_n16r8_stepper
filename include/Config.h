@@ -33,6 +33,12 @@ constexpr int PIN_PULSE = 12;          // Cable jaune
 constexpr int PIN_DIR = 13;            // Cable orange
 constexpr int PIN_ENABLE = 14;         // Cable rouge
 
+// AP Mode forcing pin (active LOW - connect to GND to force AP mode at boot)
+constexpr int PIN_AP_MODE = 18;
+
+// Onboard RGB LED (WS2812 on Freenove ESP32-S3)
+constexpr int PIN_RGB_LED = 48;
+
 // ============================================================================
 // CONFIGURATION - Motor Parameters
 // ============================================================================
@@ -179,7 +185,8 @@ const float SPEED_COMPENSATION_FACTOR = 1.20;  // +20% faster to compensate over
 // CONFIGURATION - System Timing Intervals
 // ============================================================================
 // Status broadcasting and debouncing intervals
-constexpr uint32_t STATUS_BROADCAST_INTERVAL_MS = 20;   // WebSocket status update throttle
+constexpr uint32_t STATUS_BROADCAST_INTERVAL_MS = 20;        // WebSocket status (STA mode)
+constexpr uint32_t STATUS_BROADCAST_INTERVAL_AP_MS = 100;    // WebSocket status (AP mode - slower)
 constexpr uint32_t CONTACT_DEBOUNCE_MS = 50;            // Physical contact debounce time
 constexpr uint32_t OTA_CHECK_INTERVAL_MS = 1000;        // OTA update check frequency
 constexpr uint32_t WIFI_RECONNECT_INTERVAL_MS = 5000;   // WiFi reconnection delay

@@ -1,5 +1,9 @@
 /**
- * NetworkManager.cpp - WiFi, OTA, mDNS, NTP Implementation
+ * NetworkManager.cpp - WiFi Network Management Implementation
+ * 
+ * Two exclusive modes:
+ * - AP Mode: WiFi configuration only (192.168.4.1/setup.html)
+ * - STA Mode: Stepper control (connected to home WiFi)
  */
 
 #include "communication/NetworkManager.h"
@@ -18,63 +22,152 @@ NetworkManager& NetworkManager::getInstance() {
 }
 
 // ============================================================================
-// WIFI CONNECTION
+// MODE DETERMINATION
 // ============================================================================
 
-bool NetworkManager::connectWiFi() {
-    // AP+STA dual mode: WiFi client + Access Point simultaneously
+bool NetworkManager::shouldStartAPMode() {
+    // Setup GPIO for AP mode detection (active LOW with internal pull-up)
+    pinMode(PIN_AP_MODE, INPUT_PULLUP);
+    delay(10);  // Let pin stabilize
+    
+    int pinState = digitalRead(PIN_AP_MODE);
+    engine->info("📌 GPIO" + String(PIN_AP_MODE) + " state: " + String(pinState == LOW ? "LOW (force AP)" : "HIGH"));
+    
+    // Check GPIO 18 - if LOW, force AP mode
+    if (pinState == LOW) {
+        engine->info("🔧 GPIO " + String(PIN_AP_MODE) + " is LOW - Forcing AP mode");
+        return true;
+    }
+    
+    // Check if we have valid WiFi credentials in EEPROM
+    String savedSSID, savedPassword;
+    bool eepromConfigured = WiFiConfig.isConfigured();
+    engine->info("📦 EEPROM configured: " + String(eepromConfigured ? "YES" : "NO"));
+    
+    if (eepromConfigured && WiFiConfig.loadConfig(savedSSID, savedPassword)) {
+        if (savedSSID.length() > 0) {
+            engine->info("📶 Found EEPROM WiFi config: '" + savedSSID + "' → Try STA mode");
+            return false;  // Have credentials, try STA mode
+        }
+    }
+    
+    // Check hardcoded defaults from Config.h
+    engine->info("📄 Config.h SSID: '" + String(ssid) + "'");
+    if (strlen(ssid) > 0 && strcmp(ssid, "YOUR_WIFI_SSID") != 0) {
+        engine->info("📶 Using Config.h WiFi config: '" + String(ssid) + "' → Try STA mode");
+        return false;  // Have defaults, try STA mode
+    }
+    
+    // No credentials available - must use AP mode
+    engine->warn("⚠️ No WiFi credentials found - Starting AP mode");
+    return true;
+}
+
+// ============================================================================
+// AP MODE (Configuration)
+// ============================================================================
+
+void NetworkManager::startAPMode() {
+    _apMode = true;
+    
+    // Use AP_STA mode so we can test WiFi connections without disrupting the AP!
+    // The STA part won't connect to anything until testConnection() is called
     WiFi.mode(WIFI_AP_STA);
     
-    // Get WiFi credentials - prefer EEPROM config, fallback to Config.h defaults
-    String targetSSID;
-    String targetPassword;
-    String targetHostname = otaHostname;  // Default hostname
+    // Start Access Point
+    String apName = String(otaHostname) + "-AP";
+    WiFi.softAP(apName.c_str());  // Open network, channel 1, max 4 clients
+    
+    // Start Captive Portal DNS server
+    // This makes all DNS queries return our IP, triggering auto-open on mobile/Windows
+    _dnsServer.start(53, "*", WiFi.softAPIP());
+    _captivePortalActive = true;
+    
+    engine->info("═══════════════════════════════════════════════════════");
+    engine->info("🌐 AP MODE - WiFi Configuration + Captive Portal");
+    engine->info("═══════════════════════════════════════════════════════");
+    engine->info("   Network: " + apName);
+    engine->info("   IP: " + WiFi.softAPIP().toString());
+    engine->info("   📱 Captive Portal active - auto-opens on connect!");
+    engine->info("═══════════════════════════════════════════════════════");
+}
+
+// ============================================================================
+// CAPTIVE PORTAL HANDLER
+// ============================================================================
+
+void NetworkManager::handleCaptivePortal() {
+    if (_captivePortalActive) {
+        _dnsServer.processNextRequest();
+    }
+}
+
+// ============================================================================
+// STA MODE (Normal Operation)
+// ============================================================================
+
+bool NetworkManager::startSTAMode() {
+    _apMode = false;
+    
+    // Set WiFi to STA only mode
+    WiFi.mode(WIFI_STA);
+    
+    // Get credentials - check EEPROM first, then Config.h defaults
+    String targetSSID, targetPassword;
+    String credentialSource;
     
     if (WiFiConfig.isConfigured() && WiFiConfig.loadConfig(targetSSID, targetPassword)) {
-        // Use EEPROM stored credentials
-        engine->info("📶 Using saved WiFi config: " + targetSSID);
+        credentialSource = "EEPROM";
+        engine->info("🔑 WiFi credentials from: EEPROM (saved config)");
     } else {
         // Use hardcoded defaults from Config.h
         targetSSID = ssid;
         targetPassword = password;
-        engine->info("📶 Using default WiFi config: " + targetSSID);
+        credentialSource = "Config.h";
+        engine->info("🔑 WiFi credentials from: Config.h (hardcoded defaults)");
     }
     
-    // Start STA (client) connection
+    // Connect to WiFi
     WiFi.begin(targetSSID.c_str(), targetPassword.c_str());
-    
-    engine->info("Connecting to WiFi: " + targetSSID);
+    engine->info("📶 Connecting to WiFi: " + targetSSID + " [" + credentialSource + "]");
     
     int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 60) {
+    while (WiFi.status() != WL_CONNECTED && attempts < 40) {  // 20 seconds timeout
         delay(500);
         Serial.print(".");
         attempts++;
         
         if (attempts % 10 == 0) {
-            engine->info(String("\n[") + String(attempts) + "/60] WiFi connecting...");
+            engine->info("\n[" + String(attempts) + "/40] Still connecting...");
         }
     }
     Serial.println();
     
-    _wifiConnected = (WiFi.status() == WL_CONNECTED);
-    
-    if (_wifiConnected) {
-        engine->info("✅ WiFi connected!");
-        engine->info("🌐 STA IP Address: " + WiFi.localIP().toString());
-        engine->info("🔄 OTA Mode: ACTIVE - Updates via WiFi enabled!");
-    } else {
-        engine->error("❌ WiFi connection failed!");
+    if (WiFi.status() != WL_CONNECTED) {
+        engine->error("❌ WiFi connection failed after " + String(attempts * 500 / 1000) + "s");
+        engine->warn("⚠️ Credentials from " + credentialSource + " - Switching to AP mode...");
+        
+        // Failed to connect - switch to AP mode
+        WiFi.disconnect();
+        startAPMode();
+        return false;
     }
     
-    // Start AP (Access Point) - always available even if STA fails
-    String apName = String(targetHostname) + "-AP";
-    WiFi.softAP(apName.c_str());  // Open network (no password)
+    // Connected successfully
+    engine->info("═══════════════════════════════════════════════════════");
+    engine->info("✅ STA MODE - Stepper Controller Active");
+    engine->info("═══════════════════════════════════════════════════════");
+    engine->info("   WiFi: " + targetSSID + " [" + credentialSource + "]");
+    engine->info("   IP: " + WiFi.localIP().toString());
+    engine->info("   Hostname: http://" + String(otaHostname) + ".local");
+    engine->info("═══════════════════════════════════════════════════════");
     
-    engine->info("📡 AP Mode started: " + apName);
-    engine->info("🌐 AP IP Address: " + WiFi.softAPIP().toString());
+    // Setup additional services
+    setupMDNS();
+    setupNTP();
+    setupOTA();
     
-    return _wifiConnected;
+    return true;
 }
 
 // ============================================================================
@@ -82,112 +175,96 @@ bool NetworkManager::connectWiFi() {
 // ============================================================================
 
 String NetworkManager::getConfiguredSSID() const {
-    if (WiFiConfig.isConfigured()) {
-        return WiFiConfig.getStoredSSID();
+    String savedSSID, savedPassword;
+    if (WiFiConfig.isConfigured() && WiFiConfig.loadConfig(savedSSID, savedPassword)) {
+        return savedSSID;
     }
     return String(ssid);  // Default from Config.h
 }
 
 // ============================================================================
-// MDNS SETUP
+// GET IP ADDRESS
 // ============================================================================
 
-bool NetworkManager::setupMDNS() {
-    if (!_wifiConnected) return false;
-    
-    if (MDNS.begin(otaHostname)) {
-        engine->info("✅ mDNS responder started: http://" + String(otaHostname) + ".local");
-        MDNS.addService("http", "tcp", 80);
-        return true;
-    } else {
-        engine->error("❌ Error starting mDNS responder");
-        return false;
+String NetworkManager::getIPAddress() const {
+    if (_apMode) {
+        return WiFi.softAPIP().toString();
     }
+    return WiFi.localIP().toString();
 }
 
 // ============================================================================
-// NTP TIME SYNC
+// MDNS SETUP (STA mode only)
+// ============================================================================
+
+bool NetworkManager::setupMDNS() {
+    if (MDNS.begin(otaHostname)) {
+        engine->info("✅ mDNS: http://" + String(otaHostname) + ".local");
+        MDNS.addService("http", "tcp", 80);
+        return true;
+    }
+    engine->error("❌ mDNS failed to start");
+    return false;
+}
+
+// ============================================================================
+// NTP TIME SYNC (STA mode only)
 // ============================================================================
 
 void NetworkManager::setupNTP() {
-    if (!_wifiConnected) return;
+    configTime(3600, 0, "pool.ntp.org", "time.nist.gov");  // GMT+1
+    engine->info("⏰ NTP configured (GMT+1)");
     
-    // Configure time with NTP (GMT+1 = 3600 seconds, daylight saving = 0)
-    configTime(3600, 0, "pool.ntp.org", "time.nist.gov");
-    engine->info("⏰ NTP time configured (GMT+1)");
-    
-    // Wait a bit for time sync
     delay(1000);
     time_t now = time(nullptr);
     struct tm *timeinfo = localtime(&now);
     if (timeinfo->tm_year > (2020 - 1900)) {
         char timeStr[64];
         strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", timeinfo);
-        engine->info("✓ Time synchronized: " + String(timeStr));
+        engine->info("✓ Time: " + String(timeStr));
     }
 }
 
 // ============================================================================
-// OTA CONFIGURATION
+// OTA CONFIGURATION (STA mode only)
 // ============================================================================
 
-void NetworkManager::setupOTA(std::function<void()> onStopMovement,
-                              std::function<void()> onStopSequencer) {
-    if (!_wifiConnected) return;
-    
-    _onStopMovement = onStopMovement;
-    _onStopSequencer = onStopSequencer;
-    
+void NetworkManager::setupOTA() {
     ArduinoOTA.setHostname(otaHostname);
     
     if (strlen(otaPassword) > 0) {
         ArduinoOTA.setPassword(otaPassword);
     }
     
-    ArduinoOTA.onStart([this]() {
+    ArduinoOTA.onStart([]() {
         String type = (ArduinoOTA.getCommand() == U_FLASH) ? "firmware" : "filesystem";
-        engine->info("🔄 OTA Update starting: " + type);
+        engine->info("🔄 OTA Update: " + type);
         
-        // Flush logs before OTA
-        if (engine) {
-            engine->flushLogBuffer(true);
-        }
-        
-        // Stop movements
-        if (_onStopMovement) _onStopMovement();
+        if (engine) engine->flushLogBuffer(true);
+        stopMovement();
         Motor.disable();
-        
-        // Stop sequencer
-        if (_onStopSequencer) _onStopSequencer();
+        if (seqState.isRunning) SeqExecutor.stop();
     });
     
     ArduinoOTA.onEnd([]() {
-        engine->info("✅ OTA Update complete - Rebooting...");
+        engine->info("✅ OTA Complete - Rebooting...");
     });
     
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
         static unsigned int lastPercent = 0;
         unsigned int percent = (progress * 100) / total;
-        
         if (percent >= lastPercent + 10) {
-            engine->info("📥 OTA Progress: " + String(percent) + "%");
+            engine->info("📥 OTA: " + String(percent) + "%");
             lastPercent = percent;
         }
     });
     
     ArduinoOTA.onError([](ota_error_t error) {
         engine->error("❌ OTA Error [" + String(error) + "]");
-        switch (error) {
-            case OTA_AUTH_ERROR:    engine->error("   Authentication Failed"); break;
-            case OTA_BEGIN_ERROR:   engine->error("   Begin Failed"); break;
-            case OTA_CONNECT_ERROR: engine->error("   Connect Failed"); break;
-            case OTA_RECEIVE_ERROR: engine->error("   Receive Failed"); break;
-            case OTA_END_ERROR:     engine->error("   End Failed"); break;
-        }
     });
     
     ArduinoOTA.begin();
-    engine->info("✅ OTA Ready - Hostname: " + String(otaHostname));
+    engine->info("✅ OTA Ready");
     _otaConfigured = true;
 }
 
@@ -196,25 +273,12 @@ void NetworkManager::setupOTA(std::function<void()> onStopMovement,
 // ============================================================================
 
 bool NetworkManager::begin() {
-    bool connected = connectWiFi();
+    engine->info("🌐 Network initialization...");
     
-    if (connected) {
-        // Full mode: STA + AP + all services
-        _degradedMode = false;
-        setupMDNS();
-        setupNTP();
-        setupOTA(
-            []() { stopMovement(); },
-            []() { if (seqState.isRunning) SeqExecutor.stop(); }
-        );
-        engine->info("✅ Network: FULL MODE (STA + AP + OTA + mDNS)");
+    if (shouldStartAPMode()) {
+        startAPMode();
+        return false;  // AP mode = not connected to home WiFi
     } else {
-        // Degraded mode: AP only - service minimum
-        _degradedMode = true;
-        engine->warn("⚠️ Network: DEGRADED MODE (AP only at 192.168.4.1)");
-        engine->warn("⚠️ Connect to WiFi '" + String(otaHostname) + "-AP' for access");
-        engine->warn("⚠️ OTA and mDNS disabled in degraded mode");
+        return startSTAMode();  // Returns true if connected
     }
-    
-    return connected;
 }

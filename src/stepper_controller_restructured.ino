@@ -65,6 +65,17 @@
 UtilityEngine* engine = nullptr;
 
 // ============================================================================
+// ONBOARD RGB LED (WS2812 on GPIO 48 - Freenove ESP32-S3)
+// Using neopixelWrite() - native ESP32 Arduino core function
+// ============================================================================
+void setRgbLed(uint8_t r, uint8_t g, uint8_t b) {
+  neopixelWrite(PIN_RGB_LED, r, g, b);
+}
+
+// LED blink control for AP mode (can be disabled after successful config)
+volatile bool apLedBlinkEnabled = true;
+
+// ============================================================================
 // NOTE: Hardware configuration moved to Config.h
 // NOTE: Type definitions (structs, enums) moved to Types.h
 // NOTE: Chaos pattern configs moved to ChaosPatterns.h
@@ -237,6 +248,11 @@ void setup() {
   delay(100);  // Brief pause for Serial stability
   
   // ============================================================================
+  // 0. RGB LED INITIALIZATION (Early for visual feedback) - OFF initially
+  // ============================================================================
+  setRgbLed(0, 0, 0);
+  
+  // ============================================================================
   // 1. FILESYSTEM & LOGGING (First for early logging capability)
   // ============================================================================
   engine = new UtilityEngine(webSocket);
@@ -250,34 +266,56 @@ void setup() {
   randomSeed(analogRead(0) + esp_random());
   
   // ============================================================================
-  // 2. NETWORK (WiFi + mDNS + NTP + OTA)
+  // 2. NETWORK (WiFi - determines AP or STA mode)
   // ============================================================================
   Network.begin();
   
   // ============================================================================
-  // 3. WEB SERVERS (HTTP + WebSocket) - Immediately after WiFi
+  // 3. WEB SERVERS (HTTP + WebSocket)
   // ============================================================================
   server.begin();
   webSocket.begin();
-  
-  Dispatcher.begin(&webSocket);
   webSocket.onEvent([](uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
     Dispatcher.onWebSocketEvent(num, type, payload, length);
   });
   
-  Status.begin(&webSocket);
-  SeqExecutor.begin(&webSocket);  // CRITICAL: SequenceExecutor needs WebSocket for status updates
-  engine->info("✅ HTTP (80) + WebSocket (81) servers started");
-  
   // ============================================================================
-  // 4. API ROUTES & FILESYSTEM MANAGER
+  // 4. API ROUTES (WiFi config routes needed in both modes)
   // ============================================================================
   filesystemManager.registerRoutes();
   setupAPIRoutes();
-  engine->info("✅ API routes registered");
+  engine->info("✅ HTTP (80) + WebSocket (81) servers started");
   
   // ============================================================================
-  // 5. HARDWARE (Motor + Contacts)
+  // AP MODE: Minimal setup complete - WiFi configuration only
+  // ============================================================================
+  if (Network.isAPMode()) {
+    setRgbLed(0, 0, 50);  // Start with BLUE (dimmed) - waiting for config
+    engine->info("\n╔════════════════════════════════════════════════════════╗");
+    engine->info("║  MODE AP - CONFIGURATION WiFi                          ║");
+    engine->info("║  Accès: http://192.168.4.1                             ║");
+    engine->info("║  Connectez-vous au réseau: ESP32-Stepper-Setup         ║");
+    engine->info("║  LED: Bleu/Rouge clignotant (attente config)           ║");
+    engine->info("║       Vert fixe = config OK, Rouge fixe = échec        ║");
+    engine->info("╚════════════════════════════════════════════════════════╝\n");
+    return;  // Skip stepper initialization in AP mode
+  }
+  
+  // ============================================================================
+  // STA MODE: Full stepper controller initialization
+  // ============================================================================
+  
+  // WiFi connected - LED GREEN
+  setRgbLed(0, 50, 0);  // GREEN = WiFi OK (dimmed)
+  
+  // Command dispatcher and status broadcaster
+  Dispatcher.begin(&webSocket);
+  Status.begin(&webSocket);
+  SeqExecutor.begin(&webSocket);  // SequenceExecutor needs WebSocket for status updates
+  engine->info("✅ Command dispatcher + Status broadcaster ready");
+  
+  // ============================================================================
+  // 5. HARDWARE (Motor + Contacts) - STA mode only
   // ============================================================================
   Motor.init();
   Contacts.init();
@@ -285,7 +323,7 @@ void setup() {
   engine->info("✅ Hardware initialized (Motor + Contacts)");
   
   // ============================================================================
-  // 6. CALIBRATION MANAGER
+  // 6. CALIBRATION MANAGER - STA mode only
   // ============================================================================
   Calibration.init(&webSocket, &server);
   Calibration.setStatusCallback(sendStatus);
@@ -294,7 +332,7 @@ void setup() {
   engine->info("✅ CalibrationManager ready");
   
   // ============================================================================
-  // 7. STARTUP COMPLETE
+  // 7. STARTUP COMPLETE - STA mode
   // ============================================================================
   engine->printStatus();
   
@@ -303,6 +341,7 @@ void setup() {
   engine->info("║  WEB INTERFACE READY!                                  ║");
   engine->info("║  Access: http://" + WiFi.localIP().toString() + "                          ║");
   engine->info("║  Auto-calibration starts in 1 second...               ║");
+  engine->info("║  LED: Vert (WiFi connecté)                             ║");
   engine->info("╚════════════════════════════════════════════════════════╝\n");
 }
 
@@ -312,8 +351,39 @@ void setup() {
 // Clean separation between MovementType (WHAT) and ExecutionContext (WHO)
 void loop() {
   // ═══════════════════════════════════════════════════════════════════════════
-  // OTA UPDATE HANDLER (Must be called in every loop iteration)
+  // AP MODE: Minimal loop - only web services for WiFi configuration
+  // LED alternates BLUE/RED to indicate AP mode (waiting for config)
+  // After successful config: LED stays GREEN (blink disabled)
+  // After failed config: LED stays RED for 3s then resumes blinking
   // ═══════════════════════════════════════════════════════════════════════════
+  if (Network.isAPMode()) {
+    // Handle Captive Portal DNS (redirects all DNS to ESP32 for auto-popup)
+    Network.handleCaptivePortal();
+    
+    // Blink LED Blue/Red every 500ms (only if blink enabled)
+    static unsigned long lastLedToggle = 0;
+    static bool ledIsBlue = true;
+    
+    if (apLedBlinkEnabled && millis() - lastLedToggle > 500) {
+      lastLedToggle = millis();
+      if (ledIsBlue) {
+        setRgbLed(50, 0, 0);  // RED (dimmed)
+      } else {
+        setRgbLed(0, 0, 50);  // BLUE (dimmed)
+      }
+      ledIsBlue = !ledIsBlue;
+    }
+    
+    server.handleClient();
+    webSocket.loop();
+    return;  // Skip all stepper/OTA handling in AP mode
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STA MODE: Full stepper control with OTA support
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  // OTA UPDATE HANDLER (Must be called in every loop iteration)
   Network.handleOTA();
   
   // ═══════════════════════════════════════════════════════════════════════════

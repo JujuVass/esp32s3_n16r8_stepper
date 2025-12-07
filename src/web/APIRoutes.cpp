@@ -11,11 +11,16 @@
 #include "UtilityEngine.h"
 #include "sequencer/SequenceTableManager.h"
 #include "communication/WiFiConfigManager.h"
+#include "communication/NetworkManager.h"
 
 // External globals
 extern WebServer server;
 extern WebSocketsServer webSocket;
 extern UtilityEngine* engine;
+
+// External LED control (defined in main .ino)
+extern void setRgbLed(uint8_t r, uint8_t g, uint8_t b);
+extern volatile bool apLedBlinkEnabled;
 
 // ============================================================================
 // MIME TYPE DETECTION
@@ -158,6 +163,18 @@ void sendEmptyPlaylistStructure() {
   server.send(200, "application/json", json);
 }
 
+// Helper: Create empty file with initial content if it doesn't exist
+void ensureFileExists(const char* path, const char* defaultContent) {
+  if (!LittleFS.exists(path)) {
+    File file = LittleFS.open(path, "w");
+    if (file) {
+      file.print(defaultContent);
+      file.close();
+      engine->info("📁 Created missing file: " + String(path));
+    }
+  }
+}
+
 // ============================================================================
 // API ROUTES SETUP
 // ============================================================================
@@ -182,11 +199,16 @@ void setupAPIRoutes() {
   // ============================================================================
   
   // Root route explicitly for faster response
-  server.on("/", HTTP_GET, []() {
-    if (!serveStaticFile("/index.html")) {
-      server.send(404, "text/plain", "❌ File not found: index.html\nPlease upload filesystem using: platformio run --target uploadfs");
-    }
-  });
+    server.on("/", HTTP_GET, []() {
+      if (Network.isAPMode()) {
+        server.sendHeader("Location", "/setup.html", true);
+        server.send(302, "text/plain", "Redirecting to setup.html");
+        return;
+      }
+      if (!serveStaticFile("/index.html")) {
+        server.send(404, "text/plain", "❌ File not found: index.html\nPlease upload filesystem using: platformio run --target uploadfs");
+      }
+    });
 
   // ========================================================================
   // STATISTICS API ROUTES
@@ -195,6 +217,8 @@ void setupAPIRoutes() {
   // GET /api/stats - Retrieve all daily stats
   server.on("/api/stats", HTTP_GET, []() {
     if (!LittleFS.exists("/stats.json")) {
+      // Create empty stats file
+      ensureFileExists("/stats.json", "[]");
       server.send(200, "application/json", "[]");
       return;
     }
@@ -496,7 +520,9 @@ void setupAPIRoutes() {
     }
     
     if (!LittleFS.exists(PLAYLIST_FILE_PATH)) {
-      engine->debug("📋 GET /api/playlists: File not found, returning empty");
+      // Create empty playlists file
+      const char* emptyPlaylists = "{\"vaet\":[],\"oscillation\":[],\"chaos\":[],\"pursuit\":[]}";
+      ensureFileExists(PLAYLIST_FILE_PATH, emptyPlaylists);
       sendEmptyPlaylistStructure();
       return;
     }
@@ -976,6 +1002,15 @@ void setupAPIRoutes() {
   server.on("/api/wifi/scan", HTTP_GET, []() {
     engine->info("📡 WiFi scan requested via API");
     
+    // In AP-only mode, we need to be careful with scanning
+    bool wasAPOnly = Network.isAPMode();
+    
+    if (wasAPOnly) {
+      engine->info("📡 AP mode: preparing for scan...");
+      // Brief delay to let AP stabilize
+      delay(100);
+    }
+    
     WiFiNetworkInfo networks[15];
     int count = WiFiConfig.scanNetworks(networks, 15);
     
@@ -992,6 +1027,7 @@ void setupAPIRoutes() {
     }
     
     doc["count"] = count;
+    doc["apMode"] = wasAPOnly;
     
     String response;
     serializeJson(doc, response);
@@ -1003,8 +1039,10 @@ void setupAPIRoutes() {
     JsonDocument doc;
     doc["configured"] = WiFiConfig.isConfigured();
     doc["ssid"] = WiFiConfig.getStoredSSID();
-    doc["connected"] = (WiFi.status() == WL_CONNECTED);
+    doc["apMode"] = Network.isAPMode();
+    doc["staMode"] = Network.isSTAMode();
     doc["ip"] = WiFi.localIP().toString();
+    doc["apIp"] = WiFi.softAPIP().toString();
     
     String response;
     serializeJson(doc, response);
@@ -1012,12 +1050,12 @@ void setupAPIRoutes() {
   });
   
   // POST /api/wifi/connect - Test and save WiFi credentials
-  // IMPORTANT: Only allowed in AP-only mode (degraded mode) to avoid connection issues
+  // We start in AP_STA mode, so testing won't disrupt the AP connection
   server.on("/api/wifi/connect", HTTP_POST, []() {
-    // Block if already connected in STA mode - must use AP only
-    if (WiFi.status() == WL_CONNECTED) {
+    // Block if already connected in STA mode - must use AP mode to configure
+    if (!Network.isAPMode()) {
       server.send(403, "application/json", 
-        "{\"success\":false,\"error\":\"WiFi config disabled when connected. Use AP mode (192.168.4.1) to change settings.\",\"hint\":\"Reboot with wrong credentials or use 'Forget WiFi' first.\"}");
+        "{\"success\":false,\"error\":\"WiFi config disabled when connected. Use AP mode (192.168.4.1) to change settings.\",\"hint\":\"Set GPIO18 LOW or clear EEPROM credentials.\"}");
       return;
     }
     
@@ -1043,19 +1081,22 @@ void setupAPIRoutes() {
       return;
     }
     
-    engine->info("🔌 WiFi connect request for: " + ssid);
+    engine->info("🔌 Testing WiFi: " + ssid);
     
-    // Test connection first
+    // Test connection (we're in AP_STA mode so AP stays stable)
     bool connected = WiFiConfig.testConnection(ssid, password, 15000);
     
     if (connected) {
+      // LED GREEN = Success! Stop blinking
+      apLedBlinkEnabled = false;
+      setRgbLed(0, 50, 0);
+      
       // Save to EEPROM
       WiFiConfig.saveConfig(ssid, password);
       
       JsonDocument respDoc;
       respDoc["success"] = true;
       respDoc["message"] = "WiFi configured successfully!";
-      respDoc["ip"] = WiFi.localIP().toString();
       respDoc["ssid"] = ssid;
       respDoc["rebootRequired"] = true;
       respDoc["hostname"] = String(otaHostname) + ".local";
@@ -1064,9 +1105,15 @@ void setupAPIRoutes() {
       serializeJson(respDoc, response);
       server.send(200, "application/json", response);
       
-      // Don't auto-reboot - let the UI handle it with user confirmation
+      engine->info("✅ WiFi config saved - waiting for reboot");
     } else {
+      // LED RED = Failed, resume blinking
+      setRgbLed(50, 0, 0);
+      delay(100);
+      apLedBlinkEnabled = true;
+      
       server.send(200, "application/json", "{\"success\":false,\"error\":\"Connection failed. Check password.\"}");
+      engine->warn("❌ WiFi test failed: " + ssid);
     }
   });
   
@@ -1108,21 +1155,86 @@ void setupAPIRoutes() {
   });
 
   // ========================================================================
-  // FALLBACK - Auto-serve static files from LittleFS
+  // CAPTIVE PORTAL DETECTION - Handle standard connectivity check URLs
+  // These are requested by OS to detect captive portals
+  // IMPORTANT: Use HTML meta refresh instead of 302 redirect for better compatibility
   // ========================================================================
-  // This handler serves ANY file from LittleFS automatically:
-  // - /css/*.css, /js/*.js, /js/core/*.js, /js/modules/*.js, etc.
-  // - No need to manually add routes when adding/removing JS files
-  // - Just update index.html and upload filesystem
+  
+  // Helper: Send captive portal redirect page (works better than 302)
+  auto sendCaptivePortalRedirect = []() {
+    String html = "<!DOCTYPE html><html><head>";
+    html += "<meta http-equiv='refresh' content='0;url=http://192.168.4.1/setup.html'>";
+    html += "<title>ESP32 WiFi Setup</title>";
+    html += "</head><body>";
+    html += "<h1>ESP32 Stepper Controller</h1>";
+    html += "<p>Redirecting to WiFi configuration...</p>";
+    html += "<p><a href='http://192.168.4.1/setup.html'>Click here if not redirected</a></p>";
+    html += "</body></html>";
+    server.send(200, "text/html", html);
+  };
+  
+  // Android - expects 204 response, but we give HTML to trigger captive portal popup
+  server.on("/generate_204", HTTP_GET, [sendCaptivePortalRedirect]() {
+    sendCaptivePortalRedirect();
+  });
+  server.on("/gen_204", HTTP_GET, [sendCaptivePortalRedirect]() {
+    sendCaptivePortalRedirect();
+  });
+  
+  // Windows (NCSI - Network Connectivity Status Indicator)
+  // Windows expects specific text, returning anything else triggers captive portal
+  server.on("/connecttest.txt", HTTP_GET, [sendCaptivePortalRedirect]() {
+    sendCaptivePortalRedirect();
+  });
+  server.on("/ncsi.txt", HTTP_GET, [sendCaptivePortalRedirect]() {
+    sendCaptivePortalRedirect();
+  });
+  server.on("/redirect", HTTP_GET, [sendCaptivePortalRedirect]() {
+    // Windows redirect page after detection
+    sendCaptivePortalRedirect();
+  });
+  
+  // Apple iOS/macOS
+  server.on("/hotspot-detect.html", HTTP_GET, [sendCaptivePortalRedirect]() {
+    sendCaptivePortalRedirect();
+  });
+  server.on("/library/test/success.html", HTTP_GET, [sendCaptivePortalRedirect]() {
+    sendCaptivePortalRedirect();
+  });
+  
+  // Firefox
+  server.on("/success.txt", HTTP_GET, [sendCaptivePortalRedirect]() {
+    sendCaptivePortalRedirect();
+  });
+  
+  // Generic fallback for captive portal (Microsoft fwlink)
+  server.on("/fwlink", HTTP_GET, [sendCaptivePortalRedirect]() {
+    sendCaptivePortalRedirect();
+  });
+
+  // ========================================================================
+  // FALLBACK - Auto-serve static files from LittleFS
   // ========================================================================
   server.onNotFound([]() {
     String uri = server.uri();
-    
+    // En mode AP, tout sauf /setup.html et /api/wifi/* redirige vers /setup.html
+    if (Network.isAPMode()) {
+      if (uri != "/setup.html" && !uri.startsWith("/api/wifi")) {
+        server.sendHeader("Location", "http://192.168.4.1/setup.html", true);
+        server.send(302, "text/plain", "Redirecting to setup.html");
+        return;
+      }
+    } else {
+      // En mode STA, on bloque l'accès à setup.html
+      if (uri == "/setup.html") {
+        server.send(404, "text/plain", "Not found: setup.html");
+        return;
+      }
+    }
     // Try to serve the file using our helper (handles caching)
     if (serveStaticFile(uri)) {
       return;  // File served successfully
     }
-    
     // File not found
     engine->warn("⚠️ 404: " + uri);
     server.send(404, "text/plain", "Not found: " + uri);

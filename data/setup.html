@@ -470,25 +470,23 @@
       try {
         const response = await fetch('/api/wifi/config');
         const data = await response.json();
-        
-        isStaConnected = data.connected;
-        
+        // Utilise apMode pour détecter le mode AP
+        const isAPMode = data.apMode === true;
         const modeIndicator = document.getElementById('modeIndicator');
         const blockedScreen = document.getElementById('blockedScreen');
         const configScreen = document.getElementById('configScreen');
-        
-        if (isStaConnected) {
-          // STA mode - block configuration
-          modeIndicator.className = 'mode-indicator sta-mode';
-          modeIndicator.innerHTML = '⚠️ Mode Connecté (STA) - Configuration bloquée';
-          blockedScreen.classList.add('visible');
-          configScreen.classList.add('hidden');
-        } else {
+        if (isAPMode) {
           // AP mode - allow configuration
           modeIndicator.className = 'mode-indicator ap-mode';
           modeIndicator.innerHTML = '✅ Mode Configuration (AP) - Modifications autorisées';
           blockedScreen.classList.remove('visible');
           configScreen.classList.remove('hidden');
+        } else {
+          // STA mode - block configuration
+          modeIndicator.className = 'mode-indicator sta-mode';
+          modeIndicator.innerHTML = '⚠️ Mode Connecté (STA) - Configuration bloquée';
+          blockedScreen.classList.add('visible');
+          configScreen.classList.add('hidden');
         }
       } catch (error) {
         console.error('Error checking mode:', error);
@@ -634,6 +632,11 @@
           document.getElementById('successSsid').textContent = data.ssid;
           document.getElementById('homeWifiName').textContent = data.ssid;
           document.getElementById('dnsHostname').textContent = data.hostname || 'esp32-stepper.local';
+          
+          // Show note about fallback
+          if (data.note) {
+            showStatus('info', '💡 ' + data.note);
+          }
           
         } else {
           showStatus('error', '❌ ' + (data.error || 'Connexion échouée'));

@@ -52,7 +52,7 @@ void StatusBroadcaster::send() {
         return;
     }
     if (_webSocket->connectedClients() == 0) {
-        engine->debug("⚠️ sendStatus: No clients connected!");
+        //engine->debug("⚠️ sendStatus: No clients connected!");
         return;
     }
     
@@ -319,5 +319,6 @@ void StatusBroadcaster::addSystemStats(JsonDocument& doc) {
     systemObj["hostname"] = String(otaHostname);
     systemObj["ssid"] = WiFi.SSID();
     systemObj["apClients"] = WiFi.softAPgetStationNum();
-    systemObj["degradedMode"] = Network.isDegradedMode();
+    systemObj["apMode"] = Network.isAPMode();
+    systemObj["staMode"] = Network.isSTAMode();
 }

@@ -9,7 +9,7 @@
 #include <math.h>
 
 // EEPROM addresses for logging preferences
-#define EEPROM_SIZE 64
+#define EEPROM_SIZE 128   // Increased: 0-1 for logging, 2-100 for WiFi config
 #define EEPROM_ADDR_LOGGING_ENABLED 0
 #define EEPROM_ADDR_LOG_LEVEL 1
 

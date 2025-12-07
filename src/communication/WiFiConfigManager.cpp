@@ -6,6 +6,7 @@
 
 #include "communication/WiFiConfigManager.h"
 #include "UtilityEngine.h"
+#include <esp_wifi.h>
 
 // Forward declaration
 extern UtilityEngine* engine;
@@ -79,6 +80,8 @@ bool WiFiConfigManager::saveConfig(const String& ssid, const String& password) {
         return false;
     }
     
+    if (engine) engine->info("💾 Saving WiFi config: " + ssid + " (" + String(ssid.length()) + " chars)");
+    
     // Write magic flag
     EEPROM.write(WIFI_EEPROM_FLAG, WIFI_CONFIG_MAGIC);
     
@@ -105,10 +108,26 @@ bool WiFiConfigManager::saveConfig(const String& ssid, const String& password) {
     EEPROM.write(WIFI_EEPROM_CHECKSUM, checksum);
     
     // Commit to flash
-    EEPROM.commit();
+    bool committed = EEPROM.commit();
+    if (!committed) {
+        if (engine) engine->error("❌ EEPROM commit failed!");
+        return false;
+    }
+    
+    // VERIFY: Read back and check
+    String verifySSID, verifyPassword;
+    if (!loadConfig(verifySSID, verifyPassword)) {
+        if (engine) engine->error("❌ EEPROM verify failed: couldn't read back config!");
+        return false;
+    }
+    
+    if (verifySSID != ssid) {
+        if (engine) engine->error("❌ EEPROM verify failed: SSID mismatch! Saved='" + ssid + "' Read='" + verifySSID + "'");
+        return false;
+    }
     
     if (engine) {
-        engine->info("💾 WiFi config saved to EEPROM: " + ssid);
+        engine->info("✅ WiFi config verified in EEPROM: " + verifySSID);
     }
     
     return true;
@@ -153,13 +172,26 @@ int WiFiConfigManager::scanNetworks(WiFiNetworkInfo* networks, int maxNetworks) 
         engine->info("📡 Scanning WiFi networks...");
     }
     
-    // Perform scan (blocking)
-    int numNetworks = WiFi.scanNetworks(false, false);  // async=false, showHidden=false
+    // We're already in AP_STA mode (set in startAPMode), so we can scan directly
+    // DO NOT change WiFi mode here - it disconnects all AP clients!
+    
+    // Perform scan (blocking, with longer timeout for stability)
+    if (engine) engine->info("📡 Starting network scan (AP stays active)...");
+    int numNetworks = WiFi.scanNetworks(false, false, false, 300);  // async=false, showHidden=false, passive=false, max_ms_per_chan=300
     
     if (numNetworks < 0) {
-        if (engine) engine->error("❌ WiFi scan failed");
+        if (engine) engine->error("❌ WiFi scan failed with code: " + String(numNetworks));
+        // Try again with different settings
+        delay(500);
+        numNetworks = WiFi.scanNetworks(false, false);
+    }
+    
+    if (numNetworks < 0) {
+        if (engine) engine->error("❌ WiFi scan failed after retry");
         return 0;
     }
+    
+    if (engine) engine->info("📡 Raw scan found " + String(numNetworks) + " networks");
     
     // First pass: collect all networks with deduplication (mesh support)
     // For duplicate SSIDs, keep only the one with strongest signal
@@ -212,8 +244,10 @@ int WiFiConfigManager::scanNetworks(WiFiNetworkInfo* networks, int maxNetworks) 
     // Clean up scan results
     WiFi.scanDelete();
     
+    // NO mode change here - we stay in AP_STA to keep clients connected
+    
     if (engine) {
-        engine->info("📡 Found " + String(uniqueCount) + " unique WiFi networks (from " + String(numNetworks) + " total)");
+        engine->info("📡 Found " + String(uniqueCount) + " unique WiFi networks");
     }
     
     return uniqueCount;
@@ -228,12 +262,10 @@ bool WiFiConfigManager::testConnection(const String& ssid, const String& passwor
         engine->info("🔌 Testing WiFi connection to: " + ssid);
     }
     
-    // Disconnect if already connected
-    WiFi.disconnect(true);
-    delay(100);
+    // We're already in AP_STA mode (set in startAPMode), so we can just use
+    // WiFi.begin() without changing modes - this keeps the AP stable!
     
-    // Set mode and connect
-    WiFi.mode(WIFI_STA);
+    // Try to connect as STA (AP stays active and stable)
     WiFi.begin(ssid.c_str(), password.c_str());
     
     unsigned long startTime = millis();
@@ -242,16 +274,28 @@ bool WiFiConfigManager::testConnection(const String& ssid, const String& passwor
     }
     
     bool connected = (WiFi.status() == WL_CONNECTED);
+    String assignedIP = "";
     
     if (connected) {
+        assignedIP = WiFi.localIP().toString();
         if (engine) {
-            engine->info("✅ WiFi test successful! IP: " + WiFi.localIP().toString());
+            engine->info("✅ WiFi test successful! IP: " + assignedIP);
         }
     } else {
         if (engine) {
             engine->warn("❌ WiFi test failed for: " + ssid);
         }
-        WiFi.disconnect(true);
+    }
+    
+    // DON'T disconnect - it can disrupt the AP on some ESP32 firmware versions
+    // The STA connection will be cleared on reboot anyway
+    // WiFi.disconnect(false);  // REMOVED - was causing AP client disconnection
+    
+    if (engine) {
+        engine->info("📡 AP still active: " + WiFi.softAPIP().toString());
+        if (connected) {
+            engine->info("📡 STA also connected to: " + ssid + " (will disconnect on reboot)");
+        }
     }
     
     return connected;

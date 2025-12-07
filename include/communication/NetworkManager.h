@@ -1,17 +1,20 @@
 /**
- * NetworkManager.h - WiFi, OTA, mDNS, NTP Configuration
+ * NetworkManager.h - WiFi Network Management
  * 
- * Manages all network-related initialization:
- * - WiFi connection with retry logic
- * - mDNS for local domain (esp32-stepper.local)
- * - OTA (Over-The-Air) updates
- * - NTP time synchronization
+ * Two exclusive modes:
+ * - AP Mode: For WiFi configuration only (setup.html) + Captive Portal
+ * - STA Mode: For stepper control (index.html)
+ * 
+ * AP Mode is activated if:
+ * - PIN_AP_MODE (GPIO 18) is LOW at boot (physical switch)
+ * - No WiFi credentials in EEPROM and no valid defaults
  */
 
 #pragma once
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <DNSServer.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
 #include "Config.h"
@@ -28,14 +31,29 @@ public:
     static NetworkManager& getInstance();
     
     /**
-     * Initialize WiFi connection
-     * @return true if connected successfully
+     * Full network initialization
+     * Determines mode (AP or STA) and starts appropriate services
+     * @return true if in STA mode and connected
      */
-    bool connectWiFi();
+    bool begin();
+    
+    /**
+     * Check if running in AP mode (configuration mode)
+     */
+    bool isAPMode() const { return _apMode; }
+    
+    /**
+     * Check if running in STA mode (stepper mode)
+     */
+    bool isSTAMode() const { return !_apMode; }
+    
+    /**
+     * Check if WiFi STA is connected (only valid in STA mode)
+     */
+    bool isConnected() const { return !_apMode && WiFi.status() == WL_CONNECTED; }
     
     /**
      * Check if WiFi is configured in EEPROM
-     * @return true if valid config exists
      */
     bool isWiFiConfigured() const { return WiFiConfig.isConfigured(); }
     
@@ -45,65 +63,44 @@ public:
     String getConfiguredSSID() const;
     
     /**
-     * Setup mDNS responder
-     * @return true if mDNS started successfully
+     * Get IP address as string (AP or STA depending on mode)
      */
-    bool setupMDNS();
+    String getIPAddress() const;
     
     /**
-     * Configure NTP time synchronization
-     */
-    void setupNTP();
-    
-    /**
-     * Configure OTA update handlers
-     * @param onStopMovement Callback to stop movement before OTA
-     * @param onStopSequencer Callback to stop sequencer before OTA
-     */
-    void setupOTA(std::function<void()> onStopMovement = nullptr,
-                  std::function<void()> onStopSequencer = nullptr);
-    
-    /**
-     * Full network initialization (WiFi + mDNS + NTP + OTA)
-     * @return true if WiFi connected (other services are optional)
-     */
-    bool begin();
-    
-    /**
-     * Check if WiFi STA is connected
-     */
-    bool isConnected() const { return WiFi.status() == WL_CONNECTED; }
-    
-    /**
-     * Check if running in degraded mode (AP only, STA failed)
-     */
-    bool isDegradedMode() const { return _degradedMode; }
-    
-    /**
-     * Get STA IP address as string
-     */
-    String getIPAddress() const { return WiFi.localIP().toString(); }
-    
-    /**
-     * Get AP IP address as string
-     */
-    String getAPIPAddress() const { return WiFi.softAPIP().toString(); }
-    
-    /**
-     * Handle OTA in loop - MUST be called in every loop iteration
+     * Handle OTA in loop - MUST be called in every loop iteration (STA mode only)
      */
     void handleOTA() { if (_otaConfigured) ArduinoOTA.handle(); }
+    
+    /**
+     * Handle Captive Portal DNS in loop - MUST be called in AP mode
+     */
+    void handleCaptivePortal();
 
 private:
     NetworkManager() = default;
     NetworkManager(const NetworkManager&) = delete;
     NetworkManager& operator=(const NetworkManager&) = delete;
     
-    std::function<void()> _onStopMovement = nullptr;
-    std::function<void()> _onStopSequencer = nullptr;
-    bool _wifiConnected = false;
+    // Mode determination
+    bool shouldStartAPMode();
+    
+    // Mode-specific initialization
+    void startAPMode();
+    bool startSTAMode();
+    
+    // STA services
+    bool setupMDNS();
+    void setupNTP();
+    void setupOTA();
+    
+    // State
+    bool _apMode = false;
     bool _otaConfigured = false;
-    bool _degradedMode = false;  // True if STA failed, running AP only
+    
+    // Captive Portal DNS server
+    DNSServer _dnsServer;
+    bool _captivePortalActive = false;
 };
 
 // Global access macro
