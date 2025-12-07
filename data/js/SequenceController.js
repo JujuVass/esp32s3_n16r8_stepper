@@ -230,27 +230,8 @@ function importSequence() {
 }
 
 function downloadTemplate() {
-  let fullDoc;
-  if (typeof getSequenceTemplateDocPure === 'function') {
-    fullDoc = getSequenceTemplateDocPure();
-  } else {
-    fullDoc = {
-      TEMPLATE: {
-        version: "2.0",
-        lineCount: 1,
-        lines: [{
-          lineId: 1, enabled: true, movementType: 4, cycleCount: 1, pauseAfterMs: 1000,
-          startPositionMM: 0, distanceMM: 100, speedForward: 5.0, speedBackward: 5.0,
-          decelStartEnabled: false, decelEndEnabled: false, decelZoneMM: 50.0, decelEffectPercent: 50.0, decelMode: 0,
-          oscCenterPositionMM: 100.0, oscAmplitudeMM: 50.0, oscWaveform: 0, oscFrequencyHz: 0.1,
-          oscEnableRampIn: false, oscEnableRampOut: false, oscRampInDurationMs: 1000.0, oscRampOutDurationMs: 1000.0,
-          chaosCenterPositionMM: 110.0, chaosAmplitudeMM: 50.0, chaosMaxSpeedLevel: 10.0, chaosCrazinessPercent: 50.0,
-          chaosDurationSeconds: 30, chaosSeed: 0, chaosPatternsEnabled: [true,true,true,true,true,true,true,true,true,true,true]
-        }]
-      },
-      DOCUMENTATION: { "Note": "Template minimal - Voir sequencer.js pour la version complète" }
-    };
-  }
+  // Use helper from SequenceUtils.js
+  const fullDoc = getSequenceTemplateDoc();
   
   const jsonStr = JSON.stringify(fullDoc, null, 2);
   const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -1095,86 +1076,16 @@ function createSequenceRow(line, index) {
   return row;
 }
 
-function getTypeDisplay(movementType, line) {
-  let typeIcon = '', typeInfo = '', typeName = '';
-  
-  if (movementType === 0) {
-    typeIcon = '↔️';
-    typeName = 'Va-et-vient';
-    typeInfo = `<div style="font-size: 10px; line-height: 1.2;">
-      <div>${line.startPositionMM.toFixed(1)}mm</div>
-      <div>±${line.distanceMM.toFixed(1)}mm</div>
-    </div>`;
-  } else if (movementType === 1) {
-    typeIcon = '〰️';
-    typeName = 'Oscillation';
-    const waveformNames = ['SIN', 'TRI', 'SQR'];
-    const waveformName = waveformNames[line.oscWaveform] || '?';
-    typeInfo = `<div style="font-size: 10px; line-height: 1.2;">
-      <div>C:${line.oscCenterPositionMM ? line.oscCenterPositionMM.toFixed(0) : '100'}mm</div>
-      <div>A:±${line.oscAmplitudeMM ? line.oscAmplitudeMM.toFixed(0) : '50'}mm</div>
-      <div>${waveformName} ${line.oscFrequencyHz ? line.oscFrequencyHz.toFixed(2) : '0.5'}Hz</div>
-    </div>`;
-  } else if (movementType === 2) {
-    typeIcon = '🌀';
-    typeName = 'Chaos';
-    typeInfo = `<div style="font-size: 10px; line-height: 1.2;">
-      <div>⏱️${line.chaosDurationSeconds || 30}s</div>
-      <div>🎲${line.chaosCrazinessPercent ? line.chaosCrazinessPercent.toFixed(0) : '50'}%</div>
-    </div>`;
-  } else if (movementType === 4) {
-    typeIcon = '📏';
-    typeName = 'Calibration';
-    typeInfo = `<div style="font-size: 10px; line-height: 1.2;">
-      <div>Calibration</div>
-      <div>complète</div>
-    </div>`;
-  }
-  
-  return { typeIcon, typeInfo, typeName };
-}
-
-function getDecelSummary(line, movementType) {
-  if (movementType === 0 && (line.decelStartEnabled || line.decelEndEnabled)) {
-    const parts = [];
-    if (line.decelStartEnabled) parts.push('D');
-    if (line.decelEndEnabled) parts.push('F');
-    const modeLabels = ['Lin', 'Sin', 'Tri⁻¹', 'Sin⁻¹'];
-    return `<div style="font-size: 10px; line-height: 1.3;">
-      <div style="color: #4CAF50; font-weight: bold;">${parts.join('/')}</div>
-      <div>${line.decelZoneMM}mm ${line.decelEffectPercent}%</div>
-      <div>${modeLabels[line.decelMode] || '?'}</div>
-    </div>`;
-  }
-  return '<span style="color: #999; font-size: 10px;">--</span>';
-}
-
-function getSpeedsDisplay(line, movementType) {
-  if (movementType === 0) {
-    return `<div style="font-size: 11px; line-height: 1.3;">
-      <div style="color: #2196F3; font-weight: bold;">↗${line.speedForward.toFixed(1)}</div>
-      <div style="color: #FF9800; font-weight: bold;">↙${line.speedBackward.toFixed(1)}</div>
-    </div>`;
-  } else if (movementType === 1) {
-    const peakSpeedMMPerSec = 2 * Math.PI * line.oscFrequencyHz * line.oscAmplitudeMM;
-    return `<div style="font-size: 11px; font-weight: bold; color: #9C27B0;">${peakSpeedMMPerSec.toFixed(0)} mm/s</div>`;
-  } else if (movementType === 2) {
-    return `<div style="font-size: 11px; font-weight: bold; color: #E91E63;">${line.chaosMaxSpeedLevel ? line.chaosMaxSpeedLevel.toFixed(1) : '10.0'}</div>`;
-  }
-  return '<span style="color: #999;">--</span>';
-}
-
-function getCyclesPause(line, movementType) {
-  let cyclesDisplay = line.cycleCount;
-  if (movementType === 2) cyclesDisplay = '--';
-  
-  const pauseMs = line.pauseAfterMs || 0;
-  const pauseDisplay = pauseMs > 0 ? (pauseMs / 1000).toFixed(1) + 's' : '--';
-  const pauseColor = pauseMs > 0 ? '#9C27B0' : '#999';
-  const pauseWeight = pauseMs > 0 ? 'bold' : 'normal';
-  
-  return { cyclesDisplay, pauseDisplay, pauseColor, pauseWeight };
-}
+// ============================================================================
+// DISPLAY HELPERS - Loaded from SequenceUtils.js
+// ============================================================================
+// Note: The following functions are now in SequenceUtils.js:
+// - getTypeDisplay(movementType, line)
+// - getDecelSummary(line, movementType)
+// - getSpeedsDisplay(line, movementType)
+// - getCyclesPause(line, movementType)
+// - getSequenceTemplateDoc()
+// - MOVEMENT_TYPE constants
 
 function attachRowEventHandlers(row, line, index) {
   // Hover effect
