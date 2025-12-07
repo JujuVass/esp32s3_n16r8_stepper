@@ -182,7 +182,190 @@
     }
     
     // ============================================================================
-    // UI UPDATE
+    // UI UPDATE - HELPER FUNCTIONS
+    // ============================================================================
+    
+    /**
+     * Update speed display based on current active mode
+     * @param {Object} data - Status data from backend
+     */
+    function updateSpeedDisplay(data) {
+      const speedElement = document.getElementById('currentSpeed');
+      const cpmSpan = speedElement ? speedElement.nextElementSibling : null;
+      const currentMode = AppState.system.currentMode;
+      
+      if (currentMode === 'oscillation' && data.oscillation && data.oscillation.frequencyHz !== undefined && data.oscillation.amplitudeMM !== undefined) {
+        // OSCILLATION MODE: Show ACTUAL speed (backend calculates with hardware limits)
+        let displaySpeed;
+        let isLimited = false;
+        
+        if (data.oscillation.actualSpeedMMS !== undefined && data.oscillation.actualSpeedMMS > 0) {
+          displaySpeed = parseFloat(data.oscillation.actualSpeedMMS);
+          const theoreticalSpeed = 2 * Math.PI * data.oscillation.frequencyHz * data.oscillation.amplitudeMM;
+          isLimited = (displaySpeed < theoreticalSpeed - 1);
+        } else {
+          displaySpeed = 2 * Math.PI * data.oscillation.frequencyHz * data.oscillation.amplitudeMM;
+        }
+        
+        speedElement.innerHTML = '🌊 ' + displaySpeed.toFixed(0) + ' mm/s' + (isLimited ? ' ⚠️' : '');
+        if (cpmSpan) {
+          cpmSpan.textContent = '(pic, f=' + data.oscillation.frequencyHz.toFixed(2) + ' Hz' + (isLimited ? ', limité' : '') + ')';
+        }
+      } else if (currentMode === 'chaos' && data.chaos && data.chaos.maxSpeedLevel !== undefined) {
+        // CHAOS MODE: Show max speed level
+        const speedMMPerSec = data.chaos.maxSpeedLevel * 10.0;
+        speedElement.innerHTML = '⚡ ' + data.chaos.maxSpeedLevel.toFixed(1);
+        if (cpmSpan) {
+          cpmSpan.textContent = '(max ' + speedMMPerSec.toFixed(0) + ' mm/s)';
+        }
+      } else if (currentMode === 'pursuit' && AppState.pursuit.maxSpeedLevel !== undefined) {
+        // PURSUIT MODE: Show max speed level from UI variable
+        const speedMMPerSec = AppState.pursuit.maxSpeedLevel * 10.0;
+        speedElement.innerHTML = '⚡ ' + AppState.pursuit.maxSpeedLevel.toFixed(1);
+        if (cpmSpan) {
+          cpmSpan.textContent = '(max ' + speedMMPerSec.toFixed(0) + ' mm/s)';
+        }
+      } else if (currentMode === 'sequencer') {
+        // SEQUENCER MODE: Show mode indicator
+        speedElement.innerHTML = '- (mode séquence)';
+        if (cpmSpan) {
+          cpmSpan.textContent = '';
+        }
+      } else if (currentMode === 'simple' && data.motion && data.cyclesPerMinForward !== undefined && data.cyclesPerMinBackward !== undefined) {
+        // SIMPLE MODE: Show forward/backward speeds with cycles/min
+        if (data.motion.speedLevelForward !== undefined && data.motion.speedLevelBackward !== undefined) {
+          const avgCpm = ((data.cyclesPerMinForward + data.cyclesPerMinBackward) / 2).toFixed(0);
+          speedElement.innerHTML = 
+            '↗️ ' + data.motion.speedLevelForward.toFixed(1) + 
+            '&nbsp;&nbsp;•&nbsp;&nbsp;' +
+            '↙️ ' + data.motion.speedLevelBackward.toFixed(1);
+          if (cpmSpan) {
+            cpmSpan.textContent = '(' + avgCpm + ' c/min)';
+          }
+        }
+      }
+    }
+    
+    /**
+     * Sync input values with server state (but not if user is editing)
+     * @param {Object} data - Status data from backend
+     */
+    function syncInputsFromBackend(data) {
+      // Defense: Check data.motion exists before accessing fields
+      if (data.motion) {
+        if (AppState.editing.input !== 'startPosition' && document.activeElement !== DOM.startPosition && data.motion.startPositionMM !== undefined) {
+          DOM.startPosition.value = data.motion.startPositionMM.toFixed(1);
+        }
+      }
+      
+      if (data.targetDistMM !== undefined && AppState.editing.input !== 'distance' && document.activeElement !== DOM.distance) {
+        DOM.distance.value = data.targetDistMM.toFixed(1);
+      }
+      
+      // Update speed values based on unified/separate mode
+      const isSeparateMode = document.getElementById('speedModeSeparate')?.checked || false;
+      
+      if (data.motion) {
+        if (isSeparateMode) {
+          // SEPARATE MODE: update forward and backward individually
+          if (AppState.editing.input !== 'speedForward' && document.activeElement !== DOM.speedForward && data.motion.speedLevelForward !== undefined) {
+            DOM.speedForward.value = data.motion.speedLevelForward.toFixed(1);
+          }
+          if (AppState.editing.input !== 'speedBackward' && document.activeElement !== DOM.speedBackward && data.motion.speedLevelBackward !== undefined) {
+            DOM.speedBackward.value = data.motion.speedLevelBackward.toFixed(1);
+          }
+          if (DOM.speedForwardInfo && data.cyclesPerMinForward !== undefined) {
+            DOM.speedForwardInfo.textContent = '≈ ' + data.cyclesPerMinForward.toFixed(0) + ' cycles/min';
+          }
+          if (DOM.speedBackwardInfo && data.cyclesPerMinBackward !== undefined) {
+            DOM.speedBackwardInfo.textContent = '≈ ' + data.cyclesPerMinBackward.toFixed(0) + ' cycles/min';
+          }
+        } else {
+          // UNIFIED MODE: show current speed (should be same for both directions)
+          if (AppState.editing.input !== 'speedUnified' && document.activeElement !== DOM.speedUnified) {
+            if (data.motion.speedLevelBackward !== undefined) {
+              DOM.speedUnified.value = data.motion.speedLevelBackward.toFixed(1);
+            }
+            if (data.motion.speedLevelForward !== undefined) {
+              DOM.speedForward.value = data.motion.speedLevelForward.toFixed(1);
+            }
+            if (data.motion.speedLevelBackward !== undefined) {
+              DOM.speedBackward.value = data.motion.speedLevelBackward.toFixed(1);
+            }
+          }
+          if (DOM.speedUnifiedInfo && data.cyclesPerMinForward !== undefined && data.cyclesPerMinBackward !== undefined) {
+            const avgCyclesPerMin = (data.cyclesPerMinForward + data.cyclesPerMinBackward) / 2.0;
+            DOM.speedUnifiedInfo.textContent = '≈ ' + avgCyclesPerMin.toFixed(0) + ' cycles/min';
+          }
+        }
+      }
+    }
+    
+    /**
+     * Update max values, presets and button states
+     * @param {Object} data - Status data from backend
+     */
+    function updateControlsState(data) {
+      // Update max values and presets
+      if (data.totalDistMM !== undefined) {
+        const effectiveMax = (data.effectiveMaxDistMM && data.effectiveMaxDistMM > 0) ? data.effectiveMaxDistMM : data.totalDistMM;
+        const startPos = (data.motion && data.motion.startPositionMM !== undefined) ? data.motion.startPositionMM : 0;
+        const maxAvailable = effectiveMax - startPos;
+        
+        DOM.startPosition.max = effectiveMax;
+        DOM.distance.max = maxAvailable;
+        
+        if (DOM.maxStart) {
+          if (data.maxDistLimitPercent && data.maxDistLimitPercent < 100) {
+            DOM.maxStart.textContent = effectiveMax.toFixed(2) + ' (' + data.maxDistLimitPercent.toFixed(0) + '% de ' + data.totalDistMM.toFixed(2) + ')';
+          } else {
+            DOM.maxStart.textContent = effectiveMax.toFixed(2);
+          }
+        }
+        
+        if (DOM.maxDist) {
+          DOM.maxDist.textContent = maxAvailable.toFixed(2);
+        }
+        updateStartPresets(effectiveMax);
+        updateDistancePresets(maxAvailable);
+      }
+      
+      // Enable/disable start button
+      const isRunning = data.state === SystemState.RUNNING;
+      const isPausedState = data.state === SystemState.PAUSED;
+      const canStart = canStartOperation() && !isRunning && !isPausedState;
+      setButtonState(DOM.btnStart, canStart);
+      
+      // Enable/disable calibrate button
+      if (DOM.btnCalibrateCommon) {
+        if (!data.canCalibrate) {
+          DOM.btnCalibrateCommon.disabled = true;
+          DOM.btnCalibrateCommon.style.opacity = '0.5';
+          DOM.btnCalibrateCommon.style.cursor = 'not-allowed';
+        } else {
+          DOM.btnCalibrateCommon.disabled = false;
+          DOM.btnCalibrateCommon.style.opacity = '1';
+          DOM.btnCalibrateCommon.style.cursor = 'pointer';
+        }
+      }
+      
+      // Disable inputs during calibration (but allow changes during running)
+      const inputsEnabled = canStartOperation();
+      
+      [DOM.startPosition, DOM.distance, DOM.speedUnified, DOM.speedForward, DOM.speedBackward].forEach(input => {
+        if (input) {
+          input.disabled = !inputsEnabled;
+          input.style.opacity = inputsEnabled ? '1' : '0.6';
+        }
+      });
+      
+      // Update pursuit controls
+      if (DOM.pursuitActiveCheckbox) DOM.pursuitActiveCheckbox.disabled = !inputsEnabled;
+      setButtonState(DOM.btnActivatePursuit, inputsEnabled);
+    }
+    
+    // ============================================================================
+    // UI UPDATE - MAIN FUNCTION
     // ============================================================================
     
     function updateUI(data) {
@@ -298,73 +481,8 @@
         updateGaugePosition(AppState.pursuit.currentPositionMM);
       }
       
-      // Update speed display based on CURRENT ACTIVE MODE (not just data availability)
-      const speedElement = document.getElementById('currentSpeed');
-      const cpmSpan = speedElement ? speedElement.nextElementSibling : null;
-      const currentMode = AppState.system.currentMode;
-      
-      if (currentMode === 'oscillation' && data.oscillation && data.oscillation.frequencyHz !== undefined && data.oscillation.amplitudeMM !== undefined) {
-        // OSCILLATION MODE: Show ACTUAL speed (backend calculates with hardware limits)
-        // If actualSpeedMMS is provided, use it (accounts for adaptive delay)
-        // Otherwise fallback to theoretical peak speed calculation
-        let displaySpeed;
-        let isLimited = false;
-        
-        if (data.oscillation.actualSpeedMMS !== undefined && data.oscillation.actualSpeedMMS > 0) {
-          // Use actual speed from backend (considers hardware limits)
-          displaySpeed = parseFloat(data.oscillation.actualSpeedMMS);
-          
-          // Check if speed was limited
-          const theoreticalSpeed = 2 * Math.PI * data.oscillation.frequencyHz * data.oscillation.amplitudeMM;
-          isLimited = (displaySpeed < theoreticalSpeed - 1); // 1 mm/s tolerance
-        } else {
-          // Fallback: calculate theoretical peak speed
-          displaySpeed = 2 * Math.PI * data.oscillation.frequencyHz * data.oscillation.amplitudeMM;
-        }
-        
-        speedElement.innerHTML = '🌊 ' + displaySpeed.toFixed(0) + ' mm/s' + (isLimited ? ' ⚠️' : '');
-        
-        if (cpmSpan) {
-          cpmSpan.textContent = '(pic, f=' + data.oscillation.frequencyHz.toFixed(2) + ' Hz' + 
-                                (isLimited ? ', limité' : '') + ')';
-        }
-      } else if (currentMode === 'chaos' && data.chaos && data.chaos.maxSpeedLevel !== undefined) {
-        // CHAOS MODE: Show max speed level
-        const speedMMPerSec = data.chaos.maxSpeedLevel * 10.0;
-        speedElement.innerHTML = '⚡ ' + data.chaos.maxSpeedLevel.toFixed(1);
-        
-        if (cpmSpan) {
-          cpmSpan.textContent = '(max ' + speedMMPerSec.toFixed(0) + ' mm/s)';
-        }
-      } else if (currentMode === 'pursuit' && AppState.pursuit.maxSpeedLevel !== undefined) {
-        // PURSUIT MODE: Show max speed level from UI variable
-        const speedMMPerSec = AppState.pursuit.maxSpeedLevel * 10.0;
-        speedElement.innerHTML = '⚡ ' + AppState.pursuit.maxSpeedLevel.toFixed(1);
-        
-        if (cpmSpan) {
-          cpmSpan.textContent = '(max ' + speedMMPerSec.toFixed(0) + ' mm/s)';
-        }
-      } else if (currentMode === 'sequencer') {
-        // SEQUENCER MODE: Show mode indicator
-        speedElement.innerHTML = '- (mode séquence)';
-        if (cpmSpan) {
-          cpmSpan.textContent = '';
-        }
-      } else if (currentMode === 'simple' && data.motion && data.cyclesPerMinForward !== undefined && data.cyclesPerMinBackward !== undefined) {
-        // SIMPLE MODE: Show forward/backward speeds with cycles/min
-        // Defense: Check motion fields exist before accessing
-        if (data.motion.speedLevelForward !== undefined && data.motion.speedLevelBackward !== undefined) {
-          const avgCpm = ((data.cyclesPerMinForward + data.cyclesPerMinBackward) / 2).toFixed(0);
-          speedElement.innerHTML = 
-            '↗️ ' + data.motion.speedLevelForward.toFixed(1) + 
-            '&nbsp;&nbsp;•&nbsp;&nbsp;' +
-            '↙️ ' + data.motion.speedLevelBackward.toFixed(1);
-          
-          if (cpmSpan) {
-            cpmSpan.textContent = '(' + avgCpm + ' c/min)';
-          }
-        }
-      }
+      // Update speed display (delegated to helper function)
+      updateSpeedDisplay(data);
       
       // Update milestones (delegated to helper function)
       if (data.totalTraveled !== undefined) {
@@ -379,130 +497,11 @@
         if (progressPct) progressPct.textContent = progress.toFixed(1) + '%';
       }
       
-      // Sync input values with server state (but not if user is editing)
-      // Also check activeElement to prevent overwriting during typing
-      // Defense: Check data.motion exists before accessing fields
-      if (data.motion) {
-        if (AppState.editing.input !== 'startPosition' && document.activeElement !== DOM.startPosition && data.motion.startPositionMM !== undefined) {
-          DOM.startPosition.value = data.motion.startPositionMM.toFixed(1);
-        }
-      }
+      // Sync input values with server state (delegated to helper function)
+      syncInputsFromBackend(data);
       
-      if (data.targetDistMM !== undefined && AppState.editing.input !== 'distance' && document.activeElement !== DOM.distance) {
-        DOM.distance.value = data.targetDistMM.toFixed(1);
-      }
-      
-      // Update speed values based on unified/separate mode
-      const isSeparateMode = document.getElementById('speedModeSeparate')?.checked || false;
-      
-      // Defense: Check data.motion exists before accessing speed fields
-      if (data.motion) {
-        if (isSeparateMode) {
-          // SEPARATE MODE: update forward and backward individually
-          if (AppState.editing.input !== 'speedForward' && document.activeElement !== DOM.speedForward && data.motion.speedLevelForward !== undefined) {
-            DOM.speedForward.value = data.motion.speedLevelForward.toFixed(1);
-          }
-          if (AppState.editing.input !== 'speedBackward' && document.activeElement !== DOM.speedBackward && data.motion.speedLevelBackward !== undefined) {
-            DOM.speedBackward.value = data.motion.speedLevelBackward.toFixed(1);
-          }
-          // Speed info removed in compact mode
-          if (DOM.speedForwardInfo && data.cyclesPerMinForward !== undefined) {
-            DOM.speedForwardInfo.textContent = 
-              '≈ ' + data.cyclesPerMinForward.toFixed(0) + ' cycles/min';
-          }
-          if (DOM.speedBackwardInfo && data.cyclesPerMinBackward !== undefined) {
-            DOM.speedBackwardInfo.textContent = 
-              '≈ ' + data.cyclesPerMinBackward.toFixed(0) + ' cycles/min';
-          }
-        } else {
-          // UNIFIED MODE: show current speed (should be same for both directions)
-          if (AppState.editing.input !== 'speedUnified' && document.activeElement !== DOM.speedUnified) {
-            // Use backward speed as reference (shows what user just changed)
-            // In unified mode, both speeds should be identical, but we show backward
-            // to ensure the displayed value reflects the most recent change
-            if (data.motion.speedLevelBackward !== undefined) {
-              DOM.speedUnified.value = data.motion.speedLevelBackward.toFixed(1);
-            }
-            
-            // Also keep separate fields in sync (hidden but used when switching modes)
-            if (data.motion.speedLevelForward !== undefined) {
-              DOM.speedForward.value = data.motion.speedLevelForward.toFixed(1);
-            }
-            if (data.motion.speedLevelBackward !== undefined) {
-              DOM.speedBackward.value = data.motion.speedLevelBackward.toFixed(1);
-            }
-          }
-          
-          // Speed info removed in compact mode
-          if (DOM.speedUnifiedInfo && data.cyclesPerMinForward !== undefined && data.cyclesPerMinBackward !== undefined) {
-            const avgCyclesPerMin = (data.cyclesPerMinForward + data.cyclesPerMinBackward) / 2.0;
-            DOM.speedUnifiedInfo.textContent = 
-              '≈ ' + avgCyclesPerMin.toFixed(0) + ' cycles/min';
-          }
-        }
-      }
-      
-      // Update max values and presets
-      // Use effective max distance (factored) if available, otherwise total
-      // Defense: Check data.motion exists before accessing startPositionMM
-      if (data.totalDistMM !== undefined) {
-        const effectiveMax = (data.effectiveMaxDistMM && data.effectiveMaxDistMM > 0) ? data.effectiveMaxDistMM : data.totalDistMM;
-        const startPos = (data.motion && data.motion.startPositionMM !== undefined) ? data.motion.startPositionMM : 0;
-        const maxAvailable = effectiveMax - startPos;
-        
-        DOM.startPosition.max = effectiveMax;
-        DOM.distance.max = maxAvailable;
-        
-        // Show factored value if limit < 100% (only if elements exist)
-        if (DOM.maxStart) {
-          if (data.maxDistLimitPercent && data.maxDistLimitPercent < 100) {
-            DOM.maxStart.textContent = effectiveMax.toFixed(2) + ' (' + data.maxDistLimitPercent.toFixed(0) + '% de ' + data.totalDistMM.toFixed(2) + ')';
-          } else {
-            DOM.maxStart.textContent = effectiveMax.toFixed(2);
-          }
-        }
-        
-        if (DOM.maxDist) {
-          DOM.maxDist.textContent = maxAvailable.toFixed(2);
-        }
-        updateStartPresets(effectiveMax);
-        updateDistancePresets(maxAvailable);
-      }
-      
-      // Enable/disable start button
-      const isRunning = data.state === SystemState.RUNNING;
-      const isPausedState = data.state === SystemState.PAUSED;
-      const canStart = canStartOperation() && !isRunning && !isPausedState;
-      
-      setButtonState(DOM.btnStart, canStart);
-      
-      // Enable/disable calibrate button (now in common tools section)
-      if (DOM.btnCalibrateCommon) {
-        if (!data.canCalibrate) {
-          DOM.btnCalibrateCommon.disabled = true;
-          DOM.btnCalibrateCommon.style.opacity = '0.5';
-          DOM.btnCalibrateCommon.style.cursor = 'not-allowed';
-        } else {
-          DOM.btnCalibrateCommon.disabled = false;
-          DOM.btnCalibrateCommon.style.opacity = '1';
-          DOM.btnCalibrateCommon.style.cursor = 'pointer';
-        }
-      }
-      
-      // Disable inputs during calibration (but allow changes during running)
-      const inputsEnabled = canStartOperation();
-      
-      // Update input fields state
-      [DOM.startPosition, DOM.distance, DOM.speedUnified, DOM.speedForward, DOM.speedBackward].forEach(input => {
-        if (input) {
-          input.disabled = !inputsEnabled;
-          input.style.opacity = inputsEnabled ? '1' : '0.6';
-        }
-      });
-      
-      // Update pursuit controls
-      if (DOM.pursuitActiveCheckbox) DOM.pursuitActiveCheckbox.disabled = !inputsEnabled;
-      setButtonState(DOM.btnActivatePursuit, inputsEnabled);
+      // Update max values, presets and button states (delegated to helper function)
+      updateControlsState(data);
       
       // Update deceleration zone configuration from server (delegated to helper function)
       if (data.decelZone) {
