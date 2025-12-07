@@ -16,18 +16,9 @@
     // Note: MILESTONES array and getMilestoneInfo() loaded from app.js
     
     // ========================================================================
-    // HELPER FUNCTIONS - Browser Compatibility
+    // CYCLE PAUSE HELPERS - Moved to SimpleController.js
     // ========================================================================
-    // Use .closest() instead of :has() CSS selector for broader browser support
-    function getCyclePauseSection() {
-      const header = document.getElementById('cyclePauseHeaderText');
-      return header ? header.closest('.section-collapsible') : null;
-    }
-    
-    function getCyclePauseOscSection() {
-      const header = document.getElementById('cyclePauseOscHeaderText');
-      return header ? header.closest('.section-collapsible') : null;
-    }
+    // Note: getCyclePauseSection(), getCyclePauseOscSection() now in SimpleController.js
 
     // ========================================================================
     // GLOBAL STATE - Position Tracking
@@ -35,41 +26,9 @@
     let currentPositionMM = 0; // Current motor position in millimeters
     
     // ========================================================================
-    // MAXGLOSPE GLOBAL STATE (MAX_SPEED_LEVEL) - Max speed level (don't forget to update .ino if changed))
+    // SPEED LIMITS - Moved to ToolsController.js
     // ========================================================================
-    let maxSpeedLevel = 35; // Max speed level in mm/s
-
-    // Initialize speed input max attributes based on maxSpeedLevel
-    function initSpeedLimits() {
-      const speedInputs = [
-        'speedUnified',
-        'speedForward', 
-        'speedBackward',
-        'pursuitMaxSpeed',
-        'chaosMaxSpeed',
-        'editSpeedFwd',
-        'editSpeedBack',
-        'editChaosSpeed'
-      ];
-      
-      speedInputs.forEach(id => {
-        const input = document.getElementById(id);
-        if (input) {
-          input.setAttribute('max', maxSpeedLevel);
-        }
-      });
-      
-      // Update labels that show the max value
-      const maxLabels = document.querySelectorAll('.unit-label');
-      maxLabels.forEach(label => {
-        if (label.textContent.includes('0-20')) {
-          label.textContent = `(0-${maxSpeedLevel})`;
-        }
-        if (label.textContent.includes('/20')) {
-          label.textContent = label.textContent.replace('/20', `/${maxSpeedLevel}`);
-        }
-      });
-    }
+    // Note: maxSpeedLevel and initSpeedLimits() are now in ToolsController.js
 
     // ========================================================================
     // DOM CACHE - Performance Optimization
@@ -585,6 +544,9 @@
       // Initialize chaos mode (from ChaosController.js)
       initChaosListeners();
       
+      // Initialize sequencer mode (from SequenceController.js)
+      initSequenceListeners();
+      
       // Request sequence table on load (wait for WebSocket connection)
       function requestSequenceTableWhenReady() {
         if (AppState.ws && AppState.ws.readyState === WebSocket.OPEN) {
@@ -597,292 +559,23 @@
     });
     
     // ============================================================================
-    // MODE Séquenceur - Event Listeners
+    // MODE Séquenceur - Moved to SequenceController.js
     // ============================================================================
-    
-    document.getElementById('btnAddLine').addEventListener('click', addSequenceLine);
-    document.getElementById('btnClearAll').addEventListener('click', clearSequence);
-    document.getElementById('btnImportSeq').addEventListener('click', importSequence);
-    document.getElementById('btnExportSeq').addEventListener('click', exportSequence);
-    document.getElementById('btnDownloadTemplate').addEventListener('click', downloadTemplate);
-    
-    // Phase 2: Keyboard shortcuts for multi-select
-    document.addEventListener('keydown', function(e) {
-      // Only handle when on sequencer tab
-      if (AppState.system.currentMode !== 'tableau') return;
-      
-      // Escape: Clear selection
-      if (e.key === 'Escape' && selectedLineIds.size > 0) {
-        clearSelection();
-        e.preventDefault();
-      }
-      
-      // Ctrl+A: Select all
-      if ((e.ctrlKey || e.metaKey) && e.key === 'a' && sequenceLines.length > 0) {
-        selectedLineIds.clear();
-        sequenceLines.forEach(line => selectedLineIds.add(line.lineId));
-        lastSelectedIndex = 0;
-        updateBatchToolbar();
-        renderSequenceTable({ lines: sequenceLines });
-        e.preventDefault();
-      }
-      
-      // Delete: Delete selected lines
-      if (e.key === 'Delete' && selectedLineIds.size > 0) {
-        batchDeleteLines();
-        e.preventDefault();
-      }
-    });
-    
-    // ============================================================================
-    // LOGS, STATS, SYSTEM PANELS - Loaded from ToolsController.js
-    // ============================================================================
-    // Note: Panel management functions loaded from external module:
-    // - toggleLogsPanel(), closeLogsPanel(), clearLogsPanel(), loadLogFilesList()
-    // - toggleStatsPanel(), closeStatsPanel(), clearAllStats(), exportStats()
-    // - triggerStatsImport(), handleStatsFileImport() (import stats)
-    // - toggleSystemPanel(), closeSystemPanel(), refreshWifi(), rebootESP32()
-    // - loadLoggingPreferences(), saveLoggingPreferences(), reconnectAfterReboot()
-    // Event listeners initialized via initToolsListeners() in window.load
-
-    // Note: loadStatsData, displayStatsTable, displayStatsChart loaded from stats.js
-    
-    document.getElementById('btnStartSequence').addEventListener('click', function() {
-      // Reset test mode flag in case it was left on from a failed test
-      window.isTestingLine = false;
-      // Disable both start buttons immediately (instant feedback)
-      setButtonState(DOM.btnStartSequence, false);
-      setButtonState(DOM.btnLoopSequence, false);
-      sendCommand(WS_CMD.START_SEQUENCE, {});
-    });
-    
-    document.getElementById('btnLoopSequence').addEventListener('click', function() {
-      // Reset test mode flag in case it was left on from a failed test
-      window.isTestingLine = false;
-      // Disable both start buttons immediately (instant feedback)
-      setButtonState(DOM.btnStartSequence, false);
-      setButtonState(DOM.btnLoopSequence, false);
-      sendCommand(WS_CMD.LOOP_SEQUENCE, {});
-    });
-    
-    document.getElementById('btnPauseSequence').addEventListener('click', function() {
-      sendCommand(WS_CMD.TOGGLE_SEQUENCE_PAUSE, {});
-    });
-    
-    document.getElementById('btnStopSequence').addEventListener('click', function() {
-      // Only show modal if motor has moved (currentStep > 0)
-      if (currentPositionMM > 0.5) {
-        showStopModal();
-      } else {
-        // Direct stop if at position 0
-        sendCommand(WS_CMD.STOP_SEQUENCE, {});
-      }
-    });
-    
-    // ============================================================================
-    // MODE OSCILLATION - Loaded from OscillationController.js
-    // ============================================================================
-    // Note: Oscillation mode functions loaded from external module:
-    // - toggleOscHelp()
-    // - validateOscillationLimits(), sendOscillationConfig()
-    // - updateOscillationPresets(), sendOscCyclePauseConfig()
-    // - startOscillation(), stopOscillation(), pauseOscillation()
-    // - initOscillationListeners()
+    // Note: All sequencer event listeners moved to initSequenceListeners() in SequenceController.js
+    // Including: btnAddLine, btnClearAll, btnImportSeq, btnExportSeq, btnDownloadTemplate,
+    //   btnStartSequence, btnLoopSequence, btnPauseSequence, btnStopSequence, btnSkipLine,
+    //   editLineForm, movement type radios, cycle pause toggles, keyboard shortcuts
 
     // ============================================================================
-    // CHAOS MODE - Loaded from ChaosController.js
+    // MAIN NUMERIC INPUTS - Moved to utils.js
     // ============================================================================
-    // Note: Chaos mode functions loaded from external module:
-    // - toggleChaosHelp()
-    // - sendChaosConfig(), validateChaosLimits()
-    // - updateChaosPresets(), updatePatternToggleButton()
-    // - updateChaosUI(data)
-    // - startChaos(), stopChaos(), pauseChaos()
-    // - enableAllPatterns(), disableAllPatterns(), toggleAllPatterns()
-    // - enableSoftPatterns(), enableDynamicPatterns()
-    // - initChaosListeners()
+    // Note: initMainNumericConstraints() now in utils.js
+    initMainNumericConstraints();
     
-    document.getElementById('btnSkipLine').addEventListener('click', function() {
-      sendCommand(WS_CMD.SKIP_SEQUENCE_LINE, {});
-    });
-    
-    // Modal handlers
-    document.getElementById('editLineForm').addEventListener('submit', saveLineEdit);
-    document.getElementById('btnCancelEdit').addEventListener('click', closeEditModal);
-    document.getElementById('btnCloseModal').addEventListener('click', closeEditModal);
-    
-    // Movement type radio buttons
-    document.getElementById('editTypeVaet').addEventListener('change', updateMovementTypeFields);
-    document.getElementById('editTypeOsc').addEventListener('change', updateMovementTypeFields);
-    document.getElementById('editTypeChaos').addEventListener('change', updateMovementTypeFields);
-    document.getElementById('editTypeCalibration').addEventListener('change', updateMovementTypeFields);
-    
-    // Cycle Pause toggles (VA-ET-VIENT)
-    document.getElementById('editVaetPauseEnabled').addEventListener('change', function() {
-      const enabled = this.checked;
-      document.getElementById('vaetPauseFixedDiv').style.display = enabled ? 'grid' : 'none';
-      document.getElementById('vaetPauseRandomDiv').style.display = (enabled && document.getElementById('editVaetPauseRandom').checked) ? 'grid' : 'none';
-    });
-    document.getElementById('editVaetPauseRandom').addEventListener('change', function() {
-      const isRandom = this.checked;
-      const enabled = document.getElementById('editVaetPauseEnabled').checked;
-      document.getElementById('vaetPauseFixedDiv').style.display = (enabled && !isRandom) ? 'grid' : 'none';
-      document.getElementById('vaetPauseRandomDiv').style.display = (enabled && isRandom) ? 'grid' : 'none';
-    });
-    
-    // Cycle Pause toggles (OSCILLATION)
-    document.getElementById('editOscPauseEnabled').addEventListener('change', function() {
-      const enabled = this.checked;
-      document.getElementById('oscPauseFixedDiv').style.display = enabled ? 'grid' : 'none';
-      document.getElementById('oscPauseRandomDiv').style.display = (enabled && document.getElementById('editOscPauseRandom').checked) ? 'grid' : 'none';
-    });
-    document.getElementById('editOscPauseRandom').addEventListener('change', function() {
-      const isRandom = this.checked;
-      const enabled = document.getElementById('editOscPauseEnabled').checked;
-      document.getElementById('oscPauseFixedDiv').style.display = (enabled && !isRandom) ? 'grid' : 'none';
-      document.getElementById('oscPauseRandomDiv').style.display = (enabled && isRandom) ? 'grid' : 'none';
-    });
-    
-    // Apply numeric constraints to all number inputs in edit modal
-    // Note: enforceNumericConstraints() is now in utils.js
-    const numericInputs = [
-      'editStartPos', 'editDistance', 'editSpeedFwd', 'editSpeedBack', 'editDecelZone',
-      'editOscCenter', 'editOscAmplitude', 'editOscFrequency',
-      'editOscRampInDur', 'editOscRampOutDur',
-      'editChaosCenter', 'editChaosAmplitude', 'editChaosSpeed', 'editChaosCraziness',
-      'editChaosDuration', 'editChaosSeed',
-      'editCycles', 'editPause'
-    ];
-    numericInputs.forEach(id => {
-      const input = document.getElementById(id);
-      if (input) enforceNumericConstraints(input);
-    });
-    
-    // Apply same numeric constraints to MAIN CONTROLS (classic modes)
-    const mainNumericInputs = [
-      // VA-ET-VIENT
-      'startPosition', 'distance', 'speedUnified', 'speedForward', 'speedBackward',
-      'decelZone', 'decelEffect',
-      // OSCILLATION
-      'oscCenterPosition', 'oscAmplitude', 'oscFrequency', 'oscSpeed',
-      'oscRampInDuration', 'oscRampOutDuration',
-      // CHAOS
-      'chaosCenter', 'chaosAmplitude', 'chaosSpeed', 'chaosCraziness',
-      'chaosDuration', 'chaosSeed'
-    ];
-    mainNumericInputs.forEach(id => {
-      const input = document.getElementById(id);
-      if (input) enforceNumericConstraints(input);
-    });
-    
-    // Close modal on outside click
-    document.getElementById('editLineModal').addEventListener('click', function(e) {
-      if (e.target === this) {
-        closeEditModal();
-      }
-    });
-    
-    // Update effect value display in modal
-    document.getElementById('editDecelEffect').addEventListener('input', function() {
-      document.getElementById('editEffectValue').textContent = this.value;
-    });
-    
-    // ===== CYCLE PAUSE - FACTORY FUNCTION =====
-    // Crée les handlers pour un mode (Simple ou Oscillation)
-    function createCyclePauseHandlers(cfg) {
-      // cfg = { suffix, getSectionFn, wsCmd, radioName, dataAttrSuffix }
-      const s = cfg.suffix;  // '' pour Simple, 'Osc' pour Oscillation
-      const dataS = cfg.dataAttrSuffix;  // '' pour Simple, '-osc' pour Oscillation
-      
-      // Send config function
-      const sendConfig = () => {
-        const section = cfg.getSectionFn();
-        const enabled = !section.classList.contains('collapsed');
-        const isRandom = document.getElementById('pauseModeRandom' + s).checked;
-        
-        sendCommand(cfg.wsCmd, {
-          enabled: enabled,
-          isRandom: isRandom,
-          pauseDurationSec: parseFloat(document.getElementById('cyclePauseDuration' + s).value),
-          minPauseSec: parseFloat(document.getElementById('cyclePauseMin' + s).value),
-          maxPauseSec: parseFloat(document.getElementById('cyclePauseMax' + s).value)
-        });
-      };
-      
-      // Toggle function (exposed globally)
-      const toggleName = s ? 'toggleCyclePause' + s + 'Section' : 'toggleCyclePauseSection';
-      window[toggleName] = function() {
-        const section = cfg.getSectionFn();
-        const headerText = document.getElementById('cyclePause' + s + 'HeaderText');
-        const isCollapsed = section.classList.contains('collapsed');
-        
-        section.classList.toggle('collapsed');
-        
-        if (isCollapsed) {
-          headerText.textContent = '⏸️ Pause entre cycles - activée';
-          sendConfig();
-        } else {
-          headerText.textContent = '⏸️ Pause entre cycles - désactivée';
-          sendCommand(cfg.wsCmd, { enabled: false });
-        }
-      };
-      
-      // Radio button handlers
-      document.querySelectorAll(`input[name="${cfg.radioName}"]`).forEach(radio => {
-        radio.addEventListener('change', function() {
-          const isFixed = this.value === 'fixed';
-          document.getElementById('pauseFixedControls' + s).style.display = isFixed ? 'flex' : 'none';
-          document.getElementById('pauseRandomControls' + s).style.display = isFixed ? 'none' : 'block';
-          if (!cfg.getSectionFn().classList.contains('collapsed')) sendConfig();
-        });
-      });
-      
-      // Preset buttons helper
-      const setupPresets = (attr, inputId) => {
-        document.querySelectorAll(`[${attr}]`).forEach(btn => {
-          btn.addEventListener('click', function() {
-            document.getElementById(inputId).value = this.getAttribute(attr);
-            document.querySelectorAll(`[${attr}]`).forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            sendConfig();
-          });
-        });
-      };
-      
-      setupPresets('data-pause-duration' + dataS, 'cyclePauseDuration' + s);
-      setupPresets('data-pause-min' + dataS, 'cyclePauseMin' + s);
-      setupPresets('data-pause-max' + dataS, 'cyclePauseMax' + s);
-      
-      // Input change listeners
-      ['cyclePauseDuration' + s, 'cyclePauseMin' + s, 'cyclePauseMax' + s].forEach(id => {
-        const input = document.getElementById(id);
-        if (input) {
-          input.addEventListener('change', () => {
-            if (!cfg.getSectionFn().classList.contains('collapsed')) sendConfig();
-          });
-        }
-      });
-      
-      // Expose sendConfig for external use
-      return sendConfig;
-    }
-    
-    // Initialize both modes
-    const sendCyclePauseConfig = createCyclePauseHandlers({
-      suffix: '',
-      getSectionFn: getCyclePauseSection,
-      wsCmd: WS_CMD.UPDATE_CYCLE_PAUSE,
-      radioName: 'cyclePauseMode',
-      dataAttrSuffix: ''
-    });
-    
-    const sendCyclePauseConfigOsc = createCyclePauseHandlers({
-      suffix: 'Osc',
-      getSectionFn: getCyclePauseOscSection,
-      wsCmd: WS_CMD.UPDATE_CYCLE_PAUSE_OSC,
-      radioName: 'cyclePauseModeOsc',
-      dataAttrSuffix: '-osc'
-    });
+    // ===== CYCLE PAUSE - Moved to SimpleController.js =====
+    // Note: createCyclePauseHandlers(), getCyclePauseSection/Osc() now in SimpleController.js
+    // Initialize handlers for Simple and Oscillation modes
+    initCyclePauseHandlers();
     
     connectWebSocket();
     

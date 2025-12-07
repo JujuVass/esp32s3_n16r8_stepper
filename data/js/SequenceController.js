@@ -1345,3 +1345,152 @@ function attachRowEventHandlers(row, line, index) {
   };
 }
 
+// ============================================================================
+// SEQUENCER EVENT LISTENERS INITIALIZATION
+// ============================================================================
+
+/**
+ * Initialize all sequencer-related event listeners
+ * Called from main.js on window.load
+ */
+function initSequenceListeners() {
+  console.log('📋 Initializing Sequence listeners...');
+  
+  // ===== TABLE ACTION BUTTONS =====
+  document.getElementById('btnAddLine').addEventListener('click', addSequenceLine);
+  document.getElementById('btnClearAll').addEventListener('click', clearSequence);
+  document.getElementById('btnImportSeq').addEventListener('click', importSequence);
+  document.getElementById('btnExportSeq').addEventListener('click', exportSequence);
+  document.getElementById('btnDownloadTemplate').addEventListener('click', downloadTemplate);
+  
+  // ===== PLAYBACK CONTROLS =====
+  document.getElementById('btnStartSequence').addEventListener('click', function() {
+    // Reset test mode flag in case it was left on from a failed test
+    window.isTestingLine = false;
+    // Disable both start buttons immediately (instant feedback)
+    setButtonState(DOM.btnStartSequence, false);
+    setButtonState(DOM.btnLoopSequence, false);
+    sendCommand(WS_CMD.START_SEQUENCE, {});
+  });
+  
+  document.getElementById('btnLoopSequence').addEventListener('click', function() {
+    // Reset test mode flag in case it was left on from a failed test
+    window.isTestingLine = false;
+    // Disable both start buttons immediately (instant feedback)
+    setButtonState(DOM.btnStartSequence, false);
+    setButtonState(DOM.btnLoopSequence, false);
+    sendCommand(WS_CMD.LOOP_SEQUENCE, {});
+  });
+  
+  document.getElementById('btnPauseSequence').addEventListener('click', function() {
+    sendCommand(WS_CMD.TOGGLE_SEQUENCE_PAUSE, {});
+  });
+  
+  document.getElementById('btnStopSequence').addEventListener('click', function() {
+    // Only show modal if motor has moved (currentStep > 0)
+    if (currentPositionMM > 0.5) {
+      showStopModal();
+    } else {
+      // Direct stop if at position 0
+      sendCommand(WS_CMD.STOP_SEQUENCE, {});
+    }
+  });
+  
+  document.getElementById('btnSkipLine').addEventListener('click', function() {
+    sendCommand(WS_CMD.SKIP_SEQUENCE_LINE, {});
+  });
+  
+  // ===== KEYBOARD SHORTCUTS (multi-select) =====
+  document.addEventListener('keydown', function(e) {
+    // Only handle when on sequencer tab
+    if (AppState.system.currentMode !== 'tableau') return;
+    
+    // Escape: Clear selection
+    if (e.key === 'Escape' && selectedLineIds.size > 0) {
+      clearSelection();
+      e.preventDefault();
+    }
+    
+    // Ctrl+A: Select all
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a' && sequenceLines.length > 0) {
+      selectedLineIds.clear();
+      sequenceLines.forEach(line => selectedLineIds.add(line.lineId));
+      lastSelectedIndex = 0;
+      updateBatchToolbar();
+      renderSequenceTable({ lines: sequenceLines });
+      e.preventDefault();
+    }
+    
+    // Delete: Delete selected lines
+    if (e.key === 'Delete' && selectedLineIds.size > 0) {
+      batchDeleteLines();
+      e.preventDefault();
+    }
+  });
+  
+  // ===== EDIT MODAL HANDLERS =====
+  document.getElementById('editLineForm').addEventListener('submit', saveLineEdit);
+  document.getElementById('btnCancelEdit').addEventListener('click', closeEditModal);
+  document.getElementById('btnCloseModal').addEventListener('click', closeEditModal);
+  
+  // Close modal on outside click
+  document.getElementById('editLineModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeEditModal();
+    }
+  });
+  
+  // ===== MOVEMENT TYPE RADIO BUTTONS =====
+  document.getElementById('editTypeVaet').addEventListener('change', updateMovementTypeFields);
+  document.getElementById('editTypeOsc').addEventListener('change', updateMovementTypeFields);
+  document.getElementById('editTypeChaos').addEventListener('change', updateMovementTypeFields);
+  document.getElementById('editTypeCalibration').addEventListener('change', updateMovementTypeFields);
+  
+  // ===== CYCLE PAUSE TOGGLES (VA-ET-VIENT in modal) =====
+  document.getElementById('editVaetPauseEnabled').addEventListener('change', function() {
+    const enabled = this.checked;
+    document.getElementById('vaetPauseFixedDiv').style.display = enabled ? 'grid' : 'none';
+    document.getElementById('vaetPauseRandomDiv').style.display = (enabled && document.getElementById('editVaetPauseRandom').checked) ? 'grid' : 'none';
+  });
+  document.getElementById('editVaetPauseRandom').addEventListener('change', function() {
+    const isRandom = this.checked;
+    const enabled = document.getElementById('editVaetPauseEnabled').checked;
+    document.getElementById('vaetPauseFixedDiv').style.display = (enabled && !isRandom) ? 'grid' : 'none';
+    document.getElementById('vaetPauseRandomDiv').style.display = (enabled && isRandom) ? 'grid' : 'none';
+  });
+  
+  // ===== CYCLE PAUSE TOGGLES (OSCILLATION in modal) =====
+  document.getElementById('editOscPauseEnabled').addEventListener('change', function() {
+    const enabled = this.checked;
+    document.getElementById('oscPauseFixedDiv').style.display = enabled ? 'grid' : 'none';
+    document.getElementById('oscPauseRandomDiv').style.display = (enabled && document.getElementById('editOscPauseRandom').checked) ? 'grid' : 'none';
+  });
+  document.getElementById('editOscPauseRandom').addEventListener('change', function() {
+    const isRandom = this.checked;
+    const enabled = document.getElementById('editOscPauseEnabled').checked;
+    document.getElementById('oscPauseFixedDiv').style.display = (enabled && !isRandom) ? 'grid' : 'none';
+    document.getElementById('oscPauseRandomDiv').style.display = (enabled && isRandom) ? 'grid' : 'none';
+  });
+  
+  // ===== DECEL EFFECT SLIDER =====
+  document.getElementById('editDecelEffect').addEventListener('input', function() {
+    document.getElementById('editEffectValue').textContent = this.value;
+  });
+  
+  // ===== NUMERIC CONSTRAINTS (modal inputs) =====
+  const numericInputs = [
+    'editStartPos', 'editDistance', 'editSpeedFwd', 'editSpeedBack', 'editDecelZone',
+    'editOscCenter', 'editOscAmplitude', 'editOscFrequency',
+    'editOscRampInDur', 'editOscRampOutDur',
+    'editChaosCenter', 'editChaosAmplitude', 'editChaosSpeed', 'editChaosCraziness',
+    'editChaosDuration', 'editChaosSeed',
+    'editCycles', 'editPause'
+  ];
+  numericInputs.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) enforceNumericConstraints(input);
+  });
+  
+  console.log('✅ Sequence listeners initialized');
+}
+

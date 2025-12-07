@@ -591,6 +591,50 @@ function updateSystemStats(system) {
 }
 
 // ============================================================================
+// SPEED LIMITS INITIALIZATION
+// ============================================================================
+
+/**
+ * Global max speed level (must match .ino MAX_SPEED_LEVEL constant)
+ */
+let maxSpeedLevel = 35;
+
+/**
+ * Initialize speed input max attributes based on maxSpeedLevel
+ * Called on page load to set consistent speed limits across all inputs
+ */
+function initSpeedLimits() {
+  const speedInputs = [
+    'speedUnified',
+    'speedForward', 
+    'speedBackward',
+    'pursuitMaxSpeed',
+    'chaosMaxSpeed',
+    'editSpeedFwd',
+    'editSpeedBack',
+    'editChaosSpeed'
+  ];
+  
+  speedInputs.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.setAttribute('max', maxSpeedLevel);
+    }
+  });
+  
+  // Update labels that show the max value
+  const maxLabels = document.querySelectorAll('.unit-label');
+  maxLabels.forEach(label => {
+    if (label.textContent.includes('0-20')) {
+      label.textContent = `(0-${maxSpeedLevel})`;
+    }
+    if (label.textContent.includes('/20')) {
+      label.textContent = label.textContent.replace('/20', `/${maxSpeedLevel}`);
+    }
+  });
+}
+
+// ============================================================================
 // INITIALIZE TOOLS LISTENERS
 // ============================================================================
 

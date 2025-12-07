@@ -401,3 +401,22 @@ function applyNumericConstraints(inputIds) {
   });
 }
 
+/**
+ * Initialize numeric constraints on all main control inputs (classic modes)
+ * Called from main.js on page load
+ */
+function initMainNumericConstraints() {
+  const mainNumericInputs = [
+    // VA-ET-VIENT (Simple mode)
+    'startPosition', 'distance', 'speedUnified', 'speedForward', 'speedBackward',
+    'decelZone', 'decelEffect',
+    // OSCILLATION
+    'oscCenterPosition', 'oscAmplitude', 'oscFrequency', 'oscSpeed',
+    'oscRampInDuration', 'oscRampOutDuration',
+    // CHAOS
+    'chaosCenter', 'chaosAmplitude', 'chaosSpeed', 'chaosCraziness',
+    'chaosDuration', 'chaosSeed'
+  ];
+  applyNumericConstraints(mainNumericInputs);
+}
+

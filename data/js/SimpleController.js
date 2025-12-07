@@ -786,3 +786,138 @@ function initDecelZoneListeners() {
     drawDecelPreview();
   });
 }
+
+// ============================================================================
+// CYCLE PAUSE - FACTORY FUNCTION (used by Simple and Oscillation modes)
+// ============================================================================
+
+/**
+ * Helper: Get Cycle Pause section element for Simple mode
+ */
+function getCyclePauseSection() {
+  const header = document.getElementById('cyclePauseHeaderText');
+  return header ? header.closest('.section-collapsible') : null;
+}
+
+/**
+ * Helper: Get Cycle Pause section element for Oscillation mode
+ */
+function getCyclePauseOscSection() {
+  const header = document.getElementById('cyclePauseOscHeaderText');
+  return header ? header.closest('.section-collapsible') : null;
+}
+
+/**
+ * Factory function to create Cycle Pause handlers for a mode (Simple or Oscillation)
+ * @param {Object} cfg - Configuration object
+ * @param {string} cfg.suffix - Suffix for element IDs ('' for Simple, 'Osc' for Oscillation)
+ * @param {Function} cfg.getSectionFn - Function to get the section element
+ * @param {string} cfg.wsCmd - WebSocket command to send
+ * @param {string} cfg.radioName - Name of the radio button group
+ * @param {string} cfg.dataAttrSuffix - Suffix for data attributes ('' for Simple, '-osc' for Oscillation)
+ * @returns {Function} sendConfig function for external use
+ */
+function createCyclePauseHandlers(cfg) {
+  const s = cfg.suffix;  // '' pour Simple, 'Osc' pour Oscillation
+  const dataS = cfg.dataAttrSuffix;  // '' pour Simple, '-osc' pour Oscillation
+  
+  // Send config function
+  const sendConfig = () => {
+    const section = cfg.getSectionFn();
+    const enabled = !section.classList.contains('collapsed');
+    const isRandom = document.getElementById('pauseModeRandom' + s).checked;
+    
+    sendCommand(cfg.wsCmd, {
+      enabled: enabled,
+      isRandom: isRandom,
+      pauseDurationSec: parseFloat(document.getElementById('cyclePauseDuration' + s).value),
+      minPauseSec: parseFloat(document.getElementById('cyclePauseMin' + s).value),
+      maxPauseSec: parseFloat(document.getElementById('cyclePauseMax' + s).value)
+    });
+  };
+  
+  // Toggle function (exposed globally)
+  const toggleName = s ? 'toggleCyclePause' + s + 'Section' : 'toggleCyclePauseSection';
+  window[toggleName] = function() {
+    const section = cfg.getSectionFn();
+    const headerText = document.getElementById('cyclePause' + s + 'HeaderText');
+    const isCollapsed = section.classList.contains('collapsed');
+    
+    section.classList.toggle('collapsed');
+    
+    if (isCollapsed) {
+      headerText.textContent = '⏸️ Pause entre cycles - activée';
+      sendConfig();
+    } else {
+      headerText.textContent = '⏸️ Pause entre cycles - désactivée';
+      sendCommand(cfg.wsCmd, { enabled: false });
+    }
+  };
+  
+  // Radio button handlers
+  document.querySelectorAll(`input[name="${cfg.radioName}"]`).forEach(radio => {
+    radio.addEventListener('change', function() {
+      const isFixed = this.value === 'fixed';
+      document.getElementById('pauseFixedControls' + s).style.display = isFixed ? 'flex' : 'none';
+      document.getElementById('pauseRandomControls' + s).style.display = isFixed ? 'none' : 'block';
+      if (!cfg.getSectionFn().classList.contains('collapsed')) sendConfig();
+    });
+  });
+  
+  // Preset buttons helper
+  const setupPresets = (attr, inputId) => {
+    document.querySelectorAll(`[${attr}]`).forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.getElementById(inputId).value = this.getAttribute(attr);
+        document.querySelectorAll(`[${attr}]`).forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        sendConfig();
+      });
+    });
+  };
+  
+  setupPresets('data-pause-duration' + dataS, 'cyclePauseDuration' + s);
+  setupPresets('data-pause-min' + dataS, 'cyclePauseMin' + s);
+  setupPresets('data-pause-max' + dataS, 'cyclePauseMax' + s);
+  
+  // Input change listeners
+  ['cyclePauseDuration' + s, 'cyclePauseMin' + s, 'cyclePauseMax' + s].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('change', () => {
+        if (!cfg.getSectionFn().classList.contains('collapsed')) sendConfig();
+      });
+    }
+  });
+  
+  // Expose sendConfig for external use
+  return sendConfig;
+}
+
+/**
+ * Initialize Cycle Pause handlers for both Simple and Oscillation modes
+ * Called from main.js on page load
+ */
+function initCyclePauseHandlers() {
+  // Initialize Simple mode Cycle Pause
+  const sendCyclePauseConfig = createCyclePauseHandlers({
+    suffix: '',
+    getSectionFn: getCyclePauseSection,
+    wsCmd: WS_CMD.UPDATE_CYCLE_PAUSE,
+    radioName: 'cyclePauseMode',
+    dataAttrSuffix: ''
+  });
+  
+  // Initialize Oscillation mode Cycle Pause
+  const sendCyclePauseConfigOsc = createCyclePauseHandlers({
+    suffix: 'Osc',
+    getSectionFn: getCyclePauseOscSection,
+    wsCmd: WS_CMD.UPDATE_CYCLE_PAUSE_OSC,
+    radioName: 'cyclePauseModeOsc',
+    dataAttrSuffix: '-osc'
+  });
+  
+  // Expose for external use if needed
+  window.sendCyclePauseConfig = sendCyclePauseConfig;
+  window.sendCyclePauseConfigOsc = sendCyclePauseConfigOsc;
+}
