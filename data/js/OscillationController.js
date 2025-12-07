@@ -7,8 +7,10 @@
 // OSCILLATION MODE - STATE
 // ============================================================================
 
-// Debounce timer for validation (module-scoped)
-let oscValidationDebounceTimer = null;
+/**
+ * Oscillation state is centralized in AppState.oscillation:
+ * - validationTimer: debounce timer for form validation
+ */
 
 // ============================================================================
 // OSCILLATION MODE - HELPER FUNCTIONS
@@ -474,8 +476,8 @@ function initOscillationListeners() {
     sendOscillationConfig();
   });
   document.getElementById('oscCenter').addEventListener('input', function() {
-    clearTimeout(oscValidationDebounceTimer);
-    oscValidationDebounceTimer = setTimeout(validateOscillationLimits, 300);
+    clearTimeout(AppState.oscillation.validationTimer);
+    AppState.oscillation.validationTimer = setTimeout(validateOscillationLimits, 300);
   });
   
   // Amplitude
@@ -492,8 +494,8 @@ function initOscillationListeners() {
     sendOscillationConfig();
   });
   document.getElementById('oscAmplitude').addEventListener('input', function() {
-    clearTimeout(oscValidationDebounceTimer);
-    oscValidationDebounceTimer = setTimeout(validateOscillationLimits, 300);
+    clearTimeout(AppState.oscillation.validationTimer);
+    AppState.oscillation.validationTimer = setTimeout(validateOscillationLimits, 300);
   });
   
   // Waveform
@@ -523,8 +525,8 @@ function initOscillationListeners() {
     sendOscillationConfig();
   });
   document.getElementById('oscFrequency').addEventListener('input', function() {
-    clearTimeout(oscValidationDebounceTimer);
-    oscValidationDebounceTimer = setTimeout(() => {
+    clearTimeout(AppState.oscillation.validationTimer);
+    AppState.oscillation.validationTimer = setTimeout(() => {
       validateOscillationLimits();
       updateOscillationPresets();
     }, 300);

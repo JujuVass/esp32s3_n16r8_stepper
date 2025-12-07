@@ -37,7 +37,33 @@ const AppState = {
     targetMM: 0,           // Target position from gauge
     isDragging: false,     // Is user dragging gauge cursor
     lastCommandTime: 0,    // Last command sent timestamp
-    active: false          // Is pursuit mode active
+    active: false,         // Is pursuit mode active
+    maxSpeedLevel: 10,     // Max speed level for pursuit
+    isEditingMaxDistLimit: false  // Prevent WS updates while editing
+  },
+  
+  // Oscillation mode state
+  oscillation: {
+    validationTimer: null  // Debounce timer for form validation
+  },
+  
+  // Sequence mode state
+  sequence: {
+    lines: [],             // Array of sequence line objects
+    editingLineId: null,   // Currently editing line ID
+    isLoadingEditForm: false, // Loading edit form flag
+    selectedIds: null,     // Set of selected line IDs (initialized as Set)
+    lastSelectedIndex: null, // Last selected index for shift-click
+    drag: {
+      lineId: null,        // Currently dragged line ID
+      lineIndex: null,     // Currently dragged line index
+      lastEnterTime: 0     // Last drag enter timestamp
+    }
+  },
+  
+  // Stats state
+  stats: {
+    chart: null            // Chart.js instance reference
   },
   
   // System state
@@ -251,6 +277,12 @@ function getMilestoneInfo(distanceMeters) {
     distanceToNext: next ? (next.threshold - distanceMeters) : 0
   };
 }
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+// Initialize Set for sequence selection (cannot be done inline in const)
+AppState.sequence.selectedIds = new Set();
 
 // Log initialization
 _console.log('✅ app.js loaded - AppState, WS_CMD, SystemState initialized');

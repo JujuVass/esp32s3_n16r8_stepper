@@ -20,13 +20,15 @@
  */
 
 // ============================================================================
-// GLOBAL STATE
+// CONSTANTS & STATE
 // ============================================================================
 
-// Chart.js instance reference
-let statsChart = null;
+/**
+ * Stats state is centralized in AppState.stats:
+ * - chart: Chart.js instance reference
+ */
 
-// Day names for display
+// Day names for display (constants - not moved to AppState)
 const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const dayIcons = ['🚴', '🏃', '🏁', '🏀', '🔴', '🏓', '⚪'];
 
@@ -183,9 +185,9 @@ function updateTotalMilestone(totalMM) {
  */
 function displayStatsChart(stats) {
   if (!stats || stats.length === 0) {
-    if (statsChart) {
-      statsChart.destroy();
-      statsChart = null;
+    if (AppState.stats.chart) {
+      AppState.stats.chart.destroy();
+      AppState.stats.chart = null;
     }
     return;
   }
@@ -294,11 +296,11 @@ function renderStatsChart(labels, distances, sortedWeeks, weeklyData) {
   
   const ctx = canvas.getContext('2d');
   
-  if (statsChart) {
-    statsChart.destroy();
+  if (AppState.stats.chart) {
+    AppState.stats.chart.destroy();
   }
   
-  statsChart = new Chart(ctx, {
+  AppState.stats.chart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: labels,

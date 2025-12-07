@@ -12,23 +12,60 @@
  * Dependencies: app.js (AppState, WS_CMD), utils.js (sendCommand, showNotification)
  *               PlaylistController.js (PlaylistState, generatePresetTooltip, hidePlaylistTooltip)
  *               DOMManager.js (DOM, setButtonState)
+ * 
+ * State: Centralized in AppState.sequence:
+ *   - lines: Array of sequence line objects
+ *   - editingLineId: Currently editing line ID
+ *   - isLoadingEditForm: Loading edit form flag
+ *   - selectedIds: Set of selected line IDs
+ *   - lastSelectedIndex: Last selected index for shift-click
+ *   - drag.lineId, drag.lineIndex, drag.lastEnterTime: Drag state
  */
 
 // ========================================================================
-// SEQUENCE GLOBAL STATE
+// STATE ALIASES (for cleaner code, points to AppState.sequence)
 // ========================================================================
-let sequenceLines = [];
-let editingLineId = null;
-let isLoadingEditForm = false;
+// These provide shorthand access to AppState.sequence properties
+const seqState = AppState.sequence;
 
-// Drag & Drop state
-let draggedLineId = null;
-let draggedLineIndex = null;
-let lastDragEnterTime = 0;
+// Helper getters for commonly accessed properties
+function getSequenceLines() { return seqState.lines; }
+function setSequenceLines(lines) { seqState.lines = lines; }
 
-// Multi-select state
-let selectedLineIds = new Set();
-let lastSelectedIndex = null;
+// Backward compatibility aliases (will be removed in future refactoring)
+// Using Object.defineProperty to create live references
+Object.defineProperty(window, 'sequenceLines', {
+  get: function() { return seqState.lines; },
+  set: function(val) { seqState.lines = val; }
+});
+Object.defineProperty(window, 'editingLineId', {
+  get: function() { return seqState.editingLineId; },
+  set: function(val) { seqState.editingLineId = val; }
+});
+Object.defineProperty(window, 'isLoadingEditForm', {
+  get: function() { return seqState.isLoadingEditForm; },
+  set: function(val) { seqState.isLoadingEditForm = val; }
+});
+Object.defineProperty(window, 'selectedLineIds', {
+  get: function() { return seqState.selectedIds; },
+  set: function(val) { seqState.selectedIds = val; }
+});
+Object.defineProperty(window, 'lastSelectedIndex', {
+  get: function() { return seqState.lastSelectedIndex; },
+  set: function(val) { seqState.lastSelectedIndex = val; }
+});
+Object.defineProperty(window, 'draggedLineId', {
+  get: function() { return seqState.drag.lineId; },
+  set: function(val) { seqState.drag.lineId = val; }
+});
+Object.defineProperty(window, 'draggedLineIndex', {
+  get: function() { return seqState.drag.lineIndex; },
+  set: function(val) { seqState.drag.lineIndex = val; }
+});
+Object.defineProperty(window, 'lastDragEnterTime', {
+  get: function() { return seqState.drag.lastEnterTime; },
+  set: function(val) { seqState.drag.lastEnterTime = val; }
+});
 
 // ========================================================================
 // VALIDATION FUNCTIONS

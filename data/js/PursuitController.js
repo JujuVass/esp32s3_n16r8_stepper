@@ -26,14 +26,13 @@
 // ============================================================================
 
 /**
- * Pursuit mode state variables
+ * Pursuit mode state is centralized in AppState.pursuit:
+ * - active: boolean
+ * - maxSpeedLevel: number
+ * - isEditingMaxDistLimit: boolean
+ * - totalDistanceMM, currentPositionMM, targetMM, isDragging, lastCommandTime
  */
-let pursuitActive = false;
-let pursuitMaxSpeedLevel = 10;
 const PURSUIT_COMMAND_INTERVAL = 20;  // Send command max every 20ms (50Hz)
-
-// Flag to prevent WebSocket updates while user is editing max distance limit
-let isEditingMaxDistLimit = false;
 
 // ============================================================================
 // GAUGE DISPLAY FUNCTIONS
@@ -87,7 +86,7 @@ function setGaugeTarget(positionMM) {
   DOM.positionError.textContent = error.toFixed(1);
   
   // Send pursuit command if active and enough time has passed (throttling)
-  if (pursuitActive) {
+  if (AppState.pursuit.active) {
     const now = Date.now();
     if (now - AppState.pursuit.lastCommandTime > PURSUIT_COMMAND_INTERVAL) {
       sendPursuitCommand();
@@ -106,7 +105,7 @@ function setGaugeTarget(positionMM) {
 function sendPursuitCommand() {
   sendCommand(WS_CMD.PURSUIT_MOVE, {
     targetPosition: AppState.pursuit.targetMM,
-    maxSpeed: pursuitMaxSpeedLevel
+    maxSpeed: AppState.pursuit.maxSpeedLevel
   });
 }
 
@@ -114,7 +113,7 @@ function sendPursuitCommand() {
  * Pursuit command loop - sends commands periodically while pursuit is active
  */
 function startPursuitLoop() {
-  if (!pursuitActive) return;
+  if (!AppState.pursuit.active) return;
   
   sendPursuitCommand();
   
@@ -157,12 +156,12 @@ function enablePursuitMode() {
   // Check if system is calibrating
   if (AppState.system.currentState === SystemState.CALIBRATING) {
     DOM.pursuitActiveCheckbox.checked = false;
-    pursuitActive = false;
+    AppState.pursuit.active = false;
     alert('Veuillez attendre la fin de la calibration');
     return;
   }
   
-  pursuitActive = true;
+  AppState.pursuit.active = true;
   
   // Update button state
   DOM.btnActivatePursuit.textContent = '⏸ Pause Poursuite';
@@ -196,7 +195,7 @@ function enablePursuitMode() {
  * Disable pursuit mode
  */
 function disablePursuitMode() {
-  pursuitActive = false;
+  AppState.pursuit.active = false;
   
   // Update button state
   DOM.btnActivatePursuit.textContent = '▶ Démarrer';
@@ -218,7 +217,7 @@ function disablePursuitMode() {
  * Toggle pursuit mode on/off
  */
 function togglePursuitMode() {
-  if (pursuitActive) {
+  if (AppState.pursuit.active) {
     disablePursuitMode();
     DOM.pursuitActiveCheckbox.checked = false;
   } else {
@@ -257,7 +256,7 @@ function updateMaxDistLimitUI() {
   const currentPercent = AppState.pursuit.maxDistLimitPercent || 100;
   
   // Only update slider value if user is NOT currently editing it
-  if (!isEditingMaxDistLimit) {
+  if (!AppState.pursuit.isEditingMaxDistLimit) {
     DOM.maxDistLimitSlider.value = currentPercent;
   }
   
@@ -269,7 +268,7 @@ function updateMaxDistLimitUI() {
   DOM.maxDistLimitWarning.style.display = isReady ? 'none' : 'block';
   
   // Update slider value and display (only if not editing)
-  if (!isEditingMaxDistLimit) {
+  if (!AppState.pursuit.isEditingMaxDistLimit) {
     const effectiveMM = (totalMM * currentPercent / 100).toFixed(1);
     DOM.maxDistLimitValue.textContent = currentPercent + '%';
     DOM.maxDistLimitMM.textContent = '(' + effectiveMM + ' mm)';
@@ -288,11 +287,11 @@ function initMaxDistLimitListeners() {
     
     if (!isVisible) {
       // Panel just opened - load current value and START blocking updates
-      isEditingMaxDistLimit = true;
+      AppState.pursuit.isEditingMaxDistLimit = true;
       updateMaxDistLimitUI();
     } else {
       // Panel closed - stop blocking updates
-      isEditingMaxDistLimit = false;
+      AppState.pursuit.isEditingMaxDistLimit = false;
     }
   });
   
@@ -337,13 +336,13 @@ function initMaxDistLimitListeners() {
     
     sendCommand(WS_CMD.SET_MAX_DISTANCE_LIMIT, {percent: percent});
     DOM.maxDistConfigPanel.style.display = 'none';
-    isEditingMaxDistLimit = false;
+    AppState.pursuit.isEditingMaxDistLimit = false;
   });
   
   // Cancel
   DOM.btnCancelMaxDistLimit.addEventListener('click', function() {
     DOM.maxDistConfigPanel.style.display = 'none';
-    isEditingMaxDistLimit = false;
+    AppState.pursuit.isEditingMaxDistLimit = false;
   });
 }
 
@@ -390,7 +389,7 @@ function initPursuitListeners() {
   // Max speed input
   if (DOM.pursuitMaxSpeed) {
     DOM.pursuitMaxSpeed.addEventListener('change', function() {
-      pursuitMaxSpeedLevel = parseFloat(this.value);
+      AppState.pursuit.maxSpeedLevel = parseFloat(this.value);
     });
   }
   
@@ -401,7 +400,7 @@ function initPursuitListeners() {
       if (DOM.pursuitMaxSpeed) {
         DOM.pursuitMaxSpeed.value = speed;
       }
-      pursuitMaxSpeedLevel = speed;
+      AppState.pursuit.maxSpeedLevel = speed;
       
       DOM.presetPursuitSpeedButtons.forEach(b => b.classList.remove('active'));
       this.classList.add('active');
@@ -426,7 +425,7 @@ function initPursuitListeners() {
 function initPursuitModeOnLoad() {
   // Ensure pursuit checkbox is unchecked on fresh load
   DOM.pursuitActiveCheckbox.checked = false;
-  pursuitActive = false;
+  AppState.pursuit.active = false;
   
   // Reset button text
   DOM.btnActivatePursuit.textContent = '▶ Démarrer';
@@ -450,7 +449,7 @@ function initPursuitModeOnLoad() {
  * @returns {boolean}
  */
 function isPursuitActive() {
-  return pursuitActive;
+  return AppState.pursuit.active;
 }
 
 /**
@@ -458,7 +457,7 @@ function isPursuitActive() {
  * @returns {number}
  */
 function getPursuitMaxSpeed() {
-  return pursuitMaxSpeedLevel;
+  return AppState.pursuit.maxSpeedLevel;
 }
 
 /**
@@ -466,5 +465,5 @@ function getPursuitMaxSpeed() {
  * @returns {boolean}
  */
 function isEditingMaxDistanceLimit() {
-  return isEditingMaxDistLimit;
+  return AppState.pursuit.isEditingMaxDistLimit;
 }
