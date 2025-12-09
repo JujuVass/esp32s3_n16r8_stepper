@@ -177,9 +177,14 @@ const unsigned long SUMMARY_LOG_INTERVAL_MS = 60000;  // Print summary every 60s
 const float SPEED_COMPENSATION_FACTOR = 1.20;  // +20% faster to compensate overhead
 
 // ============================================================================
-// CONFIGURATION - Logging
+// CONFIGURATION - Logging & Performance Monitoring
 // ============================================================================
 #define LOG_BUFFER_SIZE 100  // Circular buffer size for async log writes
+
+// Slow broadcast threshold for performance monitoring (microseconds)
+// Why 20ms? At typical stepDelay ~300µs, 20ms = ~66 potential steps lost
+// Logs warning when broadcast takes longer (useful for dual-core validation)
+constexpr unsigned long BROADCAST_SLOW_THRESHOLD_US = 20000;  // 20ms
 
 // ============================================================================
 // CONFIGURATION - System Timing Intervals

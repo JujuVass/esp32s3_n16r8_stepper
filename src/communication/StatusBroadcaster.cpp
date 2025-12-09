@@ -45,9 +45,6 @@ void StatusBroadcaster::begin(WebSocketsServer* ws) {
 // MAIN BROADCAST METHOD
 // ============================================================================
 
-// Threshold for slow broadcast warning (microseconds)
-static constexpr unsigned long BROADCAST_SLOW_THRESHOLD_US = 20000;  // 20ms
-
 void StatusBroadcaster::send() {
     // Start timing for performance monitoring
     unsigned long startMicros = micros();
