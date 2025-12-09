@@ -173,6 +173,7 @@ bool NetworkManager::startSTAMode() {
     
     // Setup additional services
     setupMDNS();
+    _lastMdnsRefresh = millis();  // Initialize mDNS refresh timer
     setupNTP();
     setupOTA();
     
@@ -360,6 +361,21 @@ void NetworkManager::checkConnectionHealth() {
         MDNS.end();
         delay(50);
         setupMDNS();
+        _lastMdnsRefresh = now;  // Reset refresh timer
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // CASE 3: Periodic mDNS refresh (every 2 minutes) to prevent stale entries
+    // Only refresh if no WebSocket clients connected (avoid disrupting active sessions)
+    // ═══════════════════════════════════════════════════════════════════════
+    if (currentlyConnected && (now - _lastMdnsRefresh >= MDNS_REFRESH_INTERVAL_MS)) {
+        if (!engine->hasConnectedClients()) {
+            engine->debug("🔄 Periodic mDNS refresh (no WS clients)...");
+            MDNS.end();
+            delay(50);
+            setupMDNS();
+        }
+        _lastMdnsRefresh = now;  // Reset timer even if skipped
     }
     
     _wasConnected = currentlyConnected;

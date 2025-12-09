@@ -111,6 +111,7 @@ private:
     bool _wasConnected = false;              // Track connection state for mDNS re-announce
     unsigned long _lastHealthCheck = 0;      // Last health check timestamp
     unsigned long _lastReconnectAttempt = 0; // Last WiFi reconnect attempt timestamp
+    unsigned long _lastMdnsRefresh = 0;      // Last mDNS refresh timestamp
     uint8_t _reconnectAttempts = 0;          // Count of consecutive reconnect attempts
     
     // Captive Portal DNS server
