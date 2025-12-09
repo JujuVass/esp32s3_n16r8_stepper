@@ -50,8 +50,9 @@ extern TaskHandle_t networkTaskHandle;
 extern SemaphoreHandle_t motionMutex;      // Protects: motion, pendingMotion, decelZone
 extern SemaphoreHandle_t stateMutex;       // Protects: config.currentState changes
 
-// Emergency stop flag (atomic, no mutex needed)
+// Atomic flags (no mutex needed - set from Core 0, read from Core 1)
 extern volatile bool emergencyStop;
+extern volatile bool requestCalibration;   // Trigger calibration from motorTask
 
 // ============================================================================
 // CORE SYSTEM STATE

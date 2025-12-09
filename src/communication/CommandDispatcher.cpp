@@ -127,8 +127,10 @@ bool CommandDispatcher::validateAndReport(bool isValid, const String& errorMsg) 
 
 bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) {
     if (strcmp(cmd, "calibrate") == 0) {
-        engine->info("Command: Calibration");
-        Calibration.startCalibration();
+        engine->info("Command: Calibration (delegating to Core 1)");
+        // Don't call Calibration.startCalibration() directly from Core 0!
+        // Set flag to trigger calibration from motorTask (Core 1)
+        requestCalibration = true;
         return true;
     }
     

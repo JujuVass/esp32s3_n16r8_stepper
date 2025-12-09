@@ -102,6 +102,7 @@ TaskHandle_t networkTaskHandle = NULL;
 SemaphoreHandle_t motionMutex = NULL;
 SemaphoreHandle_t stateMutex = NULL;
 volatile bool emergencyStop = false;
+volatile bool requestCalibration = false;  // Flag to trigger calibration from Core 1
 
 // ============================================================================
 // WEB SERVER INSTANCES
@@ -276,6 +277,26 @@ void motorTask(void* param) {
     }
     
     // ═══════════════════════════════════════════════════════════════════════
+    // MANUAL CALIBRATION REQUEST (triggered from Core 0 via flag)
+    // ═══════════════════════════════════════════════════════════════════════
+    if (requestCalibration) {
+      requestCalibration = false;
+      engine->info("=== Manual calibration requested ===");
+      
+      // Suspend network task during calibration
+      if (networkTaskHandle != NULL) {
+        vTaskSuspend(networkTaskHandle);
+      }
+      
+      Calibration.startCalibration();
+      
+      // Resume network task
+      if (networkTaskHandle != NULL) {
+        vTaskResume(networkTaskHandle);
+      }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
     // INITIAL CALIBRATION (with delay for web interface access)
     // ═══════════════════════════════════════════════════════════════════════
     if (needsInitialCalibration && !calibrationStarted) {
@@ -287,9 +308,20 @@ void motorTask(void* param) {
       if (millis() - calibrationDelayStart >= 1000) {
         calibrationStarted = true;
         engine->info("=== Starting automatic calibration ===");
-        vTaskDelay(pdMS_TO_TICKS(100));
+        
+        // IMPORTANT: Suspend network task during calibration to avoid race condition
+        // CalibrationManager calls webSocket.loop() and server.handleClient() internally
+        if (networkTaskHandle != NULL) {
+          vTaskSuspend(networkTaskHandle);
+        }
+        
         Calibration.startCalibration();
         needsInitialCalibration = false;
+        
+        // Resume network task after calibration
+        if (networkTaskHandle != NULL) {
+          vTaskResume(networkTaskHandle);
+        }
       }
     }
     
@@ -355,9 +387,16 @@ void motorTask(void* param) {
       cycleCounter = 0;
     }
     
-    // Minimal yield - motor task needs to run as fast as possible
-    // taskYIELD() gives other same-priority tasks a chance, but we're highest priority
-    taskYIELD();
+    // ═══════════════════════════════════════════════════════════════════════
+    // TASK YIELD - Adaptive based on motor state
+    // ═══════════════════════════════════════════════════════════════════════
+    if (config.currentState == STATE_RUNNING) {
+      // Motor running: minimal yield to maintain step timing
+      taskYIELD();
+    } else {
+      // Motor idle: longer delay to reduce CPU usage
+      vTaskDelay(pdMS_TO_TICKS(1));  // 1ms when not running
+    }
   }
 }
 
