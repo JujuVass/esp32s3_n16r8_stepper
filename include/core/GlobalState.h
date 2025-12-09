@@ -14,6 +14,11 @@
  *   - seqState, currentMovement  → SequenceExecutor.h
  *   - sequenceTable[]            → SequenceTableManager.h
  * 
+ * DUAL-CORE ARCHITECTURE (ESP32-S3):
+ *   - Core 0 (APP_CPU): Network tasks (WiFi, WebSocket, HTTP, OTA)
+ *   - Core 1 (PRO_CPU): Motor tasks (stepping, timing-critical operations)
+ *   - Mutexes protect shared motion configurations
+ * 
  * Created: December 2024
  * ============================================================================
  */
@@ -24,11 +29,29 @@
 #include <Arduino.h>
 #include <WebSocketsServer.h>
 #include <WebServer.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
 #include "Types.h"
 #include "Config.h"
 
 // Forward declaration
 struct SystemConfig;
+
+// ============================================================================
+// DUAL-CORE TASK HANDLES & SYNCHRONIZATION
+// ============================================================================
+
+// Task handles
+extern TaskHandle_t motorTaskHandle;
+extern TaskHandle_t networkTaskHandle;
+
+// Mutexes for shared data protection
+extern SemaphoreHandle_t motionMutex;      // Protects: motion, pendingMotion, decelZone
+extern SemaphoreHandle_t stateMutex;       // Protects: config.currentState changes
+
+// Emergency stop flag (atomic, no mutex needed)
+extern volatile bool emergencyStop;
 
 // ============================================================================
 // CORE SYSTEM STATE

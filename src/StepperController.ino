@@ -95,6 +95,15 @@ bool statsRequested = false;
 unsigned long lastStatsRequestTime = 0;
 
 // ============================================================================
+// DUAL-CORE FREERTOS - Task handles & Synchronization
+// ============================================================================
+TaskHandle_t motorTaskHandle = NULL;
+TaskHandle_t networkTaskHandle = NULL;
+SemaphoreHandle_t motionMutex = NULL;
+SemaphoreHandle_t stateMutex = NULL;
+volatile bool emergencyStop = false;
+
+// ============================================================================
 // WEB SERVER INSTANCES
 // ============================================================================
 WebServer server(80);
@@ -207,14 +216,195 @@ void setup() {
   engine->info("║  Auto-calibration starts in 1 second...               ║");
   engine->info("║  LED: Vert (WiFi connecté)                             ║");
   engine->info("╚════════════════════════════════════════════════════════╝\n");
+  
+  // ============================================================================
+  // 8. DUAL-CORE FREERTOS INITIALIZATION - STA mode only
+  // ============================================================================
+  
+  // Create mutexes for shared data protection
+  motionMutex = xSemaphoreCreateMutex();
+  stateMutex = xSemaphoreCreateMutex();
+  
+  if (motionMutex == NULL || stateMutex == NULL) {
+    engine->error("❌ Failed to create FreeRTOS mutexes!");
+    return;
+  }
+  
+  // Create MOTOR task on Core 1 (PRO_CPU) - HIGH priority for real-time stepping
+  xTaskCreatePinnedToCore(
+    motorTask,           // Task function
+    "MotorTask",         // Name
+    4096,                // Stack size (bytes)
+    NULL,                // Parameters
+    10,                  // Priority (10 = high, ensures motor runs first)
+    &motorTaskHandle,    // Task handle
+    1                    // Core 1 (PRO_CPU)
+  );
+  
+  // Create NETWORK task on Core 0 (APP_CPU) - Normal priority for network ops
+  xTaskCreatePinnedToCore(
+    networkTask,         // Task function
+    "NetworkTask",       // Name
+    8192,                // Stack size (larger for JSON serialization)
+    NULL,                // Parameters
+    1,                   // Priority (1 = normal)
+    &networkTaskHandle,  // Task handle
+    0                    // Core 0 (APP_CPU)
+  );
+  
+  engine->info("✅ DUAL-CORE initialized: Motor=Core1(P10), Network=Core0(P1)");
 }
 
 // ============================================================================
-// MAIN LOOP
+// MOTOR TASK - Core 1 (PRO_CPU) - Real-time stepping
+// ============================================================================
+void motorTask(void* param) {
+  engine->info("🔧 MotorTask started on Core " + String(xPortGetCoreID()));
+  
+  // Initial calibration (with delay for web interface access)
+  static bool calibrationStarted = false;
+  static unsigned long calibrationDelayStart = 0;
+  
+  while (true) {
+    // ═══════════════════════════════════════════════════════════════════════
+    // EMERGENCY STOP CHECK (highest priority, atomic flag)
+    // ═══════════════════════════════════════════════════════════════════════
+    if (emergencyStop) {
+      config.currentState = STATE_READY;
+      emergencyStop = false;
+      engine->info("🛑 Emergency stop executed");
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // INITIAL CALIBRATION (with delay for web interface access)
+    // ═══════════════════════════════════════════════════════════════════════
+    if (needsInitialCalibration && !calibrationStarted) {
+      if (calibrationDelayStart == 0) {
+        calibrationDelayStart = millis();
+        engine->info("=== Web interface ready - Calibration will start in 1 second ===");
+      }
+      
+      if (millis() - calibrationDelayStart >= 1000) {
+        calibrationStarted = true;
+        engine->info("=== Starting automatic calibration ===");
+        vTaskDelay(pdMS_TO_TICKS(100));
+        Calibration.startCalibration();
+        needsInitialCalibration = false;
+      }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // MOVEMENT EXECUTION (timing-critical, runs on dedicated core)
+    // ═══════════════════════════════════════════════════════════════════════
+    switch (currentMovement) {
+      case MOVEMENT_VAET:
+        BaseMovement.process();
+        break;
+        
+      case MOVEMENT_PURSUIT:
+        if (pursuit.isMoving) {
+          unsigned long currentMicros = micros();
+          if (currentMicros - lastStepMicros >= pursuit.stepDelay) {
+            lastStepMicros = currentMicros;
+            Pursuit.process();
+          }
+        }
+        break;
+        
+      case MOVEMENT_OSC:
+        if (config.currentState == STATE_RUNNING) {
+          Osc.process();
+        }
+        break;
+        
+      case MOVEMENT_CHAOS:
+        if (config.currentState == STATE_RUNNING) {
+          Chaos.process();
+        }
+        break;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // SEQUENCER (logic only, no network blocking)
+    // ═══════════════════════════════════════════════════════════════════════
+    if (config.executionContext == CONTEXT_SEQUENCER) {
+      SeqExecutor.process();
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // CYCLE COUNTER (periodic stats)
+    // ═══════════════════════════════════════════════════════════════════════
+    static unsigned long lastSummary = 0;
+    static unsigned long cycleCounter = 0;
+    
+    if (config.currentState == STATE_RUNNING) {
+      static bool lastWasAtStart = false;
+      bool nowAtStart = (currentStep == startStep);
+      if (nowAtStart && !lastWasAtStart) {
+        cycleCounter++;
+      }
+      lastWasAtStart = nowAtStart;
+      
+      if (millis() - lastSummary > SUMMARY_LOG_INTERVAL_MS) {
+        engine->debug("Status: " + String(cycleCounter) + " cycles | " + 
+              String(stats.totalDistanceTraveled / 1000000.0, 2) + " km");
+        lastSummary = millis();
+      }
+    } else {
+      lastSummary = millis();
+      cycleCounter = 0;
+    }
+    
+    // Minimal yield - motor task needs to run as fast as possible
+    // taskYIELD() gives other same-priority tasks a chance, but we're highest priority
+    taskYIELD();
+  }
+}
+
+// ============================================================================
+// NETWORK TASK - Core 0 (APP_CPU) - Network operations (can block)
+// ============================================================================
+void networkTask(void* param) {
+  engine->info("🌐 NetworkTask started on Core " + String(xPortGetCoreID()));
+  
+  while (true) {
+    // ═══════════════════════════════════════════════════════════════════════
+    // NETWORK SERVICES (can block without affecting motor)
+    // ═══════════════════════════════════════════════════════════════════════
+    Network.handleOTA();
+    Network.checkConnectionHealth();
+    
+    // HTTP server and WebSocket - these can block!
+    server.handleClient();
+    webSocket.loop();
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // STATUS BROADCAST (every 100ms)
+    // ═══════════════════════════════════════════════════════════════════════
+    static unsigned long lastUpdate = 0;
+    if (millis() - lastUpdate > STATUS_UPDATE_INTERVAL_MS) {
+      lastUpdate = millis();
+      sendStatus();  // Can take 100ms+ without affecting motor!
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // LOG BUFFER FLUSH (I/O to filesystem)
+    // ═══════════════════════════════════════════════════════════════════════
+    if (engine) {
+      engine->flushLogBuffer();
+    }
+    
+    // Small delay to prevent watchdog and allow other tasks
+    vTaskDelay(pdMS_TO_TICKS(1));  // 1ms between iterations
+  }
+}
+
+// ============================================================================
+// MAIN LOOP - Minimal in dual-core mode (AP mode only)
 // ============================================================================
 void loop() {
   // ═══════════════════════════════════════════════════════════════════════════
-  // AP MODE: WiFi configuration only (LED blinks Blue/Red)
+  // AP MODE: WiFi configuration only (no dual-core tasks running)
   // ═══════════════════════════════════════════════════════════════════════════
   if (Network.isAPMode()) {
     Network.handleCaptivePortal();
@@ -235,132 +425,12 @@ void loop() {
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // STA MODE: Full stepper control
+  // STA MODE: loop() is empty - FreeRTOS tasks handle everything
   // ═══════════════════════════════════════════════════════════════════════════
-  Network.handleOTA();
-  Network.checkConnectionHealth();
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // INITIAL CALIBRATION (with delay for web interface access)
-  // ═══════════════════════════════════════════════════════════════════════════
-  static bool calibrationStarted = false;
-  static unsigned long calibrationDelayStart = 0;
-  
-  if (needsInitialCalibration && !calibrationStarted) {
-    if (calibrationDelayStart == 0) {
-      calibrationDelayStart = millis();
-      engine->info("=== Web interface ready - Calibration will start in 1 second ===");
-      engine->info("Connect now to see calibration overlay!");
-    }
-
-    // Wait 1 second to allow users to connect
-    if (millis() - calibrationDelayStart >= 1000) {
-      calibrationStarted = true;
-      engine->info("=== Starting automatic calibration ===");
-      delay(100);
-      Calibration.startCalibration();
-      needsInitialCalibration = false;
-    }
-  }
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // MOVEMENT EXECUTION
-  // ═══════════════════════════════════════════════════════════════════════════
-  switch (currentMovement) {
-    case MOVEMENT_VAET:
-      BaseMovement.process();
-      break;
-      
-    case MOVEMENT_PURSUIT:
-      if (pursuit.isMoving) {
-        unsigned long currentMicros = micros();
-        if (currentMicros - lastStepMicros >= pursuit.stepDelay) {
-          lastStepMicros = currentMicros;
-          Pursuit.process();
-        }
-      }
-      break;
-      
-    case MOVEMENT_OSC:
-      if (config.currentState == STATE_RUNNING) {
-        Osc.process();
-      }
-      break;
-      
-    case MOVEMENT_CHAOS:
-      if (config.currentState == STATE_RUNNING) {
-        Chaos.process();
-      }
-      break;
-  }
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // SEQUENCER
-  // ═══════════════════════════════════════════════════════════════════════════
-  if (config.executionContext == CONTEXT_SEQUENCER) {
-    SeqExecutor.process();
-  }
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // WEB SERVICES
-  // ═══════════════════════════════════════════════════════════════════════════
-  static constexpr unsigned long WEBSERVICE_SLOW_THRESHOLD_US = 20000;  // 20ms
-  static unsigned long lastServiceUpdate = 0;
-  unsigned long currentMicros = micros();
-  if (currentMicros - lastServiceUpdate > WEBSERVICE_INTERVAL_US) {
-    lastServiceUpdate = currentMicros;
-    
-    unsigned long wsStartMicros = micros();
-    server.handleClient();
-    webSocket.loop();
-    unsigned long wsElapsedMicros = micros() - wsStartMicros;
-    
-    // Warn if web services took too long (can cause step loss)
-    if (wsElapsedMicros > WEBSERVICE_SLOW_THRESHOLD_US) {
-      unsigned long stepDelay = movingForward ? stepDelayMicrosForward : stepDelayMicrosBackward;
-      unsigned long potentialStepsLost = (stepDelay > 0) ? wsElapsedMicros / stepDelay : 0;
-      engine->warn("⚠️ SLOW WEBSERVICE: " + String(wsElapsedMicros / 1000.0, 1) + "ms"
-                   " | stepDelay=" + String(stepDelay) + "µs"
-                   " | ~" + String(potentialStepsLost) + " steps perdus potentiels");
-    }
-  }
-  
-  static unsigned long lastUpdate = 0;
-  if (millis() - lastUpdate > STATUS_UPDATE_INTERVAL_MS) {
-    lastUpdate = millis();
-    sendStatus();
-  }
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PERIODIC TASKS
-  // ═══════════════════════════════════════════════════════════════════════════
-  
-  // Flush log buffer to disk
-  if (engine) {
-    engine->flushLogBuffer();
-  }
-  
-  // Cycle counter and periodic status log
-  static unsigned long lastSummary = 0;
-  static unsigned long cycleCounter = 0;
-  
-  if (config.currentState == STATE_RUNNING) {
-    static bool lastWasAtStart = false;
-    bool nowAtStart = (currentStep == startStep);
-    if (nowAtStart && !lastWasAtStart) {
-      cycleCounter++;
-    }
-    lastWasAtStart = nowAtStart;
-    
-    if (millis() - lastSummary > SUMMARY_LOG_INTERVAL_MS) {
-      engine->debug("Status: " + String(cycleCounter) + " cycles | " + 
-            String(stats.totalDistanceTraveled / 1000000.0, 2) + " km");
-      lastSummary = millis();
-    }
-  } else {
-    lastSummary = millis();
-    cycleCounter = 0;
-  }
+  // Motor control runs on Core 1 (motorTask)
+  // Network operations run on Core 0 (networkTask)
+  // This loop just needs to not block the scheduler
+  vTaskDelay(portMAX_DELAY);  // Suspend loop() indefinitely
 }
 
 // ============================================================================
