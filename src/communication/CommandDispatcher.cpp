@@ -182,6 +182,10 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
     
     if (strcmp(cmd, "setStatsRecording") == 0) {
         bool enabled = doc["enabled"] | true;
+        if(!enabled) {
+            saveCurrentSessionStats();
+        }
+        resetTotalDistance();
         engine->setStatsRecordingEnabled(enabled);
         sendStatus();  // Update UI with new state
         return true;

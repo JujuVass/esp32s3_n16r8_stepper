@@ -179,7 +179,8 @@ const WS_CMD = Object.freeze({
   
   // === Status & Stats ===
   GET_STATUS: 'getStatus',
-  SAVE_STATS: 'saveStats'
+  SAVE_STATS: 'saveStats',
+  SET_STATS_RECORDING: 'setStatsRecording'
 });
 
 // ============================================================================

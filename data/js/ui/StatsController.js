@@ -689,8 +689,8 @@ function toggleStatsRecording() {
   // Set flag to prevent status updates from reverting the checkbox
   isEditingStatsRecording = true;
   
-  // Send command via WebSocket (use 'cmd' not 'command')
-  sendCommand('setStatsRecording', { enabled: enabled });
+  // Send command via WebSocket
+  sendCommand(WS_CMD.SET_STATS_RECORDING, { enabled: enabled });
   
   // Clear flag after server has time to process and send updated status
   setTimeout(() => {
