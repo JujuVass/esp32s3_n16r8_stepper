@@ -85,12 +85,13 @@ void NetworkManager::startAPMode() {
     // This makes all DNS queries return our IP, triggering auto-open on mobile/Windows
     _dnsServer.start(53, "*", WiFi.softAPIP());
     _captivePortalActive = true;
+    _cachedIP = WiFi.softAPIP().toString();  // Cache AP IP
     
     engine->info("═══════════════════════════════════════════════════════");
     engine->info("🌐 AP MODE - WiFi Configuration + Captive Portal");
     engine->info("═══════════════════════════════════════════════════════");
     engine->info("   Network: " + apName);
-    engine->info("   IP: " + WiFi.softAPIP().toString());
+    engine->info("   IP: " + _cachedIP);
     engine->info("   📱 Captive Portal active - auto-opens on connect!");
     engine->info("   ⚡ Power save: DISABLED");
     engine->info("═══════════════════════════════════════════════════════");
@@ -158,11 +159,13 @@ bool NetworkManager::startSTAMode() {
     }
     
     // Connected successfully
+    _cachedIP = WiFi.localIP().toString();  // Cache IP for fast access
+    
     engine->info("═══════════════════════════════════════════════════════");
     engine->info("✅ STA MODE - Stepper Controller Active");
     engine->info("═══════════════════════════════════════════════════════");
     engine->info("   WiFi: " + targetSSID + " [" + credentialSource + "]");
-    engine->info("   IP: " + WiFi.localIP().toString());
+    engine->info("   IP: " + _cachedIP);
     engine->info("   Hostname: http://" + String(otaHostname) + ".local");
     engine->info("═══════════════════════════════════════════════════════");
     
@@ -193,15 +196,8 @@ String NetworkManager::getConfiguredSSID() const {
 }
 
 // ============================================================================
-// GET IP ADDRESS
+// GET IP ADDRESS - REMOVED (now inline in header using cached value)
 // ============================================================================
-
-String NetworkManager::getIPAddress() const {
-    if (_apMode) {
-        return WiFi.softAPIP().toString();
-    }
-    return WiFi.localIP().toString();
-}
 
 // ============================================================================
 // MDNS SETUP (STA mode only)
@@ -316,7 +312,7 @@ void NetworkManager::checkConnectionHealth() {
     
     // Rate limit to once per second
     unsigned long now = millis();
-    if (now - _lastHealthCheck < 1000) return;
+    if (now - _lastHealthCheck < 5000) return;
     _lastHealthCheck = now;
     
     bool currentlyConnected = (WiFi.status() == WL_CONNECTED);
@@ -353,7 +349,8 @@ void NetworkManager::checkConnectionHealth() {
     // CASE 2: Reconnected → Re-announce mDNS
     // ═══════════════════════════════════════════════════════════════════════
     if (currentlyConnected && !_wasConnected) {
-        engine->info("✅ WiFi reconnected! IP: " + WiFi.localIP().toString());
+        _cachedIP = WiFi.localIP().toString();  // Update cached IP
+        engine->info("✅ WiFi reconnected! IP: " + _cachedIP);
         engine->info("🔄 Re-announcing mDNS...");
         _reconnectAttempts = 0;
         
@@ -367,7 +364,9 @@ void NetworkManager::checkConnectionHealth() {
     // ═══════════════════════════════════════════════════════════════════════
     // CASE 3: Periodic mDNS refresh (every 2 minutes) to prevent stale entries
     // Only refresh if no WebSocket clients connected (avoid disrupting active sessions)
+    // DISABLED FOR TESTING - suspected to cause motor jitter
     // ═══════════════════════════════════════════════════════════════════════
+    /*
     if (currentlyConnected && (now - _lastMdnsRefresh >= MDNS_REFRESH_INTERVAL_MS)) {
         if (!engine->hasConnectedClients()) {
             engine->debug("🔄 Periodic mDNS refresh (no WS clients)...");
@@ -377,6 +376,7 @@ void NetworkManager::checkConnectionHealth() {
         }
         _lastMdnsRefresh = now;  // Reset timer even if skipped
     }
+    */
     
     _wasConnected = currentlyConnected;
 }

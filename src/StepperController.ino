@@ -304,12 +304,25 @@ void loop() {
   // ═══════════════════════════════════════════════════════════════════════════
   // WEB SERVICES
   // ═══════════════════════════════════════════════════════════════════════════
+  static constexpr unsigned long WEBSERVICE_SLOW_THRESHOLD_US = 20000;  // 20ms
   static unsigned long lastServiceUpdate = 0;
   unsigned long currentMicros = micros();
   if (currentMicros - lastServiceUpdate > WEBSERVICE_INTERVAL_US) {
     lastServiceUpdate = currentMicros;
+    
+    unsigned long wsStartMicros = micros();
     server.handleClient();
     webSocket.loop();
+    unsigned long wsElapsedMicros = micros() - wsStartMicros;
+    
+    // Warn if web services took too long (can cause step loss)
+    if (wsElapsedMicros > WEBSERVICE_SLOW_THRESHOLD_US) {
+      unsigned long stepDelay = movingForward ? stepDelayMicrosForward : stepDelayMicrosBackward;
+      unsigned long potentialStepsLost = (stepDelay > 0) ? wsElapsedMicros / stepDelay : 0;
+      engine->warn("⚠️ SLOW WEBSERVICE: " + String(wsElapsedMicros / 1000.0, 1) + "ms"
+                   " | stepDelay=" + String(stepDelay) + "µs"
+                   " | ~" + String(potentialStepsLost) + " steps perdus potentiels");
+    }
   }
   
   static unsigned long lastUpdate = 0;

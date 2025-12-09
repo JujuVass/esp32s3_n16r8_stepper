@@ -45,7 +45,13 @@ void StatusBroadcaster::begin(WebSocketsServer* ws) {
 // MAIN BROADCAST METHOD
 // ============================================================================
 
+// Threshold for slow broadcast warning (microseconds)
+static constexpr unsigned long BROADCAST_SLOW_THRESHOLD_US = 20000;  // 20ms
+
 void StatusBroadcaster::send() {
+    // Start timing for performance monitoring
+    unsigned long startMicros = micros();
+    
     // Only broadcast if clients are connected (early exit optimization)
     if (_webSocket == nullptr) {
         engine->debug("⚠️ sendStatus: _webSocket is NULL!");
@@ -95,7 +101,7 @@ void StatusBroadcaster::send() {
     doc["operationMode"] = (int)currentMovement;  // Legacy
     doc["pursuitActive"] = pursuit.isMoving;
     doc["statsRecordingEnabled"] = engine->isStatsRecordingEnabled();  // Stats recording preference
-    doc["ip"] = WiFi.localIP().toString();  // IP for WebSocket reconnection caching
+    doc["ip"] = Network.getIPAddress();  // Cached IP for WebSocket reconnection
     
     // ============================================================================
     // MODE-SPECIFIC FIELDS
@@ -123,6 +129,18 @@ void StatusBroadcaster::send() {
     String output;
     serializeJson(doc, output);
     _webSocket->broadcastTXT(output);
+    
+    // Performance monitoring: warn if broadcast took too long (can cause step loss)
+    unsigned long elapsedMicros = micros() - startMicros;
+    if (elapsedMicros > BROADCAST_SLOW_THRESHOLD_US) {
+        // Calculate potential step loss based on current speed
+        unsigned long stepDelay = movingForward ? stepDelayMicrosForward : stepDelayMicrosBackward;
+        unsigned long potentialStepsLost = (stepDelay > 0) ? elapsedMicros / stepDelay : 0;
+        
+        engine->warn("⚠️ SLOW BROADCAST: " + String(elapsedMicros / 1000.0, 1) + "ms"
+                     " | stepDelay=" + String(stepDelay) + "µs"
+                     " | ~" + String(potentialStepsLost) + " steps perdus potentiels");
+    }
 }
 
 // ============================================================================

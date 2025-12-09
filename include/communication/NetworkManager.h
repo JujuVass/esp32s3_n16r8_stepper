@@ -64,8 +64,9 @@ public:
     
     /**
      * Get IP address as string (AP or STA depending on mode)
+     * Uses cached value for performance (updated on connect/reconnect)
      */
-    String getIPAddress() const;
+    const String& getIPAddress() const { return _cachedIP; }
     
     /**
      * Handle OTA in loop - MUST be called in every loop iteration (STA mode only)
@@ -113,6 +114,7 @@ private:
     unsigned long _lastReconnectAttempt = 0; // Last WiFi reconnect attempt timestamp
     unsigned long _lastMdnsRefresh = 0;      // Last mDNS refresh timestamp
     uint8_t _reconnectAttempts = 0;          // Count of consecutive reconnect attempts
+    String _cachedIP;                        // Cached IP address string (avoids WiFi.localIP() calls)
     
     // Captive Portal DNS server
     DNSServer _dnsServer;
