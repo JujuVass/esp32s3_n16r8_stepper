@@ -448,6 +448,19 @@ public:
    */
   bool isStatsRecordingEnabled() const { return statsRecordingEnabled; }
   
+  /**
+   * Save current session's distance to daily stats
+   * Only saves the increment since last save to avoid double-counting
+   * Called when: STOP pressed, mode change, WebSocket disconnect
+   */
+  void saveCurrentSessionStats();
+  
+  /**
+   * Reset total distance counter to zero
+   * Saves current session stats before resetting
+   */
+  void resetTotalDistance();
+  
   // ========================================================================
   // UTILITY METHODS
   // ========================================================================

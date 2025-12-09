@@ -9,6 +9,7 @@
  */
 
 #include "movement/SequenceTableManager.h"
+#include "communication/StatusBroadcaster.h"  // For Status.sendError()
 #include <WebSocketsServer.h>
 
 // ============================================================================
@@ -16,12 +17,6 @@
 // ============================================================================
 SequenceLine sequenceTable[MAX_SEQUENCE_LINES];
 int sequenceLineCount = 0;
-
-// ============================================================================
-// FORWARD DECLARATIONS (functions in main)
-// ============================================================================
-void sendError(String message);
-bool parseJsonCommand(const String& jsonStr, JsonDocument& doc);
 
 // ============================================================================
 // SINGLETON INSTANCE
@@ -45,7 +40,7 @@ SequenceTableManager::SequenceTableManager() {
 
 int SequenceTableManager::addLine(SequenceLine newLine) {
   if (sequenceLineCount >= MAX_SEQUENCE_LINES) {
-    sendError("❌ Séquenceur plein! Max 20 lignes");
+    Status.sendError("❌ Séquenceur plein! Max 20 lignes");
     return -1;
   }
   
@@ -63,7 +58,7 @@ bool SequenceTableManager::deleteLine(int lineId) {
   int idx = findLineIndex(lineId);
   
   if (idx == -1) {
-    sendError("❌ Ligne non trouvée");
+    Status.sendError("❌ Ligne non trouvée");
     return false;
   }
   
@@ -82,7 +77,7 @@ bool SequenceTableManager::updateLine(int lineId, SequenceLine updatedLine) {
   int idx = findLineIndex(lineId);
   
   if (idx == -1) {
-    sendError("❌ Ligne non trouvée");
+    Status.sendError("❌ Ligne non trouvée");
     return false;
   }
   
@@ -396,20 +391,23 @@ int SequenceTableManager::importFromJson(String jsonData) {
   clear();
   
   JsonDocument importDoc;
-  if (!parseJsonCommand(jsonData, importDoc)) {
+  DeserializationError error = deserializeJson(importDoc, jsonData);
+  if (error) {
+    engine->error("JSON parse error: " + String(error.c_str()));
+    Status.sendError("❌ JSON invalide: " + String(error.c_str()));
     return -1;
   }
   
   // Validate sequenceLineCount
   int importLineCount = importDoc["sequenceLineCount"] | 0;
   if (importLineCount <= 0 || importLineCount > MAX_SEQUENCE_LINES) {
-    sendError("❌ JSON invalide ou trop de lignes");
+    Status.sendError("❌ JSON invalide ou trop de lignes");
     return -1;
   }
   
   // Validate lines array
   if (!importDoc["lines"].is<JsonArray>()) {
-    sendError("❌ Array 'lines' non trouvé ou invalide");
+    Status.sendError("❌ Array 'lines' non trouvé ou invalide");
     return -1;
   }
   

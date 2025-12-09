@@ -12,6 +12,7 @@
 
 #include "movement/SequenceExecutor.h"
 #include "movement/SequenceTableManager.h"
+#include "communication/StatusBroadcaster.h"  // For Status.sendError()
 #include "core/GlobalState.h"
 #include "core/UtilityEngine.h"
 #include "hardware/MotorDriver.h"
@@ -59,12 +60,12 @@ void SequenceExecutor::start(bool loopMode) {
     }
     
     if (enabledCount == 0) {
-        sendError("❌ Aucune ligne active à exécuter!");
+        Status.sendError("❌ Aucune ligne active à exécuter!");
         return;
     }
     
     if (config.currentState != STATE_READY) {
-        sendError("❌ Système pas prêt (calibration requise?)");
+        Status.sendError("❌ Système pas prêt (calibration requise?)");
         return;
     }
     

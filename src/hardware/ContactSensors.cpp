@@ -4,6 +4,7 @@
 
 #include "hardware/ContactSensors.h"
 #include "hardware/MotorDriver.h"
+#include "communication/StatusBroadcaster.h"  // For Status.sendError()
 #include "core/GlobalState.h"
 #include "core/UtilityEngine.h"
 
@@ -168,7 +169,7 @@ bool ContactSensors::checkHardDriftEnd() {
                   String(currentPos, 1) + "mm (currentStep: " + String(currentStep) + 
                   " | " + String(distanceToLimitMM, 1) + "mm from limit)");
             
-            sendError("❌ ERREUR CRITIQUE: Contact END atteint - Position dérivée au-delà du buffer de sécurité");
+            Status.sendError("❌ ERREUR CRITIQUE: Contact END atteint - Position dérivée au-delà du buffer de sécurité");
             
             stopMovement();
             config.currentState = STATE_ERROR;
@@ -187,6 +188,7 @@ bool ContactSensors::checkHardDriftStart() {
     
     float distanceToStartMM = currentStep / STEPS_PER_MM;
     
+    
     if (distanceToStartMM <= HARD_DRIFT_TEST_ZONE_MM) {
         // Close to start → activate physical contact test
         if (readDebounced(PIN_START_CONTACT, LOW, 5, 75)) {
@@ -196,7 +198,7 @@ bool ContactSensors::checkHardDriftStart() {
                   String(currentPos, 1) + "mm (currentStep: " + String(currentStep) + 
                   " | " + String(distanceToStartMM, 1) + "mm from start)");
             
-            sendError("❌ ERREUR CRITIQUE: Contact START atteint - Position dérivée au-delà du buffer de sécurité");
+            Status.sendError("❌ ERREUR CRITIQUE: Contact START atteint - Position dérivée au-delà du buffer de sécurité");
             
             stopMovement();
             config.currentState = STATE_ERROR;

@@ -11,6 +11,7 @@
  */
 
 #include "movement/ChaosController.h"
+#include "communication/StatusBroadcaster.h"  // For Status.sendError()
 #include "core/UtilityEngine.h"
 #include "hardware/MotorDriver.h"
 #include "movement/SequenceExecutor.h"
@@ -103,7 +104,7 @@ bool ChaosController::checkLimits() {
         float distanceToEndLimitMM = config.totalDistanceMM - maxChaosPositionMM;
         if (distanceToEndLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
             if (Contacts.readDebounced(PIN_END_CONTACT, LOW, 3, 50)) {
-                sendError("❌ CHAOS: Contact END atteint - amplitude proche limite");
+                Status.sendError("❌ CHAOS: Contact END atteint - amplitude proche limite");
                 config.currentState = STATE_ERROR;
                 chaosState.isRunning = false;
                 return false;
@@ -123,7 +124,7 @@ bool ChaosController::checkLimits() {
         
         if (minChaosPositionMM <= HARD_DRIFT_TEST_ZONE_MM) {
             if (Contacts.readDebounced(PIN_START_CONTACT, LOW, 3, 50)) {
-                sendError("❌ CHAOS: Contact START atteint - amplitude proche limite");
+                Status.sendError("❌ CHAOS: Contact START atteint - amplitude proche limite");
                 config.currentState = STATE_ERROR;
                 chaosState.isRunning = false;
                 return false;
@@ -1088,7 +1089,7 @@ void ChaosController::start() {
             config.currentState = STATE_READY;
             Motor.disable();
             
-            sendError("Impossible d'atteindre le centre - timeout après 30s. Vérifiez que le moteur peut bouger librement.");
+            Status.sendError("Impossible d'atteindre le centre - timeout après 30s. Vérifiez que le moteur peut bouger librement.");
             return;
         }
     }

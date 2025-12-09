@@ -125,6 +125,26 @@ void StatusBroadcaster::send() {
 }
 
 // ============================================================================
+// ERROR BROADCASTING
+// ============================================================================
+
+void StatusBroadcaster::sendError(const String& message) {
+    // Use structured logging
+    engine->error(message);
+    
+    // Send to all WebSocket clients (only if clients connected)
+    if (_webSocket != nullptr && _webSocket->connectedClients() > 0) {
+        JsonDocument doc;
+        doc["type"] = "error";
+        doc["message"] = message;  // ArduinoJson handles escaping automatically
+        
+        String json;
+        serializeJson(doc, json);
+        _webSocket->broadcastTXT(json);
+    }
+}
+
+// ============================================================================
 // VA-ET-VIENT / PURSUIT MODE FIELDS
 // ============================================================================
 

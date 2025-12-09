@@ -87,14 +87,14 @@ extern WebSocketsServer webSocket;
 // ============================================================================
 // CALLBACK FUNCTIONS (defined in main, called by modules)
 // ============================================================================
+// NOTE: sendError() moved to StatusBroadcaster - use Status.sendError()
+// NOTE: saveCurrentSessionStats() moved to UtilityEngine - use engine->saveCurrentSessionStats()
+// NOTE: resetTotalDistance() moved to UtilityEngine - use engine->resetTotalDistance()
 
-extern void sendError(String message);
 extern void sendStatus();
 extern void stopMovement();
 extern void returnToStart();
 extern void updateEffectiveMaxDistance();
-extern void resetTotalDistance();
-extern void saveCurrentSessionStats();
 extern void togglePause();
 
 #endif // GLOBAL_STATE_H

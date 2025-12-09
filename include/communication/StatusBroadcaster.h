@@ -58,6 +58,13 @@ public:
      */
     void requestStats() { statsRequested = true; }
     
+    /**
+     * Send error message via WebSocket AND Serial
+     * Ensures user sees errors even without Serial monitor
+     * @param message Error message to broadcast
+     */
+    void sendError(const String& message);
+    
 private:
     StatusBroadcaster() : _webSocket(nullptr) {}
     StatusBroadcaster(const StatusBroadcaster&) = delete;

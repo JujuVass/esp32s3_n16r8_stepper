@@ -172,9 +172,7 @@ FilesystemManager filesystemManager(server);
 // ============================================================================
 
 // Core functions (defined below in this file)
-void resetTotalDistance();
 void sendStatus();
-void saveCurrentSessionStats();
 
 // ============================================================================
 // UTILITY HELPERS
@@ -207,9 +205,6 @@ void serviceWebSocketFor(unsigned long durationMs) {
   }
 }
 
-// Error notification helper
-void sendError(String message);
-
 // ============================================================================
 // VALIDATION HELPERS
 // ============================================================================
@@ -217,8 +212,11 @@ void sendError(String message);
 // Use: Validators::distance(), Validators::speed(), etc.
 // validateOscillationAmplitude() now in OscillationController module
 
-// Validation + error reporting helper
-bool validateAndReport(bool isValid, const String& errorMsg);
+// NOTE: sendError() moved to StatusBroadcaster (Status.sendError())
+// NOTE: validateAndReport() moved to CommandDispatcher
+// NOTE: parseJsonCommand() moved to CommandDispatcher
+// NOTE: resetTotalDistance() moved to UtilityEngine (engine->resetTotalDistance())
+// NOTE: saveCurrentSessionStats() moved to UtilityEngine (engine->saveCurrentSessionStats())
 
 // Deceleration zone functions - delegated to DecelZoneController module
 // Functions: calculateSlowdownFactor(), calculateAdjustedDelay(), validateDecelZone()
@@ -319,7 +317,7 @@ void setup() {
   // ============================================================================
   Calibration.init(&webSocket, &server);
   Calibration.setStatusCallback(sendStatus);
-  Calibration.setErrorCallback([](const String& msg) { sendError(msg); });
+  Calibration.setErrorCallback([](const String& msg) { Status.sendError(msg); });
   Calibration.setCompletionCallback([]() { SeqExecutor.onMovementComplete(); });
   engine->info("✅ CalibrationManager ready");
   
@@ -505,45 +503,6 @@ void loop() {
 }
 
 // ============================================================================
-// ERROR NOTIFICATION HELPER
-// ============================================================================
-
-/**
- * Send error message via WebSocket AND Serial
- * Ensures user sees errors even without Serial monitor
- */
-void sendError(String message) {
-  // Use structured logging
-  engine->error(message);
-  
-  // Send to all WebSocket clients (only if clients connected)
-  if (webSocket.connectedClients() > 0) {
-    JsonDocument doc;
-    doc["type"] = "error";
-    doc["message"] = message;  // ArduinoJson handles escaping automatically
-    
-    String json;
-    serializeJson(doc, json);
-    webSocket.broadcastTXT(json);
-  }
-}
-
-// ============================================================================
-// VALIDATION HELPERS
-// ============================================================================
-
-/**
- * Helper function to validate and report errors
- * Sends error to WebSocket if validation fails
- */
-bool validateAndReport(bool isValid, const String& errorMsg) {
-  if (!isValid) {
-    sendError("❌ " + errorMsg);
-  }
-  return isValid;
-}
-
-// ============================================================================
 // EFFECTIVE MAX DISTANCE - Calculate usable distance based on limit percent
 // ============================================================================
 void updateEffectiveMaxDistance() {
@@ -560,15 +519,6 @@ void updateEffectiveMaxDistance() {
 // - Osc.process() for MOVEMENT_OSC
 // ============================================================================
 
-void resetTotalDistance() {
-  // Save any unsaved distance before resetting
-  saveCurrentSessionStats();
-  
-  // Now reset counters using StatsTracking method
-  stats.reset();
-  engine->info("🔄 Total distance counter reset to 0");
-}
-
 // ============================================================================
 // STATUS BROADCASTING - Delegates to StatusBroadcaster module
 // ============================================================================
@@ -579,41 +529,6 @@ void resetTotalDistance() {
  */
 void sendStatus() {
   Status.send();
-}
-
-// ============================================================================
-// STATISTICS - Delegates to UtilityEngine
-// ============================================================================
-
-/**
- * Save current session's total distance to daily stats
- * Called when:
- * - User clicks STOP button
- * - Mode change occurs
- * - WebSocket disconnects
- * 
- * Uses stats.totalDistanceTraveled (encapsulated counter in steps)
- * IMPORTANT: Only saves the INCREMENT since last save to avoid double-counting
- */
-void saveCurrentSessionStats() {
-  // Calculate distance increment since last save (in steps)
-  unsigned long incrementSteps = stats.getIncrementSteps();
-  
-  // Convert to millimeters
-  float incrementMM = incrementSteps / STEPS_PER_MM;
-  
-  if (incrementMM <= 0) {
-    engine->debug("📊 No new distance to save (no increment since last save)");
-    return;
-  }
-  
-  // Save increment to daily stats via UtilityEngine
-  engine->incrementDailyStats(incrementMM);
-  
-  engine->debug(String("💾 Session stats saved: +") + String(incrementMM, 1) + "mm (total session: " + String(stats.totalDistanceTraveled / STEPS_PER_MM, 1) + "mm)");
-  
-  // Mark as saved using StatsTracking method
-  stats.markSaved();
 }
 
 // ============================================================================
@@ -630,24 +545,4 @@ void togglePause() {
 
 void returnToStart() {
   BaseMovement.returnToStart();
-}
-
-// ============================================================================
-// JSON PARSING HELPERS (using ArduinoJson for robustness)
-// ============================================================================
-
-/**
- * Parse JSON command and extract parameters safely
- * Returns true if parsing successful, false otherwise
- */
-bool parseJsonCommand(const String& jsonStr, JsonDocument& doc) {
-  DeserializationError error = deserializeJson(doc, jsonStr);
-  
-  if (error) {
-    engine->error("JSON parse error: " + String(error.c_str()));
-    sendError("❌ Commande JSON invalide: " + String(error.c_str()));
-    return false;
-  }
-  
-  return true;
 }

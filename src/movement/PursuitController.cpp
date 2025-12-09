@@ -11,6 +11,7 @@
  */
 
 #include "movement/PursuitController.h"
+#include "communication/StatusBroadcaster.h"  // For Status.sendError()
 #include "hardware/MotorDriver.h"
 #include "hardware/ContactSensors.h"
 
@@ -40,7 +41,7 @@ void PursuitControllerClass::begin() {
 void PursuitControllerClass::move(float targetPositionMM, float maxSpeedLevel) {
     // Safety check: calibration required
     if (config.totalDistanceMM == 0) {
-        sendError("❌ Mode Pursuit nécessite une calibration d'abord!");
+        Status.sendError("❌ Mode Pursuit nécessite une calibration d'abord!");
         return;
     }
     
@@ -191,7 +192,7 @@ bool PursuitControllerClass::checkSafetyContacts(bool moveForward) {
             if (Contacts.readDebounced(PIN_END_CONTACT, LOW, 3, 50)) {
                 pursuit.isMoving = false;
                 pursuit.targetStep = currentStep;
-                sendError("❌ PURSUIT: Contact END atteint - arrêt sécurité");
+                Status.sendError("❌ PURSUIT: Contact END atteint - arrêt sécurité");
                 config.currentState = STATE_ERROR;
                 return false;
             }
@@ -204,7 +205,7 @@ bool PursuitControllerClass::checkSafetyContacts(bool moveForward) {
             if (Contacts.readDebounced(PIN_START_CONTACT, LOW, 3, 50)) {
                 pursuit.isMoving = false;
                 pursuit.targetStep = currentStep;
-                sendError("❌ PURSUIT: Contact START atteint - arrêt sécurité");
+                Status.sendError("❌ PURSUIT: Contact START atteint - arrêt sécurité");
                 config.currentState = STATE_ERROR;
                 return false;
             }

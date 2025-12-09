@@ -4,6 +4,8 @@
 
 #include "core/UtilityEngine.h"
 #include "core/Types.h"
+#include "core/Config.h"       // For STEPS_PER_MM
+#include "core/GlobalState.h"  // For stats (StatsTracking)
 #include <ArduinoJson.h>
 #include <EEPROM.h>
 #include <math.h>
@@ -978,6 +980,44 @@ void UtilityEngine::setStatsRecordingEnabled(bool enabled) {
   EEPROM.commit();
   
   info(String("📊 Stats recording: ") + (enabled ? "ENABLED" : "DISABLED") + " (saved to EEPROM)");
+}
+
+/**
+ * Save current session's distance to daily stats
+ * Only saves the increment since last save to avoid double-counting
+ */
+void UtilityEngine::saveCurrentSessionStats() {
+  // Calculate distance increment since last save (in steps)
+  unsigned long incrementSteps = stats.getIncrementSteps();
+  
+  // Convert to millimeters
+  float incrementMM = incrementSteps / STEPS_PER_MM;
+  
+  if (incrementMM <= 0) {
+    debug("📊 No new distance to save (no increment since last save)");
+    return;
+  }
+  
+  // Save increment to daily stats
+  incrementDailyStats(incrementMM);
+  
+  debug(String("💾 Session stats saved: +") + String(incrementMM, 1) + "mm (total session: " + String(stats.totalDistanceTraveled / STEPS_PER_MM, 1) + "mm)");
+  
+  // Mark as saved using StatsTracking method
+  stats.markSaved();
+}
+
+/**
+ * Reset total distance counter to zero
+ * Saves current session stats before resetting
+ */
+void UtilityEngine::resetTotalDistance() {
+  // Save any unsaved distance before resetting
+  saveCurrentSessionStats();
+  
+  // Now reset counters using StatsTracking method
+  stats.reset();
+  info("🔄 Total distance counter reset to 0");
 }
 
 /**

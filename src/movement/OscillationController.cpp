@@ -12,6 +12,7 @@
  */
 
 #include "movement/OscillationController.h"
+#include "communication/StatusBroadcaster.h"  // For Status.sendError()
 #include "hardware/MotorDriver.h"
 #include "hardware/ContactSensors.h"
 #include "movement/SequenceExecutor.h"
@@ -75,7 +76,7 @@ void OscillationControllerClass::start() {
     // Validate configuration
     String errorMsg;
     if (!validateAmplitude(oscillation.centerPositionMM, oscillation.amplitudeMM, errorMsg)) {
-        sendError("❌ " + errorMsg);
+        Status.sendError("❌ " + errorMsg);
         config.currentState = STATE_ERROR;
         return;
     }
@@ -605,7 +606,7 @@ bool OscillationControllerClass::checkSafetyContacts(long targetStep) {
     float distanceToEndLimitMM = config.totalDistanceMM - maxOscPositionMM;
     if (distanceToEndLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
         if (targetStep >= config.maxStep && Contacts.readDebounced(PIN_END_CONTACT, LOW)) {
-            sendError("❌ OSCILLATION: Contact END atteint de manière inattendue (amplitude proche limite)");
+            Status.sendError("❌ OSCILLATION: Contact END atteint de manière inattendue (amplitude proche limite)");
             config.currentState = STATE_PAUSED;  // Stop movement (single source of truth)
             return false;
         }
@@ -614,7 +615,7 @@ bool OscillationControllerClass::checkSafetyContacts(long targetStep) {
     // Test START contact uniquement si oscillation approche de la limite basse
     if (minOscPositionMM <= HARD_DRIFT_TEST_ZONE_MM) {
         if (targetStep <= config.minStep && Contacts.readDebounced(PIN_START_CONTACT, LOW, 3, 100)) {
-            sendError("❌ OSCILLATION: Contact START atteint de manière inattendue (amplitude proche limite)");
+            Status.sendError("❌ OSCILLATION: Contact START atteint de manière inattendue (amplitude proche limite)");
             config.currentState = STATE_PAUSED;  // Stop movement (single source of truth)
             return false;
         }

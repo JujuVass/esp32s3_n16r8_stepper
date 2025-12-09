@@ -11,6 +11,7 @@
  */
 
 #include "communication/CommandDispatcher.h"
+#include "communication/StatusBroadcaster.h"  // For Status.sendError()
 #include "core/UtilityEngine.h"
 #include "movement/CalibrationManager.h"
 #include "hardware/MotorDriver.h"
@@ -56,7 +57,7 @@ void CommandDispatcher::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pa
     // Client disconnected
     if (type == WStype_DISCONNECTED) {
         engine->info(String("WebSocket client #") + String(num) + " disconnected");
-        saveCurrentSessionStats();
+        engine->saveCurrentSessionStats();
     }
     
     // Text message received
@@ -106,7 +107,7 @@ bool CommandDispatcher::parseJsonCommand(const String& jsonStr, JsonDocument& do
     
     if (error) {
         engine->error("JSON parse error: " + String(error.c_str()));
-        sendError("❌ Commande JSON invalide: " + String(error.c_str()));
+        Status.sendError("❌ Commande JSON invalide: " + String(error.c_str()));
         return false;
     }
     
@@ -115,7 +116,7 @@ bool CommandDispatcher::parseJsonCommand(const String& jsonStr, JsonDocument& do
 
 bool CommandDispatcher::validateAndReport(bool isValid, const String& errorMsg) {
     if (!isValid && errorMsg.length() > 0) {
-        sendError(errorMsg);
+        Status.sendError(errorMsg);
         return false;
     }
     return isValid;
@@ -170,22 +171,22 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
     
     if (strcmp(cmd, "resetTotalDistance") == 0) {
         engine->debug("Command: Reset total distance");
-        resetTotalDistance();
+        engine->resetTotalDistance();
         return true;
     }
     
     if (strcmp(cmd, "saveStats") == 0) {
         engine->debug("Command: Save stats");
-        saveCurrentSessionStats();
+        engine->saveCurrentSessionStats();
         return true;
     }
     
     if (strcmp(cmd, "setStatsRecording") == 0) {
         bool enabled = doc["enabled"] | true;
         if(!enabled) {
-            saveCurrentSessionStats();
+            engine->saveCurrentSessionStats();
         }
-        resetTotalDistance();
+        engine->resetTotalDistance();
         engine->setStatsRecordingEnabled(enabled);
         sendStatus();  // Update UI with new state
         return true;
@@ -195,12 +196,12 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
         float percent = doc["percent"] | 100.0;
         
         if (percent < 50.0 || percent > 100.0) {
-            sendError("⚠️ Limite doit être entre 50% et 100% (reçu: " + String(percent, 0) + "%)");
+            Status.sendError("⚠️ Limite doit être entre 50% et 100% (reçu: " + String(percent, 0) + "%)");
             return true;
         }
         
         if (config.currentState != STATE_READY) {
-            sendError("⚠️ Modification limite impossible - Système doit être en état PRÊT");
+            Status.sendError("⚠️ Modification limite impossible - Système doit être en état PRÊT");
             return true;
         }
         
@@ -369,11 +370,11 @@ bool CommandDispatcher::handleCyclePauseCommands(const char* cmd, JsonDocument& 
 bool CommandDispatcher::handlePursuitCommands(const char* cmd, JsonDocument& doc) {
     if (strcmp(cmd, "enablePursuitMode") == 0) {
         if (config.currentState == STATE_CALIBRATING) {
-            sendError("⚠️ Impossible d'activer le mode Pursuit: calibration en cours");
+            Status.sendError("⚠️ Impossible d'activer le mode Pursuit: calibration en cours");
             return true;
         }
         if (config.currentState == STATE_ERROR) {
-            sendError("⚠️ Impossible d'activer le mode Pursuit: système en état erreur");
+            Status.sendError("⚠️ Impossible d'activer le mode Pursuit: système en état erreur");
             return true;
         }
         
@@ -423,11 +424,11 @@ bool CommandDispatcher::handlePursuitCommands(const char* cmd, JsonDocument& doc
 bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, const String& message) {
     if (message.indexOf("\"cmd\":\"startChaos\"") > 0) {
         if (config.currentState == STATE_CALIBRATING) {
-            sendError("⚠️ Impossible de démarrer le mode Chaos: calibration en cours");
+            Status.sendError("⚠️ Impossible de démarrer le mode Chaos: calibration en cours");
             return true;
         }
         if (config.currentState == STATE_ERROR) {
-            sendError("⚠️ Impossible de démarrer le mode Chaos: système en état erreur");
+            Status.sendError("⚠️ Impossible de démarrer le mode Chaos: système en état erreur");
             return true;
         }
         
@@ -638,7 +639,7 @@ bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument&
     
     if (message.indexOf("\"cmd\":\"startOscillation\"") > 0) {
         if (config.currentState == STATE_INIT || config.currentState == STATE_CALIBRATING) {
-            sendError("⚠️ Calibration requise avant de démarrer l'oscillation");
+            Status.sendError("⚠️ Calibration requise avant de démarrer l'oscillation");
             return true;
         }
         
@@ -687,7 +688,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         
         String validationError = SeqTable.validatePhysics(newLine);
         if (validationError.length() > 0) {
-            sendError("❌ Ligne invalide : " + validationError);
+            Status.sendError("❌ Ligne invalide : " + validationError);
             return true;
         }
         
@@ -697,19 +698,19 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
             if (!validateAndReport(Validators::speed(newLine.speedBackward, errorMsg), errorMsg)) return true;
         } else if (newLine.movementType == MOVEMENT_OSC) {
             if (newLine.oscFrequencyHz <= 0 || newLine.oscFrequencyHz > 10.0) {
-                sendError("❌ Frequency doit être 0.01-10 Hz");
+                Status.sendError("❌ Frequency doit être 0.01-10 Hz");
                 return true;
             }
         } else if (newLine.movementType == MOVEMENT_CHAOS) {
             if (!validateAndReport(Validators::speed(newLine.chaosMaxSpeedLevel, errorMsg), errorMsg)) return true;
             if (newLine.chaosDurationSeconds < 1 || newLine.chaosDurationSeconds > 3600) {
-                sendError("❌ Duration doit être 1-3600 secondes");
+                Status.sendError("❌ Duration doit être 1-3600 secondes");
                 return true;
             }
         }
         
         if (newLine.cycleCount < 1 || newLine.cycleCount > 9999) {
-            sendError("❌ Cycle count doit être 1-9999 (reçu: " + String(newLine.cycleCount) + ")");
+            Status.sendError("❌ Cycle count doit être 1-9999 (reçu: " + String(newLine.cycleCount) + ")");
             return true;
         }
         
@@ -721,7 +722,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     if (message.indexOf("\"cmd\":\"deleteSequenceLine\"") > 0) {
         int lineId = doc["lineId"] | -1;
         if (lineId < 0) {
-            sendError("❌ Line ID invalide");
+            Status.sendError("❌ Line ID invalide");
             return true;
         }
         SeqTable.deleteLine(lineId);
@@ -735,7 +736,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         
         String validationError = SeqTable.validatePhysics(updatedLine);
         if (validationError.length() > 0) {
-            sendError("❌ Ligne invalide : " + validationError);
+            Status.sendError("❌ Ligne invalide : " + validationError);
             return true;
         }
         
@@ -848,10 +849,10 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
                 SeqTable.importFromJson(jsonData);
                 SeqTable.broadcast();
             } else {
-                sendError("❌ Erreur parsing JSON: dataEnd invalide");
+                Status.sendError("❌ Erreur parsing JSON: dataEnd invalide");
             }
         } else {
-            sendError("❌ Erreur parsing JSON: champ jsonData introuvable");
+            Status.sendError("❌ Erreur parsing JSON: champ jsonData introuvable");
         }
         return true;
     }
@@ -868,7 +869,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         engine->debug(String("📊 Stats tracking: ") + (enable ? "ENABLED" : "DISABLED"));
         
         if (enable) {
-            saveCurrentSessionStats();
+            engine->saveCurrentSessionStats();
             sendStatus();
         }
         

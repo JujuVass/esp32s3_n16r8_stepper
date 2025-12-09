@@ -3,6 +3,7 @@
 // ============================================================================
 
 #include "movement/BaseMovementController.h"
+#include "communication/StatusBroadcaster.h"  // For Status.sendError()
 #include "core/GlobalState.h"
 #include "core/UtilityEngine.h"
 #include "hardware/MotorDriver.h"
@@ -404,7 +405,7 @@ void BaseMovementControllerClass::togglePause() {
         // 💾 Save stats BEFORE toggling pause (save accumulated distance)
         if (!wasPaused) {
             // Going from RUNNING → PAUSED: save current session
-            saveCurrentSessionStats();
+            engine->saveCurrentSessionStats();
             engine->debug("💾 Stats saved before pause");
         }
         
@@ -427,7 +428,7 @@ void BaseMovementControllerClass::stop() {
         // Keep motor enabled - HSS86 needs to stay synchronized
         
         // Save session stats before stopping
-        saveCurrentSessionStats();
+        engine->saveCurrentSessionStats();
         return;
     }
     
@@ -458,7 +459,7 @@ void BaseMovementControllerClass::stop() {
         pendingMotion.hasChanges = false;
         
         // Save session stats before stopping
-        saveCurrentSessionStats();
+        engine->saveCurrentSessionStats();
     }
 }
 
@@ -478,7 +479,7 @@ void BaseMovementControllerClass::start(float distMM, float speedLevel) {
     
     // Block start if in error state
     if (config.currentState == STATE_ERROR) {
-        sendError("❌ Impossible de démarrer: Système en état ERREUR - Utilisez 'Retour Départ' ou recalibrez");
+        Status.sendError("❌ Impossible de démarrer: Système en état ERREUR - Utilisez 'Retour Départ' ou recalibrez");
         return;
     }
     
@@ -489,7 +490,7 @@ void BaseMovementControllerClass::start(float distMM, float speedLevel) {
     // Validate and limit distance if needed
     if (motion.startPositionMM + distMM > config.totalDistanceMM) {
         if (motion.startPositionMM >= config.totalDistanceMM) {
-            sendError("❌ ERROR: Position de départ dépasse le maximum");
+            Status.sendError("❌ ERROR: Position de départ dépasse le maximum");
             return;
         }
         distMM = config.totalDistanceMM - motion.startPositionMM;
