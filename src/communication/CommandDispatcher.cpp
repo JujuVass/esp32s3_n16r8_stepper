@@ -275,8 +275,8 @@ bool CommandDispatcher::handleConfigCommands(const char* cmd, JsonDocument& doc)
 // ============================================================================
 
 bool CommandDispatcher::handleDecelZoneCommands(const char* cmd, JsonDocument& doc, const String& message) {
-    if (message.indexOf("\"cmd\":\"setDecelZone\"") > 0) {
-        decelZone.enabled = message.indexOf("\"enabled\":true") > 0;
+    if (strcmp(cmd, "setDecelZone") == 0) {
+        decelZone.enabled = doc["enabled"] | false;
         decelZone.enableStart = doc["enableStart"] | decelZone.enableStart;
         decelZone.enableEnd = doc["enableEnd"] | decelZone.enableEnd;
         
@@ -421,7 +421,7 @@ bool CommandDispatcher::handlePursuitCommands(const char* cmd, JsonDocument& doc
 // ============================================================================
 
 bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, const String& message) {
-    if (message.indexOf("\"cmd\":\"startChaos\"") > 0) {
+    if (strcmp(cmd, "startChaos") == 0) {
         if (config.currentState == STATE_CALIBRATING) {
             Status.sendError("⚠️ Impossible de démarrer le mode Chaos: calibration en cours");
             return true;
@@ -465,12 +465,12 @@ bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, 
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"stopChaos\"") > 0) {
+    if (strcmp(cmd, "stopChaos") == 0) {
         Chaos.stop();  // Phase 4A: Direct singleton call
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"setChaosConfig\"") > 0) {
+    if (strcmp(cmd, "setChaosConfig") == 0) {
         chaos.centerPositionMM = doc["centerPositionMM"] | chaos.centerPositionMM;
         chaos.amplitudeMM = doc["amplitudeMM"] | chaos.amplitudeMM;
         chaos.maxSpeedLevel = doc["maxSpeedLevel"] | chaos.maxSpeedLevel;
@@ -520,7 +520,7 @@ bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, 
 // ============================================================================
 
 bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument& doc, const String& message) {
-    if (message.indexOf("\"cmd\":\"setOscillation\"") > 0) {
+    if (strcmp(cmd, "setOscillation") == 0) {
         float oldCenter = oscillation.centerPositionMM;
         float oldAmplitude = oscillation.amplitudeMM;
         float oldFrequency = oscillation.frequencyHz;
@@ -594,7 +594,7 @@ bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument&
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"setCyclePause\"") > 0) {
+    if (strcmp(cmd, "setCyclePause") == 0) {
         const char* mode = doc["mode"];
         
         if (mode && strcmp(mode, "simple") == 0) {
@@ -636,7 +636,7 @@ bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument&
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"startOscillation\"") > 0) {
+    if (strcmp(cmd, "startOscillation") == 0) {
         if (config.currentState == STATE_INIT || config.currentState == STATE_CALIBRATING) {
             Status.sendError("⚠️ Calibration requise avant de démarrer l'oscillation");
             return true;
@@ -655,7 +655,7 @@ bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument&
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"stopOscillation\"") > 0) {
+    if (strcmp(cmd, "stopOscillation") == 0) {
         if (currentMovement == MOVEMENT_OSC) {
             stopMovement();
             currentMovement = MOVEMENT_VAET;
@@ -682,7 +682,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     // SEQUENCE TABLE MANAGEMENT (CRUD)
     // ========================================================================
     
-    if (message.indexOf("\"cmd\":\"addSequenceLine\"") > 0) {
+    if (strcmp(cmd, "addSequenceLine") == 0) {
         SequenceLine newLine = SeqTable.parseFromJson(doc);
         
         String validationError = SeqTable.validatePhysics(newLine);
@@ -718,7 +718,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"deleteSequenceLine\"") > 0) {
+    if (strcmp(cmd, "deleteSequenceLine") == 0) {
         int lineId = doc["lineId"] | -1;
         if (lineId < 0) {
             Status.sendError("❌ Line ID invalide");
@@ -729,7 +729,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"updateSequenceLine\"") > 0) {
+    if (strcmp(cmd, "updateSequenceLine") == 0) {
         int lineId = doc["lineId"] | -1;
         SequenceLine updatedLine = SeqTable.parseFromJson(doc);
         
@@ -744,7 +744,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"moveSequenceLine\"") > 0) {
+    if (strcmp(cmd, "moveSequenceLine") == 0) {
         int lineId = doc["lineId"] | -1;
         int direction = doc["direction"] | 0;
         SeqTable.moveLine(lineId, direction);
@@ -752,14 +752,14 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"duplicateSequenceLine\"") > 0) {
+    if (strcmp(cmd, "duplicateSequenceLine") == 0) {
         int lineId = doc["lineId"] | -1;
         SeqTable.duplicateLine(lineId);
         SeqTable.broadcast();
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"toggleSequenceLine\"") > 0) {
+    if (strcmp(cmd, "toggleSequenceLine") == 0) {
         int lineId = doc["lineId"] | -1;
         bool enabled = doc["enabled"] | false;
         SeqTable.toggleLine(lineId, enabled);
@@ -767,13 +767,13 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"clearSequence\"") > 0) {
+    if (strcmp(cmd, "clearSequence") == 0) {
         SeqTable.clear();
         SeqTable.broadcast();
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"getSequenceTable\"") > 0) {
+    if (strcmp(cmd, "getSequenceTable") == 0) {
         SeqTable.broadcast();
         return true;
     }
@@ -782,31 +782,31 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     // SEQUENCE EXECUTION CONTROL
     // ========================================================================
     
-    if (message.indexOf("\"cmd\":\"startSequence\"") > 0) {
+    if (strcmp(cmd, "startSequence") == 0) {
         SeqExecutor.start(false);
         SeqExecutor.sendStatus();
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"loopSequence\"") > 0) {
+    if (strcmp(cmd, "loopSequence") == 0) {
         SeqExecutor.start(true);
         SeqExecutor.sendStatus();
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"stopSequence\"") > 0) {
+    if (strcmp(cmd, "stopSequence") == 0) {
         SeqExecutor.stop();
         SeqExecutor.sendStatus();
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"toggleSequencePause\"") > 0) {
+    if (strcmp(cmd, "toggleSequencePause") == 0) {
         SeqExecutor.togglePause();
         SeqExecutor.sendStatus();
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"skipSequenceLine\"") > 0) {
+    if (strcmp(cmd, "skipSequenceLine") == 0) {
         SeqExecutor.skipToNextLine();
         SeqExecutor.sendStatus();
         return true;
@@ -816,12 +816,12 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     // IMPORT/EXPORT
     // ========================================================================
     
-    if (message.indexOf("\"cmd\":\"exportSequence\"") > 0) {
+    if (strcmp(cmd, "exportSequence") == 0) {
         SeqTable.sendJsonResponse("exportData", SeqTable.exportToJson());
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"toggleDebug\"") > 0) {
+    if (strcmp(cmd, "toggleDebug") == 0) {
         if (engine) {
             LogLevel current = engine->getLogLevel();
             LogLevel next = (current == LOG_DEBUG) ? LOG_INFO : LOG_DEBUG;
@@ -831,7 +831,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         return true;
     }
     
-    if (message.indexOf("\"cmd\":\"importSequence\"") > 0) {
+    if (strcmp(cmd, "importSequence") == 0) {
         int dataStart = message.indexOf("\"jsonData\":\"");
         if (dataStart > 0) {
             dataStart += 12;
@@ -860,7 +860,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     // STATS ON-DEMAND
     // ========================================================================
     
-    if (message.indexOf("\"cmd\":\"requestStats\"") > 0) {
+    if (strcmp(cmd, "requestStats") == 0) {
         bool enable = doc["enable"] | false;
         statsRequested = enable;
 
