@@ -22,6 +22,7 @@
 const AppState = {
   // WebSocket connection
   ws: null,
+  espIpAddress: null,  // Cached ESP32 IP for faster WS reconnection (avoids mDNS)
   
   // Editing state
   editing: {

@@ -725,6 +725,12 @@ function updateSystemStats(system) {
     ipStaEl.textContent = system.ipSta;
     // Gray out if degraded mode (0.0.0.0)
     ipStaEl.style.color = (system.ipSta === '0.0.0.0') ? '#999' : '#333';
+    
+    // Cache IP for faster WebSocket reconnection (avoids mDNS resolution delay)
+    if (system.ipSta !== '0.0.0.0' && !AppState.espIpAddress) {
+      AppState.espIpAddress = system.ipSta;
+      console.log('📍 Cached ESP32 IP for WS reconnection:', system.ipSta);
+    }
   }
   if (system.ipAp !== undefined) {
     document.getElementById('sysIpAp').textContent = system.ipAp;

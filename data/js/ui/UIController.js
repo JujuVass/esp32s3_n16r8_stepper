@@ -133,6 +133,46 @@ function switchTab(tabName) {
 }
 
 /**
+ * Switch to a different mode tab WITHOUT stopping movement
+ * Used for auto-switch on reconnection when movement is already in progress
+ * @param {string} tabName - Target tab name (simple, pursuit, oscillation, chaos, tableau)
+ */
+function switchTabWithoutStop(tabName) {
+  // Hide all tab contents
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  
+  // Remove active class from all tabs
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Show selected tab content
+  const tabMap = {
+    'simple': 'tabSimple',
+    'pursuit': 'tabPursuit',
+    'oscillation': 'tabOscillation',
+    'chaos': 'tabChaos',
+    'tableau': 'tabTableau'
+  };
+  
+  const targetContent = document.getElementById(tabMap[tabName]);
+  if (targetContent) {
+    targetContent.classList.add('active');
+  }
+  
+  // Add active class to selected tab
+  const targetTab = document.querySelector('[data-tab="' + tabName + '"]');
+  if (targetTab) {
+    targetTab.classList.add('active');
+  }
+  
+  AppState.system.currentMode = tabName;
+  console.log('🔄 Auto-switched to mode: ' + tabName + ' (movement in progress)');
+}
+
+/**
  * Check if system is currently running any operation
  * @returns {boolean} True if system is running or paused
  */

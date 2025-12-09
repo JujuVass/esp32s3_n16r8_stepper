@@ -267,6 +267,24 @@
       AppState.system.currentState = data.state;
       AppState.system.canStart = data.canStart || false;
       
+      // AUTO-SWITCH TAB: If movement is running/paused, switch to corresponding tab
+      // This handles reconnection scenarios where user returns to find movement in progress
+      const isActiveMovement = (data.state === SystemState.RUNNING || data.state === SystemState.PAUSED);
+      if (isActiveMovement && data.movementType !== undefined) {
+        const tabFromMovement = {
+          0: 'simple',      // MOVEMENT_VAET
+          1: 'oscillation', // MOVEMENT_OSC
+          2: 'chaos',       // MOVEMENT_CHAOS
+          3: 'pursuit'      // MOVEMENT_PURSUIT
+        };
+        const targetTab = tabFromMovement[data.movementType];
+        if (targetTab && AppState.system.currentMode !== targetTab) {
+          console.log('🔄 Auto-switching to ' + targetTab + ' tab (movement in progress)');
+          // Use direct tab switch without stopping movement (since it's already running)
+          switchTabWithoutStop(targetTab);
+        }
+      }
+      
       const stateText = ['Initialisation', 'Calibration...', 'Prêt', 'En marche', 'En pause', 'Erreur'];
       const stateClass = ['state-init', 'state-calibrating', 'state-ready', 'state-running', 'state-paused', 'state-error'];
       

@@ -95,6 +95,7 @@ void StatusBroadcaster::send() {
     doc["operationMode"] = (int)currentMovement;  // Legacy
     doc["pursuitActive"] = pursuit.isMoving;
     doc["statsRecordingEnabled"] = engine->isStatsRecordingEnabled();  // Stats recording preference
+    doc["ip"] = WiFi.localIP().toString();  // IP for WebSocket reconnection caching
     
     // ============================================================================
     // MODE-SPECIFIC FIELDS

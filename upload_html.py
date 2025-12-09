@@ -7,6 +7,7 @@ Features:
 - Recursive directory scanning (supports js/core/, js/modules/, etc.)
 - Sync mode: deletes remote files not present locally
 - Watch mode: auto-upload on file changes
+- History backup: saves stats.json, playlists.json before sync operations
 
 Usage:
     python upload_html.py                    # Upload index.html once
@@ -17,6 +18,8 @@ Usage:
     python upload_html.py --sync             # Full sync: upload all + delete orphans
     python upload_html.py --list             # List files on ESP32
     python upload_html.py --delete /js/old.js  # Delete specific file on ESP32
+    python upload_html.py --backup           # Backup critical files from ESP32
+    python upload_html.py --no-backup        # Skip auto-backup on sync/all
 """
 
 import requests
@@ -32,6 +35,15 @@ API_BASE = f"http://{ESP32_IP}/api/fs"
 DATA_DIR = "data"
 JS_DIR = "data/js"
 CSS_DIR = "data/css"
+HISTORY_DIR = ".history"
+
+# Files to backup automatically (critical user data on ESP32)
+BACKUP_FILES = [
+    '/stats.json',
+    '/playlists.json',
+    '/config.json',
+    '/sequences.json'
+]
 
 # ============================================================================
 # FILE OPERATIONS
@@ -87,6 +99,174 @@ def upload_file(file_path, esp32_ip=ESP32_IP, target_path=None):
     except Exception as e:
         print(f"❌ {e}")
         return False
+
+
+def download_file(remote_path, esp32_ip=ESP32_IP):
+    """Download a file from ESP32, returns content or None"""
+    if not remote_path.startswith('/'):
+        remote_path = '/' + remote_path
+    
+    # Use raw file access endpoint
+    endpoint = f"http://{esp32_ip}{remote_path}"
+    
+    try:
+        response = requests.get(endpoint, timeout=10)
+        if response.status_code == 200:
+            return response.content
+        return None
+    except Exception:
+        return None
+
+
+def backup_critical_files(esp32_ip=ESP32_IP, silent=False):
+    """
+    Backup critical files from ESP32 to .history/ folder
+    Files are suffixed with datetime: stats_20241209_164530.json
+    Returns number of files backed up
+    """
+    # Create history directory
+    history_path = Path(HISTORY_DIR)
+    history_path.mkdir(exist_ok=True)
+    
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    backed_up = 0
+    
+    if not silent:
+        print("💾 Backing up critical files from ESP32...")
+    
+    for remote_file in BACKUP_FILES:
+        content = download_file(remote_file, esp32_ip)
+        
+        if content and len(content) > 2:  # Skip empty files (just "{}" or "[]")
+            # Create backup filename: /stats.json -> stats_20241209_164530.json
+            base_name = remote_file.lstrip('/').replace('/', '_')
+            name_part = base_name.rsplit('.', 1)[0]
+            ext_part = base_name.rsplit('.', 1)[1] if '.' in base_name else 'txt'
+            backup_name = f"{name_part}_{timestamp}.{ext_part}"
+            
+            backup_path = history_path / backup_name
+            backup_path.write_bytes(content)
+            
+            if not silent:
+                print(f"   📄 {remote_file} → .history/{backup_name} ({len(content)} bytes)")
+            backed_up += 1
+    
+    if not silent:
+        if backed_up > 0:
+            print(f"   ✅ {backed_up} file(s) backed up to .history/")
+        else:
+            print(f"   ℹ️  No critical files found on ESP32 (or all empty)")
+        print()
+    
+    return backed_up
+
+
+def list_history_files():
+    """List all backup files in .history/ folder, grouped by type"""
+    history_path = Path(HISTORY_DIR)
+    if not history_path.exists():
+        return {}
+    
+    # Group files by base name (stats, playlists, etc.)
+    files_by_type = {}
+    for f in history_path.glob('*.json'):
+        # Parse filename: stats_20251209_171803.json -> type=stats, timestamp=20251209_171803
+        parts = f.stem.rsplit('_', 2)  # Split from right to get name_date_time
+        if len(parts) >= 3:
+            file_type = parts[0]  # stats, playlists, config, sequences
+            timestamp = f"{parts[1]}_{parts[2]}"
+        else:
+            file_type = f.stem
+            timestamp = "unknown"
+        
+        if file_type not in files_by_type:
+            files_by_type[file_type] = []
+        files_by_type[file_type].append({
+            'path': f,
+            'name': f.name,
+            'timestamp': timestamp,
+            'size': f.stat().st_size
+        })
+    
+    # Sort each type by timestamp (most recent first)
+    for file_type in files_by_type:
+        files_by_type[file_type].sort(key=lambda x: x['timestamp'], reverse=True)
+    
+    return files_by_type
+
+
+def restore_file(filename, esp32_ip=ESP32_IP):
+    """Restore a specific backup file to ESP32"""
+    history_path = Path(HISTORY_DIR)
+    file_path = history_path / filename
+    
+    if not file_path.exists():
+        print(f"❌ File not found: .history/{filename}")
+        return False
+    
+    # Determine target path on ESP32 from filename
+    # stats_20251209_171803.json -> /stats.json
+    parts = filename.rsplit('_', 2)
+    if len(parts) >= 3:
+        base_name = parts[0]
+        ext = file_path.suffix
+        target_path = f"/{base_name}{ext}"
+    else:
+        print(f"❌ Cannot parse filename: {filename}")
+        return False
+    
+    print(f"📤 Restoring {filename} → {target_path}...")
+    return upload_file(str(file_path), esp32_ip, target_path)
+
+
+def restore_latest(esp32_ip=ESP32_IP):
+    """Restore the latest backup of each critical file type"""
+    files_by_type = list_history_files()
+    
+    if not files_by_type:
+        print("❌ No backup files found in .history/")
+        return 0
+    
+    print("🔄 Restoring latest backups to ESP32...")
+    print()
+    
+    restored = 0
+    for file_type, files in files_by_type.items():
+        if files:
+            latest = files[0]  # Already sorted, most recent first
+            target_path = f"/{file_type}.json"
+            print(f"   📄 {latest['name']} → {target_path}")
+            if upload_file(str(latest['path']), esp32_ip, target_path):
+                restored += 1
+    
+    print()
+    print(f"✅ {restored} file(s) restored to ESP32")
+    return restored
+
+
+def show_history():
+    """Display available backup files"""
+    files_by_type = list_history_files()
+    
+    if not files_by_type:
+        print("📂 No backup files in .history/")
+        return
+    
+    print("📂 Available backups in .history/:")
+    print()
+    
+    for file_type, files in sorted(files_by_type.items()):
+        print(f"  {file_type}:")
+        for i, f in enumerate(files[:5]):  # Show max 5 per type
+            marker = "→ " if i == 0 else "  "
+            ts = f['timestamp']
+            # Format: 20251209_171803 -> 2025-12-09 17:18:03
+            formatted_ts = f"{ts[0:4]}-{ts[4:6]}-{ts[6:8]} {ts[9:11]}:{ts[11:13]}:{ts[13:15]}"
+            print(f"    {marker}{f['name']} ({f['size']} bytes) - {formatted_ts}")
+        if len(files) > 5:
+            print(f"    ... and {len(files) - 5} more")
+    print()
+    print("  Use: --restore <filename>  or  --restore last")
 
 
 def delete_file(remote_path, esp32_ip=ESP32_IP):
@@ -306,6 +486,10 @@ Examples:
   python upload_html.py --sync             # Full sync: upload all + delete orphans
   python upload_html.py --list             # List files on ESP32
   python upload_html.py --delete /js/old.js  # Delete specific file on ESP32
+  python upload_html.py --backup           # Backup stats.json, playlists.json from ESP32
+  python upload_html.py --list-restore     # List available backups
+  python upload_html.py --restore          # Restore latest backup of each file
+  python upload_html.py --restore stats_20251209_171803.json  # Restore specific file
         """
     )
     
@@ -323,6 +507,14 @@ Examples:
                         help='List files on ESP32')
     parser.add_argument('--delete', '-d',
                         help='Delete specific file on ESP32 (e.g., /js/old.js)')
+    parser.add_argument('--backup', '-b', action='store_true',
+                        help='Backup critical files (stats, playlists) from ESP32 to .history/')
+    parser.add_argument('--list-restore', action='store_true',
+                        help='List available backup files in .history/')
+    parser.add_argument('--restore', '-r', nargs='?', const='last',
+                        help='Restore backup: without arg = latest, or specify filename')
+    parser.add_argument('--no-backup', action='store_true',
+                        help='Skip automatic backup before --sync or --all')
     parser.add_argument('--ip', default=ESP32_IP,
                         help=f'ESP32 IP address (default: {ESP32_IP})')
     
@@ -334,6 +526,26 @@ Examples:
     print(f"  Target: {args.ip}")
     print("=" * 60)
     print()
+    
+    # List restore (show available backups)
+    if args.list_restore:
+        show_history()
+        return
+    
+    # Restore mode
+    if args.restore:
+        if args.restore == 'last':
+            # --restore without argument or --restore last: restore latest of each type
+            restore_latest(args.ip)
+        else:
+            # --restore <filename>: restore specific file
+            restore_file(args.restore, args.ip)
+        return
+    
+    # Backup mode (explicit)
+    if args.backup:
+        backup_critical_files(args.ip)
+        return
     
     # List mode
     if args.list:
@@ -349,8 +561,10 @@ Examples:
         delete_file(args.delete, args.ip)
         return
     
-    # Sync mode
+    # Sync mode (with auto-backup)
     if args.sync:
+        if not args.no_backup:
+            backup_critical_files(args.ip)
         sync_files(args.ip, delete_orphans=True)
         return
     
@@ -366,6 +580,9 @@ Examples:
             print("❌ No JS files found")
             sys.exit(1)
     elif args.all:
+        # Auto-backup before --all (bulk upload could overwrite)
+        if not args.no_backup:
+            backup_critical_files(args.ip)
         local_files = get_local_files()
         files_to_upload = list(local_files.values())
         if not files_to_upload:

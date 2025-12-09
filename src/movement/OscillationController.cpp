@@ -271,6 +271,13 @@ float OscillationControllerClass::calculatePosition() {
     
     // Calculate time delta since last update
     unsigned long deltaMs = currentMs - oscillationState.lastPhaseUpdateMs;
+    
+    // CAP deltaMs to prevent phase jumps during CPU load spikes (WebSocket reconnect, etc.)
+    // Max 50ms = ~20 Hz update rate minimum, prevents jerky motion
+    if (deltaMs > 50) {
+        deltaMs = 50;
+    }
+    
     oscillationState.lastPhaseUpdateMs = currentMs;
     
     if (oscillationState.isTransitioning) {

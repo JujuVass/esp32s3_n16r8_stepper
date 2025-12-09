@@ -6,30 +6,8 @@
   <title>Stepper Controller</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
 
-  <!-- Preload JS modules for faster loading -->
-  <!-- Core -->
-  <link rel="preload" href="/js/ui/milestones.js" as="script">
-  <link rel="preload" href="/js/core/app.js" as="script">
-  <link rel="preload" href="/js/utils/utils.js" as="script">
-  <link rel="preload" href="/js/core/DOMManager.js" as="script">
-  <link rel="preload" href="/js/core/websocket.js" as="script">
-  <!-- UI -->
-  <link rel="preload" href="/js/ui/StatsController.js" as="script">
-  <link rel="preload" href="/js/ui/ToolsController.js" as="script">
-  <link rel="preload" href="/js/ui/UIController.js" as="script">
-  <!-- Utils -->
-  <link rel="preload" href="/js/utils/PlaylistUtils.js" as="script">
-  <link rel="preload" href="/js/utils/SimpleUtils.js" as="script">
-  <link rel="preload" href="/js/utils/SequenceUtils.js" as="script">
-  <!-- Controllers -->
-  <link rel="preload" href="/js/controllers/PlaylistController.js" as="script">
-  <link rel="preload" href="/js/controllers/SimpleController.js" as="script">
-  <link rel="preload" href="/js/controllers/PursuitController.js" as="script">
-  <link rel="preload" href="/js/controllers/OscillationController.js" as="script">
-  <link rel="preload" href="/js/controllers/ChaosController.js" as="script">
-  <link rel="preload" href="/js/controllers/SequenceController.js" as="script">
-  <!-- Main -->
-  <link rel="preload" href="/js/main.js" as="script">
+  <!-- Note: Preloads removed - they cause issues with slow mDNS resolution -->
+  <!-- Scripts are loaded sequentially at end of body for reliability -->
 
   <link rel="stylesheet" href="/css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -355,10 +333,10 @@
       </div>
 
       <!-- Stats Table -->
-      <div style="margin-bottom: 20px; overflow-x: auto;">
+      <div style="margin-bottom: 20px; overflow-x: auto; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px;">
         <table id="statsTable" style="width: 100%; border-collapse: collapse; font-size: 13px;">
-          <thead>
-            <tr style="background: #f5f5f5; border-bottom: 2px solid #4CAF50;">
+          <thead style="position: sticky; top: 0; background: #f5f5f5; z-index: 1;">
+            <tr style="border-bottom: 2px solid #4CAF50;">
               <th style="padding: 8px; text-align: left; font-weight: bold;">Date</th>
               <th style="padding: 8px; text-align: center; font-weight: bold;">Jour</th>
               <th style="padding: 8px; text-align: center; font-weight: bold;">🏆</th>
@@ -370,15 +348,15 @@
               <td colspan="4" style="padding: 20px; text-align: center; color: #999; font-style: italic;">Aucune statistique disponible</td>
             </tr>
           </tbody>
-          <tfoot>
-            <tr style="background: #e8f5e9; border-top: 2px solid #4CAF50; font-weight: bold;">
-              <td style="padding: 10px;">TOTAL</td>
-              <td style="padding: 10px; text-align: center;">🏆</td>
-              <td id="statsTotalMilestone" style="padding: 10px; text-align: center; font-size: 18px;">🎯</td>
-              <td id="statsTotalDistance" style="padding: 10px; text-align: right; color: #4CAF50; font-size: 15px;">0 km</td>
-            </tr>
-          </tfoot>
         </table>
+      </div>
+      
+      <!-- Stats Footer (outside scroll container) -->
+      <div style="background: #e8f5e9; border: 2px solid #4CAF50; border-radius: 6px; padding: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; font-weight: bold;">
+        <span>TOTAL</span>
+        <span>🏆</span>
+        <span id="statsTotalMilestone" style="font-size: 18px;">🎯</span>
+        <span id="statsTotalDistance" style="color: #4CAF50; font-size: 15px;">0 km</span>
       </div>
 
       <!-- Stats Action Buttons -->
