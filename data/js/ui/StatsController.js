@@ -687,7 +687,7 @@ function toggleStatsRecording() {
   if (AppState.connection.ws && AppState.connection.ws.readyState === WebSocket.OPEN) {
     AppState.connection.ws.send(JSON.stringify({
       command: 'setStatsRecording',
-      enable: enabled
+      enabled: enabled
     }));
   }
 }
@@ -705,7 +705,7 @@ function updateStatsRecordingUI(enabled) {
   }
   
   if (warning) {
-    warning.classList.toggle('hidden', enabled);
+    warning.style.display = enabled ? 'none' : 'inline';
   }
 }
 
