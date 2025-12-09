@@ -46,6 +46,15 @@ static const char* PATTERN_NAMES[] = {
     "WAVE", "PENDULUM", "SPIRAL", "CALM", "BRUTE_FORCE", "LIBERATOR"
 };
 
+// Debug helper - local to this module
+static const char* executionContextName(ExecutionContext ctx) {
+    switch(ctx) {
+        case CONTEXT_STANDALONE: return "STANDALONE";
+        case CONTEXT_SEQUENCER: return "SEQUENCER";
+        default: return "UNKNOWN";
+    }
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================

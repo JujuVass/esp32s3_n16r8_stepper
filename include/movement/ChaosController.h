@@ -184,6 +184,3 @@ private:
 
 // Global accessor
 extern ChaosController& Chaos;
-
-// Helper function name conversion
-extern const char* executionContextName(ExecutionContext ctx);

@@ -73,11 +73,6 @@ void setRgbLed(uint8_t r, uint8_t g, uint8_t b) {
 // ============================================================================
 
 // ============================================================================
-// HELPER FUNCTIONS FOR DEBUGGING (Forward declarations)
-// ============================================================================
-const char* executionContextName(ExecutionContext ctx);  // Used by ChaosController
-
-// ============================================================================
 // GLOBAL STATE DEFINITIONS (extern declarations in GlobalState.h)
 // ============================================================================
 
@@ -118,17 +113,6 @@ bool needsInitialCalibration = true;
 // Stats on-demand tracking
 bool statsRequested = false;
 unsigned long lastStatsRequestTime = 0;
-
-// ============================================================================
-// DEBUG HELPERS
-// ============================================================================
-const char* executionContextName(ExecutionContext ctx) {
-  switch(ctx) {
-    case CONTEXT_STANDALONE: return "STANDALONE";
-    case CONTEXT_SEQUENCER: return "SEQUENCER";
-    default: return "UNKNOWN";
-  }
-}
 
 // ============================================================================
 // WEB SERVER INSTANCES
