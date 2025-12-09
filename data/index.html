@@ -311,7 +311,7 @@
       </div>
 
       <!-- Log Console -->
-      <div style="margin-bottom: 12px;">
+      <div class="mb-12">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
           <label style="font-weight: bold; color: #333; font-size: 13px;">Console temps réel:</label>
           <div style="display: flex; gap: 6px;">
@@ -327,7 +327,7 @@
         <div style="display: flex; gap: 8px; align-items: center;">
           <label style="display: flex; align-items: center; cursor: pointer;">
             <input type="checkbox" id="debugLevelCheckbox" style="width: 16px; height: 16px; margin-right: 6px;">
-            <span style="font-size: 12px;">Activer logs DEBUG (verbose)</span>
+            <span class="text-md">Activer logs DEBUG (verbose)</span>
           </label>
           <span style="color: #666; font-size: 11px; margin-left: auto;">⚠️ Peut ralentir</span>
         </div>
@@ -393,7 +393,7 @@
       </div>
       
       <!-- Hidden file input for import -->
-      <input type="file" id="statsFileInput" accept=".json" style="display: none;">
+      <input type="file" id="statsFileInput" accept=".json" class="hidden">
 
       <!-- Histogram -->
       <div style="background: #f9f9f9; padding: 12px; border-radius: 6px; border: 1px solid #ddd;">
@@ -413,23 +413,23 @@
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 13px;">
         <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
           <div style="color: #666; font-size: 11px; margin-bottom: 4px;">CPU</div>
-          <div id="sysCpuFreq" style="font-weight: bold; color: #333; font-size: 15px;">-- MHz</div>
+          <div id="sysCpuFreq" class="value-display">-- MHz</div>
         </div>
         
         <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
           <div style="color: #666; font-size: 11px; margin-bottom: 4px;">🌡️ Température</div>
-          <div id="sysTemp" style="font-weight: bold; color: #333; font-size: 15px;">-- °C</div>
+          <div id="sysTemp" class="value-display">-- °C</div>
         </div>
         
         <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
           <div style="color: #666; font-size: 11px; margin-bottom: 4px;">💾 RAM</div>
-          <div id="sysRam" style="font-weight: bold; color: #333; font-size: 15px;">-- KB libre</div>
+          <div id="sysRam" class="value-display">-- KB libre</div>
           <div id="sysRamPercent" style="font-size: 11px; color: #666; margin-top: 2px;">--% utilisé</div>
         </div>
         
         <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
           <div style="color: #666; font-size: 11px; margin-bottom: 4px;">🧠 PSRAM</div>
-          <div id="sysPsram" style="font-weight: bold; color: #333; font-size: 15px;">-- MB libre</div>
+          <div id="sysPsram" class="value-display">-- MB libre</div>
           <div id="sysPsramPercent" style="font-size: 11px; color: #666; margin-top: 2px;">--% utilisé</div>
         </div>
         
@@ -440,13 +440,13 @@
               🔄
             </button>
           </div>
-          <div id="sysWifi" style="font-weight: bold; color: #333; font-size: 15px;">-- dBm</div>
+          <div id="sysWifi" class="value-display">-- dBm</div>
           <div id="sysWifiQuality" style="font-size: 11px; color: #666; margin-top: 2px;">--</div>
         </div>
         
         <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
           <div style="color: #666; font-size: 11px; margin-bottom: 4px;">⚡ Uptime</div>
-          <div id="sysUptime" style="font-weight: bold; color: #333; font-size: 15px;">--</div>
+          <div id="sysUptime" class="value-display">--</div>
         </div>
       </div>
 
@@ -485,7 +485,7 @@
         <div style="font-weight: bold; color: #333; font-size: 13px; margin-bottom: 10px;">📋 Configuration des logs</div>
         
         <!-- Enable/Disable Logging -->
-        <div style="margin-bottom: 10px;">
+        <div class="mb-10">
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
             <input type="checkbox" id="chkLoggingEnabled" checked style="width: 18px; height: 18px; cursor: pointer;">
             <span style="font-size: 13px; color: #333;">Activer les logs (console + fichiers)</span>
@@ -540,13 +540,13 @@
         
       <!-- Position/Distance - 2-Column Grid -->
       <div class="form-row-compact">
-        <div class="form-group-compact" style="display: block;">
+        <div class="form-group-compact d-block">
           <div>
             <label class="label-inline">Position départ:</label>
             <input type="number" id="startPosition" min="0" step="0.1" value="0" class="input-compact">
             <span class="unit-label">mm</span>
           </div>
-          <div style="margin-top: 8px;">
+          <div class="mt-8">
             <button class="preset-btn-sm btn-preset" data-start="0">0mm</button>
             <button class="preset-btn-sm btn-preset" data-start="25">25mm</button>
             <button class="preset-btn-sm btn-preset" data-start="50">50mm</button>
@@ -555,13 +555,13 @@
           </div>
         </div>
         
-        <div class="form-group-compact" style="display: block;">
+        <div class="form-group-compact d-block">
           <div>
             <label class="label-inline">Distance:</label>
             <input type="number" id="distance" min="0" step="0.1" value="50" class="input-compact">
             <span class="unit-label">mm</span>
           </div>
-          <div style="margin-top: 8px;">
+          <div class="mt-8">
             <button class="preset-btn-sm btn-preset" data-distance="25">25mm</button>
             <button class="preset-btn-sm btn-preset" data-distance="50">50mm</button>
             <button class="preset-btn-sm btn-preset" data-distance="75">75mm</button>
@@ -572,7 +572,7 @@
       </div>
       
       <!-- Séparateur -->
-      <div style="border-top: 1px solid #ddd; margin: 15px 0;"></div>
+      <div class="divider"></div>
       
       <!-- Speed Mode Toggle - Radio Buttons -->
       <div class="form-group-compact" style="margin-bottom: 15px;">
@@ -590,7 +590,7 @@
       </div>
       
       <!-- Unified Speed - Single Line -->
-      <div id="speedUnifiedGroup" class="speed-control-inline" style="margin-bottom: 12px;">
+      <div id="speedUnifiedGroup" class="speed-control-inline mb-12">
         <label class="label-inline">Vitesse:</label>
         <input type="number" id="speedUnified" min="0" max="20" step="0.1" value="5" class="input-compact">
         <button class="preset-btn-sm btn-preset" data-speed-unified="0.5" title="Ultra lent">0.5 🐌</button>
@@ -632,7 +632,7 @@
       </div>
 
       <!-- Séparateur -->
-      <div style="border-top: 1px solid #ddd; margin: 15px 0;"></div>
+      <div class="divider"></div>
 
       <!-- Deceleration - Collapsible Section -->
       <div class="section-collapsible collapsed" id="decelSection">
@@ -642,7 +642,7 @@
         
         <div class="section-collapsible-content">
           <!-- Zone -->
-          <div class="speed-control-inline" style="margin-bottom: 10px;">
+          <div class="speed-control-inline mb-10">
             <label class="label-inline">Zone:</label>
             <input type="number" id="decelZoneMM" min="10" max="200" step="5" value="50" class="input-compact">
             <span class="unit-label">mm</span>
@@ -653,7 +653,7 @@
           </div>
           
           <!-- Mode, Effect, Début/Fin - All on one line -->
-          <div class="speed-control-inline" style="margin-bottom: 10px;">
+          <div class="speed-control-inline mb-10">
             <label class="label-inline">Mode:</label>
             <select id="decelModeSelect" style="width: 120px; padding: 6px; font-size: 13px; border: 1px solid #ddd; border-radius: 4px;">
               <option value="0">Linéaire</option>
@@ -703,7 +703,7 @@
           </div>
           
           <!-- Fixed Mode: Single Duration -->
-          <div id="pauseFixedControls" class="speed-control-inline" style="margin-bottom: 10px;">
+          <div id="pauseFixedControls" class="speed-control-inline mb-10">
             <label class="label-inline">Durée:</label>
             <input type="number" id="cyclePauseDuration" min="0.1" max="60" step="0.1" value="1.5" class="input-compact">
             <span class="unit-label">s</span>
@@ -715,8 +715,8 @@
           </div>
           
           <!-- Random Mode: Min/Max Range -->
-          <div id="pauseRandomControls" style="display: none;">
-            <div class="speed-control-inline" style="margin-bottom: 10px;">
+          <div id="pauseRandomControls" class="hidden">
+            <div class="speed-control-inline mb-10">
               <label class="label-inline">Min:</label>
               <input type="number" id="cyclePauseMin" min="0.1" max="60" step="0.1" value="1.5" class="input-compact">
               <span class="unit-label">s</span>
@@ -725,7 +725,7 @@
               <button class="preset-btn-sm btn-preset" data-pause-min="3">3s</button>
             </div>
             
-            <div class="speed-control-inline" style="margin-bottom: 10px;">
+            <div class="speed-control-inline mb-10">
               <label class="label-inline">Max:</label>
               <input type="number" id="cyclePauseMax" min="0.1" max="60" step="0.1" value="5.0" class="input-compact">
               <span class="unit-label">s</span>
@@ -807,7 +807,7 @@
             <div style="text-align: center; margin-top: 15px; font-size: 12px; color: #666;">
               <div><strong>Cible:</strong> <span id="targetPositionMM" style="color: #FF5722;">0.0</span> mm</div>
               <div><strong>Actuel:</strong> <span id="currentPositionMM" style="color: #00E676;">0.0</span> mm</div>
-              <div><strong>Écart:</strong> <span id="positionError" style="color: #666;">0.0</span> mm</div>
+              <div><strong>Écart:</strong> <span id="positionError" class="text-muted">0.0</span> mm</div>
             </div>
           </div>
           
@@ -825,13 +825,13 @@
             </div>
             
             <!-- Vitesse max - COMPACT -->
-            <div class="form-group-compact" style="display: block;">
+            <div class="form-group-compact d-block">
               <div>
                 <label class="label-inline">Vitesse max:</label>
                 <input type="number" id="pursuitMaxSpeed" min="0.5" max="20" step="0.5" value="10" class="input-compact">
                 <span class="unit-label">(0-20)</span>
               </div>
-              <div style="margin-top: 8px;">
+              <div class="mt-8">
                 <button class="preset-btn-sm btn-preset" data-pursuit-speed="2">2🐌</button>
                 <button class="preset-btn-sm btn-preset" data-pursuit-speed="5">5</button>
                 <button class="preset-btn-sm btn-preset active" data-pursuit-speed="10">10✓</button>
@@ -870,13 +870,13 @@
         <!-- Configuration principale - COMPACT -->
         <div class="form-row-compact">
           <!-- Centre -->
-          <div class="form-group-compact" style="display: block;">
+          <div class="form-group-compact d-block">
             <div>
               <label class="label-inline">Centre:</label>
               <input type="number" id="oscCenter" min="0" step="0.1" value="0" class="input-compact">
               <span class="unit-label">mm</span>
             </div>
-            <div style="margin-top: 8px;">
+            <div class="mt-8">
               <button class="preset-btn-sm btn-preset" data-osc-center="25">25mm</button>
               <button class="preset-btn-sm btn-preset" data-osc-center="50">50mm</button>
               <button class="preset-btn-sm btn-preset" data-osc-center="75">75mm</button>
@@ -885,13 +885,13 @@
           </div>
           
           <!-- Amplitude -->
-          <div class="form-group-compact" style="display: block;">
+          <div class="form-group-compact d-block">
             <div>
               <label class="label-inline">Amplitude ±:</label>
               <input type="number" id="oscAmplitude" min="1" step="0.1" value="20" class="input-compact">
               <span class="unit-label">mm</span>
             </div>
-            <div style="margin-top: 8px;">
+            <div class="mt-8">
               <button class="preset-btn-sm btn-preset" data-osc-amplitude="10">10mm</button>
               <button class="preset-btn-sm btn-preset" data-osc-amplitude="25">25mm</button>
               <button class="preset-btn-sm btn-preset" data-osc-amplitude="50">50mm</button>
@@ -907,10 +907,10 @@
         </div>
         
         <!-- Séparateur -->
-        <div style="border-top: 1px solid #ddd; margin: 15px 0;"></div>
+        <div class="divider"></div>
         
         <!-- Forme + Fréquence inline -->
-        <div class="speed-control-inline" style="margin-bottom: 12px;">
+        <div class="speed-control-inline mb-12">
           <label class="label-inline">Forme:</label>
           <select id="oscWaveform" style="width: 150px; padding: 5px; font-size: 12px; border: 2px solid #ddd; border-radius: 4px;">
             <option value="0">Sinusoïdale</option>
@@ -928,39 +928,39 @@
         </div>
         
         <!-- Séparateur -->
-        <div style="border-top: 1px solid #ddd; margin: 15px 0;"></div>
+        <div class="divider"></div>
 
         <!-- Rampes inline (pas d'accordion) -->
-        <div class="speed-control-inline" style="margin-bottom: 10px;">
+        <div class="speed-control-inline mb-10">
           <label style="display: flex; align-items: center; cursor: pointer;">
             <input type="checkbox" id="oscRampInEnable" checked style="width: auto; margin-right: 5px;">
-            <span style="font-size: 12px;">Rampe entrée:</span>
+            <span class="text-md">Rampe entrée:</span>
           </label>
           <input type="number" id="oscRampInDuration" min="100" step="100" value="2000" class="input-compact" style="width: 70px;">
           <span class="unit-label">ms</span>
           
           <label style="display: flex; align-items: center; cursor: pointer; margin-left: 20px;">
             <input type="checkbox" id="oscRampOutEnable" checked style="width: auto; margin-right: 5px;">
-            <span style="font-size: 12px;">Rampe sortie:</span>
+            <span class="text-md">Rampe sortie:</span>
           </label>
           <input type="number" id="oscRampOutDuration" min="100" step="100" value="2000" class="input-compact" style="width: 70px;">
           <span class="unit-label">ms</span>
         </div>
         
         <!-- Cycles + Retour centre inline -->
-        <div class="speed-control-inline" style="margin-bottom: 12px;">
+        <div class="speed-control-inline mb-12">
           <label class="label-inline">Cycles:</label>
           <input type="number" id="oscCycleCount" min="0" step="1" value="0" class="input-compact" style="width: 60px;">
           <span class="unit-label" style="font-size: 11px;">(0=Infini)</span>
           
           <label style="display: flex; align-items: center; cursor: pointer; margin-left: 20px;">
             <input type="checkbox" id="oscReturnCenter" checked style="width: auto; margin-right: 5px;">
-            <span style="font-size: 12px;">Retour centre</span>
+            <span class="text-md">Retour centre</span>
           </label>
         </div>
         
         <!-- Séparateur -->
-        <div style="border-top: 1px solid #ddd; margin: 15px 0;"></div>
+        <div class="divider"></div>
 
         <!-- État temps réel - COMPACT -->
         <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
@@ -975,7 +975,7 @@
             </div>
             <div>
               <strong>Rampe:</strong>
-              <span id="oscRampStatus" style="color: #666;">--</span>
+              <span id="oscRampStatus" class="text-muted">--</span>
             </div>
             <div>
               <strong>Limites:</strong>
@@ -1005,7 +1005,7 @@
             </div>
             
             <!-- Fixed Mode: Single Duration -->
-            <div id="pauseFixedControlsOsc" class="speed-control-inline" style="margin-bottom: 10px;">
+            <div id="pauseFixedControlsOsc" class="speed-control-inline mb-10">
               <label class="label-inline">Durée:</label>
               <input type="number" id="cyclePauseDurationOsc" min="0.1" max="60" step="0.1" value="1.5" class="input-compact">
               <span class="unit-label">s</span>
@@ -1017,8 +1017,8 @@
             </div>
             
             <!-- Random Mode: Min/Max Range -->
-            <div id="pauseRandomControlsOsc" style="display: none;">
-              <div class="speed-control-inline" style="margin-bottom: 10px;">
+            <div id="pauseRandomControlsOsc" class="hidden">
+              <div class="speed-control-inline mb-10">
                 <label class="label-inline">Min:</label>
                 <input type="number" id="cyclePauseMinOsc" min="0.1" max="60" step="0.1" value="1.5" class="input-compact">
                 <span class="unit-label">s</span>
@@ -1027,7 +1027,7 @@
                 <button class="preset-btn-sm btn-preset" data-pause-min-osc="3">3s</button>
               </div>
               
-              <div class="speed-control-inline" style="margin-bottom: 10px;">
+              <div class="speed-control-inline mb-10">
                 <label class="label-inline">Max:</label>
                 <input type="number" id="cyclePauseMaxOsc" min="0.1" max="60" step="0.1" value="5.0" class="input-compact">
                 <span class="unit-label">s</span>
@@ -1092,26 +1092,26 @@
 
         <!-- Configuration principale -->
         <div class="form-row-compact">
-          <div class="form-group-compact" style="display: block;">
+          <div class="form-group-compact d-block">
             <div>
               <label class="label-inline">Centre:</label>
               <input type="number" id="chaosCenterPos" min="0" step="0.1" value="110" class="input-compact">
               <span class="unit-label">mm</span>
             </div>
-            <div style="margin-top: 8px;">
+            <div class="mt-8">
               <button class="preset-btn-sm btn-preset" data-chaos-center="25">25mm</button>
               <button class="preset-btn-sm btn-preset" data-chaos-center="50">50mm</button>
               <button class="preset-btn-sm btn-preset" data-chaos-center="75">75mm</button>
               <button class="preset-btn-sm btn-preset" data-chaos-center="110">110mm</button>
             </div>
           </div>
-          <div class="form-group-compact" style="display: block;">
+          <div class="form-group-compact d-block">
             <div>
               <label class="label-inline">Amplitude ±:</label>
               <input type="number" id="chaosAmplitude" min="1" step="0.1" value="50" class="input-compact">
               <span class="unit-label">mm</span>
             </div>
-            <div style="margin-top: 8px;">
+            <div class="mt-8">
               <button class="preset-btn-sm btn-preset" data-chaos-amplitude="10">10mm</button>
               <button class="preset-btn-sm btn-preset" data-chaos-amplitude="25">25mm</button>
               <button class="preset-btn-sm btn-preset" data-chaos-amplitude="50">50mm</button>
@@ -1122,10 +1122,10 @@
         </div>
 
         <!-- Séparateur -->
-        <div style="border-top: 1px solid #ddd; margin: 15px 0;"></div>
+        <div class="divider"></div>
 
         <!-- Vitesse max -->
-        <div class="speed-control-inline" style="margin-bottom: 12px;">
+        <div class="speed-control-inline mb-12">
           <label class="label-inline">Vitesse max:</label>
           <input type="number" id="chaosMaxSpeed" min="0.5" max="20" step="0.5" value="10" class="input-compact">
           <button class="preset-btn-sm btn-preset" data-chaos-speed="0.5">0.5 🐌</button>
@@ -1138,7 +1138,7 @@
         </div>
 
         <!-- Degré de folie -->
-        <div class="speed-control-inline" style="margin-bottom: 12px;">
+        <div class="speed-control-inline mb-12">
           <label class="label-inline">🔥 Degré folie: <span id="crazinessValue" style="font-weight: bold; color: #C850C0;">50</span>%</label>
           <input type="range" id="chaosCraziness" min="0" max="100" step="5" value="50" style="width: 180px; margin-left: 10px;">
           <button class="preset-btn-sm btn-preset" data-chaos-craziness="0">0% 😴</button>
@@ -1149,7 +1149,7 @@
         </div>
 
         <!-- Durée -->
-        <div class="speed-control-inline" style="margin-bottom: 12px;">
+        <div class="speed-control-inline mb-12">
           <label class="label-inline">Durée:</label>
           <input type="number" id="chaosDuration" min="0" step="1" value="0" class="input-compact" style="width: 70px;">
           <span class="unit-label">s (0=Infini)</span>
@@ -1160,7 +1160,7 @@
         </div>
 
         <!-- Séparateur -->
-        <div style="border-top: 1px solid #ddd; margin: 15px 0;"></div>
+        <div class="divider"></div>
 
         <!-- Accordion: Options avancées -->
         <details style="margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background: #f9f9f9;">
@@ -1224,14 +1224,14 @@
 
           <!-- Seed (optionnel) -->
           <div style="margin-top: 10px;">
-            <label class="label-inline" style="font-size: 12px;">Seed (optionnel):</label>
+            <label class="label-inline text-md">Seed (optionnel):</label>
             <input type="number" id="chaosSeed" min="0" step="1" value="0" class="input-compact" style="width: 90px;">
             <span class="unit-label" style="font-size: 11px;">(0=aléatoire)</span>
           </div>
         </details>
 
         <!-- Séparateur -->
-        <div style="border-top: 1px solid #ddd; margin: 15px 0;"></div>
+        <div class="divider"></div>
 
         <!-- Real-time Stats Section -->
         <div id="chaosStats" style="display: none; background: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
@@ -1351,11 +1351,11 @@
 
           <!-- Sequence Status - COMPACT -->
           <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; padding: 10px 15px; background: white; border-radius: 6px; border: 1px solid #ddd;">
-            <div><span style="color: #666;">Mode:</span> <strong id="seqMode" style="color: #333;">Arrêté</strong></div>
-            <div><span style="color: #666;">Ligne:</span> <strong id="seqCurrentLine" style="color: #2196F3;">-- / --</strong></div>
-            <div><span style="color: #666;">Cycle:</span> <strong id="seqLineCycle" style="color: #4CAF50;">--</strong></div>
-            <div><span style="color: #666;">Boucles:</span> <strong id="seqLoopCount" style="color: #FF9800;">0</strong></div>
-            <div><span style="color: #666;">⏱️ Pause:</span> <strong id="seqPauseRemaining" style="color: #9C27B0;">-- ms</strong></div>
+            <div><span class="text-muted">Mode:</span> <strong id="seqMode" style="color: #333;">Arrêté</strong></div>
+            <div><span class="text-muted">Ligne:</span> <strong id="seqCurrentLine" style="color: #2196F3;">-- / --</strong></div>
+            <div><span class="text-muted">Cycle:</span> <strong id="seqLineCycle" style="color: #4CAF50;">--</strong></div>
+            <div><span class="text-muted">Boucles:</span> <strong id="seqLoopCount" style="color: #FF9800;">0</strong></div>
+            <div><span class="text-muted">⏱️ Pause:</span> <strong id="seqPauseRemaining" style="color: #9C27B0;">-- ms</strong></div>
           </div>
         </div>
 
@@ -1476,7 +1476,7 @@
               <fieldset style="border: 1px solid #667eea; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
                 <legend style="color: #667eea; font-weight: 500; padding: 0 8px; font-size: 12px;">Décélération</legend>
                 
-                <div class="flex-gap-15 mb-8" style="font-size: 12px;">
+                <div class="flex-gap-15 mb-8 text-md">
                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" name="decelStartEnabled" id="editDecelStart" style="width: 16px; height: 16px;">
                     <span>Activer DÉBUT</span>
@@ -1513,7 +1513,7 @@
               <fieldset style="border: 1px solid #f39c12; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
                 <legend style="color: #f39c12; font-weight: 500; padding: 0 8px; font-size: 12px;">⏸️ Pause entre cycles</legend>
                 
-                <div class="flex-gap-15 mb-8" style="font-size: 12px;">
+                <div class="flex-gap-15 mb-8 text-md">
                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" name="vaetCyclePauseEnabled" id="editVaetPauseEnabled" style="width: 16px; height: 16px;">
                     <span>Activer pause</span>
@@ -1547,7 +1547,7 @@
             <!-- END VA-ET-VIENT FIELDS -->
 
             <!-- OSCILLATION FIELDS -->
-            <div id="oscFields" style="display: none;">
+            <div id="oscFields" class="hidden">
               
               <!-- Center & Amplitude -->
               <div class="grid-2col-12">
@@ -1605,7 +1605,7 @@
               <fieldset style="border: 1px solid #f39c12; border-radius: 6px; padding: 10px; margin-top: 10px;">
                 <legend style="color: #f39c12; font-weight: 500; padding: 0 8px; font-size: 12px;">⏸️ Pause entre cycles</legend>
                 
-                <div class="flex-gap-15 mb-8" style="font-size: 12px;">
+                <div class="flex-gap-15 mb-8 text-md">
                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" name="oscCyclePauseEnabled" id="editOscPauseEnabled" style="width: 16px; height: 16px;">
                     <span>Activer pause</span>
@@ -1639,7 +1639,7 @@
             <!-- END OSCILLATION FIELDS -->
 
             <!-- CHAOS FIELDS -->
-            <div id="chaosFields" style="display: none;">
+            <div id="chaosFields" class="hidden">
               
               <!-- Center & Amplitude -->
               <div class="grid-2col-12">

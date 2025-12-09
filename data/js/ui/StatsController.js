@@ -53,7 +53,7 @@ function loadStatsData() {
       const tbody = document.getElementById('statsTableBody');
       if (tbody) {
         tbody.innerHTML = 
-          '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #f44336;">❌ Erreur de chargement</td></tr>';
+          '<tr><td colspan="4" class="empty-state text-error">❌ Erreur de chargement</td></tr>';
       }
     });
 }
@@ -76,7 +76,7 @@ function displayStatsTable(stats) {
   }
   
   if (!stats || stats.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #999; font-style: italic;">Aucune statistique disponible</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Aucune statistique disponible</td></tr>';
     totalEl.textContent = '0 km';
     return;
   }
@@ -117,10 +117,10 @@ function displayStatsTable(stats) {
     const row = document.createElement('tr');
     row.style.borderBottom = '1px solid #f0f0f0';
     row.innerHTML = `
-      <td style="padding: 8px;">${entry.date}</td>
-      <td style="padding: 8px; text-align: center; font-size: 12px;">${dayNames[dayIndex]}</td>
-      <td style="padding: 8px; text-align: center; font-size: 18px; cursor: help;" title="${milestoneTooltip}">${milestoneIcon}</td>
-      <td style="padding: 8px; text-align: right; font-family: monospace;">${displayDistance}</td>
+      <td class="stats-cell">${entry.date}</td>
+      <td class="stats-cell text-md">${dayNames[dayIndex]}</td>
+      <td class="stats-cell" style="font-size: 18px; cursor: help;" title="${milestoneTooltip}">${milestoneIcon}</td>
+      <td class="stats-cell text-right font-mono">${displayDistance}</td>
     `;
     tbody.appendChild(row);
   });

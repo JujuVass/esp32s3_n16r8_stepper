@@ -162,7 +162,7 @@ function loadLogFilesList() {
       const links = doc.querySelectorAll('a');
       
       if (links.length === 0) {
-        DOM.logFilesList.innerHTML = '<div style="color: #999; font-style: italic; font-size: 11px;">Aucun fichier de log</div>';
+        DOM.logFilesList.innerHTML = '<div class="text-light italic text-sm">Aucun fichier de log</div>';
         return;
       }
       
@@ -176,11 +176,11 @@ function loadLogFilesList() {
         
         // Create item div
         const itemDiv = document.createElement('div');
-        itemDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 6px; background: #f9f9f9; border-radius: 4px; border: 1px solid #ddd;';
+        itemDiv.className = 'preset-item-box flex-between';
         
         // Create filename span (safe from XSS with textContent)
         const filenameSpan = document.createElement('span');
-        filenameSpan.style.cssText = 'font-family: monospace; font-size: 12px;';
+        filenameSpan.className = 'font-mono text-md';
         filenameSpan.textContent = filename;  // Safe: uses textContent instead of innerHTML
         
         // Create download link
@@ -199,7 +199,7 @@ function loadLogFilesList() {
       DOM.logFilesList.appendChild(container);
     })
     .catch(error => {
-      DOM.logFilesList.innerHTML = '<div style="color: #f44336; font-size: 11px;">Erreur de chargement</div>';
+      DOM.logFilesList.innerHTML = '<div class="text-error text-sm">Erreur de chargement</div>';
     });
 }
 

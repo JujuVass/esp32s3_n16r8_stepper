@@ -260,7 +260,7 @@ function refreshPlaylistPresets(mode) {
   
   if (presets.length === 0) {
     console.log('⚠️ No presets found, displaying empty message');
-    listEl.innerHTML = '<div style="color: #999; font-style: italic; padding: 20px; text-align: center;">Aucun preset sauvegardé</div>';
+    listEl.innerHTML = '<div class="empty-state">Aucun preset sauvegardé</div>';
     return;
   }
   
@@ -273,25 +273,24 @@ function refreshPlaylistPresets(mode) {
   sortedPresets.forEach(preset => {
     const tooltipContent = generatePresetTooltip(mode, preset.config);
     html += `
-      <div class="preset-item" 
-           data-tooltip="${tooltipContent.replace(/"/g, '&quot;')}"
-           style="background: #f9f9f9; padding: 8px 10px; border-radius: 4px; margin-bottom: 6px; border: 1px solid #ddd;">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+      <div class="preset-item preset-item-box" 
+           data-tooltip="${tooltipContent.replace(/"/g, '&quot;')}">
+        <div class="flex-between" style="gap: 6px;">
           <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 500; font-size: 12px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${preset.name}</div>
-            <div style="font-size: 10px; color: #888;">${new Date(preset.timestamp * 1000).toLocaleString('fr-FR', {dateStyle: 'short', timeStyle: 'short'})}</div>
+            <div class="text-500 text-md mb-4" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${preset.name}</div>
+            <div class="text-xs" style="color: #888;">${new Date(preset.timestamp * 1000).toLocaleString('fr-FR', {dateStyle: 'short', timeStyle: 'short'})}</div>
           </div>
-          <div style="display: flex; gap: 2px; flex-shrink: 0;">
-            <button onclick="loadPresetInMode('${mode}', ${preset.id})" style="padding: 4px 6px; font-size: 11px; min-width: unset;" title="Charger dans le mode actuel">
+          <div class="flex-gap-6" style="flex-shrink: 0;">
+            <button onclick="loadPresetInMode('${mode}', ${preset.id})" class="btn-mini" title="Charger dans le mode actuel">
               ⬇️
             </button>
-            <button onclick="quickAddToSequencer('${mode}', ${preset.id})" style="padding: 4px 6px; font-size: 11px; min-width: unset;" title="Ajouter direct au séquenceur">
+            <button onclick="quickAddToSequencer('${mode}', ${preset.id})" class="btn-mini" title="Ajouter direct au séquenceur">
               ➕📋
             </button>
-            <button onclick="renamePlaylistPreset('${mode}', ${preset.id})" style="padding: 4px 6px; font-size: 11px; min-width: unset;" title="Renommer">
+            <button onclick="renamePlaylistPreset('${mode}', ${preset.id})" class="btn-mini" title="Renommer">
               ✏️
             </button>
-            <button onclick="deleteFromPlaylist('${mode}', ${preset.id})" style="padding: 4px 6px; font-size: 11px; min-width: unset;" title="Supprimer">
+            <button onclick="deleteFromPlaylist('${mode}', ${preset.id})" class="btn-mini" title="Supprimer">
               🗑️
             </button>
             <button class="preset-tooltip-eye" data-preset-id="${preset.id}"

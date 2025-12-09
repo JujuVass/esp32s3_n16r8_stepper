@@ -1055,45 +1055,45 @@ function createSequenceRow(line, index) {
   const { cyclesDisplay, pauseDisplay, pauseColor, pauseWeight } = getCyclesPause(line, movementType);
   
   row.innerHTML = `
-    <td style="padding: 4px 2px; text-align: center; border-right: 1px solid #eee;">
+    <td class="seq-cell">
       <input type="checkbox" ${line.enabled ? 'checked' : ''} 
         onchange="toggleSequenceLine(${line.lineId}, this.checked)"
-        style="width: 16px; height: 16px; cursor: pointer;">
+        class="icon-md" style="cursor: pointer;">
     </td>
-    <td style="padding: 4px 2px; text-align: center; font-weight: bold; color: #667eea; border-right: 1px solid #eee; font-size: 12px;">
+    <td class="seq-cell text-bold text-primary text-md">
       ${index + 1}
     </td>
-    <td style="padding: 4px 2px; text-align: center; border-right: 1px solid #eee;" title="${typeDisplay.typeName}">
+    <td class="seq-cell" title="${typeDisplay.typeName}">
       <div style="font-size: 16px;">${typeDisplay.typeIcon}</div>
     </td>
-    <td style="padding: 4px 2px; text-align: center; border-right: 1px solid #eee;">
+    <td class="seq-cell">
       ${typeDisplay.typeInfo}
     </td>
-    <td style="padding: 4px 2px; text-align: center; border-right: 1px solid #eee;">
-      <span style="color: #999; font-size: 10px;">--</span>
+    <td class="seq-cell">
+      <span class="text-light text-xs">--</span>
     </td>
-    <td style="padding: 4px 2px; text-align: center; border-right: 1px solid #eee;">
+    <td class="seq-cell">
       ${speedsDisplay}
     </td>
-    <td style="padding: 4px 2px; text-align: center; border-right: 1px solid #eee;">
+    <td class="seq-cell">
       ${decelSummary}
     </td>
-    <td style="padding: 4px 2px; text-align: center; font-weight: bold; color: #FF9800; border-right: 1px solid #eee;">
+    <td class="seq-cell text-bold text-warning">
       ${cyclesDisplay}
     </td>
-    <td style="padding: 4px 2px; text-align: center; color: ${pauseColor}; font-weight: ${pauseWeight}; border-right: 1px solid #eee; font-size: 10px;">
+    <td class="seq-cell text-xs" style="color: ${pauseColor}; font-weight: ${pauseWeight};">
       ${pauseDisplay}
     </td>
-    <td style="padding: 4px 2px; text-align: center; white-space: nowrap;">
+    <td class="seq-cell-last">
       <button onclick="testSequenceLine(${line.lineId})" 
         id="btnTestLine_${line.lineId}"
-        style="background: #9C27B0; color: white; border: none; padding: 4px 6px; border-radius: 3px; cursor: pointer; margin: 1px; font-size: 12px;"
+        class="btn-action btn-action-test"
         title="Tester cette ligne">▶️</button>
       <button onclick="editSequenceLine(${line.lineId})" 
-        style="background: #2196F3; color: white; border: none; padding: 4px 6px; border-radius: 3px; cursor: pointer; margin: 1px; font-size: 12px;"
+        class="btn-action btn-action-edit"
         title="Éditer">✏️</button>
       <button onclick="duplicateSequenceLine(${line.lineId})"
-        style="background: #4CAF50; color: white; border: none; padding: 4px 6px; border-radius: 3px; cursor: pointer; margin: 1px; font-size: 12px;"
+        class="btn-action btn-action-copy"
         title="Dupliquer">📋</button>
       <span id="tooltipEye_${line.lineId}" class="sequence-tooltip-eye" data-line-id="${line.lineId}"
         style="display: inline-block; padding: 4px 6px; cursor: pointer; margin: 1px; font-size: 14px;"

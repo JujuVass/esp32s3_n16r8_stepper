@@ -1173,3 +1173,176 @@ select.select-input:focus {
   border-radius: 4px;
   margin-top: 10px;
 }
+
+/* ============================================================================
+ * UTILITY CLASSES
+ * Replaces repetitive inline styles for better maintainability
+ * ============================================================================ */
+
+/* === Flexbox === */
+.flex-center {
+  display: flex;
+  align-items: center;
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flex-gap-4 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.flex-gap-6 {
+  display: flex;
+  gap: 6px;
+}
+
+/* === Spacing === */
+.mb-4 { margin-bottom: 4px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-10 { margin-bottom: 10px; }
+.mb-12 { margin-bottom: 12px; }
+.mt-8 { margin-top: 8px; }
+.mr-5 { margin-right: 5px; }
+.p-8 { padding: 8px; }
+.p-10 { padding: 10px; }
+.p-20 { padding: 20px; }
+
+/* === Typography === */
+.text-xs { font-size: 10px; }
+.text-sm { font-size: 11px; }
+.text-md { font-size: 12px; }
+.text-lg { font-size: 13px; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-bold { font-weight: bold; }
+.text-500 { font-weight: 500; }
+.text-600 { font-weight: 600; }
+.text-muted { color: #666; }
+.text-light { color: #999; }
+.text-error { color: #f44336; }
+.text-success { color: #4CAF50; }
+.text-warning { color: #FF9800; }
+.text-info { color: #2196F3; }
+.text-purple { color: #9C27B0; }
+.text-primary { color: #667eea; }
+.font-mono { font-family: monospace; }
+.italic { font-style: italic; }
+
+/* === Icons === */
+.icon-sm {
+  width: 14px;
+  height: 14px;
+}
+
+.icon-md {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-scaled {
+  margin-right: 5px;
+  transform: scale(1.1);
+}
+
+/* === Dividers === */
+.divider {
+  border-top: 1px solid #ddd;
+  margin: 15px 0;
+}
+
+.divider-light {
+  border-right: 1px solid #eee;
+}
+
+/* === Boxes === */
+.box-gray {
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.box-white {
+  background: white;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+/* === Sequence Table Cells === */
+.seq-cell {
+  padding: 4px 2px;
+  text-align: center;
+  border-right: 1px solid #eee;
+}
+
+.seq-cell-last {
+  padding: 4px 2px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* === Mini Buttons (for playlist/sequence actions) === */
+.btn-mini {
+  padding: 4px 6px;
+  font-size: 11px;
+  min-width: unset;
+}
+
+.btn-action {
+  border: none;
+  padding: 4px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin: 1px;
+  font-size: 12px;
+  color: white;
+}
+
+.btn-action-test { background: #9C27B0; }
+.btn-action-edit { background: #2196F3; }
+.btn-action-copy { background: #4CAF50; }
+.btn-action-delete { background: #f44336; }
+
+/* === Preset Item === */
+.preset-item-box {
+  background: #f9f9f9;
+  padding: 8px 10px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  border: 1px solid #ddd;
+}
+
+/* === Stats Table === */
+.stats-cell {
+  padding: 8px;
+  text-align: center;
+}
+
+/* === Empty States === */
+.empty-state {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+/* === Value Display === */
+.value-display {
+  font-weight: bold;
+  color: #333;
+  font-size: 15px;
+}
+
+/* === Hidden === */
+.hidden {
+  display: none;
+}
+
+.d-block {
+  display: block;
+}
