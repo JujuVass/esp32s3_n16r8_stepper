@@ -49,10 +49,7 @@
 #include "movement/SequenceExecutor.h"       // Sequence execution (SeqExecutor.start()...)
 
 // ============================================================================
-// LOGGING SYSTEM - Managed by UtilityEngine
-// ============================================================================
-// All logging handled through UtilityEngine.h
-// Use: engine->info(), engine->error(), engine->warn(), engine->debug()
+// LOGGING - Use engine->info(), engine->error(), engine->warn(), engine->debug()
 // ============================================================================
 
 // Global UtilityEngine instance (initialized in setup)
@@ -60,17 +57,10 @@ UtilityEngine* engine = nullptr;
 
 // ============================================================================
 // ONBOARD RGB LED (WS2812 on GPIO 48 - Freenove ESP32-S3)
-// Using neopixelWrite() - native ESP32 Arduino core function
 // ============================================================================
 void setRgbLed(uint8_t r, uint8_t g, uint8_t b) {
   neopixelWrite(PIN_RGB_LED, r, g, b);
 }
-
-// ============================================================================
-// NOTE: Hardware configuration moved to Config.h
-// NOTE: Type definitions (structs, enums) moved to Types.h
-// NOTE: Chaos pattern configs moved to ChaosPatterns.h
-// ============================================================================
 
 // ============================================================================
 // GLOBAL STATE DEFINITIONS (extern declarations in GlobalState.h)
@@ -119,54 +109,10 @@ unsigned long lastStatsRequestTime = 0;
 // ============================================================================
 WebServer server(80);
 WebSocketsServer webSocket(81);
-
-// Filesystem Manager (handles all file operations via REST API)
 FilesystemManager filesystemManager(server);
 
-// ============================================================================
-// FORWARD DECLARATIONS
-// ============================================================================
-// HTML page now served from LittleFS (/data/index.html)
-
-// ============================================================================
-// NOTE: Module Singletons are used directly:
-//   - SeqTable.addLine(), SeqTable.deleteLine(), etc.
-//   - SeqExecutor.start(), SeqExecutor.stop(), etc.
-//   - Osc.start(), Osc.process(), etc.
-//   - Pursuit.move(), Pursuit.process()
-//   - Status.send()
-//   - Chaos.start(), Chaos.stop(), etc.
-//   - Calibration.start(), etc.
-// No inline wrappers needed - callers use singletons directly.
-// ============================================================================
-
-// Core functions (defined below in this file)
+// Forward declaration
 void sendStatus();
-
-// ============================================================================
-// VALIDATION HELPERS
-// ============================================================================
-// NOTE: All validation functions moved to include/core/Validators.h
-// Use: Validators::distance(), Validators::speed(), etc.
-// validateOscillationAmplitude() now in OscillationController module
-
-// NOTE: sendError() moved to StatusBroadcaster (Status.sendError())
-// NOTE: validateAndReport() moved to CommandDispatcher
-// NOTE: parseJsonCommand() moved to CommandDispatcher
-// NOTE: resetTotalDistance() moved to UtilityEngine (engine->resetTotalDistance())
-// NOTE: saveCurrentSessionStats() moved to UtilityEngine (engine->saveCurrentSessionStats())
-
-// Deceleration zone functions - delegated to DecelZoneController module
-// Functions: calculateSlowdownFactor(), calculateAdjustedDelay(), validateDecelZone()
-
-// Pursuit mode - delegated to PursuitController module
-// Functions: pursuitMove(), doPursuitStep()
-
-// Oscillation mode - delegated to OscillationController module
-// Functions: startOscillation(), doOscillationStep(), calculateOscillationPosition(), validateOscillationAmplitude()
-
-// Chaos mode - delegated to ChaosController module
-// Functions: Chaos.start(), Chaos.stop(), Chaos.process()
 
 // ============================================================================
 // SETUP - INITIALIZATION
@@ -274,48 +220,34 @@ void setup() {
 }
 
 // ============================================================================
-// MAIN LOOP (REFACTORED ARCHITECTURE)
+// MAIN LOOP
 // ============================================================================
-// Clean separation between MovementType (WHAT) and ExecutionContext (WHO)
 void loop() {
   // ═══════════════════════════════════════════════════════════════════════════
-  // AP MODE: Minimal loop - only web services for WiFi configuration
-  // LED alternates BLUE/RED to indicate AP mode (waiting for config)
-  // After successful config: LED stays GREEN (blink disabled)
-  // After failed config: LED stays RED for 3s then resumes blinking
+  // AP MODE: WiFi configuration only (LED blinks Blue/Red)
   // ═══════════════════════════════════════════════════════════════════════════
   if (Network.isAPMode()) {
-    // Handle Captive Portal DNS (redirects all DNS to ESP32 for auto-popup)
     Network.handleCaptivePortal();
     
-    // Blink LED Blue/Red every 500ms (only if blink enabled)
+    // Blink LED Blue/Red every 500ms
     static unsigned long lastLedToggle = 0;
     static bool ledIsBlue = true;
     
     if (Network.apLedBlinkEnabled && millis() - lastLedToggle > 500) {
       lastLedToggle = millis();
-      if (ledIsBlue) {
-        setRgbLed(50, 0, 0);  // RED (dimmed)
-      } else {
-        setRgbLed(0, 0, 50);  // BLUE (dimmed)
-      }
+      setRgbLed(ledIsBlue ? 50 : 0, 0, ledIsBlue ? 0 : 50);
       ledIsBlue = !ledIsBlue;
     }
     
     server.handleClient();
     webSocket.loop();
-    return;  // Skip all stepper/OTA handling in AP mode
+    return;
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // STA MODE: Full stepper control with OTA support
+  // STA MODE: Full stepper control
   // ═══════════════════════════════════════════════════════════════════════════
-  
-  // OTA UPDATE HANDLER (Must be called in every loop iteration)
   Network.handleOTA();
-  
-  // WiFi CONNECTION HEALTH CHECK (mDNS re-announce after reconnection)
-  // Ensures esp32-stepper.local stays responsive
   Network.checkConnectionHealth();
   
   // ═══════════════════════════════════════════════════════════════════════════
@@ -342,20 +274,16 @@ void loop() {
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // MOVEMENT EXECUTION (Based on MovementType - WHAT to execute)
+  // MOVEMENT EXECUTION
   // ═══════════════════════════════════════════════════════════════════════════
   switch (currentMovement) {
     case MOVEMENT_VAET:
-      // VA-ET-VIENT: Classic back-and-forth movement
-      // All logic (timing, decel, stepping) encapsulated in BaseMovement.process()
       BaseMovement.process();
       break;
       
     case MOVEMENT_PURSUIT:
-      // PURSUIT: Real-time position tracking (non-blocking)
       if (pursuit.isMoving) {
         unsigned long currentMicros = micros();
-        // SAFE: Unsigned arithmetic handles overflow correctly
         if (currentMicros - lastStepMicros >= pursuit.stepDelay) {
           lastStepMicros = currentMicros;
           Pursuit.process();
@@ -364,14 +292,12 @@ void loop() {
       break;
       
     case MOVEMENT_OSC:
-      // OSCILLATION: Sinusoidal oscillation with ramping
       if (config.currentState == STATE_RUNNING) {
         Osc.process();
       }
       break;
       
     case MOVEMENT_CHAOS:
-      // CHAOS: Random chaotic patterns (delegated to ChaosController module)
       if (config.currentState == STATE_RUNNING) {
         Chaos.process();
       }
@@ -379,18 +305,17 @@ void loop() {
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // SEQUENCER MANAGEMENT (Based on config.executionContext - WHO controls)
+  // SEQUENCER
   // ═══════════════════════════════════════════════════════════════════════════
   if (config.executionContext == CONTEXT_SEQUENCER) {
     SeqExecutor.process();
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // WEB SERVICES (Non-blocking with wraparound-safe timing)
+  // WEB SERVICES
   // ═══════════════════════════════════════════════════════════════════════════
   static unsigned long lastServiceUpdate = 0;
   unsigned long currentMicros = micros();
-  // SAFE: Wraparound-safe comparison using unsigned arithmetic
   if (currentMicros - lastServiceUpdate > WEBSERVICE_INTERVAL_US) {
     lastServiceUpdate = currentMicros;
     server.handleClient();
@@ -404,20 +329,19 @@ void loop() {
   }
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // LOG BUFFER FLUSH (Every 5 seconds)
+  // PERIODIC TASKS
   // ═══════════════════════════════════════════════════════════════════════════
+  
+  // Flush log buffer to disk
   if (engine) {
     engine->flushLogBuffer();
   }
   
-  // ═══════════════════════════════════════════════════════════════════════════
-  // STATUS LOGGING (Periodic summary)
-  // ═══════════════════════════════════════════════════════════════════════════
+  // Cycle counter and periodic status log
   static unsigned long lastSummary = 0;
   static unsigned long cycleCounter = 0;
   
   if (config.currentState == STATE_RUNNING) {
-    // Count cycles (increment when we reach start position)
     static bool lastWasAtStart = false;
     bool nowAtStart = (currentStep == startStep);
     if (nowAtStart && !lastWasAtStart) {
@@ -425,36 +349,24 @@ void loop() {
     }
     lastWasAtStart = nowAtStart;
     
-    // Print summary every 60 seconds (avoid log spam)
     if (millis() - lastSummary > SUMMARY_LOG_INTERVAL_MS) {
       engine->debug("Status: " + String(cycleCounter) + " cycles | " + 
             String(stats.totalDistanceTraveled / 1000000.0, 2) + " km");
       lastSummary = millis();
     }
   } else {
-    // Reset summary timer when not running
     lastSummary = millis();
-    if (config.currentState != STATE_RUNNING) {
-      cycleCounter = 0;  // Reset counter when stopped
-    }
+    cycleCounter = 0;
   }
 }
 
 // ============================================================================
-// STATUS BROADCASTING - Delegates to StatusBroadcaster module
+// GLOBAL CALLBACKS (called by modules)
 // ============================================================================
 
-/**
- * Broadcast current system status via WebSocket
- * Delegates to StatusBroadcaster singleton
- */
 void sendStatus() {
   Status.send();
 }
-
-// ============================================================================
-// MOVEMENT CONTROL WRAPPERS
-// ============================================================================
 
 void stopMovement() {
   BaseMovement.stop();
