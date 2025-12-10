@@ -60,8 +60,7 @@ function toggleLogsPanel() {
     loadLogFilesList();
     
     // Load current debug level state
-    fetch('/api/system/logging/preferences')
-      .then(response => response.json())
+    getWithRetry('/api/system/logging/preferences', { silent: true })
       .then(data => {
         const chkDebug = document.getElementById('debugLevelCheckbox');
         if (chkDebug) {
@@ -104,12 +103,7 @@ function handleDebugLevelChange(isChecked) {
     logLevel: isChecked ? 3 : 2  // 3=DEBUG, 2=INFO
   };
   
-  fetch('/api/system/logging/preferences', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(preferences)
-  })
-    .then(response => response.json())
+  postWithRetry('/api/system/logging/preferences', preferences, { silent: true })
     .then(data => {
       console.log('💾 Log level saved:', isChecked ? 'DEBUG' : 'INFO');
       
@@ -136,8 +130,7 @@ async function clearAllLogFiles() {
   });
   
   if (confirmed) {
-    fetch('/logs/clear', { method: 'POST' })
-      .then(response => response.json())
+    postWithRetry('/logs/clear', {})
       .then(data => {
         showAlert(data.message || 'Logs supprimés avec succès !', { type: 'success', title: 'Succès' });
         loadLogFilesList();  // Refresh list
@@ -152,55 +145,55 @@ async function clearAllLogFiles() {
 /**
  * Load and display log files list
  */
-function loadLogFilesList() {
-  fetch('/logs')
-    .then(response => response.text())
-    .then(html => {
-      // Parse HTML to extract file links
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const links = doc.querySelectorAll('a');
+async function loadLogFilesList() {
+  try {
+    const response = await fetchWithRetry('/logs', {}, { silent: true });
+    const html = await response.text();
+    
+    // Parse HTML to extract file links
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const links = doc.querySelectorAll('a');
+    
+    if (links.length === 0) {
+      DOM.logFilesList.innerHTML = '<div class="text-light italic text-sm">Aucun fichier de log</div>';
+      return;
+    }
+    
+    // Create container with DOM methods (XSS safe)
+    const container = document.createElement('div');
+    container.style.cssText = 'display: flex; flex-direction: column; gap: 5px;';
+    
+    links.forEach(link => {
+      const filename = link.textContent;
+      const url = link.href;
       
-      if (links.length === 0) {
-        DOM.logFilesList.innerHTML = '<div class="text-light italic text-sm">Aucun fichier de log</div>';
-        return;
-      }
+      // Create item div
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'preset-item-box flex-between';
       
-      // Create container with DOM methods (XSS safe)
-      const container = document.createElement('div');
-      container.style.cssText = 'display: flex; flex-direction: column; gap: 5px;';
+      // Create filename span (safe from XSS with textContent)
+      const filenameSpan = document.createElement('span');
+      filenameSpan.className = 'font-mono text-md';
+      filenameSpan.textContent = filename;  // Safe: uses textContent instead of innerHTML
       
-      links.forEach(link => {
-        const filename = link.textContent;
-        const url = link.href;
-        
-        // Create item div
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'preset-item-box flex-between';
-        
-        // Create filename span (safe from XSS with textContent)
-        const filenameSpan = document.createElement('span');
-        filenameSpan.className = 'font-mono text-md';
-        filenameSpan.textContent = filename;  // Safe: uses textContent instead of innerHTML
-        
-        // Create download link
-        const downloadLink = document.createElement('a');
-        downloadLink.href = url;
-        downloadLink.target = '_blank';
-        downloadLink.style.cssText = 'background: #2196F3; color: white; padding: 4px 10px; border-radius: 3px; text-decoration: none; font-size: 11px;';
-        downloadLink.textContent = '📥 Télécharger';
-        
-        itemDiv.appendChild(filenameSpan);
-        itemDiv.appendChild(downloadLink);
-        container.appendChild(itemDiv);
-      });
+      // Create download link
+      const downloadLink = document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.target = '_blank';
+      downloadLink.style.cssText = 'background: #2196F3; color: white; padding: 4px 10px; border-radius: 3px; text-decoration: none; font-size: 11px;';
+      downloadLink.textContent = '📥 Télécharger';
       
-      DOM.logFilesList.innerHTML = '';  // Clear first
-      DOM.logFilesList.appendChild(container);
-    })
-    .catch(error => {
-      DOM.logFilesList.innerHTML = '<div class="text-error text-sm">Erreur de chargement</div>';
+      itemDiv.appendChild(filenameSpan);
+      itemDiv.appendChild(downloadLink);
+      container.appendChild(itemDiv);
     });
+    
+    DOM.logFilesList.innerHTML = '';  // Clear first
+    DOM.logFilesList.appendChild(container);
+  } catch (error) {
+    DOM.logFilesList.innerHTML = '<div class="text-error text-sm">Erreur de chargement</div>';
+  }
 }
 
 // ============================================================================
@@ -549,8 +542,7 @@ function reconnectAfterReboot() {
  * Load logging preferences from ESP32
  */
 function loadLoggingPreferences() {
-  fetch('/api/system/logging/preferences')
-    .then(response => response.json())
+  getWithRetry('/api/system/logging/preferences', { silent: true })
     .then(data => {
       // Set checkboxes
       const chkEnabled = document.getElementById('chkLoggingEnabled');
@@ -597,12 +589,7 @@ function saveLoggingPreferences() {
   AppState.logging.enabled = preferences.loggingEnabled;
   AppState.logging.debugEnabled = (preferences.logLevel === 3);
   
-  fetch('/api/system/logging/preferences', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(preferences)
-  })
-    .then(response => response.json())
+  postWithRetry('/api/system/logging/preferences', preferences)
     .then(data => {
       console.log('💾 Logging preferences saved:', data);
       

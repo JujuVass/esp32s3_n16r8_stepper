@@ -42,8 +42,7 @@ const dayIcons = ['🚴', '🏃', '🏁', '🏀', '🔴', '🏓', '⚪'];
 function loadStatsData() {
   console.log('Stats requested from backend');
   
-  fetch('/api/stats')
-    .then(response => response.json())
+  getWithRetry('/api/stats', { silent: true })
     .then(data => {
       displayStatsTable(data);
       displayStatsChart(data);
@@ -446,8 +445,7 @@ async function clearAllStats() {
   });
   
   if (confirmed) {
-    fetch('/api/stats/clear', { method: 'POST' })
-      .then(response => response.json())
+    postWithRetry('/api/stats/clear', {})
       .then(data => {
         if (data.success) {
           showAlert('Statistiques effacées', { type: 'success' });
@@ -466,11 +464,7 @@ async function clearAllStats() {
  * Export statistics to JSON file
  */
 function exportStats() {
-  fetch('/api/stats/export')
-    .then(response => {
-      if (!response.ok) throw new Error('Export failed');
-      return response.json();
-    })
+  getWithRetry('/api/stats/export')
     .then(data => {
       // Create JSON file and download
       const jsonStr = JSON.stringify(data, null, 2);
@@ -553,12 +547,7 @@ function handleStatsFileImport(e) {
         }
         
         // Send to backend
-        fetch('/api/stats/import', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(importData)
-        })
-        .then(response => response.json())
+        postWithRetry('/api/stats/import', importData)
         .then(data => {
           if (data.success) {
             showAlert(`Import réussi !\n\n📊 ${data.entriesImported} entrées importées\n📏 Total: ${(data.totalDistanceMM / 1000000).toFixed(3)} km`, { type: 'success', title: 'Import OK' });

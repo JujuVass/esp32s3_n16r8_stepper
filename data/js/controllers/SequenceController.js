@@ -209,12 +209,7 @@ function importSequence() {
         
         console.log('📤 Sending import via HTTP:', parsed.lineCount, 'lines,', jsonText.length, 'bytes');
         
-        fetch('/api/sequence/import', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: jsonText
-        })
-        .then(response => response.json())
+        postWithRetry('/api/sequence/import', parsed)
         .then(data => {
           if (data.success) {
             console.log('✅ Import successful:', data.message);

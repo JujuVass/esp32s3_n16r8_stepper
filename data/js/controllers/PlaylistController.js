@@ -25,8 +25,7 @@
  * @param {Function} callback - Optional callback after loading
  */
 function loadPlaylists(callback) {
-  fetch('/api/playlists')
-    .then(response => response.json())
+  getWithRetry('/api/playlists', { silent: true })
     .then(data => {
       PlaylistState.simple = data.simple || [];
       PlaylistState.oscillation = data.oscillation || [];
@@ -390,16 +389,11 @@ function addToPlaylist(mode) {
   if (!name) return;
   
   // Send to backend
-  fetch('/api/playlists/add', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      mode: mode,
-      name: name,
-      config: config
-    })
+  postWithRetry('/api/playlists/add', {
+    mode: mode,
+    name: name,
+    config: config
   })
-  .then(r => r.json())
   .then(data => {
     if (data.success) {
       showNotification('✅ Preset ajouté à la playlist', 'success', 3000);
@@ -431,15 +425,10 @@ async function deleteFromPlaylist(mode, id) {
   
   if (!confirmed) return;
   
-  fetch('/api/playlists/delete', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      mode: mode,
-      id: id
-    })
+  postWithRetry('/api/playlists/delete', {
+    mode: mode,
+    id: id
   })
-  .then(r => r.json())
   .then(data => {
     if (data.success) {
       showNotification('✅ Preset supprimé', 'success', 2000);
@@ -463,16 +452,11 @@ function renamePlaylistPreset(mode, id) {
   const newName = prompt('Nouveau nom:', preset.name);
   if (!newName || newName === preset.name) return;
   
-  fetch('/api/playlists/update', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      mode: mode,
-      id: id,
-      name: newName
-    })
+  postWithRetry('/api/playlists/update', {
+    mode: mode,
+    id: id,
+    name: newName
   })
-  .then(r => r.json())
   .then(data => {
     if (data.success) {
       showNotification('✅ Preset renommé', 'success', 2000);

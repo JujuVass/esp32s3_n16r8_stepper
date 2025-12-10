@@ -420,3 +420,108 @@ function initMainNumericConstraints() {
   applyNumericConstraints(mainNumericInputs);
 }
 
+// ============================================================================
+// FETCH WITH RETRY (Network resilience for ESP32 communication)
+// ============================================================================
+
+/**
+ * Fetch with automatic retry on network errors
+ * Handles transient ESP32 network issues gracefully
+ * 
+ * @param {string} url - The URL to fetch
+ * @param {Object} options - Fetch options (method, headers, body, etc.)
+ * @param {Object} retryConfig - Retry configuration
+ * @param {number} retryConfig.maxRetries - Maximum retry attempts (default: 3)
+ * @param {number} retryConfig.baseDelay - Base delay in ms (default: 500)
+ * @param {boolean} retryConfig.exponentialBackoff - Use exponential backoff (default: true)
+ * @param {boolean} retryConfig.silent - Don't show notifications on retry (default: false)
+ * @returns {Promise<Response>} - Fetch response
+ */
+async function fetchWithRetry(url, options = {}, retryConfig = {}) {
+  const {
+    maxRetries = 3,
+    baseDelay = 500,
+    exponentialBackoff = true,
+    silent = false
+  } = retryConfig;
+
+  let lastError;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        // Add timeout to prevent hanging requests
+        signal: options.signal || AbortSignal.timeout(10000)
+      });
+      
+      // Success - return response
+      if (attempt > 0 && !silent) {
+        console.log(`✅ Request succeeded after ${attempt} retry(ies): ${url}`);
+      }
+      return response;
+      
+    } catch (error) {
+      lastError = error;
+      
+      // Check if it's a retryable error (network issues)
+      const isRetryable = 
+        error.name === 'TypeError' || // NetworkError
+        error.name === 'AbortError' || // Timeout
+        error.message?.includes('NetworkError') ||
+        error.message?.includes('Failed to fetch') ||
+        error.message?.includes('network');
+      
+      if (!isRetryable || attempt >= maxRetries) {
+        // Not retryable or max retries reached
+        throw error;
+      }
+      
+      // Calculate delay with optional exponential backoff
+      const delay = exponentialBackoff 
+        ? baseDelay * Math.pow(2, attempt) 
+        : baseDelay;
+      
+      if (!silent) {
+        console.warn(`⚠️ Network error on ${url}, retry ${attempt + 1}/${maxRetries} in ${delay}ms...`);
+      }
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  // Should not reach here, but just in case
+  throw lastError;
+}
+
+/**
+ * Wrapper for POST requests with retry
+ * @param {string} url - API endpoint
+ * @param {Object} data - Data to send as JSON
+ * @param {Object} retryConfig - Optional retry configuration
+ * @returns {Promise<Object>} - Parsed JSON response
+ */
+async function postWithRetry(url, data, retryConfig = {}) {
+  const response = await fetchWithRetry(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }, retryConfig);
+  
+  return response.json();
+}
+
+/**
+ * Wrapper for GET requests with retry
+ * @param {string} url - API endpoint
+ * @param {Object} retryConfig - Optional retry configuration
+ * @returns {Promise<Object>} - Parsed JSON response
+ */
+async function getWithRetry(url, retryConfig = {}) {
+  const response = await fetchWithRetry(url, {
+    method: 'GET'
+  }, retryConfig);
+  
+  return response.json();
+}
