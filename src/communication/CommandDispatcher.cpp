@@ -386,8 +386,12 @@ bool CommandDispatcher::handlePursuitCommands(const char* cmd, JsonDocument& doc
         currentMovement = MOVEMENT_PURSUIT;
         config.executionContext = CONTEXT_STANDALONE;
         
-        if (config.currentState == STATE_RUNNING) {
-            config.currentState = STATE_READY;
+        // Protected state change (Core 0 → Core 1 safety)
+        {
+            MutexGuard guard(stateMutex);
+            if (guard && config.currentState == STATE_RUNNING) {
+                config.currentState = STATE_READY;
+            }
         }
         
         engine->debug("✅ Mode Pursuit activé");
