@@ -381,16 +381,65 @@ void motorTask(void* param) {
     }
     lastAlarmState = alarmActive;
     
-    // PEND monitoring during movement (detect motor lag)
-    static unsigned long lastPendWarnMs = 0;
+    // PEND monitoring during movement (cumulative stats every 5 seconds)
+    static unsigned long pendStatsStartMs = 0;
+    static unsigned long pendNotReachedCount = 0;
+    static unsigned long pendReachedCount = 0;
+    static unsigned long pendMaxLagMs = 0;
+    static unsigned long pendTotalLagMs = 0;
+    static const unsigned long PEND_STATS_INTERVAL_MS = 5000;  // Log every 5 seconds
+    
     if (config.currentState == STATE_RUNNING) {
+      bool positionReached = Motor.isPositionReached();
       unsigned long lagMs = Motor.getPositionLagMs();
       
-      // Warn if motor hasn't reached position for > threshold (significant lag)
-      if (lagMs > PEND_LAG_WARN_THRESHOLD_MS && millis() - lastPendWarnMs > PEND_WARN_COOLDOWN_MS) {
-        engine->warn("⚠️ Motor position lag: " + String(lagMs) + "ms - possible load/resistance");
-        lastPendWarnMs = millis();
+      // Initialize stats period
+      if (pendStatsStartMs == 0) {
+        pendStatsStartMs = millis();
+        pendNotReachedCount = 0;
+        pendReachedCount = 0;
+        pendMaxLagMs = 0;
+        pendTotalLagMs = 0;
       }
+      
+      // Track PEND state
+      if (positionReached) {
+        pendReachedCount++;
+      } else {
+        pendNotReachedCount++;
+        pendTotalLagMs += lagMs;
+        if (lagMs > pendMaxLagMs) {
+          pendMaxLagMs = lagMs;
+        }
+      }
+      
+      // Log summary every 5 seconds
+      if (millis() - pendStatsStartMs >= PEND_STATS_INTERVAL_MS) {
+        unsigned long totalChecks = pendReachedCount + pendNotReachedCount;
+        float reachedPercent = (totalChecks > 0) ? (pendReachedCount * 100.0 / totalChecks) : 0;
+        float avgLagMs = (pendNotReachedCount > 0) ? (pendTotalLagMs / (float)pendNotReachedCount) : 0;
+        
+        if (pendNotReachedCount > 0) {
+          // Position not reached at least once - log warning with details
+          engine->info("📊 PEND Stats (5s): " + String(reachedPercent, 1) + "% reached | " +
+                "Not reached: " + String(pendNotReachedCount) + "x | " +
+                "Max lag: " + String(pendMaxLagMs) + "ms | " +
+                "Avg lag: " + String(avgLagMs, 1) + "ms");
+        } else {
+          // All positions reached - brief log
+          engine->debug("📊 PEND Stats (5s): 100% reached (" + String(pendReachedCount) + " checks)");
+        }
+        
+        // Reset for next period
+        pendStatsStartMs = millis();
+        pendNotReachedCount = 0;
+        pendReachedCount = 0;
+        pendMaxLagMs = 0;
+        pendTotalLagMs = 0;
+      }
+    } else {
+      // Reset when not running
+      pendStatsStartMs = 0;
     }
     
     // ═══════════════════════════════════════════════════════════════════════
