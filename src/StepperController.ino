@@ -387,6 +387,8 @@ void motorTask(void* param) {
     static unsigned long pendReachedCount = 0;
     static unsigned long pendMaxLagMs = 0;
     static unsigned long pendTotalLagMs = 0;
+    static unsigned long pendTransitionCount = 0;  // LOW→HIGH transitions (proves signal changes)
+    static bool lastPendStateForStats = true;
     static const unsigned long PEND_STATS_INTERVAL_MS = 5000;  // Log every 5 seconds
     
     if (config.currentState == STATE_RUNNING) {
@@ -400,7 +402,15 @@ void motorTask(void* param) {
         pendReachedCount = 0;
         pendMaxLagMs = 0;
         pendTotalLagMs = 0;
+        pendTransitionCount = 0;
+        lastPendStateForStats = positionReached;
       }
+      
+      // Count transitions (proves signal is actually changing)
+      if (positionReached && !lastPendStateForStats) {
+        pendTransitionCount++;  // LOW→HIGH transition detected
+      }
+      lastPendStateForStats = positionReached;
       
       // Track PEND state
       if (positionReached) {
@@ -419,15 +429,21 @@ void motorTask(void* param) {
         float reachedPercent = (totalChecks > 0) ? (pendReachedCount * 100.0 / totalChecks) : 0;
         float avgLagMs = (pendNotReachedCount > 0) ? (pendTotalLagMs / (float)pendNotReachedCount) : 0;
         
+        // Always show transition count to prove signal is working
+        String transitionInfo = " | Transitions: " + String(pendTransitionCount);
+        if (pendTransitionCount == 0) {
+          transitionInfo += " ⚠️ SIGNAL STUCK?";
+        }
+        
         if (pendNotReachedCount > 0) {
-          // Position not reached at least once - log warning with details
+          // Position not reached at least once - log with details
           engine->info("📊 PEND Stats (5s): " + String(reachedPercent, 1) + "% reached | " +
                 "Not reached: " + String(pendNotReachedCount) + "x | " +
                 "Max lag: " + String(pendMaxLagMs) + "ms | " +
-                "Avg lag: " + String(avgLagMs, 1) + "ms");
+                "Avg lag: " + String(avgLagMs, 1) + "ms" + transitionInfo);
         } else {
-          // All positions reached - brief log
-          engine->debug("📊 PEND Stats (5s): 100% reached (" + String(pendReachedCount) + " checks)");
+          // All positions reached - show transition count to verify signal works
+          engine->debug("📊 PEND Stats (5s): 100% reached (" + String(pendReachedCount) + " checks)" + transitionInfo);
         }
         
         // Reset for next period
@@ -436,6 +452,7 @@ void motorTask(void* param) {
         pendReachedCount = 0;
         pendMaxLagMs = 0;
         pendTotalLagMs = 0;
+        pendTransitionCount = 0;
       }
     } else {
       // Reset when not running
