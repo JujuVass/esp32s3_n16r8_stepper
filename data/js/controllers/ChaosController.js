@@ -67,12 +67,13 @@ function sendChaosConfig() {
     config = buildChaosConfigPure(formValues);
   } else {
     // Fallback
+    const duration = parseInt(formValues.duration);
     config = {
       centerPositionMM: parseFloat(formValues.centerPos) || 0,
       amplitudeMM: parseFloat(formValues.amplitude) || 0,
       maxSpeedLevel: parseFloat(formValues.maxSpeed) || 10,
       crazinessPercent: parseInt(formValues.craziness) || 50,
-      durationSeconds: parseInt(formValues.duration) || 30,
+      durationSeconds: isNaN(duration) ? 30 : duration,  // 0 = infinite, don't default to 30
       seed: parseInt(formValues.seed) || 0,
       patternsEnabled: formValues.patternsEnabled
     };

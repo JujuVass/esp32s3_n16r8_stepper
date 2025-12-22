@@ -481,7 +481,10 @@ bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, 
         chaos.amplitudeMM = doc["amplitudeMM"] | chaos.amplitudeMM;
         chaos.maxSpeedLevel = doc["maxSpeedLevel"] | chaos.maxSpeedLevel;
         chaos.crazinessPercent = doc["crazinessPercent"] | chaos.crazinessPercent;
-        chaos.durationSeconds = doc["durationSeconds"] | chaos.durationSeconds;
+        // Don't use | operator for durationSeconds as 0 means infinite (falsy but valid)
+        if (doc.containsKey("durationSeconds")) {
+            chaos.durationSeconds = doc["durationSeconds"].as<int>();
+        }
         
         String errorMsg;
         if (!validateAndReport(Validators::chaosParams(chaos.centerPositionMM, chaos.amplitudeMM,
