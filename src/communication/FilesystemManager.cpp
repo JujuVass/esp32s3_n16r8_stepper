@@ -327,6 +327,23 @@ void FilesystemManager::handleUploadFile() {
   if (upload.status == UPLOAD_FILE_START) {
     String filename = normalizePath(upload.filename);
 
+    // 🛡️ PROTECTION: Check available space BEFORE accepting upload
+    if (server.hasHeader("Content-Length")) {
+      size_t contentLength = server.header("Content-Length").toInt();
+      size_t totalBytes = LittleFS.totalBytes();
+      size_t usedBytes = LittleFS.usedBytes();
+      size_t available = totalBytes - usedBytes;
+      
+      if (contentLength > available) {
+        Serial.printf("❌ Upload rejected: file too large (%d bytes needed, only %d bytes available)\n", 
+                     contentLength, available);
+        server.send(413, "application/json", 
+          "{\"error\":\"File too large\",\"needed\":" + String(contentLength) + 
+          ",\"available\":" + String(available) + "}");
+        return;
+      }
+    }
+
     // Create parent directories if needed
     createParentDirs(filename);
 
