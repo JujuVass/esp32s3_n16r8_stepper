@@ -214,6 +214,11 @@
         }
         updateStartPresets(effectiveMax);
         updateDistancePresets(maxAvailable);
+        
+        // 🆕 Update relative presets for Simple mode
+        if (typeof updateSimpleRelativePresets === 'function') {
+          updateSimpleRelativePresets();
+        }
       }
       
       // Enable/disable start button

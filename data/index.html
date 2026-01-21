@@ -583,6 +583,14 @@
             <button class="preset-btn-sm btn-preset" data-start="75">75mm</button>
             <button class="preset-btn-sm btn-preset" data-start="100">100mm</button>
           </div>
+          <div class="mt-4">
+            <button class="preset-btn-sm btn-preset btn-relative" data-start-rel="-20">-20</button>
+            <button class="preset-btn-sm btn-preset btn-relative" data-start-rel="-10">-10</button>
+            <button class="preset-btn-sm btn-preset btn-relative" data-start-rel="-5">-5</button>
+            <button class="preset-btn-sm btn-preset btn-relative" data-start-rel="+5">+5</button>
+            <button class="preset-btn-sm btn-preset btn-relative" data-start-rel="+10">+10</button>
+            <button class="preset-btn-sm btn-preset btn-relative" data-start-rel="+20">+20</button>
+          </div>
         </div>
         
         <div class="form-group-compact d-block">
@@ -597,6 +605,14 @@
             <button class="preset-btn-sm btn-preset" data-distance="75">75mm</button>
             <button class="preset-btn-sm btn-preset" data-distance="100">100mm</button>
             <button class="preset-btn-sm btn-preset" data-distance="125">125mm</button>
+          </div>
+          <div class="mt-4">
+            <button class="preset-btn-sm btn-preset btn-relative" data-distance-rel="-20">-20</button>
+            <button class="preset-btn-sm btn-preset btn-relative" data-distance-rel="-10">-10</button>
+            <button class="preset-btn-sm btn-preset btn-relative" data-distance-rel="-5">-5</button>
+            <button class="preset-btn-sm btn-preset btn-relative" data-distance-rel="+5">+5</button>
+            <button class="preset-btn-sm btn-preset btn-relative" data-distance-rel="+10">+10</button>
+            <button class="preset-btn-sm btn-preset btn-relative" data-distance-rel="+20">+20</button>
           </div>
         </div>
       </div>
@@ -914,6 +930,14 @@
               <button class="preset-btn-sm btn-preset" data-osc-center="75">75mm</button>
               <button class="preset-btn-sm btn-preset" data-osc-center="110">110mm</button>
             </div>
+            <div class="mt-4">
+              <button class="preset-btn-sm btn-preset btn-relative" data-osc-center-rel="-20">-20</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-osc-center-rel="-10">-10</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-osc-center-rel="-5">-5</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-osc-center-rel="+5">+5</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-osc-center-rel="+10">+10</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-osc-center-rel="+20">+20</button>
+            </div>
           </div>
           
           <!-- Amplitude -->
@@ -922,6 +946,10 @@
               <label class="label-inline">Amplitude ±:</label>
               <input type="number" id="oscAmplitude" min="1" step="1" value="20" class="input-compact">
               <span class="unit-label">mm</span>
+              <label style="margin-left: 10px; font-size: 11px; cursor: pointer;" title="Si coché, amplitude = centre (liés)">
+                <input type="checkbox" id="oscAmplitudeLinked" style="margin-right: 4px;">
+                =Centre
+              </label>
             </div>
             <div class="mt-8">
               <button class="preset-btn-sm btn-preset" data-osc-amplitude="10">10mm</button>
@@ -929,6 +957,14 @@
               <button class="preset-btn-sm btn-preset" data-osc-amplitude="50">50mm</button>
               <button class="preset-btn-sm btn-preset" data-osc-amplitude="75">75mm</button>
               <button class="preset-btn-sm btn-preset" data-osc-amplitude="100">100mm</button>
+            </div>
+            <div class="mt-4">
+              <button class="preset-btn-sm btn-preset btn-relative" data-osc-amplitude-rel="-20">-20</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-osc-amplitude-rel="-10">-10</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-osc-amplitude-rel="-5">-5</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-osc-amplitude-rel="+5">+5</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-osc-amplitude-rel="+10">+10</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-osc-amplitude-rel="+20">+20</button>
             </div>
           </div>
         </div>
@@ -1138,12 +1174,24 @@
               <button class="preset-btn-sm btn-preset" data-chaos-center="75">75mm</button>
               <button class="preset-btn-sm btn-preset" data-chaos-center="110">110mm</button>
             </div>
+            <div class="mt-4">
+              <button class="preset-btn-sm btn-preset btn-relative" data-chaos-center-rel="-20">-20</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-chaos-center-rel="-10">-10</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-chaos-center-rel="-5">-5</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-chaos-center-rel="+5">+5</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-chaos-center-rel="+10">+10</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-chaos-center-rel="+20">+20</button>
+            </div>
           </div>
           <div class="form-group-compact d-block">
             <div>
               <label class="label-inline">Amplitude ±:</label>
               <input type="number" id="chaosAmplitude" min="1" step="1" value="50" class="input-compact">
               <span class="unit-label">mm</span>
+              <label style="margin-left: 10px; font-size: 11px; cursor: pointer;" title="Si coché, amplitude = centre (liés)">
+                <input type="checkbox" id="chaosAmplitudeLinked" style="margin-right: 4px;">
+                =Centre
+              </label>
             </div>
             <div class="mt-8">
               <button class="preset-btn-sm btn-preset" data-chaos-amplitude="10">10mm</button>
@@ -1151,6 +1199,14 @@
               <button class="preset-btn-sm btn-preset" data-chaos-amplitude="50">50mm</button>
               <button class="preset-btn-sm btn-preset" data-chaos-amplitude="75">75mm</button>
               <button class="preset-btn-sm btn-preset" data-chaos-amplitude="100">100mm</button>
+            </div>
+            <div class="mt-4">
+              <button class="preset-btn-sm btn-preset btn-relative" data-chaos-amplitude-rel="-20">-20</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-chaos-amplitude-rel="-10">-10</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-chaos-amplitude-rel="-5">-5</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-chaos-amplitude-rel="+5">+5</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-chaos-amplitude-rel="+10">+10</button>
+              <button class="preset-btn-sm btn-preset btn-relative" data-chaos-amplitude-rel="+20">+20</button>
             </div>
           </div>
         </div>

@@ -113,6 +113,7 @@ function updateChaosPresets() {
   
   const currentCenter = parseFloat(document.getElementById('chaosCenterPos').value) || 0;
   const currentAmplitude = parseFloat(document.getElementById('chaosAmplitude').value) || 0;
+  const isLinked = document.getElementById('chaosAmplitudeLinked')?.checked || false;
   
   // Validate center presets (must allow current amplitude)
   document.querySelectorAll('[data-chaos-center]').forEach(btn => {
@@ -133,10 +134,43 @@ function updateChaosPresets() {
     const maxPos = currentCenter + amplitudeValue;
     const isValid = minPos >= 0 && maxPos <= effectiveMax;
     
+    btn.disabled = !isValid || isLinked;  // Disabled if linked mode
+    btn.style.opacity = (isValid && !isLinked) ? '1' : '0.3';
+    btn.style.cursor = (isValid && !isLinked) ? 'pointer' : 'not-allowed';
+  });
+  
+  // 🆕 Validate relative center presets
+  document.querySelectorAll('[data-chaos-center-rel]').forEach(btn => {
+    const relValue = parseInt(btn.getAttribute('data-chaos-center-rel'));
+    const newCenter = currentCenter + relValue;
+    const minPos = newCenter - currentAmplitude;
+    const maxPos = newCenter + currentAmplitude;
+    const isValid = newCenter >= 0 && minPos >= 0 && maxPos <= effectiveMax;
+    
     btn.disabled = !isValid;
-    btn.style.opacity = isValid ? '1' : '0.3';
+    btn.style.opacity = isValid ? '1' : '0.5';
     btn.style.cursor = isValid ? 'pointer' : 'not-allowed';
   });
+  
+  // 🆕 Validate relative amplitude presets
+  document.querySelectorAll('[data-chaos-amplitude-rel]').forEach(btn => {
+    const relValue = parseInt(btn.getAttribute('data-chaos-amplitude-rel'));
+    const newAmplitude = currentAmplitude + relValue;
+    const minPos = currentCenter - newAmplitude;
+    const maxPos = currentCenter + newAmplitude;
+    const isValid = newAmplitude >= 1 && minPos >= 0 && maxPos <= effectiveMax;
+    
+    btn.disabled = !isValid || isLinked;  // Disabled if linked mode
+    btn.style.opacity = (isValid && !isLinked) ? '1' : '0.5';
+    btn.style.cursor = (isValid && !isLinked) ? 'pointer' : 'not-allowed';
+  });
+  
+  // 🆕 Handle amplitude input disabled state when linked
+  const ampInput = document.getElementById('chaosAmplitude');
+  if (ampInput) {
+    ampInput.disabled = isLinked;
+    ampInput.style.opacity = isLinked ? '0.5' : '1';
+  }
 }
 
 /**
@@ -497,6 +531,64 @@ function initChaosListeners() {
   CHAOS_PATTERNS.forEach(id => {
     document.getElementById(id).addEventListener('change', updatePatternToggleButton);
   });
+  
+  // 🆕 Relative preset buttons - Center
+  document.querySelectorAll('[data-chaos-center-rel]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (!this.disabled) {
+        const relValue = parseInt(this.getAttribute('data-chaos-center-rel'));
+        const currentCenter = parseFloat(document.getElementById('chaosCenterPos').value) || 0;
+        const newCenter = Math.max(0, currentCenter + relValue);
+        document.getElementById('chaosCenterPos').value = newCenter;
+        
+        // If linked, also update amplitude
+        if (document.getElementById('chaosAmplitudeLinked')?.checked) {
+          document.getElementById('chaosAmplitude').value = newCenter;
+        }
+        
+        sendChaosConfig();
+        updateChaosPresets();
+      }
+    });
+  });
+  
+  // 🆕 Relative preset buttons - Amplitude
+  document.querySelectorAll('[data-chaos-amplitude-rel]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (!this.disabled) {
+        const relValue = parseInt(this.getAttribute('data-chaos-amplitude-rel'));
+        const currentAmplitude = parseFloat(document.getElementById('chaosAmplitude').value) || 0;
+        const newAmplitude = Math.max(1, currentAmplitude + relValue);
+        document.getElementById('chaosAmplitude').value = newAmplitude;
+        sendChaosConfig();
+        updateChaosPresets();
+      }
+    });
+  });
+  
+  // 🆕 Amplitude linked checkbox (amplitude = center)
+  const chaosAmplitudeLinked = document.getElementById('chaosAmplitudeLinked');
+  if (chaosAmplitudeLinked) {
+    chaosAmplitudeLinked.addEventListener('change', function() {
+      if (this.checked) {
+        // Link: set amplitude = center
+        const center = parseFloat(document.getElementById('chaosCenterPos').value) || 0;
+        document.getElementById('chaosAmplitude').value = center;
+        sendChaosConfig();
+      }
+      updateChaosPresets();
+    });
+  }
+  
+  // 🆕 When center changes and linked, update amplitude too
+  const chaosCenterInput = document.getElementById('chaosCenterPos');
+  if (chaosCenterInput) {
+    chaosCenterInput.addEventListener('input', function() {
+      if (document.getElementById('chaosAmplitudeLinked')?.checked) {
+        document.getElementById('chaosAmplitude').value = this.value;
+      }
+    });
+  }
   
   console.log('🎲 ChaosController initialized');
 }

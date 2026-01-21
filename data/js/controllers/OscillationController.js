@@ -152,6 +152,7 @@ function updateOscillationPresets() {
   
   const currentCenter = parseFloat(document.getElementById('oscCenter').value) || 0;
   const currentAmplitude = parseFloat(document.getElementById('oscAmplitude').value) || 0;
+  const isLinked = document.getElementById('oscAmplitudeLinked')?.checked || false;
   
   // 🚀 MAX_SPEED_LEVEL constant (must match backend)
   const MAX_SPEED_MM_S = maxSpeedLevel * 20.0; // 300 mm/s by default
@@ -175,10 +176,43 @@ function updateOscillationPresets() {
     const maxPos = currentCenter + amplitudeValue;
     const isValid = minPos >= 0 && maxPos <= effectiveMax;
     
+    btn.disabled = !isValid || isLinked;  // Disabled if linked mode
+    btn.style.opacity = (isValid && !isLinked) ? '1' : '0.3';
+    btn.style.cursor = (isValid && !isLinked) ? 'pointer' : 'not-allowed';
+  });
+  
+  // 🆕 Validate relative center presets
+  document.querySelectorAll('[data-osc-center-rel]').forEach(btn => {
+    const relValue = parseInt(btn.getAttribute('data-osc-center-rel'));
+    const newCenter = currentCenter + relValue;
+    const minPos = newCenter - currentAmplitude;
+    const maxPos = newCenter + currentAmplitude;
+    const isValid = newCenter >= 0 && minPos >= 0 && maxPos <= effectiveMax;
+    
     btn.disabled = !isValid;
-    btn.style.opacity = isValid ? '1' : '0.3';
+    btn.style.opacity = isValid ? '1' : '0.5';
     btn.style.cursor = isValid ? 'pointer' : 'not-allowed';
   });
+  
+  // 🆕 Validate relative amplitude presets
+  document.querySelectorAll('[data-osc-amplitude-rel]').forEach(btn => {
+    const relValue = parseInt(btn.getAttribute('data-osc-amplitude-rel'));
+    const newAmplitude = currentAmplitude + relValue;
+    const minPos = currentCenter - newAmplitude;
+    const maxPos = currentCenter + newAmplitude;
+    const isValid = newAmplitude >= 1 && minPos >= 0 && maxPos <= effectiveMax;
+    
+    btn.disabled = !isValid || isLinked;  // Disabled if linked mode
+    btn.style.opacity = (isValid && !isLinked) ? '1' : '0.5';
+    btn.style.cursor = (isValid && !isLinked) ? 'pointer' : 'not-allowed';
+  });
+  
+  // 🆕 Handle amplitude input disabled state when linked
+  const ampInput = document.getElementById('oscAmplitude');
+  if (ampInput) {
+    ampInput.disabled = isLinked;
+    ampInput.style.opacity = isLinked ? '0.5' : '1';
+  }
   
   // 🚀 Validate frequency presets (must not exceed speed limit)
   document.querySelectorAll('[data-osc-frequency]').forEach(btn => {
@@ -642,6 +676,67 @@ function initOscillationListeners() {
       }
     });
   });
+  
+  // 🆕 Relative preset buttons - Center
+  document.querySelectorAll('[data-osc-center-rel]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (!this.disabled) {
+        const relValue = parseInt(this.getAttribute('data-osc-center-rel'));
+        const currentCenter = parseFloat(document.getElementById('oscCenter').value) || 0;
+        const newCenter = Math.max(0, currentCenter + relValue);
+        document.getElementById('oscCenter').value = newCenter;
+        
+        // If linked, also update amplitude
+        if (document.getElementById('oscAmplitudeLinked')?.checked) {
+          document.getElementById('oscAmplitude').value = newCenter;
+        }
+        
+        sendOscillationConfig();
+        validateOscillationLimits();
+        updateOscillationPresets();
+      }
+    });
+  });
+  
+  // 🆕 Relative preset buttons - Amplitude
+  document.querySelectorAll('[data-osc-amplitude-rel]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (!this.disabled) {
+        const relValue = parseInt(this.getAttribute('data-osc-amplitude-rel'));
+        const currentAmplitude = parseFloat(document.getElementById('oscAmplitude').value) || 0;
+        const newAmplitude = Math.max(1, currentAmplitude + relValue);
+        document.getElementById('oscAmplitude').value = newAmplitude;
+        sendOscillationConfig();
+        validateOscillationLimits();
+        updateOscillationPresets();
+      }
+    });
+  });
+  
+  // 🆕 Amplitude linked checkbox (amplitude = center)
+  const oscAmplitudeLinked = document.getElementById('oscAmplitudeLinked');
+  if (oscAmplitudeLinked) {
+    oscAmplitudeLinked.addEventListener('change', function() {
+      if (this.checked) {
+        // Link: set amplitude = center
+        const center = parseFloat(document.getElementById('oscCenter').value) || 0;
+        document.getElementById('oscAmplitude').value = center;
+        sendOscillationConfig();
+        validateOscillationLimits();
+      }
+      updateOscillationPresets();
+    });
+  }
+  
+  // 🆕 When center changes and linked, update amplitude too
+  const oscCenterInput = document.getElementById('oscCenter');
+  if (oscCenterInput) {
+    oscCenterInput.addEventListener('input', function() {
+      if (document.getElementById('oscAmplitudeLinked')?.checked) {
+        document.getElementById('oscAmplitude').value = this.value;
+      }
+    });
+  }
   
   console.log('🌊 OscillationController initialized');
 }

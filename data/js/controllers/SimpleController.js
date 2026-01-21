@@ -94,6 +94,39 @@ function stopSimpleMode() {
   }
 }
 
+/**
+ * Update visual state of simple mode relative preset buttons
+ * 🆕 Added for relative presets feature
+ */
+function updateSimpleRelativePresets() {
+  const maxStart = parseFloat(document.getElementById('startPosition').max) || 999;
+  const maxDist = parseFloat(document.getElementById('distance').max) || 999;
+  const currentStart = parseFloat(document.getElementById('startPosition').value) || 0;
+  const currentDist = parseFloat(document.getElementById('distance').value) || 0;
+  
+  // Validate relative start position presets
+  document.querySelectorAll('[data-start-rel]').forEach(btn => {
+    const relValue = parseInt(btn.getAttribute('data-start-rel'));
+    const newStart = currentStart + relValue;
+    const isValid = newStart >= 0 && newStart <= maxStart;
+    
+    btn.disabled = !isValid;
+    btn.style.opacity = isValid ? '1' : '0.5';
+    btn.style.cursor = isValid ? 'pointer' : 'not-allowed';
+  });
+  
+  // Validate relative distance presets
+  document.querySelectorAll('[data-distance-rel]').forEach(btn => {
+    const relValue = parseInt(btn.getAttribute('data-distance-rel'));
+    const newDist = currentDist + relValue;
+    const isValid = newDist >= 1 && newDist <= maxDist;
+    
+    btn.disabled = !isValid;
+    btn.style.opacity = isValid ? '1' : '0.5';
+    btn.style.cursor = isValid ? 'pointer' : 'not-allowed';
+  });
+}
+
 // ============================================================================
 // SIMPLE MODE - UI UPDATE (called from main.js updateUI)
 // ============================================================================
@@ -286,6 +319,7 @@ function initSimpleListeners() {
     const startPos = parseFloat(this.value);
     sendCommand(WS_CMD.SET_START_POSITION, {startPosition: startPos});
     AppState.editing.input = null;
+    updateSimpleRelativePresets();  // 🆕 Update relative presets
   });
   
   // ===== DISTANCE INPUT =====
@@ -304,6 +338,7 @@ function initSimpleListeners() {
     const distance = parseFloat(this.value);
     sendCommand(WS_CMD.SET_DISTANCE, {distance: distance});
     AppState.editing.input = null;
+    updateSimpleRelativePresets();  // 🆕 Update relative presets
   });
   
   // ===== UNIFIED SPEED INPUT =====
@@ -397,6 +432,25 @@ function initSimpleListeners() {
         
         document.querySelectorAll('[data-start]').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
+        updateSimpleRelativePresets();
+      }
+    });
+  });
+  
+  // 🆕 ===== START POSITION RELATIVE PRESETS =====
+  document.querySelectorAll('[data-start-rel]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (!this.disabled) {
+        const relValue = parseInt(this.getAttribute('data-start-rel'));
+        const currentStart = parseFloat(document.getElementById('startPosition').value) || 0;
+        const maxStart = parseFloat(document.getElementById('startPosition').max) || 999;
+        const newStart = Math.max(0, Math.min(maxStart, currentStart + relValue));
+        
+        document.getElementById('startPosition').value = newStart;
+        sendCommand(WS_CMD.SET_START_POSITION, {startPosition: newStart});
+        
+        document.querySelectorAll('[data-start]').forEach(b => b.classList.remove('active'));
+        updateSimpleRelativePresets();
       }
     });
   });
@@ -413,6 +467,25 @@ function initSimpleListeners() {
         
         document.querySelectorAll('[data-distance]').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
+        updateSimpleRelativePresets();
+      }
+    });
+  });
+  
+  // 🆕 ===== DISTANCE RELATIVE PRESETS =====
+  document.querySelectorAll('[data-distance-rel]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (!this.disabled) {
+        const relValue = parseInt(this.getAttribute('data-distance-rel'));
+        const currentDist = parseFloat(document.getElementById('distance').value) || 0;
+        const maxDist = parseFloat(document.getElementById('distance').max) || 999;
+        const newDist = Math.max(1, Math.min(maxDist, currentDist + relValue));
+        
+        document.getElementById('distance').value = newDist;
+        sendCommand(WS_CMD.SET_DISTANCE, {distance: newDist});
+        
+        document.querySelectorAll('[data-distance]').forEach(b => b.classList.remove('active'));
+        updateSimpleRelativePresets();
       }
     });
   });
