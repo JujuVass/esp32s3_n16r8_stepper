@@ -573,7 +573,7 @@
         <div class="form-group-compact d-block">
           <div>
             <label class="label-inline">Position départ:</label>
-            <input type="number" id="startPosition" min="0" step="0.1" value="0" class="input-compact">
+            <input type="number" id="startPosition" min="0" step="1" value="0" class="input-compact">
             <span class="unit-label">mm</span>
           </div>
           <div class="mt-8">
@@ -588,7 +588,7 @@
         <div class="form-group-compact d-block">
           <div>
             <label class="label-inline">Distance:</label>
-            <input type="number" id="distance" min="0" step="0.1" value="50" class="input-compact">
+            <input type="number" id="distance" min="0" step="1" value="50" class="input-compact">
             <span class="unit-label">mm</span>
           </div>
           <div class="mt-8">
@@ -737,6 +737,7 @@
             <label class="label-inline">Durée:</label>
             <input type="number" id="cyclePauseDuration" min="0.1" max="60" step="0.1" value="1.5" class="input-compact">
             <span class="unit-label">s</span>
+            <button class="preset-btn-sm btn-preset" data-pause-duration="0.1">0.1s</button>
             <button class="preset-btn-sm btn-preset" data-pause-duration="0.5">0.5s</button>
             <button class="preset-btn-sm btn-preset active" data-pause-duration="1.5">1.5s</button>
             <button class="preset-btn-sm btn-preset" data-pause-duration="3">3s</button>
@@ -750,6 +751,7 @@
               <label class="label-inline">Min:</label>
               <input type="number" id="cyclePauseMin" min="0.1" max="60" step="0.1" value="1.5" class="input-compact">
               <span class="unit-label">s</span>
+              <button class="preset-btn-sm btn-preset" data-pause-min="0.1">0.1s</button>
               <button class="preset-btn-sm btn-preset" data-pause-min="0.5">0.5s</button>
               <button class="preset-btn-sm btn-preset active" data-pause-min="1.5">1.5s</button>
               <button class="preset-btn-sm btn-preset" data-pause-min="3">3s</button>
@@ -903,7 +905,7 @@
           <div class="form-group-compact d-block">
             <div>
               <label class="label-inline">Centre:</label>
-              <input type="number" id="oscCenter" min="0" step="0.1" value="0" class="input-compact">
+              <input type="number" id="oscCenter" min="0" step="1" value="0" class="input-compact">
               <span class="unit-label">mm</span>
             </div>
             <div class="mt-8">
@@ -918,7 +920,7 @@
           <div class="form-group-compact d-block">
             <div>
               <label class="label-inline">Amplitude ±:</label>
-              <input type="number" id="oscAmplitude" min="1" step="0.1" value="20" class="input-compact">
+              <input type="number" id="oscAmplitude" min="1" step="1" value="20" class="input-compact">
               <span class="unit-label">mm</span>
             </div>
             <div class="mt-8">
@@ -1039,6 +1041,7 @@
               <label class="label-inline">Durée:</label>
               <input type="number" id="cyclePauseDurationOsc" min="0.1" max="60" step="0.1" value="1.5" class="input-compact">
               <span class="unit-label">s</span>
+              <button class="preset-btn-sm btn-preset" data-pause-duration-osc="0.1">0.1s</button>
               <button class="preset-btn-sm btn-preset" data-pause-duration-osc="0.5">0.5s</button>
               <button class="preset-btn-sm btn-preset active" data-pause-duration-osc="1.5">1.5s</button>
               <button class="preset-btn-sm btn-preset" data-pause-duration-osc="3">3s</button>
@@ -1052,6 +1055,7 @@
                 <label class="label-inline">Min:</label>
                 <input type="number" id="cyclePauseMinOsc" min="0.1" max="60" step="0.1" value="1.5" class="input-compact">
                 <span class="unit-label">s</span>
+                <button class="preset-btn-sm btn-preset" data-pause-min-osc="0.1">0.1s</button>
                 <button class="preset-btn-sm btn-preset" data-pause-min-osc="0.5">0.5s</button>
                 <button class="preset-btn-sm btn-preset active" data-pause-min-osc="1.5">1.5s</button>
                 <button class="preset-btn-sm btn-preset" data-pause-min-osc="3">3s</button>
@@ -1125,7 +1129,7 @@
           <div class="form-group-compact d-block">
             <div>
               <label class="label-inline">Centre:</label>
-              <input type="number" id="chaosCenterPos" min="0" step="0.1" value="110" class="input-compact">
+              <input type="number" id="chaosCenterPos" min="0" step="1" value="110" class="input-compact">
               <span class="unit-label">mm</span>
             </div>
             <div class="mt-8">
@@ -1138,7 +1142,7 @@
           <div class="form-group-compact d-block">
             <div>
               <label class="label-inline">Amplitude ±:</label>
-              <input type="number" id="chaosAmplitude" min="1" step="0.1" value="50" class="input-compact">
+              <input type="number" id="chaosAmplitude" min="1" step="1" value="50" class="input-compact">
               <span class="unit-label">mm</span>
             </div>
             <div class="mt-8">
@@ -1482,11 +1486,11 @@
               <div class="grid-2col-12">
                 <div>
                   <label class="label-inline">Position départ:</label>
-                  <input type="number" name="startPositionMM" id="editStartPos" step="0.1" min="0" class="input-modal">
+                  <input type="number" name="startPositionMM" id="editStartPos" step="1" min="0" class="input-modal">
                 </div>
                 <div>
                   <label class="label-inline">Distance (mm):</label>
-                  <input type="number" name="distanceMM" id="editDistance" step="0.1" min="1" class="input-modal">
+                  <input type="number" name="distanceMM" id="editDistance" step="1" min="1" class="input-modal">
                 </div>
               </div>
 
@@ -1583,11 +1587,11 @@
               <div class="grid-2col-12">
                 <div>
                   <label class="label-inline">Centre (mm):</label>
-                  <input type="number" name="oscCenterPositionMM" id="editOscCenter" step="0.1" min="0" value="100" class="input-modal">
+                  <input type="number" name="oscCenterPositionMM" id="editOscCenter" step="1" min="0" value="100" class="input-modal">
                 </div>
                 <div>
                   <label class="label-inline">Amplitude (mm):</label>
-                  <input type="number" name="oscAmplitudeMM" id="editOscAmplitude" step="0.1" min="1" value="50" class="input-modal">
+                  <input type="number" name="oscAmplitudeMM" id="editOscAmplitude" step="1" min="1" value="50" class="input-modal">
                 </div>
               </div>
 
@@ -1675,11 +1679,11 @@
               <div class="grid-2col-12">
                 <div>
                   <label class="label-inline">Centre (mm):</label>
-                  <input type="number" name="chaosCenterPositionMM" id="editChaosCenter" step="0.1" min="0" value="110" class="input-modal">
+                  <input type="number" name="chaosCenterPositionMM" id="editChaosCenter" step="1" min="0" value="110" class="input-modal">
                 </div>
                 <div>
                   <label class="label-inline">Amplitude (mm):</label>
-                  <input type="number" name="chaosAmplitudeMM" id="editChaosAmplitude" step="0.1" min="1" value="50" class="input-modal">
+                  <input type="number" name="chaosAmplitudeMM" id="editChaosAmplitude" step="1" min="1" value="50" class="input-modal">
                 </div>
               </div>
 
