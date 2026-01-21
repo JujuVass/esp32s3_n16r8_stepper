@@ -214,7 +214,29 @@ function updateOscillationPresets() {
     ampInput.style.opacity = isLinked ? '0.5' : '1';
   }
   
-  // 🚀 Validate frequency presets (must not exceed speed limit)
+  // �️ SAFETY: Validate and disable "=Centre" checkbox if center*2 > effectiveMax
+  const linkedCheckbox = document.getElementById('oscAmplitudeLinked');
+  if (linkedCheckbox) {
+    const wouldBeValid = (currentCenter * 2) <= effectiveMax && currentCenter >= 1;
+    linkedCheckbox.disabled = !wouldBeValid;
+    linkedCheckbox.parentElement.style.opacity = wouldBeValid ? '1' : '0.5';
+    linkedCheckbox.parentElement.style.cursor = wouldBeValid ? 'pointer' : 'not-allowed';
+    linkedCheckbox.parentElement.title = wouldBeValid 
+      ? 'Lier amplitude au centre' 
+      : `⚠️ Impossible: centre×2 (${currentCenter * 2}mm) > max calibré (${effectiveMax}mm)`;
+    
+    // If currently linked but now invalid, uncheck it
+    if (isLinked && !wouldBeValid) {
+      linkedCheckbox.checked = false;
+      // Re-enable amplitude input
+      if (ampInput) {
+        ampInput.disabled = false;
+        ampInput.style.opacity = '1';
+      }
+    }
+  }
+  
+  // �🚀 Validate frequency presets (must not exceed speed limit)
   document.querySelectorAll('[data-osc-frequency]').forEach(btn => {
     const frequencyValue = parseFloat(btn.getAttribute('data-osc-frequency'));
     
