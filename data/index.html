@@ -1528,7 +1528,7 @@
 
         <!-- Modal Body -->
         <div style="padding: 25px;">
-          <form id="editLineForm">
+          <form id="editLineForm" novalidate>
             
             <!-- Movement Type Selection -->
             <div class="type-selection-row">
@@ -1625,40 +1625,93 @@
                 </div>
               </div>
 
-              <!-- Deceleration Section -->
+              <!-- Zone Effects Section (Full ZoneEffectConfig) -->
               <fieldset style="border: 1px solid #667eea; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
-                <legend style="color: #667eea; font-weight: 500; padding: 0 8px; font-size: 12px;">Décélération</legend>
+                <legend style="color: #667eea; font-weight: 500; padding: 0 8px; font-size: 12px;">🎯 Effets de Zone</legend>
                 
-                <div class="flex-gap-15 mb-8 text-md">
-                  <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                    <input type="checkbox" name="decelStartEnabled" id="editDecelStart" style="width: 16px; height: 16px;">
-                    <span>Activer DÉBUT</span>
+                <!-- Zone Size + Positions -->
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap;">
+                  <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
+                    <input type="checkbox" name="zoneEnableStart" id="editZoneEnableStart" style="width: 16px; height: 16px;">
+                    <span>Début</span>
                   </label>
-                  <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                    <input type="checkbox" name="decelEndEnabled" id="editDecelEnd" style="width: 16px; height: 16px;" checked>
-                    <span>Activer FIN</span>
+                  <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
+                    <input type="checkbox" name="zoneEnableEnd" id="editZoneEnableEnd" style="width: 16px; height: 16px;" checked>
+                    <span>Fin</span>
                   </label>
+                  <span style="margin-left: 10px; font-size: 13px;">Zone:</span>
+                  <input type="number" name="zoneMM" id="editZoneMM" min="10" max="200" step="5" value="50" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                  <span style="font-size: 13px;">mm</span>
                 </div>
 
-                <div class="grid-2col-12" style="margin-bottom: 8px; gap: 10px;">
-                  <div>
-                    <label class="label-inline">Zone (mm):</label>
-                    <input type="number" name="decelZoneMM" id="editDecelZone" min="10" max="200" step="5" value="20" class="input-modal">
+                <!-- Speed Effect -->
+                <div style="background: #f8f9fa; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
+                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-size: 13px; font-weight: 500;">🚀 Vitesse:</span>
+                    <select name="speedEffect" id="editSpeedEffect" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+                      <option value="0">Aucun</option>
+                      <option value="1" selected>Décélération</option>
+                      <option value="2">Accélération</option>
+                    </select>
+                    <span style="font-size: 13px;">Courbe:</span>
+                    <select name="speedCurve" id="editSpeedCurve" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+                      <option value="0">Linéaire</option>
+                      <option value="1" selected>Sinusoïdal</option>
+                      <option value="2">Triangle Inv.</option>
+                      <option value="3">Sinus Inv.</option>
+                    </select>
                   </div>
-                  <div>
-                    <label class="label-inline">Effet (%): <span id="editEffectValue" style="font-weight: bold; color: #667eea;">50</span></label>
-                    <input type="range" name="decelEffectPercent" id="editDecelEffect" min="0" max="100" step="5" value="50" style="width: 100%; margin-top: 3px;">
+                  <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+                    <span style="font-size: 13px;">Intensité:</span>
+                    <input type="range" name="speedIntensity" id="editSpeedIntensity" min="0" max="100" step="5" value="75" style="flex: 1; max-width: 150px;">
+                    <span id="editSpeedIntensityValue" style="font-weight: bold; color: #667eea; font-size: 13px; min-width: 35px;">75%</span>
                   </div>
                 </div>
 
-                <div>
-                  <label class="label-inline">Mode courbe:</label>
-                  <select name="decelMode" id="editDecelMode" class="input-modal">
-                    <option value="0">Linéaire</option>
-                    <option value="1" selected>Sinusoïdal</option>
-                    <option value="2">Triangle Inversé</option>
-                    <option value="3">Sinus Inversé</option>
-                  </select>
+                <!-- Random Turnback -->
+                <div style="background: #f0f7ff; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
+                  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
+                      <input type="checkbox" name="randomTurnbackEnabled" id="editRandomTurnback" style="width: 16px; height: 16px;">
+                      <span style="font-weight: 500;">🔄 Retour aléatoire</span>
+                    </label>
+                    <span style="font-size: 13px; color: #666;">Chance:</span>
+                    <input type="range" name="turnbackChance" id="editTurnbackChance" min="5" max="100" step="5" value="30" style="width: 80px;">
+                    <span id="editTurnbackChanceValue" style="font-weight: bold; font-size: 13px; min-width: 35px;">30%</span>
+                  </div>
+                </div>
+
+                <!-- End Pause -->
+                <div style="background: #fff8e6; border-radius: 4px; padding: 8px;">
+                  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
+                      <input type="checkbox" name="endPauseEnabled" id="editEndPauseEnabled" style="width: 16px; height: 16px;">
+                      <span style="font-weight: 500;">⏸️ Pause extrémités</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; margin-left: 10px;">
+                      <input type="radio" name="editEndPauseMode" value="fixed" id="editEndPauseModeFixed" checked style="width: 14px; height: 14px;">
+                      <span>Fixe</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
+                      <input type="radio" name="editEndPauseMode" value="random" id="editEndPauseModeRandom" style="width: 14px; height: 14px;">
+                      <span>Aléatoire</span>
+                    </label>
+                  </div>
+                  <!-- Fixed Duration -->
+                  <div id="editEndPauseFixedDiv" style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 13px;">Durée:</span>
+                    <input type="number" name="endPauseDurationSec" id="editEndPauseDuration" min="0.1" max="30" step="0.1" value="1.0" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                    <span style="font-size: 13px;">s</span>
+                  </div>
+                  <!-- Random Min/Max -->
+                  <div id="editEndPauseRandomDiv" style="display: none; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-size: 13px;">Min:</span>
+                    <input type="number" name="endPauseMinSec" id="editEndPauseMin" min="0.1" max="30" step="0.1" value="0.5" style="width: 55px; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                    <span style="font-size: 13px;">s</span>
+                    <span style="font-size: 13px; margin-left: 8px;">Max:</span>
+                    <input type="number" name="endPauseMaxSec" id="editEndPauseMax" min="0.1" max="30" step="0.1" value="2.0" style="width: 55px; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                    <span style="font-size: 13px;">s</span>
+                  </div>
                 </div>
               </fieldset>
 

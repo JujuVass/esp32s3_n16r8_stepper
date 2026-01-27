@@ -513,11 +513,11 @@ struct SequenceLine {
   float distanceMM;
   float speedForward;
   float speedBackward;
-  bool decelStartEnabled;
-  bool decelEndEnabled;
-  float decelZoneMM;
-  float decelEffectPercent;
-  DecelMode decelMode;
+  
+  // VA-ET-VIENT Zone Effects (DRY: uses same struct as standalone mode)
+  // NOTE: Runtime state fields (hasPendingTurnback, isPausing, etc.) are ignored
+  // and will be managed by the global zoneEffect at execution time
+  ZoneEffectConfig vaetZoneEffect;
   
   // VA-ET-VIENT cycle pause
   bool vaetCyclePauseEnabled;
@@ -564,11 +564,7 @@ struct SequenceLine {
     distanceMM(100),
     speedForward(5.0),
     speedBackward(5.0),
-    decelStartEnabled(false),
-    decelEndEnabled(true),
-    decelZoneMM(20.0),
-    decelEffectPercent(50.0),
-    decelMode(DECEL_SINE),
+    vaetZoneEffect(),  // Uses ZoneEffectConfig default constructor
     vaetCyclePauseEnabled(false),
     vaetCyclePauseIsRandom(false),
     vaetCyclePauseDurationSec(0.0),

@@ -697,7 +697,7 @@ function highlightErrorFields(movementType, line, emptyFieldErrors) {
 
 function clearErrorFields() {
   const fields = (typeof ALL_EDIT_FIELDS !== 'undefined') ? ALL_EDIT_FIELDS : [
-    'editStartPos', 'editDistance', 'editSpeedFwd', 'editSpeedBack', 'editZoneMM',
+    'editStartPos', 'editDistance', 'editSpeedFwd', 'editSpeedBack', 'editDecelZone',
     'editOscCenter', 'editOscAmplitude', 'editOscFrequency', 'editOscRampInDur', 'editOscRampOutDur',
     'editChaosCenter', 'editChaosAmplitude', 'editChaosSpeed', 'editChaosCraziness',
     'editChaosDuration', 'editChaosSeed', 'editCycles', 'editPause'

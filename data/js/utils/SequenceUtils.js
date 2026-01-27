@@ -27,7 +27,11 @@ const MOVEMENT_TYPE = {
 
 // Short names for sequence table display (SIN/TRI/SQR)
 const WAVEFORM_SHORT = ['SIN', 'TRI', 'SQR'];
-const DECEL_MODE_LABELS = ['Lin', 'Sin', 'Tri⁻¹', 'Sin⁻¹'];
+const SPEED_CURVE_LABELS = ['Lin', 'Sin', 'Tri⁻¹', 'Sin⁻¹'];
+const SPEED_EFFECT_LABELS = ['', 'Décel', 'Accel'];
+
+// Legacy alias for backward compatibility
+const DECEL_MODE_LABELS = SPEED_CURVE_LABELS;
 
 // ============================================================================
 // TYPE DISPLAY HELPERS
@@ -78,27 +82,76 @@ function getTypeDisplay(movementType, line) {
 }
 
 // ============================================================================
-// DECELERATION SUMMARY
+// ZONE EFFECTS SUMMARY
 // ============================================================================
 
 /**
- * Get deceleration zone summary HTML for a sequence line
+ * Get zone effects summary HTML for a sequence line
+ * Supports both new format (vaetZoneEffect) and legacy format (decel* fields)
  * @param {Object} line - Sequence line object
  * @param {number} movementType - Movement type
- * @returns {string} HTML string for decel summary
+ * @returns {string} HTML string for zone effects summary
  */
 function getDecelSummary(line, movementType) {
-  if (movementType === MOVEMENT_TYPE.VA_ET_VIENT && (line.decelStartEnabled || line.decelEndEnabled)) {
-    const parts = [];
-    if (line.decelStartEnabled) parts.push('D');
-    if (line.decelEndEnabled) parts.push('F');
-    return `<div style="font-size: 10px; line-height: 1.3;">
-      <div style="color: #4CAF50; font-weight: bold;">${parts.join('/')}</div>
-      <div>${line.decelZoneMM}mm ${line.decelEffectPercent}%</div>
-      <div>${DECEL_MODE_LABELS[line.decelMode] || '?'}</div>
-    </div>`;
+  if (movementType !== MOVEMENT_TYPE.VA_ET_VIENT) {
+    return '<span style="color: #999; font-size: 10px;">--</span>';
   }
-  return '<span style="color: #999; font-size: 10px;">--</span>';
+  
+  // Get zone effect config (new format or convert from legacy)
+  let ze = line.vaetZoneEffect;
+  if (!ze) {
+    // Legacy format - convert
+    ze = {
+      enabled: line.decelStartEnabled || line.decelEndEnabled,
+      enableStart: line.decelStartEnabled ?? false,
+      enableEnd: line.decelEndEnabled ?? false,
+      zoneMM: line.decelZoneMM || 50,
+      speedEffect: 1,  // DECEL
+      speedCurve: line.decelMode || 1,
+      speedIntensity: line.decelEffectPercent || 75,
+      randomTurnbackEnabled: false,
+      endPauseEnabled: false
+    };
+  }
+  
+  if (!ze.enabled) {
+    return '<span style="color: #999; font-size: 10px;">--</span>';
+  }
+  
+  // Build summary parts
+  const parts = [];
+  
+  // Position indicators (Début/Fin)
+  const posIndicator = [];
+  if (ze.enableStart) posIndicator.push('D');
+  if (ze.enableEnd) posIndicator.push('F');
+  
+  // Speed effect
+  let effectLine = '';
+  if (ze.speedEffect > 0) {
+    const effectName = SPEED_EFFECT_LABELS[ze.speedEffect] || 'Eff';
+    const curveName = SPEED_CURVE_LABELS[ze.speedCurve] || '';
+    effectLine = `${effectName} ${curveName} ${ze.speedIntensity}%`;
+  }
+  
+  // Random turnback indicator
+  const turnbackIndicator = ze.randomTurnbackEnabled ? `🔄${ze.turnbackChance || 30}%` : '';
+  
+  // End pause indicator
+  const pauseIndicator = ze.endPauseEnabled ? '⏸' : '';
+  
+  // Build HTML
+  let html = `<div style="font-size: 10px; line-height: 1.3;">`;
+  html += `<div style="color: #4CAF50; font-weight: bold;">${posIndicator.join('/')} ${ze.zoneMM}mm</div>`;
+  if (effectLine) {
+    html += `<div>${effectLine}</div>`;
+  }
+  if (turnbackIndicator || pauseIndicator) {
+    html += `<div>${turnbackIndicator} ${pauseIndicator}</div>`;
+  }
+  html += `</div>`;
+  
+  return html;
 }
 
 // ============================================================================
@@ -177,11 +230,27 @@ function getSequenceTemplateDoc() {
         distanceMM: 100,
         speedForward: 5.0,
         speedBackward: 5.0,
-        decelStartEnabled: false,
-        decelEndEnabled: false,
-        decelZoneMM: 50.0,
-        decelEffectPercent: 50.0,
-        decelMode: 0,
+        vaetZoneEffect: {
+          enabled: false,
+          enableStart: true,
+          enableEnd: true,
+          zoneMM: 50,
+          speedEffect: 1,
+          speedCurve: 1,
+          speedIntensity: 75,
+          randomTurnbackEnabled: false,
+          turnbackChance: 30,
+          endPauseEnabled: false,
+          endPauseIsRandom: false,
+          endPauseDurationSec: 1.0,
+          endPauseMinSec: 0.5,
+          endPauseMaxSec: 2.0
+        },
+        vaetCyclePauseEnabled: false,
+        vaetCyclePauseIsRandom: false,
+        vaetCyclePauseDurationSec: 0.0,
+        vaetCyclePauseMinSec: 0.5,
+        vaetCyclePauseMaxSec: 3.0,
         oscCenterPositionMM: 100.0,
         oscAmplitudeMM: 50.0,
         oscWaveform: 0,
@@ -190,6 +259,11 @@ function getSequenceTemplateDoc() {
         oscEnableRampOut: false,
         oscRampInDurationMs: 1000.0,
         oscRampOutDurationMs: 1000.0,
+        oscCyclePauseEnabled: false,
+        oscCyclePauseIsRandom: false,
+        oscCyclePauseDurationSec: 0.0,
+        oscCyclePauseMinSec: 0.5,
+        oscCyclePauseMaxSec: 3.0,
         chaosCenterPositionMM: 110.0,
         chaosAmplitudeMM: 50.0,
         chaosMaxSpeedLevel: 10.0,

@@ -242,11 +242,45 @@ SequenceLine SequenceTableManager::parseFromJson(JsonVariantConst obj) {
   line.distanceMM = obj["distanceMM"] | 100.0;
   line.speedForward = obj["speedForward"] | 5.0;
   line.speedBackward = obj["speedBackward"] | 5.0;
-  line.decelStartEnabled = obj["decelStartEnabled"] | false;
-  line.decelEndEnabled = obj["decelEndEnabled"] | false;
-  line.decelZoneMM = obj["decelZoneMM"] | 50.0;
-  line.decelEffectPercent = obj["decelEffectPercent"] | 50.0;
-  line.decelMode = (DecelMode)(obj["decelMode"] | 0);
+  
+  // VA-ET-VIENT zone effects (embedded ZoneEffectConfig)
+  JsonVariantConst ze = obj["vaetZoneEffect"];
+  if (!ze.isNull()) {
+    // New format: vaetZoneEffect object
+    line.vaetZoneEffect.enabled = ze["enabled"] | false;
+    line.vaetZoneEffect.enableStart = ze["enableStart"] | true;
+    line.vaetZoneEffect.enableEnd = ze["enableEnd"] | true;
+    line.vaetZoneEffect.zoneMM = ze["zoneMM"] | 50.0;
+    line.vaetZoneEffect.speedEffect = (SpeedEffect)(ze["speedEffect"] | 1);
+    line.vaetZoneEffect.speedCurve = (SpeedCurve)(ze["speedCurve"] | 0);
+    line.vaetZoneEffect.speedIntensity = ze["speedIntensity"] | 75.0;
+    line.vaetZoneEffect.randomTurnbackEnabled = ze["randomTurnbackEnabled"] | false;
+    line.vaetZoneEffect.turnbackChance = ze["turnbackChance"] | 30;
+    line.vaetZoneEffect.endPauseEnabled = ze["endPauseEnabled"] | false;
+    line.vaetZoneEffect.endPauseIsRandom = ze["endPauseIsRandom"] | false;
+    line.vaetZoneEffect.endPauseDurationSec = ze["endPauseDurationSec"] | 1.0;
+    line.vaetZoneEffect.endPauseMinSec = ze["endPauseMinSec"] | 0.5;
+    line.vaetZoneEffect.endPauseMaxSec = ze["endPauseMaxSec"] | 2.0;
+  } else {
+    // Legacy format: decel* fields - migrate to new format
+    bool decelStartEnabled = obj["decelStartEnabled"] | false;
+    bool decelEndEnabled = obj["decelEndEnabled"] | false;
+    float decelZoneMM = obj["decelZoneMM"] | 50.0;
+    float decelEffectPercent = obj["decelEffectPercent"] | 50.0;
+    int decelMode = obj["decelMode"] | 0;
+    
+    // Convert to ZoneEffectConfig
+    line.vaetZoneEffect.enabled = (decelStartEnabled || decelEndEnabled);
+    line.vaetZoneEffect.enableStart = decelStartEnabled;
+    line.vaetZoneEffect.enableEnd = decelEndEnabled;
+    line.vaetZoneEffect.zoneMM = decelZoneMM;
+    line.vaetZoneEffect.speedEffect = SPEED_DECEL;
+    line.vaetZoneEffect.speedCurve = (SpeedCurve)decelMode;
+    line.vaetZoneEffect.speedIntensity = decelEffectPercent;
+    // New features disabled by default for legacy imports
+    line.vaetZoneEffect.randomTurnbackEnabled = false;
+    line.vaetZoneEffect.endPauseEnabled = false;
+  }
   
   // VA-ET-VIENT cycle pause
   line.vaetCyclePauseEnabled = obj["vaetCyclePauseEnabled"] | false;
@@ -326,11 +360,23 @@ String SequenceTableManager::exportToJson() {
     lineObj["distanceMM"] = serialized(String(line->distanceMM, 1));
     lineObj["speedForward"] = serialized(String(line->speedForward, 1));
     lineObj["speedBackward"] = serialized(String(line->speedBackward, 1));
-    lineObj["decelStartEnabled"] = line->decelStartEnabled;
-    lineObj["decelEndEnabled"] = line->decelEndEnabled;
-    lineObj["decelZoneMM"] = serialized(String(line->decelZoneMM, 1));
-    lineObj["decelEffectPercent"] = serialized(String(line->decelEffectPercent, 0));
-    lineObj["decelMode"] = (int)line->decelMode;
+    
+    // VA-ET-VIENT zone effects (embedded ZoneEffectConfig)
+    JsonObject ze = lineObj["vaetZoneEffect"].to<JsonObject>();
+    ze["enabled"] = line->vaetZoneEffect.enabled;
+    ze["enableStart"] = line->vaetZoneEffect.enableStart;
+    ze["enableEnd"] = line->vaetZoneEffect.enableEnd;
+    ze["zoneMM"] = serialized(String(line->vaetZoneEffect.zoneMM, 1));
+    ze["speedEffect"] = (int)line->vaetZoneEffect.speedEffect;
+    ze["speedCurve"] = (int)line->vaetZoneEffect.speedCurve;
+    ze["speedIntensity"] = serialized(String(line->vaetZoneEffect.speedIntensity, 0));
+    ze["randomTurnbackEnabled"] = line->vaetZoneEffect.randomTurnbackEnabled;
+    ze["turnbackChance"] = line->vaetZoneEffect.turnbackChance;
+    ze["endPauseEnabled"] = line->vaetZoneEffect.endPauseEnabled;
+    ze["endPauseIsRandom"] = line->vaetZoneEffect.endPauseIsRandom;
+    ze["endPauseDurationSec"] = serialized(String(line->vaetZoneEffect.endPauseDurationSec, 1));
+    ze["endPauseMinSec"] = serialized(String(line->vaetZoneEffect.endPauseMinSec, 1));
+    ze["endPauseMaxSec"] = serialized(String(line->vaetZoneEffect.endPauseMaxSec, 1));
     
     // VA-ET-VIENT cycle pause
     lineObj["vaetCyclePauseEnabled"] = line->vaetCyclePauseEnabled;

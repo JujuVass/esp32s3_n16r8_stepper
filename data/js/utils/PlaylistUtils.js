@@ -67,6 +67,22 @@ function generatePresetTooltipPure(mode, config) {
     if (config.cycleCount !== undefined) {
       tooltip += `\n🔄 Cycles: ${config.cycleCount === 0 ? '∞' : config.cycleCount}`;
     }
+    // Zone Effects info (new format or legacy)
+    const ze = config.vaetZoneEffect;
+    if (ze && ze.enabled) {
+      const pos = [];
+      if (ze.enableStart) pos.push('D');
+      if (ze.enableEnd) pos.push('F');
+      tooltip += `\n🎯 Zone: ${pos.join('/')} ${ze.zoneMM}mm`;
+      if (ze.randomTurnbackEnabled) tooltip += ` 🔄${ze.turnbackChance}%`;
+      if (ze.endPauseEnabled) tooltip += ' ⏸';
+    } else if (config.decelStartEnabled || config.decelEndEnabled) {
+      // Legacy format
+      const pos = [];
+      if (config.decelStartEnabled) pos.push('D');
+      if (config.decelEndEnabled) pos.push('F');
+      tooltip += `\n🎯 Décel: ${pos.join('/')} ${config.decelZoneMM || 20}mm`;
+    }
     return tooltip;
   } else if (mode === 'oscillation') {
     let tooltip = `📍 Centre: ${config.centerPositionMM || 100}mm\n`;

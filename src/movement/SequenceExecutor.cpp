@@ -460,14 +460,15 @@ void SequenceExecutor::startVaEtVientLine(SequenceLine* line) {
     if (motion.speedLevelBackward < 1.0) motion.speedLevelBackward = 1.0;
     if (motion.speedLevelBackward > MAX_SPEED_LEVEL) motion.speedLevelBackward = MAX_SPEED_LEVEL;
     
-    // Apply deceleration configuration (legacy sequence line format)
-    zoneEffect.enabled = line->decelStartEnabled || line->decelEndEnabled;
-    zoneEffect.enableStart = line->decelStartEnabled;
-    zoneEffect.enableEnd = line->decelEndEnabled;
-    zoneEffect.zoneMM = line->decelZoneMM;
-    zoneEffect.speedIntensity = line->decelEffectPercent;
-    zoneEffect.speedCurve = line->decelMode;
-    zoneEffect.speedEffect = SPEED_DECEL;  // Sequences use deceleration by default
+    // Copy zone effect configuration from sequence line (DRY: embedded ZoneEffectConfig)
+    // Copy all settings, then reset runtime state
+    zoneEffect = line->vaetZoneEffect;
+    zoneEffect.hasPendingTurnback = false;
+    zoneEffect.hasRolledForTurnback = false;
+    zoneEffect.turnbackPointMM = 0.0;
+    zoneEffect.isPausing = false;
+    zoneEffect.pauseStartMs = 0;
+    zoneEffect.pauseDurationMs = 0;
     
     // Apply cycle pause configuration from sequence line
     motion.cyclePause.enabled = line->vaetCyclePauseEnabled;

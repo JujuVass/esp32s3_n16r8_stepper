@@ -113,24 +113,40 @@ function getCurrentModeConfig(mode) {
     const cyclePauseSection = document.querySelector('.section-collapsible:has(#cyclePauseHeaderText)');
     const cyclePauseEnabled = cyclePauseSection && !cyclePauseSection.classList.contains('collapsed');
     
-    // Check if deceleration section is expanded (enabled)
-    const decelSection = document.getElementById('decelSection');
-    const decelSectionEnabled = decelSection && !decelSection.classList.contains('collapsed');
+    // Check if Zone Effects section is expanded (enabled)
+    const zoneEffectSection = document.getElementById('zoneEffectSection');
+    const zoneEffectEnabled = zoneEffectSection && !zoneEffectSection.classList.contains('collapsed');
     
-    // Determine if random mode is selected
+    // Determine if random mode is selected (cycle pause)
     const isRandom = document.getElementById('pauseModeRandom')?.checked || false;
+    
+    // Determine if random mode is selected (end pause)
+    const endPauseIsRandom = document.getElementById('endPauseModeRandom')?.checked || false;
     
     return {
       startPositionMM: parseFloat(document.getElementById('startPosition').value) || 0,
       distanceMM: parseFloat(document.getElementById('distance').value) || 50,
       speedLevelForward: parseFloat(document.getElementById('speedForward')?.value || document.getElementById('speedUnified').value) || 5,
       speedLevelBackward: parseFloat(document.getElementById('speedBackward')?.value || document.getElementById('speedUnified').value) || 5,
-      // Deceleration parameters - ONLY if section is expanded
-      decelStartEnabled: decelSectionEnabled ? (document.getElementById('decelZoneStart')?.checked || false) : false,
-      decelEndEnabled: decelSectionEnabled ? (document.getElementById('decelZoneEnd')?.checked || false) : false,
-      decelZoneMM: parseFloat(document.getElementById('decelZoneMM')?.value) || 20,
-      decelEffectPercent: parseFloat(document.getElementById('decelEffectPercent')?.value) || 50,
-      decelMode: parseInt(document.getElementById('decelModeSelect')?.value) || 1,
+      
+      // Zone Effects (new unified structure)
+      vaetZoneEffect: {
+        enabled: zoneEffectEnabled,
+        enableStart: document.getElementById('zoneEffectStart')?.checked ?? true,
+        enableEnd: document.getElementById('zoneEffectEnd')?.checked ?? true,
+        zoneMM: parseFloat(document.getElementById('zoneEffectMM')?.value) || 50,
+        speedEffect: parseInt(document.getElementById('speedEffectType')?.value) || 1,
+        speedCurve: parseInt(document.getElementById('speedCurveSelect')?.value) || 1,
+        speedIntensity: parseFloat(document.getElementById('speedIntensity')?.value) || 75,
+        randomTurnbackEnabled: document.getElementById('randomTurnbackEnabled')?.checked || false,
+        turnbackChance: parseInt(document.getElementById('turnbackChance')?.value) || 30,
+        endPauseEnabled: document.getElementById('endPauseEnabled')?.checked || false,
+        endPauseIsRandom: endPauseIsRandom,
+        endPauseDurationSec: parseFloat(document.getElementById('endPauseDuration')?.value) || 1.0,
+        endPauseMinSec: parseFloat(document.getElementById('endPauseMin')?.value) || 0.5,
+        endPauseMaxSec: parseFloat(document.getElementById('endPauseMax')?.value) || 2.0
+      },
+      
       // Cycle pause parameters
       cyclePauseEnabled: cyclePauseEnabled,
       cyclePauseIsRandom: isRandom,
@@ -518,38 +534,101 @@ function loadSimplePreset(config) {
     document.getElementById('speedUnified').value = config.speedLevelForward || 5;
   }
   
-  // Load DECELERATION parameters (if present)
-  if (config.decelStartEnabled !== undefined) {
-    const decelStartEl = document.getElementById('decelZoneStart');
-    if (decelStartEl) decelStartEl.checked = config.decelStartEnabled;
-  }
-  if (config.decelEndEnabled !== undefined) {
-    const decelEndEl = document.getElementById('decelZoneEnd');
-    if (decelEndEl) decelEndEl.checked = config.decelEndEnabled;
-  }
-  if (config.decelZoneMM !== undefined) {
-    const decelZoneEl = document.getElementById('decelZoneMM');
-    if (decelZoneEl) decelZoneEl.value = config.decelZoneMM;
-  }
-  if (config.decelEffectPercent !== undefined) {
-    const decelEffectEl = document.getElementById('decelEffectPercent');
-    const decelValueEl = document.getElementById('effectValue');
-    if (decelEffectEl) decelEffectEl.value = config.decelEffectPercent;
-    if (decelValueEl) decelValueEl.textContent = config.decelEffectPercent + '%';
-  }
-  if (config.decelMode !== undefined) {
-    const decelModeEl = document.getElementById('decelModeSelect');
-    if (decelModeEl) decelModeEl.value = config.decelMode;
+  // Load Zone Effects parameters (new format: vaetZoneEffect, or legacy: decel*)
+  let ze = config.vaetZoneEffect;
+  if (!ze) {
+    // Convert legacy format to new format
+    ze = {
+      enabled: config.decelStartEnabled || config.decelEndEnabled || false,
+      enableStart: config.decelStartEnabled ?? true,
+      enableEnd: config.decelEndEnabled ?? true,
+      zoneMM: config.decelZoneMM || 50,
+      speedEffect: 1,  // DECEL
+      speedCurve: config.decelMode || 1,
+      speedIntensity: config.decelEffectPercent || 75,
+      randomTurnbackEnabled: false,
+      turnbackChance: 30,
+      endPauseEnabled: false,
+      endPauseIsRandom: false,
+      endPauseDurationSec: 1.0,
+      endPauseMinSec: 0.5,
+      endPauseMaxSec: 2.0
+    };
   }
   
-  // Auto-expand deceleration section if enabled
-  if (config.decelStartEnabled || config.decelEndEnabled) {
-    const decelSection = document.getElementById('decelSection');
-    if (decelSection?.classList.contains('collapsed')) {
-      decelSection.classList.remove('collapsed');
-      const chevron = decelSection.querySelector('.section-chevron');
+  // Apply Zone Effects to UI
+  const zoneEffectSection = document.getElementById('zoneEffectSection');
+  const zoneEffectHeaderText = document.getElementById('zoneEffectHeaderText');
+  
+  // Zone settings
+  const zoneMMEl = document.getElementById('zoneEffectMM');
+  const zoneStartEl = document.getElementById('zoneEffectStart');
+  const zoneEndEl = document.getElementById('zoneEffectEnd');
+  if (zoneMMEl) zoneMMEl.value = ze.zoneMM || 50;
+  if (zoneStartEl) zoneStartEl.checked = ze.enableStart ?? true;
+  if (zoneEndEl) zoneEndEl.checked = ze.enableEnd ?? true;
+  
+  // Speed effect
+  const speedEffectEl = document.getElementById('speedEffectType');
+  const speedCurveEl = document.getElementById('speedCurveSelect');
+  const speedIntensityEl = document.getElementById('speedIntensity');
+  const speedIntensityValueEl = document.getElementById('speedIntensityValue');
+  if (speedEffectEl) speedEffectEl.value = ze.speedEffect || 1;
+  if (speedCurveEl) speedCurveEl.value = ze.speedCurve || 1;
+  if (speedIntensityEl) speedIntensityEl.value = ze.speedIntensity || 75;
+  if (speedIntensityValueEl) speedIntensityValueEl.textContent = (ze.speedIntensity || 75) + '%';
+  
+  // Random turnback
+  const turnbackEnabledEl = document.getElementById('randomTurnbackEnabled');
+  const turnbackChanceEl = document.getElementById('turnbackChance');
+  const turnbackChanceValueEl = document.getElementById('turnbackChanceValue');
+  if (turnbackEnabledEl) turnbackEnabledEl.checked = ze.randomTurnbackEnabled || false;
+  if (turnbackChanceEl) turnbackChanceEl.value = ze.turnbackChance || 30;
+  if (turnbackChanceValueEl) turnbackChanceValueEl.textContent = (ze.turnbackChance || 30) + '%';
+  
+  // End pause
+  const endPauseEnabledEl = document.getElementById('endPauseEnabled');
+  const endPauseModeFixedEl = document.getElementById('endPauseModeFixed');
+  const endPauseModeRandomEl = document.getElementById('endPauseModeRandom');
+  const endPauseDurationEl = document.getElementById('endPauseDuration');
+  const endPauseMinEl = document.getElementById('endPauseMin');
+  const endPauseMaxEl = document.getElementById('endPauseMax');
+  
+  if (endPauseEnabledEl) endPauseEnabledEl.checked = ze.endPauseEnabled || false;
+  if (endPauseModeFixedEl && endPauseModeRandomEl) {
+    if (ze.endPauseIsRandom) {
+      endPauseModeRandomEl.checked = true;
+      endPauseModeFixedEl.checked = false;
+    } else {
+      endPauseModeFixedEl.checked = true;
+      endPauseModeRandomEl.checked = false;
+    }
+  }
+  if (endPauseDurationEl) endPauseDurationEl.value = ze.endPauseDurationSec || 1.0;
+  if (endPauseMinEl) endPauseMinEl.value = ze.endPauseMinSec || 0.5;
+  if (endPauseMaxEl) endPauseMaxEl.value = ze.endPauseMaxSec || 2.0;
+  
+  // Toggle end pause fixed/random visibility
+  const endPauseFixedControls = document.getElementById('endPauseFixedControls');
+  const endPauseRandomControls = document.getElementById('endPauseRandomControls');
+  if (endPauseFixedControls && endPauseRandomControls) {
+    if (ze.endPauseIsRandom) {
+      endPauseFixedControls.classList.add('hidden');
+      endPauseRandomControls.classList.remove('hidden');
+    } else {
+      endPauseFixedControls.classList.remove('hidden');
+      endPauseRandomControls.classList.add('hidden');
+    }
+  }
+  
+  // Auto-expand Zone Effects section if enabled
+  if (ze.enabled && zoneEffectSection && zoneEffectHeaderText) {
+    if (zoneEffectSection.classList.contains('collapsed')) {
+      zoneEffectSection.classList.remove('collapsed');
+      const chevron = zoneEffectSection.querySelector('.collapse-icon');
       if (chevron) chevron.textContent = '▼';
     }
+    zoneEffectHeaderText.textContent = '🎯 Effets de Zone - activés';
   }
   
   // Load cycle pause parameters
@@ -611,17 +690,22 @@ function loadSimplePreset(config) {
   sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: config.speedLevelForward || 5});
   sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: config.speedLevelBackward || 5});
   
-  // Send deceleration config to backend
-  const decelCmd = {
-    enabled: config.decelStartEnabled || config.decelEndEnabled,
-    enableStart: config.decelStartEnabled || false,
-    enableEnd: config.decelEndEnabled || false,
-    zoneMM: config.decelZoneMM || 20,
-    effectPercent: config.decelEffectPercent || 50,
-    mode: config.decelMode || 1
-  };
-  console.log('🔧 Sending setDecelZone:', decelCmd);
-  sendCommand(WS_CMD.SET_DECEL_ZONE, decelCmd);
+  // Send Zone Effects config to backend (use new format)
+  const zoneEffectCmd = ze;  // ze is already built above
+  console.log('🔧 Sending setZoneEffect:', zoneEffectCmd);
+  if (WS_CMD.SET_ZONE_EFFECT) {
+    sendCommand(WS_CMD.SET_ZONE_EFFECT, zoneEffectCmd);
+  } else {
+    // Fallback to old command if new one not available
+    sendCommand(WS_CMD.SET_DECEL_ZONE, {
+      enabled: ze.enabled,
+      enableStart: ze.enableStart,
+      enableEnd: ze.enableEnd,
+      zoneMM: ze.zoneMM,
+      effectPercent: ze.speedIntensity,
+      mode: ze.speedCurve
+    });
+  }
   
   // Send cycle pause config to backend
   const pauseCmd = {
@@ -635,7 +719,7 @@ function loadSimplePreset(config) {
   console.log('🔧 Sending setCyclePause:', pauseCmd);
   sendCommand(WS_CMD.SET_CYCLE_PAUSE, pauseCmd);
   
-  console.log('✅ Simple preset loaded | Pause enabled:', pauseEnabled, '| Random:', pauseIsRandom);
+  console.log('✅ Simple preset loaded | Zone Effects:', ze.enabled);
 }
 
 /**
@@ -794,6 +878,32 @@ function quickAddToSequencer(mode, presetId) {
     // Fallback - minimal construction (should not happen if sequencer.js loaded)
     console.warn('buildSequenceLineFromPresetPure not available');
     const center = effectiveMax / 2;
+    
+    // Build vaetZoneEffect from config (new format) or convert from legacy format
+    let vaetZoneEffect;
+    if (config.vaetZoneEffect) {
+      // New format
+      vaetZoneEffect = config.vaetZoneEffect;
+    } else {
+      // Legacy format - convert decel* fields
+      vaetZoneEffect = {
+        enabled: config.decelStartEnabled || config.decelEndEnabled,
+        enableStart: config.decelStartEnabled ?? true,
+        enableEnd: config.decelEndEnabled ?? true,
+        zoneMM: config.decelZoneMM || 50,
+        speedEffect: 1,  // DECEL
+        speedCurve: config.decelMode || 1,
+        speedIntensity: config.decelEffectPercent || 75,
+        randomTurnbackEnabled: false,
+        turnbackChance: 30,
+        endPauseEnabled: false,
+        endPauseIsRandom: false,
+        endPauseDurationSec: 1.0,
+        endPauseMinSec: 0.5,
+        endPauseMaxSec: 2.0
+      };
+    }
+    
     newLine = {
       enabled: true,
       movementType: mode === 'simple' ? 0 : mode === 'oscillation' ? 1 : 2,
@@ -803,11 +913,7 @@ function quickAddToSequencer(mode, presetId) {
       distanceMM: config.distanceMM || 50,
       speedForward: config.speedLevelForward || 5,
       speedBackward: config.speedLevelBackward || 5,
-      decelStartEnabled: false,
-      decelEndEnabled: true,
-      decelZoneMM: 20,
-      decelEffectPercent: 50,
-      decelMode: 1,
+      vaetZoneEffect: vaetZoneEffect,
       oscCenterPositionMM: config.centerPositionMM || center,
       oscAmplitudeMM: config.amplitudeMM || 50,
       oscWaveform: 0,
@@ -823,11 +929,11 @@ function quickAddToSequencer(mode, presetId) {
       chaosDurationSeconds: 30,
       chaosSeed: 0,
       chaosPatternsEnabled: [true, true, true, true, true, true, true, true, true, true, true],
-      vaetCyclePauseEnabled: false,
-      vaetCyclePauseIsRandom: false,
-      vaetCyclePauseDurationSec: 0.0,
-      vaetCyclePauseMinSec: 0.5,
-      vaetCyclePauseMaxSec: 3.0,
+      vaetCyclePauseEnabled: config.cyclePauseEnabled || false,
+      vaetCyclePauseIsRandom: config.cyclePauseIsRandom || false,
+      vaetCyclePauseDurationSec: config.cyclePauseDurationSec || 0.0,
+      vaetCyclePauseMinSec: config.cyclePauseMinSec || 0.5,
+      vaetCyclePauseMaxSec: config.cyclePauseMaxSec || 3.0,
       oscCyclePauseEnabled: false,
       oscCyclePauseIsRandom: false,
       oscCyclePauseDurationSec: 0.0,
