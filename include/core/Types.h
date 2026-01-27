@@ -173,32 +173,95 @@ struct PendingMotionConfig {
 };
 
 // ============================================================================
-// DECELERATION ZONE
+// ZONE EFFECTS (replaces DECELERATION ZONE)
 // ============================================================================
 
-enum DecelMode {
-  DECEL_LINEAR = 0,           // Linear: constant deceleration rate
-  DECEL_SINE = 1,             // Sinusoidal: smooth curve (max slowdown at contact)
-  DECEL_TRIANGLE_INV = 2,     // Triangle inverted: weak at start, strong at end
-  DECEL_SINE_INV = 3          // Sine inverted: weak at start, strong at end
+// Speed effect type (mutually exclusive)
+enum SpeedEffect {
+  SPEED_NONE = 0,             // No speed change in zone
+  SPEED_DECEL = 1,            // Deceleration (slow down)
+  SPEED_ACCEL = 2             // Acceleration (punch effect)
 };
 
-struct DecelZoneConfig {
-  bool enabled;
-  bool enableStart;
-  bool enableEnd;
-  float zoneMM;
-  float effectPercent;
-  DecelMode mode;
+// Speed curve type (how the effect is applied)
+enum SpeedCurve {
+  CURVE_LINEAR = 0,           // Linear: constant rate
+  CURVE_SINE = 1,             // Sinusoidal: smooth S-curve
+  CURVE_TRIANGLE_INV = 2,     // Triangle inverted: weak at start, strong at end
+  CURVE_SINE_INV = 3          // Sine inverted: weak at start, strong at end
+};
+
+// Legacy alias for backward compatibility
+typedef SpeedCurve DecelMode;
+#define DECEL_LINEAR CURVE_LINEAR
+#define DECEL_SINE CURVE_SINE
+#define DECEL_TRIANGLE_INV CURVE_TRIANGLE_INV
+#define DECEL_SINE_INV CURVE_SINE_INV
+
+struct ZoneEffectConfig {
+  // === Zone Settings ===
+  bool enabled;               // Master enable for zone effects
+  bool enableStart;           // Apply effects at start position
+  bool enableEnd;             // Apply effects at end position
+  float zoneMM;               // Zone size in mm (10-200)
   
-  DecelZoneConfig() :
+  // === Speed Effect ===
+  SpeedEffect speedEffect;    // NONE, DECEL, ACCEL
+  SpeedCurve speedCurve;      // Curve type
+  float speedIntensity;       // 0-100% intensity
+  
+  // === Random Turnback ===
+  bool randomTurnbackEnabled; // Enable random turnback in zone
+  uint8_t turnbackChance;     // 0-100% chance per zone entry
+  
+  // === End Pause (like cycle pause) ===
+  bool endPauseEnabled;       // Enable pause at extremity
+  bool endPauseIsRandom;      // Fixed or random duration
+  float endPauseDurationSec;  // Fixed mode: duration in seconds
+  float endPauseMinSec;       // Random mode: minimum duration
+  float endPauseMaxSec;       // Random mode: maximum duration
+  
+  // === Runtime State (not persisted) ===
+  bool hasPendingTurnback;    // Turnback decision made for this pass
+  bool hasRolledForTurnback;  // Already rolled dice for this zone entry (prevents multiple rolls)
+  float turnbackPointMM;      // Where to turn back (distance into zone)
+  bool isPausing;             // Currently in end pause
+  unsigned long pauseStartMs; // When pause started
+  unsigned long pauseDurationMs; // Current pause duration
+  
+  ZoneEffectConfig() :
     enabled(false),
     enableStart(true),
     enableEnd(true),
     zoneMM(50.0),
-    effectPercent(75.0),
-    mode(DECEL_SINE) {}
+    speedEffect(SPEED_DECEL),
+    speedCurve(CURVE_SINE),
+    speedIntensity(75.0),
+    randomTurnbackEnabled(false),
+    turnbackChance(30),
+    endPauseEnabled(false),
+    endPauseIsRandom(false),
+    endPauseDurationSec(1.0),
+    endPauseMinSec(0.5),
+    endPauseMaxSec(2.0),
+    hasPendingTurnback(false),
+    hasRolledForTurnback(false),
+    turnbackPointMM(0.0),
+    isPausing(false),
+    pauseStartMs(0),
+    pauseDurationMs(0) {}
+    
+  // Legacy getter for backward compatibility (effectPercent)
+  float getEffectPercent() const { return speedIntensity; }
+  void setEffectPercent(float val) { speedIntensity = val; }
+  
+  // Legacy getter for mode (maps to speedCurve when speedEffect is DECEL)
+  SpeedCurve getMode() const { return speedCurve; }
+  void setMode(SpeedCurve m) { speedCurve = m; }
 };
+
+// Legacy alias
+typedef ZoneEffectConfig DecelZoneConfig;
 
 // ============================================================================
 // PURSUIT MODE

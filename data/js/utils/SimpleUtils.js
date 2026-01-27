@@ -109,6 +109,33 @@ function calculateSlowdownFactorPure(zoneProgress, maxSlowdown, mode) {
  * @param {number} [config.movementAmplitude=150] - Total movement range for preview
  */
 function drawDecelPreviewPure(canvas, config) {
+  // Delegate to new unified function
+  drawZoneEffectPreviewPure(canvas, {
+    ...config,
+    speedEffect: 1,  // DECEL
+    speedCurve: config.mode,
+    speedIntensity: config.effectPercent
+  });
+}
+
+/**
+ * Draw zone effects preview on a canvas
+ * Shows: speed effects (decel/accel), random turnback zones, and end pause indicators
+ * 
+ * @param {HTMLCanvasElement} canvas - Target canvas element
+ * @param {Object} config - Zone effect configuration
+ * @param {boolean} config.enableStart - Whether start zone is active
+ * @param {boolean} config.enableEnd - Whether end zone is active
+ * @param {number} config.zoneMM - Zone size in millimeters
+ * @param {number} config.speedEffect - Speed effect type (0=none, 1=decel, 2=accel)
+ * @param {number} config.speedCurve - Speed curve type (0-3)
+ * @param {number} config.speedIntensity - Speed effect intensity (0-100)
+ * @param {boolean} config.randomTurnbackEnabled - Whether random turnback is enabled
+ * @param {number} config.turnbackChance - Turnback chance percentage
+ * @param {boolean} config.endPauseEnabled - Whether end pause is enabled
+ * @param {number} [config.movementAmplitude=150] - Total movement range for preview
+ */
+function drawZoneEffectPreviewPure(canvas, config) {
   if (!canvas) return;
   
   const ctx = canvas.getContext('2d');
@@ -123,26 +150,33 @@ function drawDecelPreviewPure(canvas, config) {
   
   // Destructure config with defaults
   const {
-    enabled = false,
     enableStart = true,
     enableEnd = true,
     zoneMM = 50,
-    effectPercent = 75,
-    mode = 1,
+    speedEffect = 1,        // 0=none, 1=decel, 2=accel
+    speedCurve = 1,         // 0=linear, 1=sine, 2=tri_inv, 3=sine_inv
+    speedIntensity = 75,
+    randomTurnbackEnabled = false,
+    turnbackChance = 30,
+    endPauseEnabled = false,
     movementAmplitude = 150
   } = config;
   
-  // Show disabled message if not enabled
-  if (!enabled) {
+  // Check if any effect is active
+  const hasSpeedEffect = speedEffect !== 0;
+  const hasAnyEffect = hasSpeedEffect || randomTurnbackEnabled || endPauseEnabled;
+  
+  // Show disabled message if nothing is enabled
+  if (!hasAnyEffect) {
     ctx.font = '14px Arial';
     ctx.fillStyle = '#999';
     ctx.textAlign = 'center';
-    ctx.fillText('Décélération désactivée', width / 2, height / 2);
+    ctx.fillText('Aucun effet actif', width / 2, height / 2);
     return;
   }
   
-  // Calculate max slowdown from effect percent
-  const maxSlowdown = 1.0 + (effectPercent / 100.0) * 9.0;  // 1× to 10×
+  // Calculate max slowdown/speedup from intensity
+  const maxFactor = 1.0 + (speedIntensity / 100.0) * 9.0;  // 1× to 10×
   
   // Draw axes
   ctx.strokeStyle = '#ccc';
@@ -153,39 +187,71 @@ function drawDecelPreviewPure(canvas, config) {
   ctx.lineTo(width - padding, height - padding);
   ctx.stroke();
   
-  // Draw curve
-  ctx.strokeStyle = '#4CAF50';
-  ctx.lineWidth = 2;
+  // Draw horizontal line for normal speed (y = 0.5 * plotHeight)
+  ctx.strokeStyle = '#ddd';
+  ctx.setLineDash([2, 2]);
   ctx.beginPath();
-  
-  for (let x = 0; x <= plotWidth; x++) {
-    const positionMM = (x / plotWidth) * movementAmplitude;
-    let speedFactor = 1.0;  // Normal speed
-    
-    // Check START zone
-    if (enableStart && positionMM <= zoneMM) {
-      const zoneProgress = positionMM / zoneMM;
-      speedFactor = calculateSlowdownFactorPure(zoneProgress, maxSlowdown, mode);
-    }
-    // Check END zone
-    if (enableEnd && positionMM >= (movementAmplitude - zoneMM)) {
-      const distanceFromEnd = movementAmplitude - positionMM;
-      const zoneProgress = distanceFromEnd / zoneMM;
-      speedFactor = calculateSlowdownFactorPure(zoneProgress, maxSlowdown, mode);
-    }
-    
-    // Convert speed factor to Y coordinate (inverted: slower = higher on graph)
-    const normalizedSpeed = 1.0 / speedFactor;  // 1.0 = normal, 0.1 = 10× slower
-    const y = height - padding - (normalizedSpeed * plotHeight);
-    
-    if (x === 0) {
-      ctx.moveTo(padding + x, y);
-    } else {
-      ctx.lineTo(padding + x, y);
-    }
-  }
-  
+  const normalY = height - padding - (0.5 * plotHeight);
+  ctx.moveTo(padding, normalY);
+  ctx.lineTo(width - padding, normalY);
   ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // Draw speed curve if speed effect is active
+  if (hasSpeedEffect) {
+    const isAccel = speedEffect === 2;
+    ctx.strokeStyle = isAccel ? '#2196F3' : '#4CAF50';  // Blue for accel, green for decel
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    for (let x = 0; x <= plotWidth; x++) {
+      const positionMM = (x / plotWidth) * movementAmplitude;
+      let speedFactor = 1.0;  // Normal speed
+      
+      // Check START zone
+      if (enableStart && positionMM <= zoneMM) {
+        const zoneProgress = positionMM / zoneMM;
+        speedFactor = calculateSlowdownFactorPure(zoneProgress, maxFactor, speedCurve);
+        if (isAccel) {
+          // For acceleration: invert the slowdown to speedup
+          speedFactor = 1.0 / speedFactor;
+        }
+      }
+      // Check END zone
+      if (enableEnd && positionMM >= (movementAmplitude - zoneMM)) {
+        const distanceFromEnd = movementAmplitude - positionMM;
+        const zoneProgress = distanceFromEnd / zoneMM;
+        speedFactor = calculateSlowdownFactorPure(zoneProgress, maxFactor, speedCurve);
+        if (isAccel) {
+          speedFactor = 1.0 / speedFactor;
+        }
+      }
+      
+      // Convert speed factor to Y coordinate
+      // For decel: slower = higher value = lower on graph (towards bottom)
+      // For accel: faster = lower value (< 1) = higher on graph
+      let normalizedSpeed;
+      if (isAccel) {
+        // Accel: values range from 1 (normal) to < 1 (faster)
+        // Map to 0.5 (normal) to 1.0 (fast) for display
+        normalizedSpeed = 0.5 + (1.0 - speedFactor) * 0.5;
+      } else {
+        // Decel: values range from 1 (normal) to > 1 (slower)
+        // Map to 0.5 (normal) to 0 (slow) for display
+        normalizedSpeed = 0.5 / speedFactor;
+      }
+      
+      const y = height - padding - (normalizedSpeed * plotHeight);
+      
+      if (x === 0) {
+        ctx.moveTo(padding + x, y);
+      } else {
+        ctx.lineTo(padding + x, y);
+      }
+    }
+    
+    ctx.stroke();
+  }
   
   // Draw zone boundaries
   if (enableStart || enableEnd) {
@@ -212,6 +278,44 @@ function drawDecelPreviewPure(canvas, config) {
     ctx.setLineDash([]);
   }
   
+  // Draw random turnback indicator
+  if (randomTurnbackEnabled) {
+    ctx.fillStyle = 'rgba(156, 39, 176, 0.2)';  // Purple with transparency
+    
+    if (enableStart) {
+      ctx.fillRect(padding, padding, (zoneMM / movementAmplitude) * plotWidth, plotHeight);
+    }
+    if (enableEnd) {
+      const endStartX = padding + ((movementAmplitude - zoneMM) / movementAmplitude) * plotWidth;
+      ctx.fillRect(endStartX, padding, (zoneMM / movementAmplitude) * plotWidth, plotHeight);
+    }
+    
+    // Draw turnback symbol
+    ctx.fillStyle = '#9C27B0';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    if (enableStart) {
+      ctx.fillText('🔄 ' + turnbackChance + '%', padding + 20, padding + 15);
+    }
+    if (enableEnd) {
+      ctx.fillText('🔄 ' + turnbackChance + '%', width - padding - 20, padding + 15);
+    }
+  }
+  
+  // Draw end pause indicator
+  if (endPauseEnabled) {
+    ctx.fillStyle = '#FFC107';  // Amber
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    
+    if (enableStart) {
+      ctx.fillText('⏸', padding + 8, height - padding - 5);
+    }
+    if (enableEnd) {
+      ctx.fillText('⏸', width - padding - 8, height - padding - 5);
+    }
+  }
+  
   // Draw labels
   ctx.font = '10px Arial';
   ctx.fillStyle = '#666';
@@ -221,8 +325,11 @@ function drawDecelPreviewPure(canvas, config) {
   
   // Draw speed indicators
   ctx.textAlign = 'left';
-  ctx.fillText('Rapide', padding + 5, padding + 10);
-  ctx.fillText('Lent', padding + 5, height - padding - 5);
+  if (hasSpeedEffect) {
+    const isAccel = speedEffect === 2;
+    ctx.fillText(isAccel ? 'Rapide' : 'Normal', padding + 5, padding + 10);
+    ctx.fillText(isAccel ? 'Normal' : 'Lent', padding + 5, height - padding - 5);
+  }
 }
 
 /**

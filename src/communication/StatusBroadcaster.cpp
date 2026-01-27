@@ -220,14 +220,32 @@ void StatusBroadcaster::addVaEtVientFields(JsonDocument& doc) {
         doc["hasPending"] = false;
     }
     
-    // Deceleration zone (always send, even if disabled, for UI sync)
-    JsonObject decelObj = doc["decelZone"].to<JsonObject>();
-    decelObj["enabled"] = decelZone.enabled;
-    decelObj["enableStart"] = decelZone.enableStart;
-    decelObj["enableEnd"] = decelZone.enableEnd;
-    decelObj["zoneMM"] = serialized(String(decelZone.zoneMM, 1));
-    decelObj["effectPercent"] = serialized(String(decelZone.effectPercent, 0));
-    decelObj["mode"] = (int)decelZone.mode;
+    // Zone effects (always send, even if disabled, for UI sync)
+    // Keep "decelZone" key for backward compatibility with existing frontend
+    JsonObject zoneObj = doc["decelZone"].to<JsonObject>();
+    zoneObj["enabled"] = zoneEffect.enabled;
+    zoneObj["enableStart"] = zoneEffect.enableStart;
+    zoneObj["enableEnd"] = zoneEffect.enableEnd;
+    zoneObj["zoneMM"] = serialized(String(zoneEffect.zoneMM, 1));
+    
+    // Speed effect
+    zoneObj["speedEffect"] = (int)zoneEffect.speedEffect;
+    zoneObj["speedCurve"] = (int)zoneEffect.speedCurve;
+    zoneObj["speedIntensity"] = serialized(String(zoneEffect.speedIntensity, 0));
+    // Legacy aliases for backward compatibility
+    zoneObj["effectPercent"] = serialized(String(zoneEffect.speedIntensity, 0));
+    zoneObj["mode"] = (int)zoneEffect.speedCurve;
+    
+    // Random turnback
+    zoneObj["randomTurnbackEnabled"] = zoneEffect.randomTurnbackEnabled;
+    zoneObj["turnbackChance"] = zoneEffect.turnbackChance;
+    
+    // End pause
+    zoneObj["endPauseEnabled"] = zoneEffect.endPauseEnabled;
+    zoneObj["endPauseIsRandom"] = zoneEffect.endPauseIsRandom;
+    zoneObj["endPauseDurationSec"] = serialized(String(zoneEffect.endPauseDurationSec, 1));
+    zoneObj["endPauseMinSec"] = serialized(String(zoneEffect.endPauseMinSec, 1));
+    zoneObj["endPauseMaxSec"] = serialized(String(zoneEffect.endPauseMaxSec, 1));
 }
 
 // ============================================================================

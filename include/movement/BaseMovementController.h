@@ -106,15 +106,15 @@ public:
     float cyclesPerMinToSpeedLevel(float cpm);
     
     // ========================================================================
-    // DECELERATION ZONE METHODS (integrated from DecelZoneController)
+    // ZONE EFFECT METHODS (Speed Effects + Special Effects)
     // ========================================================================
     
     /**
-     * Calculate slowdown factor based on position within deceleration zone
-     * @param zoneProgress Position in zone: 0.0 (at boundary) to 1.0 (exiting zone)
-     * @return Slowdown factor (1.0 = normal speed, >1.0 = slower)
+     * Calculate speed factor based on position within effect zone
+     * @param zoneProgress Position in zone: 0.0 (at boundary) to 1.0 (at extremity)
+     * @return Speed factor (1.0 = normal, >1.0 = slower for DECEL, <1.0 = faster for ACCEL)
      */
-    float calculateSlowdownFactor(float zoneProgress);
+    float calculateSpeedFactor(float zoneProgress);
     
     /**
      * Calculate adjusted delay based on position within movement range
@@ -122,15 +122,46 @@ public:
      * @param movementStartMM Start position of current movement in mm
      * @param movementEndMM End position of current movement in mm
      * @param baseDelayMicros Base delay in microseconds
-     * @return Adjusted delay in microseconds (higher = slower)
+     * @return Adjusted delay in microseconds
      */
     int calculateAdjustedDelay(float currentPositionMM, float movementStartMM, 
                                float movementEndMM, int baseDelayMicros);
     
     /**
+     * Check and trigger random turnback in zone
+     * @param distanceIntoZone Distance traveled into the zone (mm)
+     * @param isEndZone True if this is the end zone, false for start zone
+     */
+    void checkAndTriggerRandomTurnback(float distanceIntoZone, bool isEndZone);
+    
+    /**
+     * Reset random turnback state
+     */
+    void resetRandomTurnback();
+    
+    /**
+     * Check and handle end pause (returns true if currently pausing)
+     * @return true if pausing and should not step
+     */
+    bool checkAndHandleEndPause();
+    
+    /**
+     * Trigger end pause at extremity
+     */
+    void triggerEndPause();
+    
+    /**
      * Validate and adjust zone size to ensure it doesn't exceed movement amplitude
      */
+    void validateZoneEffect();
+    
+    /**
+     * Legacy alias for validateZoneEffect
+     */
     void validateDecelZone();
+    
+    // Legacy alias for calculateSpeedFactor (backward compatibility)
+    float calculateSlowdownFactor(float zoneProgress) { return calculateSpeedFactor(zoneProgress); }
     
     // ========================================================================
     // PENDING CHANGES MANAGEMENT

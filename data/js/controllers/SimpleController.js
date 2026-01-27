@@ -541,14 +541,14 @@ function initSimpleListeners() {
     radio.addEventListener('change', handleSpeedModeChange);
   });
   
-  // ===== DECELERATION ZONE EVENT LISTENERS =====
-  initDecelZoneListeners();
+  // ===== ZONE EFFECTS EVENT LISTENERS =====
+  initZoneEffectListeners();
   
   console.log('✅ Simple mode listeners initialized');
 }
 
 // ============================================================================
-// DECELERATION ZONE - Simple Mode Only
+// ZONE EFFECTS - Simple Mode Only
 // ============================================================================
 
 /**
@@ -560,197 +560,392 @@ function calculateSlowdownFactorJS(zoneProgress, maxSlowdown, mode) {
 }
 
 /**
- * Toggle deceleration section collapsed state
+ * Toggle zone effects section collapsed state
  */
-function toggleDecelSection() {
-  const section = document.getElementById('decelSection');
-  const headerText = document.getElementById('decelHeaderText');
+function toggleZoneEffectSection() {
+  const section = document.getElementById('zoneEffectSection');
+  const headerText = document.getElementById('zoneEffectHeaderText');
   const isCollapsed = section.classList.contains('collapsed');
   
   section.classList.toggle('collapsed');
   
   if (isCollapsed) {
     // Expanding = activating
-    headerText.textContent = '🎯 Décélération - activée';
-    sendDecelConfig();
-    drawDecelPreview();
+    updateZoneEffectHeaderText();
+    sendZoneEffectConfig(true);  // true = initial open, don't track zone request
+    drawZoneEffectPreview();
   } else {
     // Collapsing = deactivating
-    headerText.textContent = '🎯 Décélération - désactivée';
-    sendCommand(WS_CMD.SET_DECEL_ZONE, { enabled: false });
+    headerText.textContent = '🎯 Effets de Zone - désactivés';
+    sendCommand(WS_CMD.SET_ZONE_EFFECT, { enabled: false });
   }
 }
 
 /**
- * Send deceleration configuration to ESP32
+ * Update the header text based on active effects
  */
-function sendDecelConfig() {
-  const section = document.getElementById('decelSection');
-  const isEnabled = !section.classList.contains('collapsed');
+function updateZoneEffectHeaderText() {
+  const headerText = document.getElementById('zoneEffectHeaderText');
+  if (!headerText) return;
   
-  const zoneMM = parseFloat(document.getElementById('decelZoneMM').value) || 50;
+  const speedEffect = parseInt(document.getElementById('speedEffectType')?.value || 0);
+  const randomTurnback = document.getElementById('randomTurnbackEnabled')?.checked;
+  const endPause = document.getElementById('endPauseEnabled')?.checked;
   
-  const config = {
-    enabled: isEnabled,
-    enableStart: document.getElementById('decelZoneStart').checked,
-    enableEnd: document.getElementById('decelZoneEnd').checked,
-    zoneMM: zoneMM,
-    effectPercent: parseFloat(document.getElementById('decelEffectPercent').value) || 75,
-    mode: parseInt(document.getElementById('decelModeSelect')?.value || 1)
-  };
+  const effects = [];
+  if (speedEffect === 1) effects.push('Décél');
+  if (speedEffect === 2) effects.push('Accél');
+  if (randomTurnback) effects.push('Retour');
+  if (endPause) effects.push('Pause');
   
-  // Store requested zone value for comparison
-  AppState.lastDecelZoneRequest = zoneMM;
-  
-  sendCommand(WS_CMD.SET_DECEL_ZONE, config);
+  if (effects.length === 0) {
+    headerText.textContent = '🎯 Effets de Zone - activés (aucun effet)';
+  } else {
+    headerText.textContent = `🎯 Effets de Zone - ${effects.join(' + ')}`;
+  }
 }
 
 /**
- * Update deceleration zone UI from server data
- * @param {Object} decelZone - Deceleration zone data from backend
+ * Send zone effects configuration to ESP32
+ * @param {boolean} isInitialOpen - If true, don't track zone request (avoids false popup on first open)
  */
-function updateDecelZoneUI(decelZone) {
-  if (!decelZone || AppState.editing.input === 'decelZone') return;
+function sendZoneEffectConfig(isInitialOpen = false) {
+  const section = document.getElementById('zoneEffectSection');
+  const isEnabled = !section.classList.contains('collapsed');
   
-  const section = document.getElementById('decelSection');
-  const headerText = document.getElementById('decelHeaderText');
+  const zoneMM = parseFloat(document.getElementById('zoneEffectMM')?.value) || 50;
   
-  // Defense: Only update full decelZone fields if enabled (Phase 1 optimization)
-  // When disabled, backend sends only {enabled: false} to save bandwidth
-  if (decelZone.enabled && decelZone.zoneMM !== undefined) {
-    // Update section collapsed state and header text based on enabled
+  // Parse values carefully - 0 is a valid value for speedEffect and speedCurve
+  const speedEffectEl = document.getElementById('speedEffectType');
+  const speedCurveEl = document.getElementById('speedCurveSelect');
+  const speedIntensityEl = document.getElementById('speedIntensity');
+  const turnbackChanceEl = document.getElementById('turnbackChance');
+  
+  const config = {
+    enabled: isEnabled,
+    enableStart: document.getElementById('zoneEffectStart')?.checked ?? true,
+    enableEnd: document.getElementById('zoneEffectEnd')?.checked ?? true,
+    zoneMM: zoneMM,
+    // Speed effect - use explicit check for null/undefined, 0 is valid
+    speedEffect: speedEffectEl ? parseInt(speedEffectEl.value) : 1,
+    speedCurve: speedCurveEl ? parseInt(speedCurveEl.value) : 1,
+    speedIntensity: speedIntensityEl ? parseFloat(speedIntensityEl.value) : 75,
+    // Random turnback
+    randomTurnbackEnabled: document.getElementById('randomTurnbackEnabled')?.checked ?? false,
+    turnbackChance: turnbackChanceEl ? parseInt(turnbackChanceEl.value) : 30,
+    // End pause
+    endPauseEnabled: document.getElementById('endPauseEnabled')?.checked ?? false,
+    endPauseIsRandom: document.getElementById('endPauseModeRandom')?.checked ?? false,
+    endPauseDurationSec: parseFloat(document.getElementById('endPauseDuration')?.value) || 1.0,
+    endPauseMinSec: parseFloat(document.getElementById('endPauseMin')?.value) || 0.5,
+    endPauseMaxSec: parseFloat(document.getElementById('endPauseMax')?.value) || 2.0
+  };
+  
+  // Store requested zone value for comparison - but NOT on initial open
+  // This avoids the false "zone adjusted" popup when first opening the section
+  if (!isInitialOpen) {
+    AppState.lastZoneEffectRequest = zoneMM;
+  }
+  
+  // Use new command if available, fallback to legacy
+  if (WS_CMD.SET_ZONE_EFFECT) {
+    sendCommand(WS_CMD.SET_ZONE_EFFECT, config);
+  } else {
+    // Legacy fallback for backward compatibility
+    sendCommand(WS_CMD.SET_DECEL_ZONE, config);
+  }
+  
+  // Update header text
+  updateZoneEffectHeaderText();
+}
+
+/**
+ * Update zone effects UI from server data
+ * @param {Object} zoneEffect - Zone effects data from backend
+ */
+function updateZoneEffectUI(zoneEffect) {
+  if (!zoneEffect || AppState.editing.input === 'zoneEffect') return;
+  
+  const section = document.getElementById('zoneEffectSection');
+  const headerText = document.getElementById('zoneEffectHeaderText');
+  
+  if (zoneEffect.enabled) {
+    // Section is enabled
     if (section && headerText) {
       section.classList.remove('collapsed');
-      headerText.textContent = '🎯 Décélération - activée';
     }
     
-    // Safe access to optional fields
-    if (decelZone.enableStart !== undefined) {
-      const startCheckbox = document.getElementById('decelZoneStart');
-      if (startCheckbox) startCheckbox.checked = decelZone.enableStart;
+    // Update start/end checkboxes
+    const startCheckbox = document.getElementById('zoneEffectStart');
+    const endCheckbox = document.getElementById('zoneEffectEnd');
+    if (startCheckbox && zoneEffect.enableStart !== undefined) {
+      startCheckbox.checked = zoneEffect.enableStart;
     }
-    if (decelZone.enableEnd !== undefined) {
-      const endCheckbox = document.getElementById('decelZoneEnd');
-      if (endCheckbox) endCheckbox.checked = decelZone.enableEnd;
-    }
-    
-    // Check if zone value was adapted by ESP32 (only if we just sent a request)
-    const decelZoneInput = document.getElementById('decelZoneMM');
-    const requestedZone = AppState.lastDecelZoneRequest;
-    const receivedZone = decelZone.zoneMM;
-    
-    if (requestedZone !== undefined && Math.abs(requestedZone - receivedZone) > 0.1) {
-      // Value was adapted - show notification once
-      showNotification(`⚠️ Zone ajustée: ${requestedZone.toFixed(0)}mm → ${receivedZone.toFixed(0)}mm (limite du mouvement)`, 'warning', 4000);
-      AppState.lastDecelZoneRequest = undefined;
+    if (endCheckbox && zoneEffect.enableEnd !== undefined) {
+      endCheckbox.checked = zoneEffect.enableEnd;
     }
     
-    if (decelZoneInput) {
-      decelZoneInput.value = receivedZone;
-    }
-    
-    // Effect percent (safe access)
-    if (decelZone.effectPercent !== undefined) {
-      const effectPercentInput = document.getElementById('decelEffectPercent');
-      const effectValueSpan = document.getElementById('effectValue');
-      if (effectPercentInput) {
-        effectPercentInput.value = decelZone.effectPercent;
+    // Update zone size
+    const zoneInput = document.getElementById('zoneEffectMM');
+    if (zoneInput && zoneEffect.zoneMM !== undefined) {
+      // Check if zone value was adapted by ESP32
+      const requestedZone = AppState.lastZoneEffectRequest;
+      const receivedZone = zoneEffect.zoneMM;
+      
+      if (requestedZone !== undefined && Math.abs(requestedZone - receivedZone) > 0.1) {
+        showNotification(`⚠️ Zone ajustée: ${requestedZone.toFixed(0)}mm → ${receivedZone.toFixed(0)}mm (limite du mouvement)`, 'warning', 4000);
+        AppState.lastZoneEffectRequest = undefined;
       }
-      if (effectValueSpan) {
-        effectValueSpan.textContent = decelZone.effectPercent.toFixed(0) + '%';
-      }
+      
+      zoneInput.value = receivedZone;
     }
     
-    // Update select dropdown for mode
-    if (decelZone.mode !== undefined) {
-      const decelModeSelect = document.getElementById('decelModeSelect');
-      if (decelModeSelect) {
-        decelModeSelect.value = decelZone.mode.toString();
+    // Update speed effect controls
+    if (zoneEffect.speedEffect !== undefined) {
+      const speedEffectSelect = document.getElementById('speedEffectType');
+      if (speedEffectSelect) speedEffectSelect.value = zoneEffect.speedEffect.toString();
+    }
+    if (zoneEffect.speedCurve !== undefined) {
+      const curveSelect = document.getElementById('speedCurveSelect');
+      if (curveSelect) curveSelect.value = zoneEffect.speedCurve.toString();
+    }
+    if (zoneEffect.speedIntensity !== undefined) {
+      const intensityInput = document.getElementById('speedIntensity');
+      const intensityValue = document.getElementById('speedIntensityValue');
+      if (intensityInput) intensityInput.value = zoneEffect.speedIntensity;
+      if (intensityValue) intensityValue.textContent = zoneEffect.speedIntensity.toFixed(0) + '%';
+    }
+    
+    // Update random turnback controls
+    if (zoneEffect.randomTurnbackEnabled !== undefined) {
+      const turnbackCheckbox = document.getElementById('randomTurnbackEnabled');
+      if (turnbackCheckbox) turnbackCheckbox.checked = zoneEffect.randomTurnbackEnabled;
+    }
+    if (zoneEffect.turnbackChance !== undefined) {
+      const chanceInput = document.getElementById('turnbackChance');
+      const chanceValue = document.getElementById('turnbackChanceValue');
+      if (chanceInput) chanceInput.value = zoneEffect.turnbackChance;
+      if (chanceValue) chanceValue.textContent = zoneEffect.turnbackChance + '%';
+    }
+    
+    // Update end pause controls
+    if (zoneEffect.endPauseEnabled !== undefined) {
+      const pauseCheckbox = document.getElementById('endPauseEnabled');
+      if (pauseCheckbox) pauseCheckbox.checked = zoneEffect.endPauseEnabled;
+    }
+    if (zoneEffect.endPauseIsRandom !== undefined) {
+      const fixedRadio = document.getElementById('endPauseModeFixed');
+      const randomRadio = document.getElementById('endPauseModeRandom');
+      if (fixedRadio && randomRadio) {
+        fixedRadio.checked = !zoneEffect.endPauseIsRandom;
+        randomRadio.checked = zoneEffect.endPauseIsRandom;
+        
+        // Show/hide controls based on mode
+        const fixedControls = document.getElementById('endPauseFixedControls');
+        const randomControls = document.getElementById('endPauseRandomControls');
+        if (fixedControls && randomControls) {
+          fixedControls.classList.toggle('hidden', zoneEffect.endPauseIsRandom);
+          randomControls.classList.toggle('hidden', !zoneEffect.endPauseIsRandom);
+        }
       }
+    }
+    if (zoneEffect.endPauseDurationSec !== undefined) {
+      const durationInput = document.getElementById('endPauseDuration');
+      if (durationInput) durationInput.value = zoneEffect.endPauseDurationSec;
+    }
+    if (zoneEffect.endPauseMinSec !== undefined) {
+      const minInput = document.getElementById('endPauseMin');
+      if (minInput) minInput.value = zoneEffect.endPauseMinSec;
+    }
+    if (zoneEffect.endPauseMaxSec !== undefined) {
+      const maxInput = document.getElementById('endPauseMax');
+      if (maxInput) maxInput.value = zoneEffect.endPauseMaxSec;
     }
     
     // Update zone preset active state
-    document.querySelectorAll('[data-decel-zone]').forEach(btn => {
-      const btnValue = parseInt(btn.getAttribute('data-decel-zone'));
-      if (btnValue === decelZone.zoneMM) {
-        btn.classList.add('active');
-      } else {
-        btn.classList.remove('active');
-      }
+    document.querySelectorAll('[data-zone-mm]').forEach(btn => {
+      const btnValue = parseInt(btn.getAttribute('data-zone-mm'));
+      btn.classList.toggle('active', btnValue === Math.round(zoneEffect.zoneMM));
     });
     
-    // Redraw preview if enabled
-    drawDecelPreview();
+    // Update header and redraw preview
+    updateZoneEffectHeaderText();
+    drawZoneEffectPreview();
   } else {
     // Disabled state
     if (section && headerText) {
       section.classList.add('collapsed');
-      headerText.textContent = '🎯 Décélération - désactivée';
+      headerText.textContent = '🎯 Effets de Zone - désactivés';
     }
   }
 }
 
 /**
- * Draw deceleration curve preview on canvas
+ * Draw zone effects preview on canvas
  * Delegates to pure function from SimpleUtils.js
  */
-function drawDecelPreview() {
-  const canvas = document.getElementById('decelPreview');
+function drawZoneEffectPreview() {
+  const canvas = document.getElementById('zoneEffectPreview');
   if (!canvas) return;
   
-  const config = getDecelConfigFromDOM();
-  drawDecelPreviewPure(canvas, config);
+  const config = getZoneEffectConfigFromDOM();
+  drawZoneEffectPreviewPure(canvas, config);
 }
 
 /**
- * Initialize deceleration zone event listeners
+ * Get zone effect configuration from DOM elements
  */
-function initDecelZoneListeners() {
-  // Decel zone presets
-  document.querySelectorAll('[data-decel-zone]').forEach(btn => {
+function getZoneEffectConfigFromDOM() {
+  const speedEffectEl = document.getElementById('speedEffectType');
+  const speedCurveEl = document.getElementById('speedCurveSelect');
+  const speedIntensityEl = document.getElementById('speedIntensity');
+  const turnbackChanceEl = document.getElementById('turnbackChance');
+  
+  return {
+    zoneMM: parseFloat(document.getElementById('zoneEffectMM')?.value) || 50,
+    enableStart: document.getElementById('zoneEffectStart')?.checked ?? true,
+    enableEnd: document.getElementById('zoneEffectEnd')?.checked ?? true,
+    speedEffect: speedEffectEl ? parseInt(speedEffectEl.value) : 1,
+    speedCurve: speedCurveEl ? parseInt(speedCurveEl.value) : 1,
+    speedIntensity: speedIntensityEl ? parseFloat(speedIntensityEl.value) : 75,
+    randomTurnbackEnabled: document.getElementById('randomTurnbackEnabled')?.checked ?? false,
+    turnbackChance: turnbackChanceEl ? parseInt(turnbackChanceEl.value) : 30,
+    endPauseEnabled: document.getElementById('endPauseEnabled')?.checked ?? false
+  };
+}
+
+/**
+ * Initialize zone effects event listeners
+ */
+function initZoneEffectListeners() {
+  // Zone size presets
+  document.querySelectorAll('[data-zone-mm]').forEach(btn => {
     btn.addEventListener('click', function() {
-      const value = this.getAttribute('data-decel-zone');
-      document.getElementById('decelZoneMM').value = value;
+      const value = this.getAttribute('data-zone-mm');
+      const zoneInput = document.getElementById('zoneEffectMM');
+      if (zoneInput) zoneInput.value = value;
       
       // Update active state
-      document.querySelectorAll('[data-decel-zone]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('[data-zone-mm]').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
       
-      sendDecelConfig();
-      drawDecelPreview();
+      sendZoneEffectConfig();
+      drawZoneEffectPreview();
     });
   });
   
-  // Decel zone start/end checkboxes
-  document.getElementById('decelZoneStart').addEventListener('change', function() {
-    sendDecelConfig();
-    drawDecelPreview();
-  });
-  
-  document.getElementById('decelZoneEnd').addEventListener('change', function() {
-    sendDecelConfig();
-    drawDecelPreview();
+  // Zone start/end checkboxes
+  ['zoneEffectStart', 'zoneEffectEnd'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => {
+      sendZoneEffectConfig();
+      drawZoneEffectPreview();
+    });
   });
   
   // Zone size input
-  document.getElementById('decelZoneMM').addEventListener('input', function() {
-    sendDecelConfig();
-    drawDecelPreview();
+  const zoneInput = document.getElementById('zoneEffectMM');
+  if (zoneInput) zoneInput.addEventListener('input', () => {
+    sendZoneEffectConfig();
+    drawZoneEffectPreview();
   });
   
-  // Effect percent slider
-  document.getElementById('decelEffectPercent').addEventListener('input', function() {
-    document.getElementById('effectValue').textContent = this.value + '%';
-    sendDecelConfig();
-    drawDecelPreview();
+  // Speed effect type
+  const speedEffectType = document.getElementById('speedEffectType');
+  if (speedEffectType) speedEffectType.addEventListener('change', () => {
+    sendZoneEffectConfig();
+    drawZoneEffectPreview();
+    updateZoneEffectHeaderText();
   });
   
-  // Deceleration mode select dropdown
-  document.getElementById('decelModeSelect').addEventListener('change', function() {
-    sendDecelConfig();
-    drawDecelPreview();
+  // Speed curve
+  const speedCurve = document.getElementById('speedCurveSelect');
+  if (speedCurve) speedCurve.addEventListener('change', () => {
+    sendZoneEffectConfig();
+    drawZoneEffectPreview();
+  });
+  
+  // Speed intensity slider
+  const speedIntensity = document.getElementById('speedIntensity');
+  const speedIntensityValue = document.getElementById('speedIntensityValue');
+  if (speedIntensity) speedIntensity.addEventListener('input', function() {
+    if (speedIntensityValue) speedIntensityValue.textContent = this.value + '%';
+    sendZoneEffectConfig();
+    drawZoneEffectPreview();
+  });
+  
+  // Random turnback checkbox
+  const randomTurnback = document.getElementById('randomTurnbackEnabled');
+  if (randomTurnback) randomTurnback.addEventListener('change', () => {
+    sendZoneEffectConfig();
+    drawZoneEffectPreview();
+    updateZoneEffectHeaderText();
+  });
+  
+  // Turnback chance slider
+  const turnbackChance = document.getElementById('turnbackChance');
+  const turnbackChanceValue = document.getElementById('turnbackChanceValue');
+  if (turnbackChance) turnbackChance.addEventListener('input', function() {
+    if (turnbackChanceValue) turnbackChanceValue.textContent = this.value + '%';
+    sendZoneEffectConfig();
+  });
+  
+  // End pause checkbox
+  const endPauseEnabled = document.getElementById('endPauseEnabled');
+  if (endPauseEnabled) endPauseEnabled.addEventListener('change', () => {
+    sendZoneEffectConfig();
+    updateZoneEffectHeaderText();
+  });
+  
+  // End pause mode radio buttons
+  document.querySelectorAll('input[name="endPauseMode"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const isRandom = document.getElementById('endPauseModeRandom')?.checked;
+      const fixedControls = document.getElementById('endPauseFixedControls');
+      const randomControls = document.getElementById('endPauseRandomControls');
+      
+      if (fixedControls && randomControls) {
+        fixedControls.classList.toggle('hidden', isRandom);
+        randomControls.classList.toggle('hidden', !isRandom);
+      }
+      
+      sendZoneEffectConfig();
+    });
+  });
+  
+  // End pause duration presets
+  document.querySelectorAll('[data-end-pause]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const value = this.getAttribute('data-end-pause');
+      const durationInput = document.getElementById('endPauseDuration');
+      if (durationInput) durationInput.value = value;
+      
+      // Update active state
+      document.querySelectorAll('[data-end-pause]').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      
+      sendZoneEffectConfig();
+    });
+  });
+  
+  // End pause duration inputs
+  ['endPauseDuration', 'endPauseMin', 'endPauseMax'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => sendZoneEffectConfig());
   });
 }
+
+// ============================================================================
+// LEGACY SUPPORT - Map old decel functions to new zone effect functions
+// ============================================================================
+
+// Legacy function names for backward compatibility
+function toggleDecelSection() { toggleZoneEffectSection(); }
+function sendDecelConfig() { sendZoneEffectConfig(); }
+function updateDecelZoneUI(data) { updateZoneEffectUI(data); }
+function drawDecelPreview() { drawZoneEffectPreview(); }
+function initDecelZoneListeners() { /* handled by initZoneEffectListeners */ }
+function getDecelConfigFromDOM() { return getZoneEffectConfigFromDOM(); }
 
 // ============================================================================
 // CYCLE PAUSE - FACTORY FUNCTION (used by Simple and Oscillation modes)

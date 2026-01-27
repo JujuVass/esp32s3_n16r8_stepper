@@ -15,9 +15,9 @@
 #include "movement/CalibrationManager.h"
 
 // ============================================================================
-// DECEL ZONE STATE - Owned by BaseMovementController (integrated)
+// ZONE EFFECT STATE - Owned by BaseMovementController (integrated)
 // ============================================================================
-DecelZoneConfig decelZone;
+ZoneEffectConfig zoneEffect;
 
 // ============================================================================
 // SINGLETON INSTANCE
@@ -277,66 +277,83 @@ float BaseMovementControllerClass::cyclesPerMinToSpeedLevel(float cpm) {
 }
 
 // ============================================================================
-// DECELERATION ZONE METHODS (integrated from DecelZoneController)
+// ZONE EFFECT METHODS (Speed Effect + Special Effects)
 // ============================================================================
 
-float BaseMovementControllerClass::calculateSlowdownFactor(float zoneProgress) {
-    // Maximum slowdown based on effect percentage
-    // 0% effect = 1.0 (no slowdown)
-    // 100% effect = 10.0 (10× slower at contact)
-    float maxSlowdown = 1.0 + (decelZone.effectPercent / 100.0) * 9.0;
+float BaseMovementControllerClass::calculateSpeedFactor(float zoneProgress) {
+    // zoneProgress: 0.0 = at zone boundary (entering), 1.0 = at extremity
     
-    float factor;
+    // If no speed effect, return normal speed
+    if (zoneEffect.speedEffect == SPEED_NONE) {
+        return 1.0;
+    }
     
-    switch (decelZone.mode) {
-        case DECEL_LINEAR:
-            // Linear: constant deceleration rate
-            factor = 1.0 + (1.0 - zoneProgress) * (maxSlowdown - 1.0);
+    // Calculate max intensity based on percentage
+    // 0% = factor 1.0 (no change)
+    // 100% = factor 10.0 (10× slower for DECEL, 10× faster for ACCEL)
+    float maxIntensity = 1.0 + (zoneEffect.speedIntensity / 100.0) * 9.0;
+    
+    float curveValue;
+    
+    // Calculate curve value based on curve type
+    switch (zoneEffect.speedCurve) {
+        case CURVE_LINEAR:
+            // Linear: constant rate
+            curveValue = 1.0 - zoneProgress;
             break;
             
-        case DECEL_SINE:
-            // Sinusoidal curve (smooth, max slowdown at contact)
+        case CURVE_SINE:
+            // Sinusoidal: smooth S-curve
             {
                 float smoothProgress = (1.0 - cos(zoneProgress * PI)) / 2.0;
-                factor = 1.0 + (1.0 - smoothProgress) * (maxSlowdown - 1.0);
+                curveValue = 1.0 - smoothProgress;
             }
             break;
             
-        case DECEL_TRIANGLE_INV:
-            // Triangle inverted: weak deceleration at start, strong at end
+        case CURVE_TRIANGLE_INV:
+            // Triangle inverted: weak at start, strong at end
             {
                 float invProgress = 1.0 - zoneProgress;
-                float curved = invProgress * invProgress;
-                factor = 1.0 + curved * (maxSlowdown - 1.0);
+                curveValue = invProgress * invProgress;
             }
             break;
             
-        case DECEL_SINE_INV:
-            // Sine inverted: weak deceleration at start, strong at end
+        case CURVE_SINE_INV:
+            // Sine inverted: weak at start, strong at end
             {
                 float invProgress = 1.0 - zoneProgress;
-                float curved = sin(invProgress * PI / 2.0);
-                factor = 1.0 + curved * (maxSlowdown - 1.0);
+                curveValue = sin(invProgress * PI / 2.0);
             }
             break;
             
         default:
-            factor = 1.0;
+            curveValue = 1.0 - zoneProgress;
             break;
     }
     
-    return factor;
+    // Apply based on effect type
+    if (zoneEffect.speedEffect == SPEED_DECEL) {
+        // Deceleration: factor > 1.0 = longer delay = slower
+        return 1.0 + curveValue * (maxIntensity - 1.0);
+    } else {
+        // Acceleration (punch): factor < 1.0 = shorter delay = faster
+        // Invert: at zone entry (zoneProgress=0), normal speed
+        //         at extremity (zoneProgress=1), max speed (factor = 1/maxIntensity)
+        float accelCurve = 1.0 - curveValue;  // Invert curve for accel
+        float minFactor = 1.0 / maxIntensity;  // e.g., 0.1 for 10× faster
+        return 1.0 - accelCurve * (1.0 - minFactor);
+    }
 }
 
 int BaseMovementControllerClass::calculateAdjustedDelay(float currentPositionMM, float movementStartMM, 
                                                         float movementEndMM, int baseDelayMicros) {
-    // If deceleration disabled, return base speed
-    if (!decelZone.enabled) {
+    // If zone effects disabled or no speed effect, return base speed
+    if (!zoneEffect.enabled || zoneEffect.speedEffect == SPEED_NONE) {
         return baseDelayMicros;
     }
     
     // Safety: protect against division by zero
-    if (decelZone.zoneMM <= 0.0) {
+    if (zoneEffect.zoneMM <= 0.0) {
         return baseDelayMicros;
     }
     
@@ -344,28 +361,144 @@ int BaseMovementControllerClass::calculateAdjustedDelay(float currentPositionMM,
     float distanceFromStart = abs(currentPositionMM - movementStartMM);
     float distanceFromEnd = abs(movementEndMM - currentPositionMM);
     
-    float slowdownFactor = 1.0;  // Default: normal speed
+    float speedFactor = 1.0;  // Default: normal speed
     
-    // Check if in START deceleration zone
-    if (decelZone.enableStart && distanceFromStart <= decelZone.zoneMM) {
-        float zoneProgress = distanceFromStart / decelZone.zoneMM;
-        slowdownFactor = calculateSlowdownFactor(zoneProgress);
+    // Check if in START zone
+    if (zoneEffect.enableStart && distanceFromStart <= zoneEffect.zoneMM) {
+        float zoneProgress = distanceFromStart / zoneEffect.zoneMM;
+        speedFactor = calculateSpeedFactor(zoneProgress);
     }
     
-    // Check if in END deceleration zone (takes priority if overlapping)
-    if (decelZone.enableEnd && distanceFromEnd <= decelZone.zoneMM) {
-        float zoneProgress = distanceFromEnd / decelZone.zoneMM;
-        float endFactor = calculateSlowdownFactor(zoneProgress);
-        // Use maximum slowdown if zones overlap (instead of just overwriting)
-        slowdownFactor = max(slowdownFactor, endFactor);
+    // Check if in END zone
+    if (zoneEffect.enableEnd && distanceFromEnd <= zoneEffect.zoneMM) {
+        float zoneProgress = distanceFromEnd / zoneEffect.zoneMM;
+        float endFactor = calculateSpeedFactor(zoneProgress);
+        
+        // For decel: use max slowdown; for accel: use max speedup (min factor)
+        if (zoneEffect.speedEffect == SPEED_DECEL) {
+            speedFactor = max(speedFactor, endFactor);
+        } else {
+            speedFactor = min(speedFactor, endFactor);
+        }
     }
     
-    // Apply slowdown factor to base delay
-    return (int)(baseDelayMicros * slowdownFactor);
+    // Apply speed factor to base delay
+    return (int)(baseDelayMicros * speedFactor);
 }
 
-void BaseMovementControllerClass::validateDecelZone() {
-    if (!decelZone.enabled) {
+// ============================================================================
+// RANDOM TURNBACK LOGIC
+// ============================================================================
+
+void BaseMovementControllerClass::checkAndTriggerRandomTurnback(float distanceIntoZone, bool isEndZone) {
+    // Only process if random turnback is enabled
+    if (!zoneEffect.randomTurnbackEnabled) {
+        return;
+    }
+    
+    // Don't trigger turnback if we're currently pausing
+    if (zoneEffect.isPausing) {
+        return;
+    }
+    
+    // Check if we already have a pending turnback
+    if (zoneEffect.hasPendingTurnback) {
+        // Check if we've reached the turnback point
+        if (distanceIntoZone >= zoneEffect.turnbackPointMM) {
+            // Execute turnback - first trigger pause if enabled
+            if (zoneEffect.endPauseEnabled) {
+                triggerEndPause();
+                engine->debug("🔄⏸️ Retour aléatoire + pause à " + String(distanceIntoZone, 1) + "mm");
+            } else {
+                engine->debug("🔄 Retour aléatoire exécuté à " + String(distanceIntoZone, 1) + "mm dans la zone");
+            }
+            movingForward = !movingForward;
+            zoneEffect.hasPendingTurnback = false;
+            // Don't reset hasRolledForTurnback here - it will be reset when we exit the zone
+        }
+        return;
+    }
+    
+    // If we already rolled the dice for this zone entry, don't roll again
+    if (zoneEffect.hasRolledForTurnback) {
+        return;
+    }
+    
+    // We just entered the zone - roll the dice ONCE
+    if (distanceIntoZone < 2.0) {  // Just entered (within first 2mm)
+        // Mark that we've rolled for this zone entry
+        zoneEffect.hasRolledForTurnback = true;
+        
+        // Roll the dice
+        int roll = random(100);
+        if (roll < zoneEffect.turnbackChance) {
+            // Decide to turn back at a random point in the zone
+            // Don't turn back in the first 10% or last 10% of the zone
+            float minTurnback = zoneEffect.zoneMM * 0.1;
+            float maxTurnback = zoneEffect.zoneMM * 0.9;
+            zoneEffect.turnbackPointMM = minTurnback + (random(0, 1000) / 1000.0) * (maxTurnback - minTurnback);
+            zoneEffect.hasPendingTurnback = true;
+            engine->debug("🔄 Retour aléatoire planifié à " + String(zoneEffect.turnbackPointMM, 1) + "mm (tirage=" + String(roll) + " < " + String(zoneEffect.turnbackChance) + "%)");
+        } else {
+            engine->debug("🎲 Pas de retour (tirage=" + String(roll) + " >= " + String(zoneEffect.turnbackChance) + "%)");
+        }
+    }
+}
+
+void BaseMovementControllerClass::resetRandomTurnback() {
+    zoneEffect.hasPendingTurnback = false;
+    zoneEffect.hasRolledForTurnback = false;  // Reset the roll flag too
+    zoneEffect.turnbackPointMM = 0.0;
+}
+
+// ============================================================================
+// END PAUSE LOGIC (like cycle pause)
+// ============================================================================
+
+bool BaseMovementControllerClass::checkAndHandleEndPause() {
+    // If not pausing, nothing to do
+    if (!zoneEffect.isPausing) {
+        return false;
+    }
+    
+    // Check if pause duration has elapsed
+    unsigned long elapsed = millis() - zoneEffect.pauseStartMs;
+    if (elapsed >= zoneEffect.pauseDurationMs) {
+        // Pause complete
+        zoneEffect.isPausing = false;
+        engine->debug("⏸️ Fin pause extrémité (" + String(zoneEffect.pauseDurationMs) + "ms)");
+        return false;
+    }
+    
+    // Still pausing - don't step
+    return true;
+}
+
+void BaseMovementControllerClass::triggerEndPause() {
+    if (!zoneEffect.endPauseEnabled) {
+        return;
+    }
+    
+    // Calculate pause duration
+    if (zoneEffect.endPauseIsRandom) {
+        float minMs = zoneEffect.endPauseMinSec * 1000.0;
+        float maxMs = zoneEffect.endPauseMaxSec * 1000.0;
+        zoneEffect.pauseDurationMs = (unsigned long)(minMs + (random(0, 1000) / 1000.0) * (maxMs - minMs));
+    } else {
+        zoneEffect.pauseDurationMs = (unsigned long)(zoneEffect.endPauseDurationSec * 1000.0);
+    }
+    
+    zoneEffect.isPausing = true;
+    zoneEffect.pauseStartMs = millis();
+    engine->debug("⏸️ Pause extrémité: " + String(zoneEffect.pauseDurationMs) + "ms");
+}
+
+// ============================================================================
+// ZONE VALIDATION
+// ============================================================================
+
+void BaseMovementControllerClass::validateZoneEffect() {
+    if (!zoneEffect.enabled) {
         return;  // No validation needed if disabled
     }
     
@@ -373,36 +506,53 @@ void BaseMovementControllerClass::validateDecelZone() {
     float movementAmplitudeMM = motion.targetDistanceMM;
     
     if (movementAmplitudeMM <= 0) {
-        engine->warn("⚠️ Cannot validate decel zone: no movement configured");
+        engine->warn("⚠️ Cannot validate zone effect: no movement configured");
         return;
     }
     
     float maxAllowedZone;
     
     // If both zones enabled, each can use max 50% of movement amplitude
-    if (decelZone.enableStart && decelZone.enableEnd) {
+    if (zoneEffect.enableStart && zoneEffect.enableEnd) {
         maxAllowedZone = movementAmplitudeMM / 2.0;
     } else {
         maxAllowedZone = movementAmplitudeMM;
     }
     
     // Enforce minimum zone size (10mm)
-    if (decelZone.zoneMM < 0) {
-        decelZone.zoneMM = 10.0;
+    if (zoneEffect.zoneMM < 0) {
+        zoneEffect.zoneMM = 10.0;
         engine->warn("⚠️ Zone négative détectée, corrigée à 10 mm");
-    } else if (decelZone.zoneMM < 10.0) {
-        decelZone.zoneMM = 10.0;
+    } else if (zoneEffect.zoneMM < 10.0) {
+        zoneEffect.zoneMM = 10.0;
         engine->warn("⚠️ Zone augmentée à 10 mm (minimum)");
     }
     
     // Enforce maximum zone size
-    if (decelZone.zoneMM > maxAllowedZone) {
-        engine->warn("⚠️ Zone réduite de " + String(decelZone.zoneMM, 1) + " mm à " + 
+    if (zoneEffect.zoneMM > maxAllowedZone) {
+        engine->warn("⚠️ Zone réduite de " + String(zoneEffect.zoneMM, 1) + " mm à " + 
               String(maxAllowedZone, 1) + " mm (max pour amplitude de " + 
               String(movementAmplitudeMM, 1) + " mm)");
         
-        decelZone.zoneMM = maxAllowedZone;
+        zoneEffect.zoneMM = maxAllowedZone;
     }
+    
+    // Validate turnback chance
+    if (zoneEffect.turnbackChance > 100) {
+        zoneEffect.turnbackChance = 100;
+    }
+    
+    // Validate pause durations
+    if (zoneEffect.endPauseMinSec < 0.1) zoneEffect.endPauseMinSec = 0.1;
+    if (zoneEffect.endPauseMaxSec < zoneEffect.endPauseMinSec) {
+        zoneEffect.endPauseMaxSec = zoneEffect.endPauseMinSec + 0.5;
+    }
+    if (zoneEffect.endPauseDurationSec < 0.1) zoneEffect.endPauseDurationSec = 0.1;
+}
+
+// Legacy alias for backward compatibility
+void BaseMovementControllerClass::validateDecelZone() {
+    validateZoneEffect();
 }
 
 // ============================================================================
@@ -662,7 +812,7 @@ void BaseMovementControllerClass::returnToStart() {
 }
 
 // ============================================================================
-// MAIN LOOP PROCESSING (Phase 4D - encapsulates timing + decel + step)
+// MAIN LOOP PROCESSING (Phase 4D - encapsulates timing + zone effects + step)
 // ============================================================================
 
 void BaseMovementControllerClass::process() {
@@ -684,15 +834,20 @@ void BaseMovementControllerClass::process() {
         return;
     }
     
+    // Check if in end pause (zone effect)
+    if (checkAndHandleEndPause()) {
+        return;  // Still pausing, don't step
+    }
+    
     // Calculate current step delay
     unsigned long currentMicros = micros();
     unsigned long currentDelay = movingForward ? stepDelayMicrosForward : stepDelayMicrosBackward;
     
-    // Apply deceleration zone adjustment if enabled
-    if (decelZone.enabled && hasReachedStartStep) {
+    // Apply zone effects if enabled
+    if (zoneEffect.enabled && hasReachedStartStep) {
         float currentPositionMM = (currentStep - startStep) / STEPS_PER_MM;
         
-        // CRITICAL: Direction matters for deceleration zones!
+        // CRITICAL: Direction matters for zones!
         float movementStartMM, movementEndMM;
         if (movingForward) {
             movementStartMM = 0.0;
@@ -703,6 +858,31 @@ void BaseMovementControllerClass::process() {
             movementEndMM = 0.0;
         }
         
+        // Calculate distance into each zone
+        float distanceFromStart = abs(currentPositionMM - movementStartMM);
+        float distanceFromEnd = abs(movementEndMM - currentPositionMM);
+        
+        // Check for random turnback in START zone (when moving backward)
+        if (!movingForward && zoneEffect.enableStart && distanceFromEnd <= zoneEffect.zoneMM) {
+            float distanceIntoZone = zoneEffect.zoneMM - distanceFromEnd;
+            checkAndTriggerRandomTurnback(distanceIntoZone, false);
+            // If pause was triggered, exit early
+            if (zoneEffect.isPausing) {
+                return;
+            }
+        }
+        
+        // Check for random turnback in END zone (when moving forward)
+        if (movingForward && zoneEffect.enableEnd && distanceFromEnd <= zoneEffect.zoneMM) {
+            float distanceIntoZone = zoneEffect.zoneMM - distanceFromEnd;
+            checkAndTriggerRandomTurnback(distanceIntoZone, true);
+            // If pause was triggered, exit early
+            if (zoneEffect.isPausing) {
+                return;
+            }
+        }
+        
+        // Apply speed effect (decel or accel)
         currentDelay = calculateAdjustedDelay(currentPositionMM, movementStartMM, movementEndMM, currentDelay);
     }
     
@@ -737,6 +917,7 @@ void BaseMovementControllerClass::doStep() {
         // Drift detection & correction (delegated to ContactSensors)
         if (Contacts.checkAndCorrectDriftEnd()) {
             movingForward = false;  // Reverse direction after correction
+            resetRandomTurnback();  // Reset turnback state on direction change
             return;
         }
         
@@ -747,7 +928,12 @@ void BaseMovementControllerClass::doStep() {
         
         // Check if reached target position
         if (currentStep + 1 > targetStep) {
+            // Trigger end pause if enabled (at END extremity)
+            if (zoneEffect.enabled && zoneEffect.endPauseEnabled && zoneEffect.enableEnd) {
+                triggerEndPause();
+            }
             movingForward = false;
+            resetRandomTurnback();  // Reset turnback state on direction change
             return;
         }
         
@@ -795,6 +981,11 @@ void BaseMovementControllerClass::doStep() {
         // Check if reached startStep (end of backward movement)
         // ONLY reverse if we've already been to startStep once (va-et-vient mode active)
         if (currentStep <= startStep && hasReachedStartStep) {
+            // Trigger end pause if enabled (at START extremity)
+            if (zoneEffect.enabled && zoneEffect.endPauseEnabled && zoneEffect.enableStart) {
+                triggerEndPause();
+            }
+            resetRandomTurnback();  // Reset turnback state on direction change
             processCycleCompletion();
         }
     }

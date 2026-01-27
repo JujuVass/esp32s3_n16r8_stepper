@@ -47,7 +47,7 @@ extern TaskHandle_t motorTaskHandle;
 extern TaskHandle_t networkTaskHandle;
 
 // Mutexes for shared data protection
-extern SemaphoreHandle_t motionMutex;      // Protects: motion, pendingMotion, decelZone
+extern SemaphoreHandle_t motionMutex;      // Protects: motion, pendingMotion, zoneEffect
 extern SemaphoreHandle_t stateMutex;       // Protects: config.currentState changes
 
 // ============================================================================
@@ -132,7 +132,7 @@ extern float maxDistanceLimitPercent;
 extern MotionConfig motion;
 extern PendingMotionConfig pendingMotion;
 extern CyclePauseState motionPauseState;
-extern DecelZoneConfig decelZone;  // Owned by BaseMovementController.cpp
+extern ZoneEffectConfig zoneEffect;  // Zone effects (speed + special effects) - Owned by BaseMovementController.cpp
 
 // ============================================================================
 // STATISTICS TRACKING

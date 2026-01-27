@@ -850,14 +850,43 @@ bool UtilityEngine::loadSystemConfig(SystemConfig& config, const String& configP
   }
   
   // ========================================================================
-  // EXTRACT DECELERATION ZONE
+  // EXTRACT ZONE EFFECTS (new format + legacy fallback)
   // ========================================================================
-  if (doc["decelZone"].is<JsonObject>()) {
+  // Try new zoneEffect format first
+  if (doc["zoneEffect"].is<JsonObject>()) {
+    JsonObject zoneObj = doc["zoneEffect"];
+    config.decelZone.enabled = zoneObj["enabled"] | false;
+    config.decelZone.enableStart = zoneObj["enableStart"] | true;
+    config.decelZone.enableEnd = zoneObj["enableEnd"] | true;
+    config.decelZone.zoneMM = zoneObj["zoneMM"] | 50.0;
+    config.decelZone.speedEffect = (SpeedEffect)(zoneObj["speedEffect"] | (int)SPEED_DECEL);
+    config.decelZone.speedCurve = (SpeedCurve)(zoneObj["speedCurve"] | (int)CURVE_SINE);
+    config.decelZone.speedIntensity = zoneObj["speedIntensity"] | 75.0;
+    config.decelZone.randomTurnbackEnabled = zoneObj["randomTurnbackEnabled"] | false;
+    config.decelZone.turnbackChance = zoneObj["turnbackChance"] | 30;
+    config.decelZone.endPauseEnabled = zoneObj["endPauseEnabled"] | false;
+    config.decelZone.endPauseIsRandom = zoneObj["endPauseIsRandom"] | false;
+    config.decelZone.endPauseDurationSec = zoneObj["endPauseDurationSec"] | 1.0;
+    config.decelZone.endPauseMinSec = zoneObj["endPauseMinSec"] | 0.5;
+    config.decelZone.endPauseMaxSec = zoneObj["endPauseMaxSec"] | 2.0;
+  }
+  // Fallback to legacy decelZone format
+  else if (doc["decelZone"].is<JsonObject>()) {
     JsonObject decelObj = doc["decelZone"];
-    config.decelZone.enabled = decelObj["enabled"] | false;
+    bool enabled = decelObj["enabled"] | false;
+    config.decelZone.enabled = enabled;
+    config.decelZone.speedEffect = enabled ? SPEED_DECEL : SPEED_NONE;
     config.decelZone.zoneMM = decelObj["zoneMM"] | 50.0;
-    config.decelZone.effectPercent = decelObj["effectPercent"] | 75.0;
-    config.decelZone.mode = (DecelMode)(decelObj["mode"] | (int)DECEL_SINE);
+    config.decelZone.speedIntensity = decelObj["effectPercent"] | 75.0;
+    config.decelZone.speedCurve = (SpeedCurve)(decelObj["mode"] | (int)CURVE_SINE);
+    // Legacy format doesn't have these - use defaults
+    config.decelZone.randomTurnbackEnabled = false;
+    config.decelZone.turnbackChance = 30;
+    config.decelZone.endPauseEnabled = false;
+    config.decelZone.endPauseIsRandom = false;
+    config.decelZone.endPauseDurationSec = 1.0;
+    config.decelZone.endPauseMinSec = 0.5;
+    config.decelZone.endPauseMaxSec = 2.0;
   }
   
   // ========================================================================
@@ -958,13 +987,29 @@ bool UtilityEngine::saveSystemConfig(const SystemConfig& config, const String& c
   pursuitObj["maxSpeedLevel"] = config.pursuit.maxSpeedLevel;
   
   // ========================================================================
-  // SAVE DECELERATION ZONE
+  // SAVE ZONE EFFECTS (Speed + Special Effects)
   // ========================================================================
+  JsonObject zoneObj = doc["zoneEffect"].to<JsonObject>();
+  zoneObj["enabled"] = config.decelZone.enabled;
+  zoneObj["enableStart"] = config.decelZone.enableStart;
+  zoneObj["enableEnd"] = config.decelZone.enableEnd;
+  zoneObj["zoneMM"] = config.decelZone.zoneMM;
+  zoneObj["speedEffect"] = (int)config.decelZone.speedEffect;
+  zoneObj["speedCurve"] = (int)config.decelZone.speedCurve;
+  zoneObj["speedIntensity"] = config.decelZone.speedIntensity;
+  zoneObj["randomTurnbackEnabled"] = config.decelZone.randomTurnbackEnabled;
+  zoneObj["turnbackChance"] = config.decelZone.turnbackChance;
+  zoneObj["endPauseEnabled"] = config.decelZone.endPauseEnabled;
+  zoneObj["endPauseIsRandom"] = config.decelZone.endPauseIsRandom;
+  zoneObj["endPauseDurationSec"] = config.decelZone.endPauseDurationSec;
+  zoneObj["endPauseMinSec"] = config.decelZone.endPauseMinSec;
+  zoneObj["endPauseMaxSec"] = config.decelZone.endPauseMaxSec;
+  // Legacy compatibility - also save as decelZone
   JsonObject decelObj = doc["decelZone"].to<JsonObject>();
-  decelObj["enabled"] = config.decelZone.enabled;
+  decelObj["enabled"] = config.decelZone.enabled && (config.decelZone.speedEffect == SPEED_DECEL);
   decelObj["zoneMM"] = config.decelZone.zoneMM;
-  decelObj["effectPercent"] = config.decelZone.effectPercent;
-  decelObj["mode"] = (int)config.decelZone.mode;
+  decelObj["effectPercent"] = config.decelZone.speedIntensity;
+  decelObj["mode"] = (int)config.decelZone.speedCurve;
   
   // ========================================================================
   // SAVE CHAOS CONFIG & STATE

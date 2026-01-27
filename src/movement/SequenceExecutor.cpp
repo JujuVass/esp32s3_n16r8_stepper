@@ -460,13 +460,14 @@ void SequenceExecutor::startVaEtVientLine(SequenceLine* line) {
     if (motion.speedLevelBackward < 1.0) motion.speedLevelBackward = 1.0;
     if (motion.speedLevelBackward > MAX_SPEED_LEVEL) motion.speedLevelBackward = MAX_SPEED_LEVEL;
     
-    // Apply deceleration configuration
-    decelZone.enabled = line->decelStartEnabled || line->decelEndEnabled;
-    decelZone.enableStart = line->decelStartEnabled;
-    decelZone.enableEnd = line->decelEndEnabled;
-    decelZone.zoneMM = line->decelZoneMM;
-    decelZone.effectPercent = line->decelEffectPercent;
-    decelZone.mode = line->decelMode;
+    // Apply deceleration configuration (legacy sequence line format)
+    zoneEffect.enabled = line->decelStartEnabled || line->decelEndEnabled;
+    zoneEffect.enableStart = line->decelStartEnabled;
+    zoneEffect.enableEnd = line->decelEndEnabled;
+    zoneEffect.zoneMM = line->decelZoneMM;
+    zoneEffect.speedIntensity = line->decelEffectPercent;
+    zoneEffect.speedCurve = line->decelMode;
+    zoneEffect.speedEffect = SPEED_DECEL;  // Sequences use deceleration by default
     
     // Apply cycle pause configuration from sequence line
     motion.cyclePause.enabled = line->vaetCyclePauseEnabled;
@@ -476,7 +477,7 @@ void SequenceExecutor::startVaEtVientLine(SequenceLine* line) {
     motion.cyclePause.maxPauseSec = line->vaetCyclePauseMaxSec;
     
     // Validate configuration
-    BaseMovement.validateDecelZone();  // Integrated into BaseMovementController
+    BaseMovement.validateZoneEffect();
     
     // Calculate step delays and start movement
     BaseMovement.calculateStepDelay();

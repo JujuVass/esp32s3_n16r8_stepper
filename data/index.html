@@ -680,51 +680,114 @@
       <!-- Séparateur -->
       <div class="divider"></div>
 
-      <!-- Deceleration - Collapsible Section -->
-      <div class="section-collapsible collapsed" id="decelSection">
-        <div class="section-collapsible-header" onclick="toggleDecelSection()">
-          <span class="collapse-icon">▼</span> <span id="decelHeaderText">🎯 Décélération - désactivée</span>
+      <!-- Zone Effects - Collapsible Section -->
+      <div class="section-collapsible collapsed" id="zoneEffectSection">
+        <div class="section-collapsible-header" onclick="toggleZoneEffectSection()">
+          <span class="collapse-icon">▼</span> <span id="zoneEffectHeaderText">🎯 Effets de Zone - désactivés</span>
         </div>
         
         <div class="section-collapsible-content">
-          <!-- Zone -->
+          <!-- Zone Size -->
           <div class="speed-control-inline mb-10">
             <label class="label-inline">Zone:</label>
-            <input type="number" id="decelZoneMM" min="10" max="200" step="5" value="50" class="input-compact">
+            <input type="number" id="zoneEffectMM" min="10" max="200" step="5" value="50" class="input-compact">
             <span class="unit-label">mm</span>
-            <button class="preset-btn-sm btn-preset" data-decel-zone="10">10</button>
-            <button class="preset-btn-sm btn-preset" data-decel-zone="25">25</button>
-            <button class="preset-btn-sm btn-preset active" data-decel-zone="50">50</button>
-            <button class="preset-btn-sm btn-preset" data-decel-zone="75">75</button>
-          </div>
-          
-          <!-- Mode, Effect, Début/Fin - All on one line -->
-          <div class="speed-control-inline mb-10">
-            <label class="label-inline">Mode:</label>
-            <select id="decelModeSelect" style="width: 120px; padding: 6px; font-size: 13px; border: 1px solid #ddd; border-radius: 4px;">
-              <option value="0">Linéaire</option>
-              <option value="1" selected>Sinusoïdal</option>
-              <option value="2">Triangle Inv.</option>
-              <option value="3">Sinus Inv.</option>
-            </select>
-            
-            <span style="margin-left: 10px; font-size: 13px; font-weight: 500;">Effet:</span>
-            <input type="range" id="decelEffectPercent" min="0" max="100" step="5" value="75" style="width: 100px;">
-            <span id="effectValue" style="font-weight: bold; min-width: 35px; font-size: 13px;">75%</span>
-            
+            <button class="preset-btn-sm btn-preset" data-zone-mm="10">10</button>
+            <button class="preset-btn-sm btn-preset" data-zone-mm="25">25</button>
+            <button class="preset-btn-sm btn-preset active" data-zone-mm="50">50</button>
+            <button class="preset-btn-sm btn-preset" data-zone-mm="75">75</button>
             <span style="margin-left: 10px; font-size: 13px;">-</span>
             <label style="margin-left: 5px; font-size: 13px;">
-              <input type="checkbox" id="decelZoneStart" checked style="margin-right: 3px;">
+              <input type="checkbox" id="zoneEffectStart" checked style="margin-right: 3px;">
               Début
             </label>
             <label style="margin-left: 10px; font-size: 13px;">
-              <input type="checkbox" id="decelZoneEnd" checked style="margin-right: 3px;">
+              <input type="checkbox" id="zoneEffectEnd" checked style="margin-right: 3px;">
               Fin
             </label>
           </div>
+
+          <!-- ===== 1. Speed Effect ===== -->
+          <div style="background: #f8f9fa; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+            <div class="speed-control-inline mb-5">
+              <label style="font-weight: bold; font-size: 13px; min-width: 90px;">🚀 Vitesse:</label>
+              <select id="speedEffectType" style="width: 130px; padding: 5px; font-size: 13px; border: 1px solid #ddd; border-radius: 4px;">
+                <option value="0">Aucun</option>
+                <option value="1" selected>Décélération</option>
+                <option value="2">Accélération</option>
+              </select>
+              
+              <label style="margin-left: 10px; font-size: 13px;">Courbe:</label>
+              <select id="speedCurveSelect" style="width: 110px; padding: 5px; font-size: 13px; border: 1px solid #ddd; border-radius: 4px;">
+                <option value="0">Linéaire</option>
+                <option value="1" selected>Sinusoïdal</option>
+                <option value="2">Triangle Inv.</option>
+                <option value="3">Sinus Inv.</option>
+              </select>
+              
+              <span style="margin-left: 10px; font-size: 13px;">Intensité:</span>
+              <input type="range" id="speedIntensity" min="0" max="100" step="5" value="75" style="width: 80px;">
+              <span id="speedIntensityValue" style="font-weight: bold; min-width: 35px; font-size: 13px;">75%</span>
+            </div>
+          </div>
+
+          <!-- ===== 2. Random Turnback ===== -->
+          <div style="background: #f0f7ff; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+            <div class="speed-control-inline">
+              <label style="font-size: 13px; margin-right: 10px;">
+                <input type="checkbox" id="randomTurnbackEnabled" style="margin-right: 5px;">
+                <strong>🔄 Retour aléatoire</strong>
+              </label>
+              <span style="font-size: 13px; color: #666;">Chance:</span>
+              <input type="range" id="turnbackChance" min="5" max="100" step="5" value="30" style="width: 80px; margin-left: 5px;">
+              <span id="turnbackChanceValue" style="font-weight: bold; min-width: 35px; font-size: 13px;">30%</span>
+              <span style="font-size: 11px; color: #888; margin-left: 10px;">(fait demi-tour aléatoirement dans la zone)</span>
+            </div>
+          </div>
+
+          <!-- ===== 3. End Pause ===== -->
+          <div style="background: #fff8e6; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+            <div class="speed-control-inline mb-5">
+              <label style="font-size: 13px; margin-right: 10px;">
+                <input type="checkbox" id="endPauseEnabled" style="margin-right: 5px;">
+                <strong>⏸️ Pause aux extrémités</strong>
+              </label>
+              <label style="margin-left: 15px; font-size: 13px;">
+                <input type="radio" name="endPauseMode" value="fixed" id="endPauseModeFixed" checked style="margin-right: 3px;">
+                Fixe
+              </label>
+              <label style="margin-left: 10px; font-size: 13px;">
+                <input type="radio" name="endPauseMode" value="random" id="endPauseModeRandom" style="margin-right: 3px;">
+                Aléatoire
+              </label>
+            </div>
+            
+            <!-- Fixed Duration -->
+            <div id="endPauseFixedControls" class="speed-control-inline" style="margin-top: 8px;">
+              <label class="label-inline" style="min-width: 60px;">Durée:</label>
+              <input type="number" id="endPauseDuration" min="0.1" max="30" step="0.1" value="1.0" class="input-compact" style="width: 60px;">
+              <span class="unit-label">s</span>
+              <button class="preset-btn-sm btn-preset" data-end-pause="0.5">0.5s</button>
+              <button class="preset-btn-sm btn-preset active" data-end-pause="1">1s</button>
+              <button class="preset-btn-sm btn-preset" data-end-pause="2">2s</button>
+              <button class="preset-btn-sm btn-preset" data-end-pause="5">5s</button>
+            </div>
+            
+            <!-- Random Min/Max -->
+            <div id="endPauseRandomControls" class="hidden" style="margin-top: 8px;">
+              <div class="speed-control-inline">
+                <label class="label-inline" style="min-width: 60px;">Min:</label>
+                <input type="number" id="endPauseMin" min="0.1" max="30" step="0.1" value="0.5" class="input-compact" style="width: 60px;">
+                <span class="unit-label">s</span>
+                <span style="margin-left: 15px; font-size: 13px;">Max:</span>
+                <input type="number" id="endPauseMax" min="0.1" max="30" step="0.1" value="2.0" class="input-compact" style="width: 60px; margin-left: 5px;">
+                <span class="unit-label">s</span>
+              </div>
+            </div>
+          </div>
           
           <!-- Canvas Preview -->
-          <canvas id="decelPreview" class="canvas-compact" width="300" height="100"></canvas>
+          <canvas id="zoneEffectPreview" class="canvas-compact" width="300" height="100"></canvas>
         </div>
       </div>
 

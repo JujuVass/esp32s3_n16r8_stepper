@@ -273,31 +273,90 @@ bool CommandDispatcher::handleConfigCommands(const char* cmd, JsonDocument& doc)
 }
 
 // ============================================================================
-// HANDLER 3/8: DECEL ZONE COMMANDS
+// HANDLER 3/8: ZONE EFFECT COMMANDS (Speed + Special Effects)
 // ============================================================================
 
 bool CommandDispatcher::handleDecelZoneCommands(const char* cmd, JsonDocument& doc, const String& message) {
-    if (strcmp(cmd, "setDecelZone") == 0) {
-        decelZone.enabled = doc["enabled"] | false;
-        decelZone.enableStart = doc["enableStart"] | decelZone.enableStart;
-        decelZone.enableEnd = doc["enableEnd"] | decelZone.enableEnd;
+    if (strcmp(cmd, "setDecelZone") == 0 || strcmp(cmd, "setZoneEffect") == 0) {
+        // === Zone Settings ===
+        zoneEffect.enabled = doc["enabled"] | false;
+        zoneEffect.enableStart = doc["enableStart"] | zoneEffect.enableStart;
+        zoneEffect.enableEnd = doc["enableEnd"] | zoneEffect.enableEnd;
         
-        float zoneMM = doc["zoneMM"] | decelZone.zoneMM;
-        float effectPercent = doc["effectPercent"] | decelZone.effectPercent;
-        int modeValue = doc["mode"] | (int)decelZone.mode;
+        float zoneMM = doc["zoneMM"] | zoneEffect.zoneMM;
+        if (zoneMM > 0) zoneEffect.zoneMM = zoneMM;
         
-        if (zoneMM > 0) decelZone.zoneMM = zoneMM;
-        if (effectPercent >= 0 && effectPercent <= 100) decelZone.effectPercent = effectPercent;
-        if (modeValue >= 0 && modeValue <= 3) decelZone.mode = (DecelMode)modeValue;
+        // === Speed Effect ===
+        // Use is<T>() to handle value 0 correctly (containsKey is deprecated)
+        if (doc["speedEffect"].is<int>()) {
+            int speedEffectValue = doc["speedEffect"].as<int>();
+            if (speedEffectValue >= 0 && speedEffectValue <= 2) {
+                zoneEffect.speedEffect = (SpeedEffect)speedEffectValue;
+            }
+        }
         
-        BaseMovement.validateDecelZone();  // Integrated into BaseMovementController
+        // Legacy: "mode" maps to speedCurve, "effectPercent" maps to speedIntensity
+        // Use is<T>() to handle value 0 correctly (containsKey is deprecated)
+        if (doc["speedCurve"].is<int>()) {
+            int curveValue = doc["speedCurve"].as<int>();
+            if (curveValue >= 0 && curveValue <= 3) {
+                zoneEffect.speedCurve = (SpeedCurve)curveValue;
+            }
+        } else if (doc["mode"].is<int>()) {
+            int curveValue = doc["mode"].as<int>();
+            if (curveValue >= 0 && curveValue <= 3) {
+                zoneEffect.speedCurve = (SpeedCurve)curveValue;
+            }
+        }
+        
+        float intensity = doc["speedIntensity"] | doc["effectPercent"] | zoneEffect.speedIntensity;
+        if (intensity >= 0 && intensity <= 100) {
+            zoneEffect.speedIntensity = intensity;
+        }
+        
+        // === Random Turnback ===
+        if (doc["randomTurnbackEnabled"].is<bool>()) {
+            zoneEffect.randomTurnbackEnabled = doc["randomTurnbackEnabled"].as<bool>();
+        }
+        int turnbackChance = doc["turnbackChance"] | zoneEffect.turnbackChance;
+        if (turnbackChance >= 0 && turnbackChance <= 100) {
+            zoneEffect.turnbackChance = turnbackChance;
+        }
+        
+        // === End Pause ===
+        if (doc["endPauseEnabled"].is<bool>()) {
+            zoneEffect.endPauseEnabled = doc["endPauseEnabled"].as<bool>();
+        }
+        if (doc["endPauseIsRandom"].is<bool>()) {
+            zoneEffect.endPauseIsRandom = doc["endPauseIsRandom"].as<bool>();
+        }
+        float endPauseDuration = doc["endPauseDurationSec"] | zoneEffect.endPauseDurationSec;
+        if (endPauseDuration >= 0.1) zoneEffect.endPauseDurationSec = endPauseDuration;
+        
+        float endPauseMin = doc["endPauseMinSec"] | zoneEffect.endPauseMinSec;
+        float endPauseMax = doc["endPauseMaxSec"] | zoneEffect.endPauseMaxSec;
+        if (endPauseMin >= 0.1) zoneEffect.endPauseMinSec = endPauseMin;
+        if (endPauseMax >= endPauseMin) zoneEffect.endPauseMaxSec = endPauseMax;
+        
+        // Validate zone
+        BaseMovement.validateZoneEffect();
+        
+        // Build debug log
+        String speedEffectNames[] = {"NONE", "DECEL", "ACCEL"};
+        String curveNames[] = {"LINEAR", "SINE", "TRI_INV", "SINE_INV"};
         
         String zones = "";
-        if (decelZone.enableStart) zones += "START ";
-        if (decelZone.enableEnd) zones += "END";
-        engine->debug("✅ Decel config: " + String(decelZone.enabled ? "ON" : "OFF") + 
-              (decelZone.enabled ? " | zones=" + zones + "| size=" + String(decelZone.zoneMM, 1) + 
-               "mm | effect=" + String(decelZone.effectPercent, 0) + "%" : ""));
+        if (zoneEffect.enableStart) zones += "START ";
+        if (zoneEffect.enableEnd) zones += "END";
+        
+        engine->debug("✅ Zone Effect: " + String(zoneEffect.enabled ? "ON" : "OFF") + 
+              (zoneEffect.enabled ? " | zones=" + zones + 
+               " | speed=" + speedEffectNames[zoneEffect.speedEffect] + 
+               " " + curveNames[zoneEffect.speedCurve] + " " + String(zoneEffect.speedIntensity, 0) + "%" +
+               " | zone=" + String(zoneEffect.zoneMM, 1) + "mm" +
+               (zoneEffect.randomTurnbackEnabled ? " | turnback=" + String(zoneEffect.turnbackChance) + "%" : "") +
+               (zoneEffect.endPauseEnabled ? " | pause=" + String(zoneEffect.endPauseDurationSec, 1) + "s" : "")
+               : ""));
         
         sendStatus();
         return true;
