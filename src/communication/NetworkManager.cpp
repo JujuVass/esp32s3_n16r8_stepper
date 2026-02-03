@@ -1,4 +1,4 @@
-/**
+﻿/**
  * NetworkManager.cpp - WiFi Network Management Implementation
  * 
  * Two exclusive modes:
@@ -31,11 +31,11 @@ bool NetworkManager::shouldStartAPMode() {
     delay(10);  // Let pin stabilize
     
     int pinState = digitalRead(PIN_AP_MODE);
-    engine->info("📌 GPIO" + String(PIN_AP_MODE) + " state: " + String(pinState == LOW ? "LOW (force AP)" : "HIGH"));
+    engine->info("📌 GPIO" + String(PIN_AP_MODE) + " state: " + String(pinState == HIGH ? "LOW (force AP)" : "HIGH"));
     
-    // Check GPIO 18 - if LOW, force AP mode
-    if (pinState == LOW) {
-        engine->info("🔧 GPIO " + String(PIN_AP_MODE) + " is LOW - Forcing AP mode");
+    // Check GPIO 18 - if HIGH, force AP mode
+    if (pinState == HIGH) {
+        engine->info("🔧 GPIO " + String(PIN_AP_MODE) + " is HIGH - Forcing AP mode");
         return true;
     }
     

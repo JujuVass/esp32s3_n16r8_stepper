@@ -173,6 +173,10 @@ function moveSequenceLine(lineId, direction) {
   sendCommand(WS_CMD.MOVE_SEQUENCE_LINE, { lineId: lineId, direction: direction });
 }
 
+function reorderSequenceLine(lineId, newIndex) {
+  sendCommand(WS_CMD.REORDER_SEQUENCE_LINE, { lineId: lineId, newIndex: newIndex });
+}
+
 function duplicateSequenceLine(lineId) {
   sendCommand(WS_CMD.DUPLICATE_SEQUENCE_LINE, { lineId: lineId });
 }
@@ -1064,15 +1068,9 @@ function renderSequenceTable(data) {
     }, 0);
   });
   
-  tbody.ondragleave = function(e) {
-    if (!this.contains(e.relatedTarget)) {
-      const spacer = document.querySelector('.sequence-drop-spacer');
-      if (spacer) spacer.remove();
-    }
-  };
-  
   updateBatchToolbar();
   initializeTrashZones();
+  initSequenceSortable();  // Initialize SortableJS drag & drop
   
   if (window.isTestingLine) {
     document.querySelectorAll('[id^="btnTestLine_"]').forEach(btn => {
@@ -1117,7 +1115,7 @@ function createSequenceRow(line, index) {
         onchange="toggleSequenceLine(${line.lineId}, this.checked)"
         class="icon-md" style="cursor: pointer;">
     </td>
-    <td class="seq-cell text-bold text-primary text-md">
+    <td class="seq-cell text-bold text-primary text-md" style="cursor: grab;">
       ${index + 1}
     </td>
     <td class="seq-cell" title="${typeDisplay.typeName}">
@@ -1190,133 +1188,6 @@ function attachRowEventHandlers(row, line, index) {
     }
   };
   
-  // Drag start
-  row.ondragstart = function(e) {
-    draggedLineId = line.lineId;
-    draggedLineIndex = index;
-    this.classList.add('sequence-line-dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', line.lineId);
-    
-    const trashDropZone = document.getElementById('sequenceTrashDropZone');
-    if (trashDropZone) trashDropZone.classList.add('drag-active');
-  };
-  
-  // Drag end
-  row.ondragend = function(e) {
-    this.classList.remove('sequence-line-dragging');
-    const spacer = document.querySelector('.sequence-drop-spacer');
-    if (spacer) spacer.remove();
-    
-    const trashDropZone = document.getElementById('sequenceTrashDropZone');
-    if (trashDropZone) trashDropZone.classList.remove('drag-active');
-  };
-  
-  // Drag over
-  row.ondragover = function(e) {
-    if (draggedLineId === line.lineId) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    
-    const rect = this.getBoundingClientRect();
-    const mouseY = e.clientY;
-    const rowMiddle = rect.top + (rect.height / 2);
-    
-    let insertAfter = (mouseY > rowMiddle);
-    let finalTargetIndex = insertAfter ? index : index - 1;
-    
-    if (finalTargetIndex === draggedLineIndex || index === draggedLineIndex) {
-      const existingSpacer = document.querySelector('.sequence-drop-spacer');
-      if (existingSpacer) existingSpacer.remove();
-      return false;
-    }
-    
-    const now = Date.now();
-    if (now - lastDragEnterTime < 200) return false;
-    lastDragEnterTime = now;
-    
-    const existingSpacer = document.querySelector('.sequence-drop-spacer');
-    if (existingSpacer) existingSpacer.remove();
-    
-    const spacer = document.createElement('tr');
-    spacer.className = 'sequence-drop-spacer';
-    spacer.innerHTML = '<td colspan="10" style="height: 50px; padding: 0; border: none; background: transparent;"><div class="sequence-drop-placeholder-inner">⬇ Insérer ici ⬇</div></td>';
-    spacer.dataset.targetLineId = line.lineId;
-    spacer.dataset.targetIndex = index;
-    
-    spacer.ondragover = function(e) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      return false;
-    };
-    
-    spacer.ondrop = function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      const targetRow = document.querySelector(`[data-line-id="${this.dataset.targetLineId}"]`);
-      if (targetRow && targetRow.ondrop) targetRow.ondrop(e);
-      return false;
-    };
-    
-    if (insertAfter) {
-      this.parentNode.insertBefore(spacer, this.nextSibling);
-    } else {
-      this.parentNode.insertBefore(spacer, this);
-    }
-    
-    return false;
-  };
-  
-  row.ondragenter = function(e) {
-    if (draggedLineId === line.lineId) return;
-    e.preventDefault();
-  };
-  
-  row.ondragleave = function(e) { /* Keep spacer visible */ };
-  
-  // Drop
-  row.ondrop = function(e) {
-    e.stopPropagation();
-    e.preventDefault();
-    
-    const spacer = document.querySelector('.sequence-drop-spacer');
-    if (spacer) spacer.remove();
-    
-    if (draggedLineId && draggedLineId !== line.lineId) {
-      const targetIndex = index;
-      let direction;
-      
-      if (draggedLineIndex < targetIndex) {
-        direction = targetIndex - draggedLineIndex;
-      } else {
-        direction = -(draggedLineIndex - targetIndex);
-      }
-      
-      console.log(`📦 Drag: line ${draggedLineId} from index ${draggedLineIndex} to ${targetIndex} (${direction} moves)`);
-      
-      let movesRemaining = Math.abs(direction);
-      const moveDirection = direction > 0 ? 1 : -1;
-      
-      const executeMove = () => {
-        if (movesRemaining > 0) {
-          sendCommand(WS_CMD.MOVE_SEQUENCE_LINE, { lineId: draggedLineId, direction: moveDirection });
-          movesRemaining--;
-          setTimeout(executeMove, 100);
-        } else {
-          if (selectedLineIds.has(draggedLineId)) {
-            selectedLineIds.delete(draggedLineId);
-            updateBatchToolbar();
-            renderSequenceTable({ lines: sequenceLines });
-          }
-        }
-      };
-      
-      executeMove();
-    }
-    
-    return false;
-  };
-  
   // Multi-select click
   row.onclick = function(e) {
     if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
@@ -1344,6 +1215,55 @@ function attachRowEventHandlers(row, line, index) {
     updateBatchToolbar();
     renderSequenceTable({ lines: sequenceLines });
   };
+}
+
+// ============================================================================
+// SORTABLEJS INITIALIZATION
+// ============================================================================
+
+let sequenceSortable = null;
+
+/**
+ * Initialize SortableJS for the sequence table
+ * Called after table render
+ */
+function initSequenceSortable() {
+  const tbody = document.getElementById('sequenceTableBody');
+  if (!tbody || typeof Sortable === 'undefined') return;
+  
+  // Destroy previous instance if exists
+  if (sequenceSortable) {
+    sequenceSortable.destroy();
+    sequenceSortable = null;
+  }
+  
+  sequenceSortable = new Sortable(tbody, {
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    dragClass: 'sortable-drag',
+    filter: 'input, button',  // Ignore drag on inputs and buttons
+    preventOnFilter: false,   // Allow click events on filtered elements
+    onStart: function(evt) {
+      // Show trash zone
+      const trashZone = document.getElementById('sequenceTrashDropZone');
+      if (trashZone) trashZone.classList.add('drag-active');
+    },
+    onEnd: function(evt) {
+      // Hide trash zone
+      const trashZone = document.getElementById('sequenceTrashDropZone');
+      if (trashZone) trashZone.classList.remove('drag-active');
+      
+      // Only send if position changed
+      if (evt.oldIndex !== evt.newIndex) {
+        const lineId = parseInt(evt.item.dataset.lineId);
+        console.log(`🔄 SortableJS: line ${lineId} moved from ${evt.oldIndex} to ${evt.newIndex}`);
+        reorderSequenceLine(lineId, evt.newIndex);
+      }
+    }
+  });
+  
+  console.log('✅ SortableJS initialized for sequence table');
 }
 
 // ============================================================================

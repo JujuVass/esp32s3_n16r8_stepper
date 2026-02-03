@@ -1308,6 +1308,11 @@ void setupAPIRoutes() {
   // ========================================================================
   server.onNotFound([]() {
     String uri = server.uri();
+    String method = (server.method() == HTTP_GET) ? "GET" : 
+                    (server.method() == HTTP_POST) ? "POST" : 
+                    (server.method() == HTTP_OPTIONS) ? "OPTIONS" : "OTHER";
+    engine->debug("📥 Request: " + method + " " + uri);
+    
     // En mode AP, tout sauf /setup.html et /api/wifi/* redirige vers /setup.html
     if (Network.isAPMode()) {
       if (uri != "/setup.html" && !uri.startsWith("/api/wifi")) {

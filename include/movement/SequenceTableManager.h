@@ -83,6 +83,14 @@ public:
   bool moveLine(int lineId, int direction);
   
   /**
+   * Reorder a line to a specific index (for drag & drop)
+   * @param lineId Line ID to move
+   * @param newIndex Target index (0-based)
+   * @return true if reordered, false if invalid
+   */
+  bool reorderLine(int lineId, int newIndex);
+  
+  /**
    * Toggle line enabled/disabled
    * @param lineId Line ID
    * @param enabled New state

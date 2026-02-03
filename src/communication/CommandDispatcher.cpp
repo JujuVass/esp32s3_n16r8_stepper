@@ -835,6 +835,14 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         return true;
     }
     
+    if (strcmp(cmd, "reorderSequenceLine") == 0) {
+        int lineId = doc["lineId"] | -1;
+        int newIndex = doc["newIndex"] | -1;
+        SeqTable.reorderLine(lineId, newIndex);
+        SeqTable.broadcast();
+        return true;
+    }
+    
     if (strcmp(cmd, "duplicateSequenceLine") == 0) {
         int lineId = doc["lineId"] | -1;
         SeqTable.duplicateLine(lineId);

@@ -471,6 +471,36 @@ select.select-input:focus {
   background: #f0f0f0 !important;
 }
 
+/* SortableJS drag & drop styles */
+.sortable-ghost {
+  opacity: 0.4;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%) !important;
+}
+
+.sortable-chosen {
+  background: #e8f4ff !important;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.sortable-drag {
+  opacity: 1 !important;
+  background: white !important;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+}
+
+.drag-handle {
+  cursor: grab;
+  user-select: none;
+}
+
+.drag-handle:hover {
+  opacity: 1 !important;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
 /* Drop spacer - Real table row that creates space */
 .sequence-drop-spacer {
   height: 50px !important;

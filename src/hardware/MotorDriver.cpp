@@ -45,7 +45,7 @@ void MotorDriver::init() {
     attachInterrupt(digitalPinToInterrupt(PIN_PEND), pendISR, CHANGE);
     
     // Set initial state: disabled, forward direction
-    digitalWrite(PIN_ENABLE, HIGH);  // Disable (active LOW)
+    digitalWrite(PIN_ENABLE, LOW);  // Disable (active LOW)
     digitalWrite(PIN_DIR, HIGH);     // Forward direction
     digitalWrite(PIN_PULSE, LOW);    // Pulse idle LOW
     
@@ -103,7 +103,7 @@ void MotorDriver::enable() {
     if (m_enabled) return;  // Already enabled
     
     // HSS86 ENABLE is active LOW
-    digitalWrite(PIN_ENABLE, LOW);
+    digitalWrite(PIN_ENABLE, HIGH);
     m_enabled = true;
 }
 
@@ -111,7 +111,7 @@ void MotorDriver::disable() {
     if (!m_enabled) return;  // Already disabled
     
     // HSS86 ENABLE is active LOW, set HIGH to disable
-    digitalWrite(PIN_ENABLE, HIGH);
+    digitalWrite(PIN_ENABLE, LOW);
     m_enabled = false;
 }
 

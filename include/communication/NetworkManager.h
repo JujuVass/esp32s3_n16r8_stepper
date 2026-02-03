@@ -1,4 +1,4 @@
-/**
+﻿/**
  * NetworkManager.h - WiFi Network Management
  * 
  * Two exclusive modes:
@@ -6,7 +6,7 @@
  * - STA Mode: For stepper control (index.html)
  * 
  * AP Mode is activated if:
- * - PIN_AP_MODE (GPIO 18) is LOW at boot (physical switch)
+ * - PIN_AP_MODE (GPIO 19) is HIGH (floating) at boot = AP mode, LOW (GND) = normal mode
  * - No WiFi credentials in EEPROM and no valid defaults
  */
 

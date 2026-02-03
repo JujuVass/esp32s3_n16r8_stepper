@@ -163,6 +163,7 @@ const WS_CMD = Object.freeze({
   DELETE_SEQUENCE_LINE: 'deleteSequenceLine',
   UPDATE_SEQUENCE_LINE: 'updateSequenceLine',
   MOVE_SEQUENCE_LINE: 'moveSequenceLine',
+  REORDER_SEQUENCE_LINE: 'reorderSequenceLine',
   DUPLICATE_SEQUENCE_LINE: 'duplicateSequenceLine',
   TOGGLE_SEQUENCE_LINE: 'toggleSequenceLine',
   START_SEQUENCE: 'startSequence',

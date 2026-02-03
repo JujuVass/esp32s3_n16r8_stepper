@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // CONFIG.H - System Configuration (WiFi, OTA, GPIO, Hardware)
 // ============================================================================
 // Central configuration file for all hardware and network settings
@@ -27,20 +27,20 @@ extern const char* otaPassword;  // OTA password protection
 // ============================================================================
 // Motor driver pins (HSS86 stepper driver)
 // Cable colors: Yellow=PULSE, Orange=DIR, Red=ENABLE
-constexpr int PIN_START_CONTACT = 47;  // Pull-up
-constexpr int PIN_END_CONTACT = 21;    // Pull-up
-constexpr int PIN_PULSE = 12;          // Cable jaune
-constexpr int PIN_DIR = 13;            // Cable orange
-constexpr int PIN_ENABLE = 14;         // Cable rouge
+constexpr int PIN_START_CONTACT = 4;   // MIN - capteur opto (jaune)
+constexpr int PIN_END_CONTACT = 5;     // MAX - capteur opto (vert)
+constexpr int PIN_PULSE = 6;           // PU- via level shifter
+constexpr int PIN_DIR = 7;             // DR- via level shifter
+constexpr int PIN_ENABLE = 15;         // EN- via level shifter
 
 // HSS86 feedback signals (directly connected, active states documented below)
 // ALM (Alarm): LOW = alarm active (position error, over-current, overheat)
 // PEND (Position End): HIGH = motor reached commanded position
-constexpr int PIN_ALM = 1;             
-constexpr int PIN_PEND = 2;            
+constexpr int PIN_ALM = 17;            // ALM- via level shifter (input)
+constexpr int PIN_PEND = 16;           // PED- via level shifter (input)
 
 // AP Mode forcing pin (active LOW - connect to GND to force AP mode at boot)
-constexpr int PIN_AP_MODE = 18;
+constexpr int PIN_AP_MODE = 19;        // GND = normal mode, floating = AP mode (INVERTED!)
 
 // Onboard RGB LED (WS2812 on Freenove ESP32-S3)
 constexpr int PIN_RGB_LED = 48;
@@ -48,9 +48,9 @@ constexpr int PIN_RGB_LED = 48;
 // ============================================================================
 // CONFIGURATION - Motor Parameters
 // ============================================================================
-const int STEPS_PER_REV = 600;
-const float MM_PER_REV = 90.0;  // HTD 5M belt, 18T pulley (5mm pitch × 18 teeth = 90mm)
-const float STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // 6.67 steps/mm
+const int STEPS_PER_REV = 800;
+const float MM_PER_REV = 100.0;  // HTD 5M belt, 20T pulley (5mm pitch  20 teeth = 100mm)
+const float STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // 8.0 steps/mm
 
 // ============================================================================
 // CONFIGURATION - Drift Correction (Safety Offset)
@@ -59,25 +59,25 @@ const float STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // 6.67 steps/mm
 // Why 10? Position 0 is set 10 steps AFTER START contact release
 // maxStep is set 10 steps BEFORE END contact
 // This creates a buffer zone for drift tolerance
-const int SAFETY_OFFSET_STEPS = 10;  // 10 steps = 1.5mm @ 6.67 steps/mm
+const int SAFETY_OFFSET_STEPS = 10;  // 10 steps = 1.25mm @ 8.0 steps/mm
 
 // Hard drift detection zone (only test physical contacts when close to limits)
 // Why 20mm? Balance between performance (88% less tests) and safety (~133 steps buffer)
 // Reduces false positives and CPU overhead while maintaining excellent protection
-const float HARD_DRIFT_TEST_ZONE_MM = 20.0;  // ~133 steps @ 6.67 steps/mm
+const float HARD_DRIFT_TEST_ZONE_MM = 20.0;  // ~160 steps @ 8.0 steps/mm
 
 // ============================================================================
 // CONFIGURATION - Step Timing
 // ============================================================================
-const int STEP_PULSE_MICROS = 3;   // HSS86 requires min 2.5µs (used for HIGH + LOW)
-const float STEP_EXECUTION_TIME_MICROS = STEP_PULSE_MICROS * 2.0;  // Total: 10µs per step
+const int STEP_PULSE_MICROS = 3;   // HSS86 requires min 2.5Âµs (used for HIGH + LOW)
+const float STEP_EXECUTION_TIME_MICROS = STEP_PULSE_MICROS * 2.0;  // Total: 10Âµs per step
 const int DIR_CHANGE_DELAY_MICROS = 30;  // HSS86 driver requires time to process direction changes
 
 // ============================================================================
 // CONFIGURATION - Calibration Constants
 // ============================================================================
 // WebSocket servicing during calibration
-// Why 20? At 10µs/step (5µs HIGH + 5µs LOW), 20 steps = 200µs
+// Why 20? At 10Âµs/step (5Âµs HIGH + 5Âµs LOW), 20 steps = 200Âµs
 // This ensures WebSocket keeps connection alive without interfering with timing
 const int WEBSOCKET_SERVICE_INTERVAL_STEPS = 20;
 
@@ -89,7 +89,7 @@ const int CALIB_DELAY = 2000;  // 2ms per step = 500 steps/sec (safer for heavy 
 const int CALIBRATION_MAX_STEPS = 3000;
 
 // Speed reduction for precise positioning
-// Why 3? Slows down by 3× (e.g., 5ms → 15ms per step)
+// Why 3? Slows down by 3Ã— (e.g., 5ms â†’ 15ms per step)
 // Reduces mechanical shock when contacting limit switches
 const int CALIBRATION_SLOW_FACTOR = 3;
 
@@ -111,7 +111,7 @@ const int CALIBRATION_ERROR_MARGIN_STEPS = 1000;
 // CONFIGURATION - Oscillation Mode Constants
 // ============================================================================
 // Phase tracking and position tolerances
-const float OSC_INITIAL_POSITIONING_TOLERANCE_MM = 2.0;  // ±2mm considered "at center"
+const float OSC_INITIAL_POSITIONING_TOLERANCE_MM = 2.0;  // Â±2mm considered "at center"
 const float OSC_RAMP_START_DELAY_MS = 500.0;  // Wait 500ms before starting ramp-in
 
 // Step timing for oscillation phases
@@ -120,7 +120,7 @@ const unsigned long OSC_MIN_STEP_DELAY_MICROS = 50;  // Minimum delay for oscill
 const int OSC_MAX_STEPS_PER_CATCH_UP = 2;  // Max steps per loop iteration (anti-jerk)
 
 // Sine wave lookup table (optional performance optimization)
-#define USE_SINE_LOOKUP_TABLE true  // Enable pre-calculated sine table (saves ~13µs per call)
+#define USE_SINE_LOOKUP_TABLE true  // Enable pre-calculated sine table (saves ~13Âµs per call)
 const int SINE_TABLE_SIZE = 1024;  // 1024 points = 0.1% precision, 4KB RAM
 
 // Smooth transitions
@@ -136,7 +136,7 @@ const unsigned long OSC_TRANSITION_LOG_INTERVAL_MS = 200;  // Transition logs ev
 // ============================================================================
 // CONFIGURATION - Chaos Mode
 // ============================================================================
-// Why 50000µs? Chaos mode: max step delay = 50ms = 20 steps/sec (minimum sane speed)
+// Why 50000Âµs? Chaos mode: max step delay = 50ms = 20 steps/sec (minimum sane speed)
 const unsigned long CHAOS_MAX_STEP_DELAY_MICROS = 50000;
 
 // Why 500ms? Sequence status: update frequency during wait (balance responsiveness vs traffic)
@@ -150,14 +150,8 @@ const unsigned long SEQUENCE_STATUS_UPDATE_MS = 500;
 const long WASATSTART_THRESHOLD_STEPS = 10;
 
 // Hard mechanical limits for safety
-// Why 200mm? Physical constraint of HTD 5M belt system (18T pulley, limited travel)
-// Prevents over-travel damage to mechanics
-const float HARD_MAX_DISTANCE_MM = 200.0;
-
-// Why 180mm? Minimum expected travel distance (detects mechanical issues early)
-// If calibration finds less than 180mm, something is wrong (contact not working, obstruction, etc.)
-// Set lower for initial testing after pulley correction (18T vs 20T)
-const float HARD_MIN_DISTANCE_MM = 180.0;
+const float HARD_MAX_DISTANCE_MM = 265.0;
+const float HARD_MIN_DISTANCE_MM = 250.0;
 
 // ============================================================================
 // CONFIGURATION - Speed Limits MAXGLOSPE
@@ -199,7 +193,7 @@ constexpr unsigned long PEND_WARN_COOLDOWN_MS = 5000;  // Max 1 warning per 5 se
 #define LOG_BUFFER_SIZE 100  // Circular buffer size for async log writes
 
 // Slow broadcast threshold for performance monitoring (microseconds)
-// Why 20ms? At typical stepDelay ~300µs, 20ms = ~66 potential steps lost
+// Why 20ms? At typical stepDelay ~300Âµs, 20ms = ~66 potential steps lost
 // Logs warning when broadcast takes longer (useful for dual-core validation)
 constexpr unsigned long BROADCAST_SLOW_THRESHOLD_US = 20000;  // 20ms
 

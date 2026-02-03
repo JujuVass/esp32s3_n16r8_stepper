@@ -618,7 +618,7 @@ bool OscillationControllerClass::checkSafetyContacts(long targetStep) {
     // Test END contact uniquement si oscillation approche de la limite haute
     float distanceToEndLimitMM = config.totalDistanceMM - maxOscPositionMM;
     if (distanceToEndLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
-        if (targetStep >= config.maxStep && Contacts.readDebounced(PIN_END_CONTACT, LOW)) {
+        if (targetStep >= config.maxStep && Contacts.isEndActive()) {
             Status.sendError("❌ OSCILLATION: Contact END atteint de manière inattendue (amplitude proche limite)");
             config.currentState = STATE_PAUSED;  // Stop movement (single source of truth)
             return false;
@@ -627,7 +627,7 @@ bool OscillationControllerClass::checkSafetyContacts(long targetStep) {
 
     // Test START contact uniquement si oscillation approche de la limite basse
     if (minOscPositionMM <= HARD_DRIFT_TEST_ZONE_MM) {
-        if (targetStep <= config.minStep && Contacts.readDebounced(PIN_START_CONTACT, LOW, 3, 100)) {
+        if (targetStep <= config.minStep && Contacts.isStartActive()) {
             Status.sendError("❌ OSCILLATION: Contact START atteint de manière inattendue (amplitude proche limite)");
             config.currentState = STATE_PAUSED;  // Stop movement (single source of truth)
             return false;

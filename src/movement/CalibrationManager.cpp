@@ -69,13 +69,37 @@ bool CalibrationManager::handleFailure() {
 // ============================================================================
 // CONTACT DETECTION
 // ============================================================================
+// OPTO LOGIC: HIGH = blocked/active, LOW = clear/inactive
 
 bool CalibrationManager::findContact(bool moveForward, uint8_t contactPin, const char* contactName) {
     Motor.setDirection(moveForward);
     unsigned long stepCount = 0;
     
-    // Search for contact with debouncing (3 checks, 25µs interval)
-    while (Contacts.readDebounced(contactPin, HIGH, 3, 25)) {
+    // Check if already on the contact (opto HIGH = blocked = already triggered)
+    if (Contacts.isActive(contactPin)) {
+        engine->info(String("⚠️ Already on ") + contactName + " opto - backing off first...");
+        
+        // Back off in opposite direction until opto clears (goes LOW)
+        Motor.setDirection(!moveForward);
+        int backoffSteps = 0;
+        while (Contacts.isActive(contactPin) && backoffSteps < SAFETY_OFFSET_STEPS * 2) {
+            Motor.step();
+            backoffSteps++;
+            delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR);
+        }
+        
+        if (backoffSteps >= SAFETY_OFFSET_STEPS * 2) {
+            engine->error("❌ Cannot clear " + String(contactName) + " opto!");
+            return false;
+        }
+        
+        engine->info("✓ Cleared opto after " + String(backoffSteps) + " steps, continuing calibration...");
+        Motor.setDirection(moveForward);
+        serviceWebSocket(100);
+    }
+    
+    // Search for contact: move while opto is LOW (clear), stop when HIGH (blocked)
+    while (Contacts.isClear(contactPin)) {
         Motor.step();
         currentStep += moveForward ? 1 : -1;
         delayMicroseconds(CALIB_DELAY);
@@ -100,18 +124,16 @@ bool CalibrationManager::findContact(bool moveForward, uint8_t contactPin, const
         }
     }
     
-    // Validate END contact distance (filter mechanical bounces)
+    // Validate END contact distance (sanity check - not a retry loop)
     if (contactPin == PIN_END_CONTACT) {
         long detectedSteps = abs(currentStep);
         long minExpectedSteps = (long)(HARD_MIN_DISTANCE_MM * STEPS_PER_MM);
         
         if (detectedSteps < minExpectedSteps) {
-            engine->error("Contact END détecté AVANT zone valide (" + 
+            engine->error("❌ Opto END détecté trop tôt (" + 
                          String(detectedSteps) + " < " + String(minExpectedSteps) + " steps)");
-            engine->error("→ Rebond mécanique probable - Retry");
-            
-            // Recursive retry
-            return findContact(moveForward, contactPin, contactName);
+            engine->error("→ Vérifier le câblage ou la position des optos");
+            return false;  // Fail without infinite retry
         }
     }
     
@@ -121,10 +143,11 @@ bool CalibrationManager::findContact(bool moveForward, uint8_t contactPin, const
 void CalibrationManager::releaseContact(uint8_t contactPin, bool moveForward) {
     Motor.setDirection(moveForward);
     
-    // Move slowly until contact releases
-    while (Contacts.readDebounced(contactPin, LOW, 3, 200)) {
+    // Move slowly until opto clears (HIGH->LOW transition)
+    while (Contacts.isActive(contactPin)) {
         Motor.step();
         if (!moveForward) currentStep--;
+        else currentStep++;
         delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR * 2);
     }
     
@@ -132,6 +155,7 @@ void CalibrationManager::releaseContact(uint8_t contactPin, bool moveForward) {
     for (int i = 0; i < SAFETY_OFFSET_STEPS; i++) {
         Motor.step();
         if (!moveForward) currentStep--;
+        else currentStep++;
         delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR);
     }
 }
@@ -286,15 +310,16 @@ bool CalibrationManager::startCalibration() {
 bool CalibrationManager::returnToStart() {
     engine->debug("Returning to START contact...");
     
-    // Check if stuck at END contact
-    if (Contacts.readDebounced(PIN_END_CONTACT, LOW, 3, 50)) {
+    // Check if stuck at END contact (HIGH = opto blocked = still on contact)
+    if (Contacts.isEndActive()) {
         engine->warn("⚠️ Stuck at END - emergency decontact...");
         Motor.setDirection(false);  // Backward
         
         int emergencySteps = 0;
         const int MAX_EMERGENCY = 300;
         
-        while (Contacts.readDebounced(PIN_END_CONTACT, LOW, 3, 50) && emergencySteps < MAX_EMERGENCY) {
+        // Move until opto clears (goes LOW)
+        while (Contacts.isEndActive() && emergencySteps < MAX_EMERGENCY) {
             Motor.step();
             currentStep--;
             emergencySteps++;
@@ -320,10 +345,10 @@ bool CalibrationManager::returnToStart() {
         delay(200);
     }
     
-    // Search for START contact
+    // Search for START contact: move backward while opto is LOW (clear), stop when HIGH (blocked)
     Motor.setDirection(false);  // Backward
     
-    while (Contacts.readDebounced(PIN_START_CONTACT, HIGH, 3, 100)) {
+    while (Contacts.isStartClear()) {
         Motor.step();
         currentStep--;
         delayMicroseconds(CALIB_DELAY);
@@ -344,17 +369,20 @@ bool CalibrationManager::returnToStart() {
         }
     }
     
-    // Release contact and add safety margin
+    // Release contact: move forward while opto is HIGH (blocked), until it goes LOW (clear)
     engine->debug("START contact detected - releasing...");
     Motor.setDirection(true);  // Forward
     
-    while (Contacts.readDebounced(PIN_START_CONTACT, LOW, 3, 100)) {
+    while (Contacts.isStartActive()) {
         Motor.step();
+        currentStep++;
         delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR * 2);
     }
     
+    // Add safety margin
     for (int i = 0; i < SAFETY_OFFSET_STEPS; i++) {
         Motor.step();
+        currentStep++;
         delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR);
     }
     

@@ -112,7 +112,7 @@ bool ChaosController::checkLimits() {
         
         float distanceToEndLimitMM = config.totalDistanceMM - maxChaosPositionMM;
         if (distanceToEndLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
-            if (Contacts.readDebounced(PIN_END_CONTACT, LOW, 3, 50)) {
+            if (Contacts.isEndActive()) {
                 Status.sendError("❌ CHAOS: Contact END atteint - amplitude proche limite");
                 config.currentState = STATE_ERROR;
                 chaosState.isRunning = false;
@@ -132,7 +132,7 @@ bool ChaosController::checkLimits() {
         }
         
         if (minChaosPositionMM <= HARD_DRIFT_TEST_ZONE_MM) {
-            if (Contacts.readDebounced(PIN_START_CONTACT, LOW, 3, 50)) {
+            if (Contacts.isStartActive()) {
                 Status.sendError("❌ CHAOS: Contact START atteint - amplitude proche limite");
                 config.currentState = STATE_ERROR;
                 chaosState.isRunning = false;

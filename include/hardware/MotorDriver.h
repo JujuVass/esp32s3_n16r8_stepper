@@ -17,15 +17,6 @@
  * Singleton class providing hardware abstraction for the HSS86 stepper driver.
  * All direct GPIO manipulation for motor control should go through this class.
  * 
- * Hardware connections (from Config.h):
- * - PIN_PULSE (12): Step pulse signal (Yellow cable)
- * - PIN_DIR (13): Direction signal (Orange cable)
- * - PIN_ENABLE (14): Enable signal - Active LOW (Red cable)
- * 
- * Timing requirements (HSS86):
- * - Minimum pulse width: 2.5µs (we use STEP_PULSE_MICROS = 3µs)
- * - Direction setup time: 5µs before step (we use DIR_CHANGE_DELAY_MICROS = 30µs)
- * - Enable active LOW
  */
 class MotorDriver {
 public:

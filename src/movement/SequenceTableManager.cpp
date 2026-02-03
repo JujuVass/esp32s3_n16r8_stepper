@@ -109,6 +109,38 @@ bool SequenceTableManager::moveLine(int lineId, int direction) {
   return true;
 }
 
+bool SequenceTableManager::reorderLine(int lineId, int newIndex) {
+  int oldIndex = findLineIndex(lineId);
+  
+  if (oldIndex == -1) return false;
+  if (newIndex < 0 || newIndex >= sequenceLineCount) return false;
+  if (oldIndex == newIndex) return true;  // Already at target
+  
+  // Store the line to move
+  SequenceLine lineToMove = sequenceTable[oldIndex];
+  
+  // Shift lines to fill the gap
+  if (oldIndex < newIndex) {
+    // Moving down: shift lines up
+    for (int i = oldIndex; i < newIndex; i++) {
+      sequenceTable[i] = sequenceTable[i + 1];
+    }
+  } else {
+    // Moving up: shift lines down
+    for (int i = oldIndex; i > newIndex; i--) {
+      sequenceTable[i] = sequenceTable[i - 1];
+    }
+  }
+  
+  // Place the line at new position
+  sequenceTable[newIndex] = lineToMove;
+  
+  engine->info(String("🔄 Ligne réordonnée: ID=") + String(lineId) + " | " + 
+        String(oldIndex + 1) + " → " + String(newIndex + 1));
+  
+  return true;
+}
+
 bool SequenceTableManager::toggleLine(int lineId, bool enabled) {
   int idx = findLineIndex(lineId);
   

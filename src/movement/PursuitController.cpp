@@ -189,7 +189,7 @@ bool PursuitControllerClass::checkSafetyContacts(bool moveForward) {
         float distanceToLimitMM = stepsToLimit / STEPS_PER_MM;
         
         if (distanceToLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
-            if (Contacts.readDebounced(PIN_END_CONTACT, LOW, 3, 50)) {
+            if (Contacts.isEndActive()) {
                 pursuit.isMoving = false;
                 pursuit.targetStep = currentStep;
                 Status.sendError("❌ PURSUIT: Contact END atteint - arrêt sécurité");
@@ -202,7 +202,7 @@ bool PursuitControllerClass::checkSafetyContacts(bool moveForward) {
         float distanceToStartMM = currentStep / STEPS_PER_MM;
         
         if (distanceToStartMM <= HARD_DRIFT_TEST_ZONE_MM) {
-            if (Contacts.readDebounced(PIN_START_CONTACT, LOW, 3, 50)) {
+            if (Contacts.isStartActive()) {
                 pursuit.isMoving = false;
                 pursuit.targetStep = currentStep;
                 Status.sendError("❌ PURSUIT: Contact START atteint - arrêt sécurité");

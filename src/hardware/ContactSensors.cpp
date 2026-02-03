@@ -1,10 +1,14 @@
 // ============================================================================
-// CONTACT_SENSORS.CPP - Limit Switch / Contact Sensor Implementation
+// CONTACT_SENSORS.CPP - Opto Sensor Implementation (OPTIMIZED)
+// ============================================================================
+// OPTO LOGIC (verified):
+//   HIGH = beam BLOCKED = object detected = ACTIVE
+//   LOW  = beam CLEAR   = no object      = INACTIVE
 // ============================================================================
 
 #include "hardware/ContactSensors.h"
 #include "hardware/MotorDriver.h"
-#include "communication/StatusBroadcaster.h"  // For Status.sendError()
+#include "communication/StatusBroadcaster.h"
 #include "core/GlobalState.h"
 #include "core/UtilityEngine.h"
 
@@ -22,72 +26,45 @@ ContactSensors& ContactSensors::getInstance() {
 // ============================================================================
 
 void ContactSensors::init() {
-    if (m_initialized) return;  // Prevent double initialization
+    if (m_initialized) return;
     
-    // Configure contact pins as inputs with internal pull-up
-    // Contacts are normally open (HIGH), closed when engaged (LOW)
-    pinMode(PIN_START_CONTACT, INPUT_PULLUP);
-    pinMode(PIN_END_CONTACT, INPUT_PULLUP);
+    // Opto sensors: HIGH when beam blocked, LOW when clear
+    // No pull-up needed - opto drives the signal
+    pinMode(PIN_START_CONTACT, INPUT);
+    pinMode(PIN_END_CONTACT, INPUT);
     
     m_initialized = true;
+    engine->info("✅ Opto sensors initialized (START=GPIO" + String(PIN_START_CONTACT) + 
+                 ", END=GPIO" + String(PIN_END_CONTACT) + ") - HIGH=blocked, LOW=clear");
 }
 
 // ============================================================================
-// DEBOUNCED READING - SPECIFIC CONTACTS
+// OPTO READING - SIMPLE API (no debounce needed)
+// HIGH = BLOCKED/ACTIVE, LOW = CLEAR/INACTIVE
 // ============================================================================
 
-bool ContactSensors::isStartContactActive(uint8_t checks, uint16_t delayUs) {
-    // Contact is active when LOW (closed to ground)
-    return readDebounced(PIN_START_CONTACT, LOW, checks, delayUs);
+bool ContactSensors::isStartActive() {
+    return digitalRead(PIN_START_CONTACT) == HIGH;
 }
 
-bool ContactSensors::isEndContactActive(uint8_t checks, uint16_t delayUs) {
-    // Contact is active when LOW (closed to ground)
-    return readDebounced(PIN_END_CONTACT, LOW, checks, delayUs);
+bool ContactSensors::isEndActive() {
+    return digitalRead(PIN_END_CONTACT) == HIGH;
 }
 
-// ============================================================================
-// RAW READING (NO DEBOUNCE)
-// ============================================================================
-
-bool ContactSensors::readStartContactRaw() {
+bool ContactSensors::isStartClear() {
     return digitalRead(PIN_START_CONTACT) == LOW;
 }
 
-bool ContactSensors::readEndContactRaw() {
+bool ContactSensors::isEndClear() {
     return digitalRead(PIN_END_CONTACT) == LOW;
 }
 
-// ============================================================================
-// GENERIC DEBOUNCED READING
-// ============================================================================
+bool ContactSensors::isActive(uint8_t pin) {
+    return digitalRead(pin) == HIGH;
+}
 
-bool ContactSensors::readDebounced(uint8_t pin, uint8_t expectedState, uint8_t checks, uint16_t delayUs) {
-    // Majority voting algorithm
-    // Requires (checks/2 + 1) matching reads to confirm state
-    // Example: 3 checks requires 2/3, 5 checks requires 3/5
-    
-    int validCount = 0;
-    int requiredValid = (checks + 1) / 2;  // Ceiling division for majority
-    
-    for (uint8_t i = 0; i < checks; i++) {
-        if (digitalRead(pin) == expectedState) {
-            validCount++;
-            
-            // Early exit: majority already reached
-            if (validCount >= requiredValid) {
-                return true;
-            }
-        }
-        
-        // Delay between samples (except after last sample)
-        if (i < checks - 1) {
-            delayMicroseconds(delayUs);
-        }
-    }
-    
-    // Not enough valid reads to confirm expected state
-    return false;
+bool ContactSensors::isClear(uint8_t pin) {
+    return digitalRead(pin) == LOW;
 }
 
 // ============================================================================
@@ -161,15 +138,15 @@ bool ContactSensors::checkHardDriftEnd() {
     float distanceToLimitMM = stepsToLimit / STEPS_PER_MM;
     
     if (distanceToLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
-        // Close to limit → activate physical contact test
-        if (readDebounced(PIN_END_CONTACT, LOW, 5, 75)) {
+        // Close to limit → activate opto sensor test (no debounce needed)
+        if (isEndActive()) {
             float currentPos = currentStep / STEPS_PER_MM;
             
-            engine->error(String("🔴 Hard drift END! Physical contact at ") + 
+            engine->error(String("🔴 Hard drift END! Opto triggered at ") + 
                   String(currentPos, 1) + "mm (currentStep: " + String(currentStep) + 
                   " | " + String(distanceToLimitMM, 1) + "mm from limit)");
             
-            Status.sendError("❌ ERREUR CRITIQUE: Contact END atteint - Position dérivée au-delà du buffer de sécurité");
+            Status.sendError("❌ ERREUR CRITIQUE: Opto END déclenché - Position dérivée au-delà du buffer de sécurité");
             
             stopMovement();
             config.currentState = STATE_ERROR;
@@ -190,15 +167,15 @@ bool ContactSensors::checkHardDriftStart() {
     
     
     if (distanceToStartMM <= HARD_DRIFT_TEST_ZONE_MM) {
-        // Close to start → activate physical contact test
-        if (readDebounced(PIN_START_CONTACT, LOW, 5, 75)) {
+        // Close to start → activate opto sensor test (no debounce needed)
+        if (isStartActive()) {
             float currentPos = currentStep / STEPS_PER_MM;
             
-            engine->error(String("🔴 Hard drift START! Physical contact at ") +
+            engine->error(String("🔴 Hard drift START! Opto triggered at ") +
                   String(currentPos, 1) + "mm (currentStep: " + String(currentStep) + 
                   " | " + String(distanceToStartMM, 1) + "mm from start)");
             
-            Status.sendError("❌ ERREUR CRITIQUE: Contact START atteint - Position dérivée au-delà du buffer de sécurité");
+            Status.sendError("❌ ERREUR CRITIQUE: Opto START déclenché - Position dérivée au-delà du buffer de sécurité");
             
             stopMovement();
             config.currentState = STATE_ERROR;
