@@ -59,7 +59,7 @@ const float STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // 8.0 steps/mm
 // Why 10? Position 0 is set 10 steps AFTER START contact release
 // maxStep is set 10 steps BEFORE END contact
 // This creates a buffer zone for drift tolerance
-const int SAFETY_OFFSET_STEPS = 10;  // 10 steps = 1.25mm @ 8.0 steps/mm
+const int SAFETY_OFFSET_STEPS = 20;  // 10 steps = 1.25mm @ 8.0 steps/mm
 
 // Hard drift detection zone (only test physical contacts when close to limits)
 // Why 20mm? Balance between performance (88% less tests) and safety (~133 steps buffer)
@@ -150,7 +150,7 @@ const unsigned long SEQUENCE_STATUS_UPDATE_MS = 500;
 const long WASATSTART_THRESHOLD_STEPS = 10;
 
 // Hard mechanical limits for safety
-const float HARD_MAX_DISTANCE_MM = 265.0;
+const float HARD_MAX_DISTANCE_MM = 365.0;
 const float HARD_MIN_DISTANCE_MM = 250.0;
 
 // ============================================================================
