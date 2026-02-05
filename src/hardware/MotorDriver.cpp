@@ -4,6 +4,7 @@
 
 #include "hardware/MotorDriver.h"
 #include "core/UtilityEngine.h"
+#include "core/GlobalState.h"  // For sensorsInverted
 
 // ============================================================================
 // ISR FOR PEND SIGNAL (counts all transitions for debugging)
@@ -78,17 +79,20 @@ void MotorDriver::step() {
 // ============================================================================
 
 void MotorDriver::setDirection(bool forward) {
-    // Optimization: only change if direction is different
-    // This avoids unnecessary delay when direction hasn't changed
-    if (forward == m_direction) return;
+    // Apply sensors inversion: if inverted, flip the physical direction
+    bool physicalForward = sensorsInverted ? !forward : forward;
     
-    // Update GPIO
-    digitalWrite(PIN_DIR, forward ? HIGH : LOW);
+    // Optimization: only change GPIO if physical direction is different
+    bool currentPhysical = sensorsInverted ? !m_direction : m_direction;
+    if (physicalForward == currentPhysical && forward == m_direction) return;
+    
+    // Update GPIO with physical direction
+    digitalWrite(PIN_DIR, physicalForward ? HIGH : LOW);
     
     // HSS86 needs time to process direction change before next step
     delayMicroseconds(DIR_CHANGE_DELAY_MICROS);
     
-    m_direction = forward;
+    m_direction = forward;  // Store logical direction
 }
 
 bool MotorDriver::getDirection() const {
