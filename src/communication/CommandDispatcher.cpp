@@ -217,6 +217,28 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
         return true;
     }
     
+    if (strcmp(cmd, "setSensorsInverted") == 0) {
+        bool inverted = doc["inverted"] | false;
+        
+        // Allow change only when stopped (READY, INIT, or ERROR states)
+        if (config.currentState == STATE_RUNNING || config.currentState == STATE_CALIBRATING) {
+            Status.sendError("⚠️ Arrêter le mouvement avant de changer le mode capteurs");
+            return true;
+        }
+        
+        sensorsInverted = inverted;
+        engine->saveSensorsInverted();
+        
+        // Force recalibration (physical positions have changed meaning)
+        config.currentState = STATE_INIT;
+        
+        engine->info(String("🔄 Mode capteurs: ") + (inverted ? "INVERSÉ (START↔END)" : "NORMAL"));
+        engine->warn("⚠️ Recalibration nécessaire après changement de mode");
+        
+        sendStatus();
+        return true;
+    }
+    
     return false;
 }
 

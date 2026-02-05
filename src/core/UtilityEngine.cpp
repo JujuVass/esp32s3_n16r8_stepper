@@ -11,17 +11,18 @@
 #include <math.h>
 
 // EEPROM addresses for preferences
-#define EEPROM_SIZE 128   // Increased: 0-2 for logging/stats, 3-100 for WiFi config
+#define EEPROM_SIZE 128   // Increased: 0-3 for logging/stats/sensors, 4-100 for WiFi config
 #define EEPROM_ADDR_LOGGING_ENABLED 0
 #define EEPROM_ADDR_LOG_LEVEL 1
 #define EEPROM_ADDR_STATS_ENABLED 2  // Stats recording enabled (1=enabled, 0=disabled)
+#define EEPROM_ADDR_SENSORS_INVERTED 3  // Sensors inverted (0=normal, 1=inverted)
 #define EEPROM_ADDR_CHECKSUM 127     // 🛡️ NEW: Checksum for data integrity validation
 
 // 🛡️ EEPROM PROTECTION: Calculate XOR checksum of critical bytes
 static uint8_t calculateEEPROMChecksum() {
   uint8_t checksum = 0;
-  // Only checksum the critical data (logging, stats)
-  for (int i = 0; i < 3; i++) {
+  // Only checksum the critical data (logging, stats, sensors)
+  for (int i = 0; i < 4; i++) {
     checksum ^= EEPROM.read(i);
   }
   return checksum;
@@ -1142,6 +1143,9 @@ void UtilityEngine::loadLoggingPreferences() {
     Serial.print("[UtilityEngine] 📂 Stats recording: ");
     Serial.println(statsRecordingEnabled ? "ENABLED" : "DISABLED");
   }
+  
+  // Load sensors inversion preference
+  loadSensorsInverted();
 }
 
 // ============================================================================
@@ -1176,6 +1180,57 @@ void UtilityEngine::setStatsRecordingEnabled(bool enabled) {
   }
   
   info(String("📊 Stats recording: ") + (enabled ? "ENABLED" : "DISABLED") + " (saved to EEPROM with checksum)");
+}
+
+// ============================================================================
+// SENSORS INVERSION PREFERENCE
+// ============================================================================
+
+/**
+ * Load sensors inversion preference from EEPROM
+ */
+void UtilityEngine::loadSensorsInverted() {
+  uint8_t inverted = EEPROM.read(EEPROM_ADDR_SENSORS_INVERTED);
+  if (inverted == 0xFF) {
+    // First boot: normal mode by default
+    sensorsInverted = false;
+    EEPROM.write(EEPROM_ADDR_SENSORS_INVERTED, 0);
+    EEPROM.commit();
+    Serial.println("[UtilityEngine] 🔧 First boot: sensors mode = NORMAL");
+  } else {
+    sensorsInverted = (inverted == 1);
+    Serial.print("[UtilityEngine] 📂 Sensors mode: ");
+    Serial.println(sensorsInverted ? "INVERTED" : "NORMAL");
+  }
+}
+
+/**
+ * Save sensors inversion preference to EEPROM
+ */
+void UtilityEngine::saveSensorsInverted() {
+  EEPROM.write(EEPROM_ADDR_SENSORS_INVERTED, sensorsInverted ? 1 : 0);
+  
+  // Update checksum
+  uint8_t checksum = calculateEEPROMChecksum();
+  EEPROM.write(EEPROM_ADDR_CHECKSUM, checksum);
+  
+  // Commit with retry
+  const int maxRetries = 3;
+  bool committed = false;
+  
+  for (int attempt = 0; attempt < maxRetries && !committed; attempt++) {
+    if (attempt > 0) {
+      Serial.println("[UtilityEngine] ⚠️ Sensors EEPROM retry #" + String(attempt));
+    }
+    committed = EEPROM.commit();
+    if (!committed) delay(50 * (attempt + 1));
+  }
+  
+  if (!committed) {
+    Serial.println("[UtilityEngine] ❌ Sensors EEPROM commit failed!");
+  }
+  
+  info(String("🔄 Sensors mode: ") + (sensorsInverted ? "INVERTED" : "NORMAL") + " (saved to EEPROM)");
 }
 
 /**

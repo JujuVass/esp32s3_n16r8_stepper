@@ -98,6 +98,8 @@ function initDOMCache() {
   DOM.btnApplyMaxDistLimit = document.getElementById('btnApplyMaxDistLimit');
   DOM.btnCancelMaxDistLimit = document.getElementById('btnCancelMaxDistLimit');
   DOM.maxDistLimitWarning = document.getElementById('maxDistLimitWarning');
+  DOM.chkSensorsInverted = document.getElementById('chkSensorsInverted');
+  DOM.sensorsInvertedStatus = document.getElementById('sensorsInvertedStatus');
 
   // ========================================================================
   // OSCILLATION MODE ELEMENTS

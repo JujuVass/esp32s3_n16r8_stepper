@@ -472,6 +472,12 @@
       if (data.statsRecordingEnabled !== undefined) {
         updateStatsRecordingUI(data.statsRecordingEnabled);
       }
+      
+      // Update sensors inverted UI
+      if (data.sensorsInverted !== undefined) {
+        DOM.chkSensorsInverted.checked = data.sensorsInverted;
+        DOM.sensorsInvertedStatus.textContent = data.sensorsInverted ? '(Inversé)' : '(Normal)';
+      }
     }
     
     // ============================================================================

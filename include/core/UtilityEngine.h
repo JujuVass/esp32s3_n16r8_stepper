@@ -449,6 +449,16 @@ public:
   bool isStatsRecordingEnabled() const { return statsRecordingEnabled; }
   
   /**
+   * Load sensors inversion preference from EEPROM
+   */
+  void loadSensorsInverted();
+  
+  /**
+   * Save sensors inversion preference to EEPROM
+   */
+  void saveSensorsInverted();
+  
+  /**
    * Save current session's distance to daily stats
    * Only saves the increment since last save to avoid double-counting
    * Called when: STOP pressed, mode change, WebSocket disconnect

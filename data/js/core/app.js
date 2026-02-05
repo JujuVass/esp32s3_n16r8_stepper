@@ -144,6 +144,7 @@ const WS_CMD = Object.freeze({
   SET_DECEL_ZONE: 'setDecelZone',
   SET_ZONE_EFFECT: 'setZoneEffect',
   SET_MAX_DISTANCE_LIMIT: 'setMaxDistanceLimit',
+  SET_SENSORS_INVERTED: 'setSensorsInverted',
   UPDATE_CYCLE_PAUSE: 'updateCyclePause',
   
   // === Oscillation Mode ===

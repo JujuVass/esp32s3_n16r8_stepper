@@ -126,6 +126,12 @@ extern float effectiveMaxDistanceMM;
 extern float maxDistanceLimitPercent;
 
 // ============================================================================
+// SENSOR CONFIGURATION
+// ============================================================================
+
+extern bool sensorsInverted;  // false=normal (START=GPIO4, END=GPIO5), true=inverted
+
+// ============================================================================
 // MOTION CONFIGURATIONS
 // ============================================================================
 

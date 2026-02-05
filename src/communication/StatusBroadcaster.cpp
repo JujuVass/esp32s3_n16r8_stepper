@@ -98,6 +98,7 @@ void StatusBroadcaster::send() {
     doc["operationMode"] = (int)currentMovement;  // Legacy
     doc["pursuitActive"] = pursuit.isMoving;
     doc["statsRecordingEnabled"] = engine->isStatsRecordingEnabled();  // Stats recording preference
+    doc["sensorsInverted"] = sensorsInverted;  // Sensors inversion mode
     doc["ip"] = Network.getIPAddress();  // Cached IP for WebSocket reconnection
     
     // ============================================================================

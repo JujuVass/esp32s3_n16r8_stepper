@@ -75,6 +75,9 @@ CyclePauseState motionPauseState;
 float maxDistanceLimitPercent = 100.0;
 float effectiveMaxDistanceMM = 0.0;
 
+// Sensor configuration
+bool sensorsInverted = false;  // Loaded from EEPROM
+
 // Timing
 unsigned long lastStepMicros = 0;
 unsigned long stepDelayMicrosForward = 1000;

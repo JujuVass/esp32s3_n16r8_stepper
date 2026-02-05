@@ -41,29 +41,44 @@ void ContactSensors::init() {
 // ============================================================================
 // OPTO READING - SIMPLE API (no debounce needed)
 // HIGH = BLOCKED/ACTIVE, LOW = CLEAR/INACTIVE
+// Supports sensorsInverted mode (swaps START <-> END pins)
 // ============================================================================
 
 bool ContactSensors::isStartActive() {
-    return digitalRead(PIN_START_CONTACT) == HIGH;
+    uint8_t pin = sensorsInverted ? PIN_END_CONTACT : PIN_START_CONTACT;
+    return digitalRead(pin) == HIGH;
 }
 
 bool ContactSensors::isEndActive() {
-    return digitalRead(PIN_END_CONTACT) == HIGH;
+    uint8_t pin = sensorsInverted ? PIN_START_CONTACT : PIN_END_CONTACT;
+    return digitalRead(pin) == HIGH;
 }
 
 bool ContactSensors::isStartClear() {
-    return digitalRead(PIN_START_CONTACT) == LOW;
+    uint8_t pin = sensorsInverted ? PIN_END_CONTACT : PIN_START_CONTACT;
+    return digitalRead(pin) == LOW;
 }
 
 bool ContactSensors::isEndClear() {
-    return digitalRead(PIN_END_CONTACT) == LOW;
+    uint8_t pin = sensorsInverted ? PIN_START_CONTACT : PIN_END_CONTACT;
+    return digitalRead(pin) == LOW;
 }
 
 bool ContactSensors::isActive(uint8_t pin) {
+    // Generic method - apply inversion if using standard pins
+    if (sensorsInverted) {
+        if (pin == PIN_START_CONTACT) pin = PIN_END_CONTACT;
+        else if (pin == PIN_END_CONTACT) pin = PIN_START_CONTACT;
+    }
     return digitalRead(pin) == HIGH;
 }
 
 bool ContactSensors::isClear(uint8_t pin) {
+    // Generic method - apply inversion if using standard pins
+    if (sensorsInverted) {
+        if (pin == PIN_START_CONTACT) pin = PIN_END_CONTACT;
+        else if (pin == PIN_END_CONTACT) pin = PIN_START_CONTACT;
+    }
     return digitalRead(pin) == LOW;
 }
 

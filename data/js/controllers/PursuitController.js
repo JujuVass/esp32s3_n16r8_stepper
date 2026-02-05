@@ -344,6 +344,11 @@ function initMaxDistLimitListeners() {
     DOM.maxDistConfigPanel.style.display = 'none';
     AppState.pursuit.isEditingMaxDistLimit = false;
   });
+  
+  // Sensors inversion checkbox
+  DOM.chkSensorsInverted.addEventListener('change', function() {
+    sendCommand(WS_CMD.SET_SENSORS_INVERTED, { inverted: this.checked });
+  });
 }
 
 // ============================================================================
