@@ -186,6 +186,9 @@
     "pausePursuit": "Pause Poursuite"
   },
   "oscillation": {
+    "awaitingCalibration": "⏳ En attente calibration",
+    "invalid": "❌ Invalide",
+    "valid": "✅ Valide",
     "center": "Centre:",
     "amplitude": "Amplitude ±:",
     "amplitudeLinked": "=Centre",
@@ -293,6 +296,8 @@
     "singlePlay": "Lecture unique",
     "editLineTitle": "Éditer la ligne #{{num}}",
     "editBtn": "Éditer",
+    "duplicate": "Dupliquer",
+    "testThisLine": "Tester cette ligne",
     "viewDetails": "Voir détails",
     "movementType": "Type:",
     "typeVaet": "Va-et-vient",
@@ -458,6 +463,7 @@
     "notConnected": "(non connecté)",
     "mdnsUnavailable": "mDNS indisponible en mode AP",
     "degradedMode": "MODE DÉGRADÉ",
+    "apModeBadge": "⚠️ Mode AP",
     "configTitle": "Configuration WiFi",
     "currentEepromConfig": "Configuration actuelle en EEPROM:",
     "ssidLabel": "SSID:",
@@ -558,7 +564,15 @@
   },
   "speedIcons": {
     "stopped": "Arrêté",
-    "bike": "Vélo"
+    "snail": "Escargot",
+    "turtle": "Tortue",
+    "slowWalk": "Marche lente",
+    "dogTrot": "Chien au trot",
+    "fastWalk": "Marche rapide",
+    "jogging": "Jogging",
+    "bike": "Vélo",
+    "gallop": "Cheval au galop",
+    "maxSpeed": "Vitesse max !"
   },
   "utils": {
     "adjusted": "{{field}} ajustée: {{from}} → {{to}} ({{type}})",

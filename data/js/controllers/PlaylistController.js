@@ -311,7 +311,7 @@ function refreshPlaylistPresets(mode) {
             </button>
             <button class="preset-tooltip-eye" data-preset-id="${preset.id}"
               style="display: inline-block; padding: 4px 6px; cursor: pointer; font-size: 14px;"
-              title="Voir détails">👁️</button>
+              title="${t('sequencer.viewDetails')}">👁️</button>
           </div>
         </div>
       </div>

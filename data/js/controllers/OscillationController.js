@@ -40,7 +40,7 @@ function validateOscillationLimits() {
   // If not calibrated yet, show waiting message
   if (!AppState.system.canStart || !totalDistMM || totalDistMM === 0) {
     warning.style.display = 'none';
-    statusSpan.textContent = '⏳ En attente calibration';
+    statusSpan.textContent = t('oscillation.awaitingCalibration');
     statusSpan.style.color = '#ff9800';
     btnStart.disabled = true;
     btnStart.style.opacity = '0.5';
@@ -62,7 +62,7 @@ function validateOscillationLimits() {
   
   if (!isValid) {
     warning.style.display = 'block';
-    statusSpan.textContent = '❌ Invalide';
+    statusSpan.textContent = t('oscillation.invalid');
     statusSpan.style.color = '#e74c3c';
     btnStart.disabled = true;
     btnStart.style.opacity = '0.5';
@@ -70,7 +70,7 @@ function validateOscillationLimits() {
     return false;
   } else {
     warning.style.display = 'none';
-    statusSpan.textContent = '✅ Valide';
+    statusSpan.textContent = t('oscillation.valid');
     statusSpan.style.color = '#27ae60';
     btnStart.disabled = false;
     btnStart.style.opacity = '1';

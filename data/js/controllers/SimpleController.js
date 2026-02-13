@@ -576,7 +576,7 @@ function toggleZoneEffectSection() {
     drawZoneEffectPreview();
   } else {
     // Collapsing = deactivating
-    headerText.textContent = '🎯 Effets de Zone - désactivés';
+    headerText.textContent = t('simple.zoneEffectsDisabled');
     sendCommand(WS_CMD.SET_ZONE_EFFECT, { enabled: false });
   }
 }
@@ -594,16 +594,16 @@ function updateZoneEffectHeaderText() {
   const mirrorOnReturn = document.getElementById('zoneEffectMirror')?.checked;
   
   const effects = [];
-  if (speedEffect === 1) effects.push('Décél');
-  if (speedEffect === 2) effects.push('Accél');
+  if (speedEffect === 1) effects.push(t('simple.decel'));
+  if (speedEffect === 2) effects.push(t('simple.accel'));
   if (randomTurnback) effects.push('Retour');
   if (endPause) effects.push('Pause');
   if (mirrorOnReturn) effects.push('🔀Miroir');
   
   if (effects.length === 0) {
-    headerText.textContent = '🎯 Effets de Zone - activés (aucun effet)';
+    headerText.textContent = t('simple.zoneEffectsNoEffect');
   } else {
-    headerText.textContent = `🎯 Effets de Zone - ${effects.join(' + ')}`;
+    headerText.textContent = `🎯 ${t('simple.zoneEffects')} - ${effects.join(' + ')}`;
   }
 }
 
@@ -700,7 +700,7 @@ function updateZoneEffectUI(zoneEffect) {
       const receivedZone = zoneEffect.zoneMM;
       
       if (requestedZone !== undefined && Math.abs(requestedZone - receivedZone) > 0.1) {
-        showNotification(`⚠️ Zone ajustée: ${requestedZone.toFixed(0)}mm → ${receivedZone.toFixed(0)}mm (limite du mouvement)`, 'warning', 4000);
+        showNotification(`⚠️ ${t('simple.zoneAdjusted', {requested: requestedZone.toFixed(0), received: receivedZone.toFixed(0)})}`, 'warning', 4000);
         AppState.lastZoneEffectRequest = undefined;
       }
       
@@ -786,7 +786,7 @@ function updateZoneEffectUI(zoneEffect) {
     // Disabled state
     if (section && headerText) {
       section.classList.add('collapsed');
-      headerText.textContent = '🎯 Effets de Zone - désactivés';
+      headerText.textContent = t('simple.zoneEffectsDisabled');
     }
   }
 }
@@ -1003,10 +1003,10 @@ function createCyclePauseHandlers(cfg) {
     section.classList.toggle('collapsed');
     
     if (isCollapsed) {
-      headerText.textContent = '⏸️ Pause entre cycles - activée';
+      headerText.textContent = t('simple.cyclePauseEnabled');
       sendConfig();
     } else {
-      headerText.textContent = '⏸️ Pause entre cycles - désactivée';
+      headerText.textContent = t('simple.cyclePauseDisabled');
       sendCommand(cfg.wsCmd, { enabled: false });
     }
   };

@@ -374,7 +374,7 @@ async function refreshWifi() {
             modalIcon.textContent = '❌';
             modalTitle.textContent = t('tools.reconnectFailed');
             modalMessage.innerHTML = t('tools.reconnectFailedMsg');
-            modalButton.textContent = 'Fermer';
+            modalButton.textContent = t('common.close');
             modalButton.style.display = '';
             modalButton.onclick = function() { modal.classList.remove('active'); };
             
@@ -749,7 +749,7 @@ function updateSystemStats(system) {
     const section = document.getElementById('networkInfoSection');
     if (system.apMode) {
       badge.style.display = '';
-      badge.textContent = '⚠️ Mode AP';
+      badge.textContent = t('tools.apModeBadge');
       section.style.borderLeftColor = '#FF9800';
       section.style.background = '#fff3e0';
     } else {

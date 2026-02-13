@@ -1146,16 +1146,16 @@ function createSequenceRow(line, index) {
       <button onclick="testSequenceLine(${line.lineId})" 
         id="btnTestLine_${line.lineId}"
         class="btn-action btn-action-test"
-        title="Tester cette ligne">▶️</button>
+        title="${t('sequencer.testThisLine')}">▶️</button>
       <button onclick="editSequenceLine(${line.lineId})" 
         class="btn-action btn-action-edit"
-        title="Éditer">✏️</button>
+        title="${t('sequencer.editBtn')}">✏️</button>
       <button onclick="duplicateSequenceLine(${line.lineId})"
         class="btn-action btn-action-copy"
-        title="Dupliquer">📋</button>
+        title="${t('sequencer.duplicate')}">📋</button>
       <span id="tooltipEye_${line.lineId}" class="sequence-tooltip-eye" data-line-id="${line.lineId}"
         style="display: inline-block; padding: 4px 6px; cursor: pointer; margin: 1px; font-size: 14px;"
-        title="Voir détails">👁️</span>
+        title="${t('sequencer.viewDetails')}">👁️</span>
     </td>
   `;
   

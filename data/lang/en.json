@@ -186,6 +186,9 @@
     "pausePursuit": "Pause Pursuit"
   },
   "oscillation": {
+    "awaitingCalibration": "⏳ Awaiting calibration",
+    "invalid": "❌ Invalid",
+    "valid": "✅ Valid",
     "center": "Center:",
     "amplitude": "Amplitude ±:",
     "amplitudeLinked": "=Center",
@@ -293,6 +296,8 @@
     "singlePlay": "Single play",
     "editLineTitle": "Edit line #{{num}}",
     "editBtn": "Edit",
+    "duplicate": "Duplicate",
+    "testThisLine": "Test this line",
     "viewDetails": "View details",
     "movementType": "Type:",
     "typeVaet": "Back-and-forth",
@@ -458,6 +463,7 @@
     "notConnected": "(not connected)",
     "mdnsUnavailable": "mDNS unavailable in AP mode",
     "degradedMode": "DEGRADED MODE",
+    "apModeBadge": "⚠️ AP Mode",
     "configTitle": "WiFi Configuration",
     "currentEepromConfig": "Current EEPROM configuration:",
     "ssidLabel": "SSID:",
@@ -558,7 +564,15 @@
   },
   "speedIcons": {
     "stopped": "Stopped",
-    "bike": "Bike"
+    "snail": "Snail",
+    "turtle": "Turtle",
+    "slowWalk": "Slow walk",
+    "dogTrot": "Dog trot",
+    "fastWalk": "Fast walk",
+    "jogging": "Jogging",
+    "bike": "Bike",
+    "gallop": "Horse gallop",
+    "maxSpeed": "Max speed!"
   },
   "utils": {
     "adjusted": "{{field}} adjusted: {{from}} → {{to}} ({{type}})",

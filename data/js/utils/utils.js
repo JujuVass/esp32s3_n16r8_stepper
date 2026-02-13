@@ -172,11 +172,11 @@ function validateNumericInput(value, options = {}) {
   
   // Clamp to min/max
   if (numValue < min) {
-    if (notify) showNotification(`⚠️ ${fieldName} ajustée: ${numValue.toFixed(1)} → ${min.toFixed(1)} (minimum)`, 'warning');
+    if (notify) showNotification(`⚠️ ${t('utils.adjusted', {field: fieldName, from: numValue.toFixed(1), to: min.toFixed(1), type: t('utils.adjustedMin')})}`, 'warning');
     numValue = min;
     wasAdjusted = true;
   } else if (numValue > max) {
-    if (notify) showNotification(`⚠️ ${fieldName} ajustée: ${numValue.toFixed(1)} → ${max.toFixed(1)} (maximum)`, 'warning');
+    if (notify) showNotification(`⚠️ ${t('utils.adjusted', {field: fieldName, from: numValue.toFixed(1), to: max.toFixed(1), type: t('utils.adjustedMax')})}`, 'warning');
     numValue = max;
     wasAdjusted = true;
   }
@@ -206,7 +206,7 @@ function validateMinMaxPair(minValue, maxValue, options = {}) {
   let wasAdjusted = false;
   
   if (min > max) {
-    showNotification(`⚠️ ${minFieldName} (${min.toFixed(1)}) > ${maxFieldName} (${max.toFixed(1)}) - ajusté`, 'warning');
+    showNotification(`⚠️ ${t('utils.minGtMax', {min: minFieldName, minVal: min.toFixed(1), max: maxFieldName, maxVal: max.toFixed(1)})}`, 'warning');
     max = min;
     wasAdjusted = true;
   }

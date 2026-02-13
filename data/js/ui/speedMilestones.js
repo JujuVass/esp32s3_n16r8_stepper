@@ -7,17 +7,18 @@
  */
 
 // Speed milestone definitions (sorted by threshold ascending)
+// nameKey maps to speedIcons.* i18n keys, resolved at access time
 const SPEED_MILESTONES = [
-  { threshold: 0,    emoji: '⏸️',  name: 'Arrêté' },
-  { threshold: 0.1,  emoji: '🐌',  name: 'Escargot' },
-  { threshold: 0.5,  emoji: '🐢',  name: 'Tortue' },
-  { threshold: 2,    emoji: '🚶',  name: 'Marche lente' },
-  { threshold: 5,    emoji: '🐕',  name: 'Chien au trot' },
-  { threshold: 10,   emoji: '🚶‍♂️', name: 'Marche rapide' },
-  { threshold: 20,   emoji: '🏃',  name: 'Jogging' },
-  { threshold: 35,   emoji: '🚴',  name: 'Vélo' },
-  { threshold: 50,   emoji: '🐎',  name: 'Cheval au galop' },
-  { threshold: 70,   emoji: '🏎️',  name: 'Vitesse max !' }
+  { threshold: 0,    emoji: '⏸️',  nameKey: 'stopped' },
+  { threshold: 0.1,  emoji: '🐌',  nameKey: 'snail' },
+  { threshold: 0.5,  emoji: '🐢',  nameKey: 'turtle' },
+  { threshold: 2,    emoji: '🚶',  nameKey: 'slowWalk' },
+  { threshold: 5,    emoji: '🐕',  nameKey: 'dogTrot' },
+  { threshold: 10,   emoji: '🚶‍♂️', nameKey: 'fastWalk' },
+  { threshold: 20,   emoji: '🏃',  nameKey: 'jogging' },
+  { threshold: 35,   emoji: '🚴',  nameKey: 'bike' },
+  { threshold: 50,   emoji: '🐎',  nameKey: 'gallop' },
+  { threshold: 70,   emoji: '🏎️',  nameKey: 'maxSpeed' }
 ];
 
 /**
@@ -26,7 +27,7 @@ const SPEED_MILESTONES = [
  * @returns {object} { current: {threshold, emoji, name}, next: {threshold, emoji, name}|null }
  */
 function getSpeedMilestoneInfo(speedCmPerSec) {
-  let current = SPEED_MILESTONES[0]; // Default: Arrêté
+  let current = SPEED_MILESTONES[0]; // Default: stopped
   let next = SPEED_MILESTONES.length > 1 ? SPEED_MILESTONES[1] : null;
 
   for (let i = SPEED_MILESTONES.length - 1; i >= 0; i--) {
@@ -37,5 +38,7 @@ function getSpeedMilestoneInfo(speedCmPerSec) {
     }
   }
 
-  return { current, next };
+  // Resolve translated names
+  const resolve = (m) => m ? { ...m, name: t('speedIcons.' + m.nameKey) } : null;
+  return { current: resolve(current), next: resolve(next) };
 }
