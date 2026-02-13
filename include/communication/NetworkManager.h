@@ -2,10 +2,11 @@
  * NetworkManager.h - WiFi Network Management
  * 
  * Three network modes:
- * - AP_SETUP:  No WiFi credentials → Captive Portal + setup.html only
- * - STA+AP:    WiFi credentials OK → Connected to router + AP parallel (192.168.4.1)
- * - AP_DIRECT: Credentials exist but WiFi fail → AP only with full stepper control
+ * - AP_SETUP:  GPIO 19 floating (HIGH) or no credentials → Captive Portal + setup.html only
+ * - STA+AP:    GPIO 19 GND + credentials OK → Connected to router + AP parallel (192.168.4.1)
+ * - AP_DIRECT: GPIO 19 GND + credentials but WiFi fail → AP only with full stepper control
  * 
+ * GPIO 19: permanently wired to GND = normal operation, disconnected = AP_SETUP
  * In STA+AP and AP_DIRECT modes, the full stepper app (index.html) is served.
  * Hardware is initialized in both STA+AP and AP_DIRECT modes.
  * Only AP_SETUP skips hardware init (configuration-only mode).
@@ -31,9 +32,9 @@ extern void Motor_disable();
 // NETWORK MODE ENUM
 // ============================================================================
 enum NetworkMode {
-    NET_AP_SETUP,    // No credentials → Config-only (setup.html + captive portal)
-    NET_STA_AP,      // WiFi connected + AP parallel → Full app on both interfaces
-    NET_AP_DIRECT    // WiFi fail → AP-only with full stepper control
+    NET_AP_SETUP,    // GPIO 19 floating or no credentials → Config-only (setup.html + captive portal)
+    NET_STA_AP,      // GPIO 19 GND + WiFi connected → Full app on both interfaces (STA + AP parallel)
+    NET_AP_DIRECT    // GPIO 19 GND + WiFi fail → AP-only with full stepper control
 };
 
 class NetworkManager {

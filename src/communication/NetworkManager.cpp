@@ -1,10 +1,10 @@
 ﻿/**
  * NetworkManager.cpp - WiFi Network Management Implementation
  * 
- * Three modes:
- * - AP_SETUP:  No WiFi credentials → Config-only (setup.html + captive portal)
- * - STA+AP:    WiFi connected + AP parallel → Full app on both interfaces
- * - AP_DIRECT: Credentials exist but WiFi fail → AP-only with full stepper control
+ * Three modes (GPIO 19: GND = normal, floating = AP_SETUP):
+ * - AP_SETUP:  GPIO 19 floating or no credentials → Config-only (setup.html + captive portal)
+ * - STA+AP:    GPIO 19 GND + WiFi connected → Full app on both interfaces (STA + AP parallel)
+ * - AP_DIRECT: GPIO 19 GND + WiFi fail → AP-only with full stepper control
  */
 
 #include "communication/NetworkManager.h"
@@ -25,27 +25,43 @@ NetworkManager& NetworkManager::getInstance() {
 
 // ============================================================================
 // MODE DETERMINATION - Should we enter AP_SETUP (config-only)?
-// AP_SETUP is triggered when NO WiFi credentials are available
+// GPIO 19: GND (LOW) = normal operation, floating (HIGH via pull-up) = AP_SETUP
+// Also enters AP_SETUP if no WiFi credentials are available
 // ============================================================================
 
 bool NetworkManager::shouldStartAPSetup() {
-    // Check if we have valid WiFi credentials in EEPROM
+    // Setup GPIO for AP mode detection (active HIGH with internal pull-up)
+    // Pin permanently wired to GND = normal mode
+    // Pin disconnected/floating = HIGH via pull-up = force AP_SETUP
+    pinMode(PIN_AP_MODE, INPUT_PULLUP);
+    delay(10);  // Let pin stabilize
+    
+    int pinState = digitalRead(PIN_AP_MODE);
+    engine->info("📌 GPIO" + String(PIN_AP_MODE) + " state: " + String(pinState == HIGH ? "HIGH (floating → AP_SETUP)" : "LOW (GND → normal)"));
+    
+    // GPIO 19 HIGH (floating, not connected to GND) = force AP_SETUP mode
+    if (pinState == HIGH) {
+        engine->info("🔧 GPIO " + String(PIN_AP_MODE) + " is HIGH (floating) - Forcing AP_SETUP mode");
+        return true;
+    }
+    
+    // GPIO 19 is LOW (GND) = normal mode, check credentials
     String savedSSID, savedPassword;
     bool eepromConfigured = WiFiConfig.isConfigured();
     engine->info("📦 EEPROM configured: " + String(eepromConfigured ? "YES" : "NO"));
     
     if (eepromConfigured && WiFiConfig.loadConfig(savedSSID, savedPassword)) {
         if (savedSSID.length() > 0) {
-            engine->info("� Found EEPROM WiFi config: '" + savedSSID + "' → Skip AP_SETUP");
-            return false;  // Have credentials, don't enter setup
+            engine->info("📶 Found EEPROM WiFi config: '" + savedSSID + "' → Try STA+AP mode");
+            return false;  // Have credentials, try STA mode
         }
     }
     
     // Check hardcoded defaults from Config.h
     engine->info("📄 Config.h SSID: '" + String(ssid) + "'");
     if (strlen(ssid) > 0 && strcmp(ssid, "YOUR_WIFI_SSID") != 0) {
-        engine->info("� Using Config.h WiFi config: '" + String(ssid) + "' → Skip AP_SETUP");
-        return false;  // Have defaults, don't enter setup
+        engine->info("📶 Using Config.h WiFi config: '" + String(ssid) + "' → Try STA+AP mode");
+        return false;  // Have defaults, try STA mode
     }
     
     // No credentials available - must use AP_SETUP for configuration
