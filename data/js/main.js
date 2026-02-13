@@ -625,12 +625,12 @@
     // - initUIListeners() (tab click handlers)
     
     // Force initial state on page load (prevent browser cache issues)
-    window.addEventListener('load', function() {
+    window.addEventListener('load', async function() {
       // Initialize DOM cache FIRST (performance optimization)
       initDOMCache();
       
       // Initialize i18n system (loads translations, applies data-i18n attributes)
-      I18n.init();
+      await I18n.init();
       
       // Initialize speed limits based on maxSpeedLevel constant
       initSpeedLimits();

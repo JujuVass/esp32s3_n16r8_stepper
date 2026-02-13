@@ -88,7 +88,7 @@
   <div class="modal" id="modeChangeModal">
     <div class="modal-content">
       <div class="modal-title">⚠️ <span data-i18n="modal.modeChangeTitle">Changement de mode</span></div>
-      <div class="modal-message" id="modalMessage">
+      <div class="modal-message" id="modalMessage" data-i18n-html="modal.modeChangeRunning">
         Une opération est en cours. Le changement de mode va arrêter le mouvement et lancer une recalibration.
         <br><br>
         <strong>Voulez-vous continuer ?</strong>
@@ -345,10 +345,10 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
           <label style="font-weight: bold; color: #333; font-size: 13px;" data-i18n="system.realTimeConsole">Console temps réel:</label>
           <div style="display: flex; gap: 6px;">
-            <button class="button btn-secondary" id="btnClearLogsPanel" style="padding: 4px 10px; font-size: 11px;">🗑️ Effacer</button>
+            <button class="button btn-secondary" id="btnClearLogsPanel" style="padding: 4px 10px; font-size: 11px;">🗑️ <span data-i18n="system.clearAll">Effacer</span></button>
           </div>
         </div>
-        <div id="logConsolePanel" style="height: 180px; overflow: auto; background: #1e1e1e; color: #d4d4d4; padding: 8px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 11px; white-space: pre-wrap; border: 1px solid #333;">(les logs apparaîtront ici...)</div>
+        <div id="logConsolePanel" style="height: 180px; overflow: auto; background: #1e1e1e; color: #d4d4d4; padding: 8px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 11px; white-space: pre-wrap; border: 1px solid #333;" data-i18n="system.logsAppear">(les logs apparaîtront ici...)</div>
       </div>
 
       <!-- Debug Controls -->
@@ -710,37 +710,37 @@
             <span style="margin-left: 10px; font-size: 13px;">-</span>
             <label style="margin-left: 5px; font-size: 13px;">
               <input type="checkbox" id="zoneEffectStart" checked style="margin-right: 3px;">
-              Début
+              <span data-i18n="simple.zoneStart">Début</span>
             </label>
             <label style="margin-left: 10px; font-size: 13px;">
               <input type="checkbox" id="zoneEffectEnd" checked style="margin-right: 3px;">
-              Fin
+              <span data-i18n="simple.zoneEnd">Fin</span>
             </label>
-            <label style="margin-left: 10px; font-size: 13px;" title="L'effet suit la destination: au retour, les zones Début/Fin sont inversées">
+            <label style="margin-left: 10px; font-size: 13px;" data-i18n-title="simple.zoneMirrorTooltip" title="L'effet suit la destination: au retour, les zones Début/Fin sont inversées">
               <input type="checkbox" id="zoneEffectMirror" style="margin-right: 3px;">
-              🔀 Miroir retour
+              🔀 <span data-i18n="simple.zoneMirror">Miroir retour</span>
             </label>
           </div>
 
           <!-- ===== 1. Speed Effect ===== -->
           <div style="background: #f8f9fa; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
             <div class="speed-control-inline mb-5">
-              <label style="font-weight: bold; font-size: 13px; min-width: 90px;">🚀 Vitesse:</label>
+              <label style="font-weight: bold; font-size: 13px; min-width: 90px;">🚀 <span data-i18n="simple.speedEffect">Vitesse:</span></label>
               <select id="speedEffectType" style="width: 130px; padding: 5px; font-size: 13px; border: 1px solid #ddd; border-radius: 4px;">
-                <option value="0">Aucun</option>
-                <option value="1" selected>Décélération</option>
-                <option value="2">Accélération</option>
+                <option value="0" data-i18n="simple.speedEffectNone">Aucun</option>
+                <option value="1" selected data-i18n="simple.speedEffectDecel">Décélération</option>
+                <option value="2" data-i18n="simple.speedEffectAccel">Accélération</option>
               </select>
               
-              <label style="margin-left: 10px; font-size: 13px;">Courbe:</label>
+              <label style="margin-left: 10px; font-size: 13px;" data-i18n="simple.curve">Courbe:</label>
               <select id="speedCurveSelect" style="width: 110px; padding: 5px; font-size: 13px; border: 1px solid #ddd; border-radius: 4px;">
-                <option value="0">Linéaire</option>
-                <option value="1" selected>Sinusoïdal</option>
-                <option value="2">Triangle Inv.</option>
-                <option value="3">Sinus Inv.</option>
+                <option value="0" data-i18n="simple.curveLinear">Linéaire</option>
+                <option value="1" selected data-i18n="simple.curveSinusoidal">Sinusoïdal</option>
+                <option value="2" data-i18n="simple.curveTriInv">Triangle Inv.</option>
+                <option value="3" data-i18n="simple.curveSinInv">Sinus Inv.</option>
               </select>
               
-              <span style="margin-left: 10px; font-size: 13px;">Intensité:</span>
+              <span style="margin-left: 10px; font-size: 13px;" data-i18n="simple.intensity">Intensité:</span>
               <input type="range" id="speedIntensity" min="0" max="100" step="5" value="75" style="width: 80px;">
               <span id="speedIntensityValue" style="font-weight: bold; min-width: 35px; font-size: 13px;">75%</span>
             </div>
@@ -751,12 +751,12 @@
             <div class="speed-control-inline">
               <label style="font-size: 13px; margin-right: 10px;">
                 <input type="checkbox" id="randomTurnbackEnabled" style="margin-right: 5px;">
-                <strong>🔄 Retour aléatoire</strong>
+                <strong>🔄 <span data-i18n="simple.randomTurnback">Retour aléatoire</span></strong>
               </label>
-              <span style="font-size: 13px; color: #666;">Chance:</span>
+              <span style="font-size: 13px; color: #666;" data-i18n="simple.randomTurnbackChance">Chance:</span>
               <input type="range" id="turnbackChance" min="5" max="100" step="5" value="30" style="width: 80px; margin-left: 5px;">
               <span id="turnbackChanceValue" style="font-weight: bold; min-width: 35px; font-size: 13px;">30%</span>
-              <span style="font-size: 11px; color: #888; margin-left: 10px;">(fait demi-tour aléatoirement dans la zone)</span>
+              <span style="font-size: 11px; color: #888; margin-left: 10px;" data-i18n="simple.randomTurnbackHint">(fait demi-tour aléatoirement dans la zone)</span>
             </div>
           </div>
 
@@ -765,21 +765,21 @@
             <div class="speed-control-inline mb-5">
               <label style="font-size: 13px; margin-right: 10px;">
                 <input type="checkbox" id="endPauseEnabled" style="margin-right: 5px;">
-                <strong>⏸️ Pause aux extrémités</strong>
+                <strong>⏸️ <span data-i18n="simple.endPause">Pause aux extrémités</span></strong>
               </label>
               <label style="margin-left: 15px; font-size: 13px;">
                 <input type="radio" name="endPauseMode" value="fixed" id="endPauseModeFixed" checked style="margin-right: 3px;">
-                Fixe
+                <span data-i18n="simple.endPauseModeFixed">Fixe</span>
               </label>
               <label style="margin-left: 10px; font-size: 13px;">
                 <input type="radio" name="endPauseMode" value="random" id="endPauseModeRandom" style="margin-right: 3px;">
-                Aléatoire
+                <span data-i18n="simple.endPauseModeRandom">Aléatoire</span>
               </label>
             </div>
             
             <!-- Fixed Duration -->
             <div id="endPauseFixedControls" class="speed-control-inline" style="margin-top: 8px;">
-              <label class="label-inline" style="min-width: 60px;">Durée:</label>
+              <label class="label-inline" style="min-width: 60px;" data-i18n="common.duration">Durée:</label>
               <input type="number" id="endPauseDuration" min="0.1" max="30" step="0.1" value="1.0" class="input-compact" style="width: 60px;">
               <span class="unit-label">s</span>
               <button class="preset-btn-sm btn-preset" data-end-pause="0.5">0.5s</button>
@@ -809,7 +809,7 @@
       <!-- ===== CYCLE PAUSE SECTION ===== -->
       <div class="section-collapsible collapsed" style="margin-bottom: 20px;">
         <div class="section-collapsible-header" onclick="toggleCyclePauseSection()">
-          <span class="collapse-icon">▼</span> <span id="cyclePauseHeaderText">⏸️ Pause entre cycles - désactivée</span>
+          <span class="collapse-icon">▼</span> <span id="cyclePauseHeaderText" data-i18n="simple.cyclePauseDisabled">⏸️ Pause entre cycles - désactivée</span>
         </div>
         
         <div class="section-collapsible-content">
@@ -818,17 +818,17 @@
             <label class="label-inline">Mode:</label>
             <label style="margin-right: 15px; font-size: 13px;">
               <input type="radio" name="cyclePauseMode" value="fixed" id="pauseModeFixed" checked style="margin-right: 5px;">
-              ⏱️ Fixe
+              ⏱️ <span data-i18n="common.fixed">Fixe</span>
             </label>
             <label style="font-size: 13px;">
               <input type="radio" name="cyclePauseMode" value="random" id="pauseModeRandom" style="margin-right: 5px;">
-              🎲 Aléatoire
+              🎲 <span data-i18n="common.random">Aléatoire</span>
             </label>
           </div>
           
           <!-- Fixed Mode: Single Duration -->
           <div id="pauseFixedControls" class="speed-control-inline mb-10">
-            <label class="label-inline">Durée:</label>
+            <label class="label-inline" data-i18n="common.duration">Durée:</label>
             <input type="number" id="cyclePauseDuration" min="0.1" max="60" step="0.1" value="1.5" class="input-compact">
             <span class="unit-label">s</span>
             <button class="preset-btn-sm btn-preset" data-pause-duration="0.1">0.1s</button>
@@ -864,15 +864,15 @@
           
           <!-- Real-time Pause Indicator -->
           <div id="cyclePauseStatus" style="margin-top: 10px; padding: 8px; background: #f0f0f0; border-radius: 5px; font-size: 13px; text-align: center; display: none;">
-            <strong>⏱️ En pause:</strong> <span id="cyclePauseRemaining">0.0s</span> restantes
+            <strong>⏱️ <span data-i18n="simple.inPause">En pause:</span></strong> <span id="cyclePauseRemaining">0.0s</span> <span data-i18n="simple.remaining">restantes</span>
           </div>
         </div>
       </div>
 
     <div class="button-group">
-      <button class="button btn-success" id="btnStart">▶ Démarrer</button>
-      <button class="button btn-warning" id="btnPause">⏸ Pause</button>
-      <button class="button btn-danger" id="btnStop">⏹ Arrêter</button>
+      <button class="button btn-success" id="btnStart">▶ <span data-i18n="common.start">Démarrer</span></button>
+      <button class="button btn-warning" id="btnPause">⏸ <span data-i18n="common.pause">Pause</span></button>
+      <button class="button btn-danger" id="btnStop">⏹ <span data-i18n="common.stop">Arrêter</span></button>
       <button class="button btn-info" id="btnManagePlaylistSimple">
         📋 Playlist (0/20)
       </button>
@@ -893,7 +893,7 @@
           <!-- Left Side: Gauge -->
           <div style="flex: 0 0 200px;">
             <div style="text-align: center; margin-bottom: 10px;">
-              <strong style="color: #333;">Jauge de Position</strong>
+              <strong style="color: #333;" data-i18n="pursuit.gaugeTitle">Jauge de Position</strong>
             </div>
             
             <!-- Gauge Container -->
@@ -901,14 +901,14 @@
               
               <!-- Target Cursor (user control) -->
               <div id="gaugeCursor" style="position: absolute; left: -5px; right: -5px; height: 8px; background: #FF5722; border: 3px solid white; border-radius: 4px; cursor: grab; box-shadow: 0 2px 8px rgba(0,0,0,0.5); transition: top 0.05s linear; z-index: 10;">
-                <div style="position: absolute; right: -60px; top: -8px; background: #FF5722; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap;">
+                <div style="position: absolute; right: -60px; top: -8px; background: #FF5722; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap;" data-i18n="pursuit.target">
                   CIBLE
                 </div>
               </div>
               
               <!-- Current Position Indicator -->
               <div id="gaugePosition" style="position: absolute; left: 0; right: 0; height: 6px; background: #00E676; border: 2px solid white; border-radius: 3px; box-shadow: 0 2px 8px rgba(0,255,118,0.6); transition: top 0.1s linear; z-index: 5;">
-                <div style="position: absolute; left: -60px; top: -8px; background: #00E676; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap;">
+                <div style="position: absolute; left: -60px; top: -8px; background: #00E676; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap;" data-i18n="pursuit.actual">
                   RÉEL
                 </div>
               </div>
@@ -916,24 +916,24 @@
               <!-- Software Limit Line (dynamically positioned if limit < 100%) -->
               <div id="gaugeLimitLine" style="position: absolute; left: -8px; right: -8px; height: 3px; background: #000; border-top: 2px dashed #FF5722; display: none; z-index: 15;">
                 <div style="position: absolute; right: -90px; top: -10px; background: #000; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; white-space: nowrap;">
-                  🚫 LIMITE
+                  🚫 <span data-i18n="pursuit.softLimit">LIMITE</span>
                 </div>
               </div>
               
               <!-- Scale markers -->
               <div style="position: absolute; right: -40px; top: 0; height: 100%; display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; color: #666;">
-                <span>FIN ▶</span>
+                <span data-i18n="pursuit.scaleEnd">FIN ▶</span>
                 <span>75% ▶</span>
                 <span>50% ▶</span>
                 <span>25% ▶</span>
-                <span>0mm ▶</span>
+                <span data-i18n="pursuit.scaleStart">0mm ▶</span>
               </div>
             </div>
             
             <div style="text-align: center; margin-top: 15px; font-size: 12px; color: #666;">
-              <div><strong>Cible:</strong> <span id="targetPositionMM" style="color: #FF5722;">0.0</span> mm</div>
-              <div><strong>Actuel:</strong> <span id="currentPositionMM" style="color: #00E676;">0.0</span> mm</div>
-              <div><strong>Écart:</strong> <span id="positionError" class="text-muted">0.0</span> mm</div>
+              <div><strong data-i18n="pursuit.targetLabel">Cible:</strong> <span id="targetPositionMM" style="color: #FF5722;">0.0</span> mm</div>
+              <div><strong data-i18n="pursuit.actualLabel">Actuel:</strong> <span id="currentPositionMM" style="color: #00E676;">0.0</span> mm</div>
+              <div><strong data-i18n="pursuit.errorLabel">Écart:</strong> <span id="positionError" class="text-muted">0.0</span> mm</div>
             </div>
           </div>
           
@@ -943,17 +943,17 @@
             <div style="padding: 10px 15px; background: #E3F2FD; border-radius: 6px; margin-bottom: 15px;">
               <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                 <input type="checkbox" id="pursuitActiveCheckbox" autocomplete="off">
-                <span style="font-weight: 500; color: #1976D2;">🎯 Activer poursuite</span>
+                <span style="font-weight: 500; color: #1976D2;">🎯 <span data-i18n="pursuit.enablePursuit">Activer poursuite</span></span>
               </label>
               <small style="color: #666; display: block; margin-top: 4px; font-size: 11px; padding-left: 28px;">
-                ⚠️ Le moteur suivra automatiquement le curseur
+                ⚠️ <span data-i18n="pursuit.enablePursuitWarn">Le moteur suivra automatiquement le curseur</span>
               </small>
             </div>
             
             <!-- Vitesse max - COMPACT -->
             <div class="form-group-compact d-block">
               <div>
-                <label class="label-inline">Vitesse max:</label>
+                <label class="label-inline" data-i18n="pursuit.maxSpeed">Vitesse max:</label>
                 <input type="number" id="pursuitMaxSpeed" min="0.5" max="20" step="0.5" value="10" class="input-compact">
                 <span class="unit-label">(0-20)</span>
               </div>
@@ -969,8 +969,8 @@
         </div>
 
         <div class="button-group">
-          <button class="button btn-success" id="btnActivatePursuit">▶ Démarrer</button>
-          <button class="button btn-danger" id="btnStopPursuit">⏹ Arrêter</button>
+          <button class="button btn-success" id="btnActivatePursuit">▶ <span data-i18n="common.start">Démarrer</span></button>
+          <button class="button btn-danger" id="btnStopPursuit">⏹ <span data-i18n="common.stop">Arrêter</span></button>
         </div>
       </div>
     </div>
@@ -982,14 +982,14 @@
         
         <!-- Help Section (masquée par défaut) -->
         <div id="oscHelpSection" style="display: none; background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 15px; border-radius: 4px; font-size: 12px;">
-          <strong style="color: #856404;">💡 Conseils d'utilisation:</strong>
+          <strong style="color: #856404;">💡 <span data-i18n="oscillation.helpTitle">Conseils d'utilisation:</span></strong>
           <ul style="margin: 8px 0 0 20px; color: #856404;">
-            <li><strong>Forme sinusoïdale:</strong> Mouvement fluide et doux, idéal pour tests mécaniques (comme une vague 🌊)</li>
-            <li><strong>Forme triangle:</strong> Accélération/décélération linéaire constante (mouvement mécanique)</li>
-            <li><strong>Forme carrée:</strong> Changements de direction instantanés (attention aux contraintes mécaniques!)</li>
-            <li><strong>Rampes:</strong> Évitent les à-coups au démarrage/arrêt en augmentant/réduisant progressivement l'amplitude</li>
-            <li><strong>Limites auto:</strong> L'amplitude est automatiquement limitée aux bornes calibrées</li>
-            <li><strong>Modification temps réel:</strong> Vous pouvez changer les paramètres pendant l'oscillation!</li>
+            <li data-i18n-html="oscillation.helpSine"><strong>Forme sinusoïdale:</strong> Mouvement fluide et doux, idéal pour tests mécaniques (comme une vague 🌊)</li>
+            <li data-i18n-html="oscillation.helpTriangle"><strong>Forme triangle:</strong> Accélération/décélération linéaire constante (mouvement mécanique)</li>
+            <li data-i18n-html="oscillation.helpSquare"><strong>Forme carrée:</strong> Changements de direction instantanés (attention aux contraintes mécaniques!)</li>
+            <li data-i18n-html="oscillation.helpRamps"><strong>Rampes:</strong> Évitent les à-coups au démarrage/arrêt en augmentant/réduisant progressivement l'amplitude</li>
+            <li data-i18n-html="oscillation.helpAutoLimits"><strong>Limites auto:</strong> L'amplitude est automatiquement limitée aux bornes calibrées</li>
+            <li data-i18n-html="oscillation.helpRealtime"><strong>Modification temps réel:</strong> Vous pouvez changer les paramètres pendant l'oscillation!</li>
           </ul>
         </div>
 
@@ -1024,9 +1024,9 @@
               <label class="label-inline">Amplitude ±:</label>
               <input type="number" id="oscAmplitude" min="1" step="1" value="20" class="input-compact">
               <span class="unit-label">mm</span>
-              <label style="margin-left: 10px; display: inline; font-size: 11px; cursor: pointer;" title="Si coché, amplitude = centre (liés)">
+              <label style="margin-left: 10px; display: inline; font-size: 11px; cursor: pointer;" data-i18n-title="oscillation.amplitudeLinkedTooltip" title="Si coché, amplitude = centre (liés)">
                 <input type="checkbox" id="oscAmplitudeLinked" style="margin-right: 4px;">
-                =Centre
+                <span data-i18n="oscillation.amplitudeLinked">=Centre</span>
               </label>
             </div>
             <div class="mt-8">
@@ -1049,7 +1049,7 @@
         
         <!-- Warning limite (compact) -->
         <div id="oscLimitWarning" style="display:none; color: #f44336; font-size: 12px; padding: 5px 10px; background: #ffe5e5; border-radius: 4px; margin-bottom: 10px;">
-          ⚠️ Limites dépassées! Ajuster centre ou amplitude.
+          ⚠️ <span data-i18n="oscillation.limitWarning">Limites dépassées! Ajuster centre ou amplitude.</span>
         </div>
         
         <!-- Séparateur -->
@@ -1057,13 +1057,13 @@
         
         <!-- Forme + Fréquence inline -->
         <div class="speed-control-inline mb-12">
-          <label class="label-inline">Forme:</label>
+          <label class="label-inline" data-i18n="oscillation.waveform">Forme:</label>
           <select id="oscWaveform" style="width: 150px; padding: 5px; font-size: 12px; border: 2px solid #ddd; border-radius: 4px;">
-            <option value="0">Sinusoïdale</option>
-            <option value="1">Triangle</option>
-            <option value="2">Carrée</option>
+            <option value="0" data-i18n="oscillation.waveformSine">Sinusoïdale</option>
+            <option value="1" data-i18n="oscillation.waveformTriangle">Triangle</option>
+            <option value="2" data-i18n="oscillation.waveformSquare">Carrée</option>
           </select>
-          <label class="label-inline" style="margin-left: 15px;">Fréquence:</label>
+          <label class="label-inline" style="margin-left: 15px;" data-i18n="oscillation.frequency">Fréquence:</label>
           <input type="number" id="oscFrequency" min="0.01" max="10" step="0.01" value="0.5" class="input-compact">
           <span class="unit-label">Hz</span>
           <button class="preset-btn-sm btn-preset" data-osc-frequency="0.1">0.1Hz</button>
@@ -1080,14 +1080,14 @@
         <div class="speed-control-inline mb-10">
           <label style="display: flex; align-items: center; cursor: pointer;">
             <input type="checkbox" id="oscRampInEnable" checked style="width: auto; margin-right: 5px;">
-            <span class="text-md">Rampe entrée:</span>
+            <span class="text-md" data-i18n="oscillation.rampIn">Rampe entrée:</span>
           </label>
           <input type="number" id="oscRampInDuration" min="100" step="100" value="2000" class="input-compact" style="width: 70px;">
           <span class="unit-label">ms</span>
           
           <label style="display: flex; align-items: center; cursor: pointer; margin-left: 20px;">
             <input type="checkbox" id="oscRampOutEnable" checked style="width: auto; margin-right: 5px;">
-            <span class="text-md">Rampe sortie:</span>
+            <span class="text-md" data-i18n="oscillation.rampOut">Rampe sortie:</span>
           </label>
           <input type="number" id="oscRampOutDuration" min="100" step="100" value="2000" class="input-compact" style="width: 70px;">
           <span class="unit-label">ms</span>
@@ -1097,11 +1097,11 @@
         <div class="speed-control-inline mb-12">
           <label class="label-inline">Cycles:</label>
           <input type="number" id="oscCycleCount" min="0" step="1" value="0" class="input-compact" style="width: 60px;">
-          <span class="unit-label" style="font-size: 11px;">(0=Infini)</span>
+          <span class="unit-label" style="font-size: 11px;" data-i18n="oscillation.cyclesInfinite">(0=Infini)</span>
           
           <label style="display: flex; align-items: center; cursor: pointer; margin-left: 20px;">
             <input type="checkbox" id="oscReturnCenter" checked style="width: auto; margin-right: 5px;">
-            <span class="text-md">Retour centre</span>
+            <span class="text-md" data-i18n="oscillation.returnCenter">Retour centre</span>
           </label>
         </div>
         
@@ -1133,7 +1133,7 @@
         <!-- ===== CYCLE PAUSE SECTION (OSCILLATION) ===== -->
         <div class="section-collapsible collapsed" style="margin-bottom: 20px;">
           <div class="section-collapsible-header" onclick="toggleCyclePauseOscSection()">
-            <span class="collapse-icon">▼</span> <span id="cyclePauseOscHeaderText">⏸️ Pause entre cycles - désactivée</span>
+            <span class="collapse-icon">▼</span> <span id="cyclePauseOscHeaderText" data-i18n="oscillation.cyclePauseDisabled">⏸️ Pause entre cycles - désactivée</span>
           </div>
           
           <div class="section-collapsible-content">
@@ -1142,17 +1142,17 @@
               <label class="label-inline">Mode:</label>
               <label style="margin-right: 15px; font-size: 13px;">
                 <input type="radio" name="cyclePauseModeOsc" value="fixed" id="pauseModeFixedOsc" checked style="margin-right: 5px;">
-                ⏱️ Fixe
+                ⏱️ <span data-i18n="common.fixed">Fixe</span>
               </label>
               <label style="font-size: 13px;">
                 <input type="radio" name="cyclePauseModeOsc" value="random" id="pauseModeRandomOsc" style="margin-right: 5px;">
-                🎲 Aléatoire
+                🎲 <span data-i18n="common.random">Aléatoire</span>
               </label>
             </div>
             
             <!-- Fixed Mode: Single Duration -->
             <div id="pauseFixedControlsOsc" class="speed-control-inline mb-10">
-              <label class="label-inline">Durée:</label>
+              <label class="label-inline" data-i18n="common.duration">Durée:</label>
               <input type="number" id="cyclePauseDurationOsc" min="0.1" max="60" step="0.1" value="1.5" class="input-compact">
               <span class="unit-label">s</span>
               <button class="preset-btn-sm btn-preset" data-pause-duration-osc="0.1">0.1s</button>
@@ -1188,16 +1188,16 @@
             
             <!-- Real-time Pause Indicator -->
             <div id="cyclePauseStatusOsc" style="margin-top: 10px; padding: 8px; background: #f0f0f0; border-radius: 5px; font-size: 13px; text-align: center; display: none;">
-              <strong>⏱️ En pause:</strong> <span id="cyclePauseRemainingOsc">0.0s</span> restantes
+              <strong>⏱️ <span data-i18n="simple.inPause">En pause:</span></strong> <span id="cyclePauseRemainingOsc">0.0s</span> <span data-i18n="simple.remaining">restantes</span>
             </div>
           </div>
         </div>
         
         <!-- Boutons de contrôle (comme Simple - en bas) -->
         <div class="button-group">
-          <button class="button btn-success" id="btnStartOscillation">▶️ Démarrer</button>
-          <button class="button btn-warning" id="btnPauseOscillation">⏸ Pause</button>
-          <button class="button btn-danger" id="btnStopOscillation">⏹️ Arrêter</button>
+          <button class="button btn-success" id="btnStartOscillation">▶️ <span data-i18n="common.start">Démarrer</span></button>
+          <button class="button btn-warning" id="btnPauseOscillation">⏸ <span data-i18n="common.pause">Pause</span></button>
+          <button class="button btn-danger" id="btnStopOscillation">⏹️ <span data-i18n="common.stop">Arrêter</span></button>
           <button class="button btn-info" id="btnManagePlaylistOscillation">
             📋 Playlist (0/20)
           </button>
@@ -1215,26 +1215,26 @@
         
         <!-- Help Section (masquée par défaut) -->
         <div id="chaosHelpSection" style="display: none; background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 15px; border-radius: 4px; font-size: 12px;">
-          <strong style="color: #856404;">💡 Patterns Chaos (11 patterns):</strong>
-          <p style="margin: 8px 0 0 0; color: #856404; font-weight: bold;">🌊 Patterns DOUX (mouvements continus - 45%):</p>
+          <strong style="color: #856404;">💡 <span data-i18n="chaos.helpTitle">Patterns Chaos (11 patterns):</span></strong>
+          <p style="margin: 8px 0 0 0; color: #856404; font-weight: bold;">🌊 <span data-i18n="chaos.helpSoftTitle">Patterns DOUX (mouvements continus - 45%):</span></p>
           <ul style="margin: 5px 0 10px 20px; color: #856404;">
-            <li><strong>WAVE:</strong> Vagues lentes et continues, fluide, 25-75% vitesse, 4-8s</li>
-            <li><strong>PENDULUM:</strong> Balancier régulier, oscillations douces, 30-90% vitesse, 3-6s</li>
-            <li><strong>SPIRAL:</strong> Spirale progressive expansion/contraction, 20-75% vitesse, 5-10s</li>
-            <li><strong>BREATHING:</strong> Respiration apaisante, petites amplitudes 10-50%, pauses aléatoires, 15-60% vitesse, 2-5s</li>
+            <li data-i18n-html="chaos.helpWave"><strong>WAVE:</strong> Vagues lentes et continues, fluide, 25-75% vitesse, 4-8s</li>
+            <li data-i18n-html="chaos.helpPendulum"><strong>PENDULUM:</strong> Balancier régulier, oscillations douces, 30-90% vitesse, 3-6s</li>
+            <li data-i18n-html="chaos.helpSpiral"><strong>SPIRAL:</strong> Spirale progressive expansion/contraction, 20-75% vitesse, 5-10s</li>
+            <li data-i18n-html="chaos.helpBreathing"><strong>BREATHING:</strong> Respiration apaisante, petites amplitudes 10-50%, pauses aléatoires, 15-60% vitesse, 2-5s</li>
           </ul>
-          <p style="margin: 8px 0 0 0; color: #856404; font-weight: bold;">⚡ Patterns DYNAMIQUES (sauts de position - 55%):</p>
+          <p style="margin: 8px 0 0 0; color: #856404; font-weight: bold;">⚡ <span data-i18n="chaos.helpDynamicTitle">Patterns DYNAMIQUES (sauts de position - 55%):</span></p>
           <ul style="margin: 5px 0 10px 20px; color: #856404;">
-            <li><strong>ZIGZAG:</strong> Va-et-vient modérés, sauts max 60%, 40-100% vitesse, 1-2.5s</li>
-            <li><strong>SWEEP:</strong> Balayages bout-à-bout, 30-90% vitesse, 2-4s</li>
-            <li><strong>PULSE:</strong> Impulsions depuis centre ±40%, 50-100% vitesse, 0.8-1.5s</li>
-            <li><strong>DRIFT:</strong> Dérive micro-changements 25%, 20-70% vitesse, 3-6s</li>
-            <li><strong>BURST:</strong> Sauts ultrarapides 70%, 60-100% vitesse, 0.6-1.2s</li>
-            <li><strong>BRUTE FORCE:</strong> Bélier 3 phases: entrée rapide 70-100%, sortie lente 20-30%, pause 200-1500ms</li>
-            <li><strong>LIBERATOR:</strong> Extraction 3 phases: entrée lente 20-30%, sortie rapide 70-100%, pause 200-1500ms</li>
+            <li data-i18n-html="chaos.helpZigzag"><strong>ZIGZAG:</strong> Va-et-vient modérés, sauts max 60%, 40-100% vitesse, 1-2.5s</li>
+            <li data-i18n-html="chaos.helpSweep"><strong>SWEEP:</strong> Balayages bout-à-bout, 30-90% vitesse, 2-4s</li>
+            <li data-i18n-html="chaos.helpPulse"><strong>PULSE:</strong> Impulsions depuis centre ±40%, 50-100% vitesse, 0.8-1.5s</li>
+            <li data-i18n-html="chaos.helpDrift"><strong>DRIFT:</strong> Dérive micro-changements 25%, 20-70% vitesse, 3-6s</li>
+            <li data-i18n-html="chaos.helpBurst"><strong>BURST:</strong> Sauts ultrarapides 70%, 60-100% vitesse, 0.6-1.2s</li>
+            <li data-i18n-html="chaos.helpBruteForce"><strong>BRUTE FORCE:</strong> Bélier 3 phases: entrée rapide 70-100%, sortie lente 20-30%, pause 200-1500ms</li>
+            <li data-i18n-html="chaos.helpLiberator"><strong>LIBERATOR:</strong> Extraction 3 phases: entrée lente 20-30%, sortie rapide 70-100%, pause 200-1500ms</li>
           </ul>
           <p style="margin: 8px 0 0 0; color: #856404;">
-            ✨ <strong>45% doux, 55% dynamiques.</strong> Degré de folie module vitesse/durée/sauts/pauses.
+            ✨ <strong data-i18n="chaos.helpSummary">45% doux, 55% dynamiques. Degré de folie module vitesse/durée/sauts/pauses.</strong>
           </p>
         </div>
 
@@ -1266,9 +1266,9 @@
               <label class="label-inline">Amplitude ±:</label>
               <input type="number" id="chaosAmplitude" min="1" step="1" value="50" class="input-compact">
               <span class="unit-label">mm</span>
-              <label style="margin-left: 10px; display: inline; font-size: 11px; cursor: pointer;" title="Si coché, amplitude = centre (liés)">
+              <label style="margin-left: 10px; display: inline; font-size: 11px; cursor: pointer;" data-i18n-title="chaos.amplitudeLinkedTooltip" title="Si coché, amplitude = centre (liés)">
                 <input type="checkbox" id="chaosAmplitudeLinked" style="margin-right: 4px;">
-                =Centre
+                <span data-i18n="chaos.amplitudeLinked">=Centre</span>
               </label>
             </div>
             <div class="mt-8">
@@ -1294,7 +1294,7 @@
 
         <!-- Vitesse max -->
         <div class="speed-control-inline mb-12">
-          <label class="label-inline">Vitesse max:</label>
+          <label class="label-inline" data-i18n="chaos.maxSpeed">Vitesse max:</label>
           <input type="number" id="chaosMaxSpeed" min="0.5" max="20" step="0.5" value="10" class="input-compact">
           <button class="preset-btn-sm btn-preset" data-chaos-speed="0.5">0.5 🐌</button>
           <button class="preset-btn-sm btn-preset" data-chaos-speed="1">1</button>
@@ -1307,7 +1307,7 @@
 
         <!-- Degré de folie -->
         <div class="speed-control-inline mb-12">
-          <label class="label-inline">🔥 Degré folie: <span id="crazinessValue" style="font-weight: bold; color: #C850C0;">50</span>%</label>
+          <label class="label-inline">🔥 <span data-i18n="chaos.craziness">Degré folie:</span> <span id="crazinessValue" style="font-weight: bold; color: #C850C0;">50</span>%</label>
           <input type="range" id="chaosCraziness" min="0" max="100" step="5" value="50" style="width: 180px; margin-left: 10px;">
           <button class="preset-btn-sm btn-preset" data-chaos-craziness="0">0% 😴</button>
           <button class="preset-btn-sm btn-preset" data-chaos-craziness="25">25%</button>
@@ -1318,9 +1318,9 @@
 
         <!-- Durée -->
         <div class="speed-control-inline mb-12">
-          <label class="label-inline">Durée:</label>
+          <label class="label-inline" data-i18n="chaos.duration">Durée:</label>
           <input type="number" id="chaosDuration" min="0" step="1" value="0" class="input-compact" style="width: 70px;">
-          <span class="unit-label">s (0=Infini)</span>
+          <span class="unit-label" data-i18n="chaos.durationInfinite">s (0=Infini)</span>
           <button class="preset-btn-sm btn-preset" data-chaos-duration="30">30s</button>
           <button class="preset-btn-sm btn-preset" data-chaos-duration="60">60s</button>
           <button class="preset-btn-sm btn-preset" data-chaos-duration="120">120s</button>
@@ -1332,11 +1332,11 @@
 
         <!-- Accordion: Options avancées -->
         <details style="margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background: #f9f9f9;">
-          <summary style="cursor: pointer; font-weight: bold; font-size: 13px; color: #333;">▼ Options avancées</summary>
+          <summary style="cursor: pointer; font-weight: bold; font-size: 13px; color: #333;">▼ <span data-i18n="chaos.advancedOptions">Options avancées</span></summary>
           
           <!-- Patterns actifs -->
           <div style="margin-top: 10px; padding: 10px; background: #e8f5e9; border-radius: 4px; border-left: 3px solid #4caf50;">
-            <label style="font-weight: bold; font-size: 12px; display: block; margin-bottom: 8px;">✅ Patterns actifs:</label>
+            <label style="font-weight: bold; font-size: 12px; display: block; margin-bottom: 8px;">✅ <span data-i18n="chaos.activePatterns">Patterns actifs:</span></label>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 8px;">
               <label style="display: flex; align-items: center; background: white; padding: 5px; border-radius: 3px; cursor: pointer; font-size: 11px;">
                 <input type="checkbox" id="patternWave" checked style="margin-right: 5px; transform: scale(1.1);">
@@ -1384,17 +1384,17 @@
               </label>
             </div>
             <div style="display: flex; gap: 5px; margin-top: 8px;">
-              <button class="preset-btn-sm btn-preset" id="btnEnableAllPatterns" style="flex: 1; font-size: 10px; padding: 4px;">✅ Tout</button>
-              <button class="preset-btn-sm btn-preset" id="btnEnableSoftPatterns" style="flex: 1; font-size: 10px; padding: 4px;">🌊 Doux</button>
-              <button class="preset-btn-sm btn-preset" id="btnEnableDynamicPatterns" style="flex: 1; font-size: 10px; padding: 4px;">⚡ Dynamiques</button>
+              <button class="preset-btn-sm btn-preset" id="btnEnableAllPatterns" style="flex: 1; font-size: 10px; padding: 4px;">✅ <span data-i18n="chaos.allPatterns">Tout</span></button>
+              <button class="preset-btn-sm btn-preset" id="btnEnableSoftPatterns" style="flex: 1; font-size: 10px; padding: 4px;">🌊 <span data-i18n="chaos.softPatterns">Doux</span></button>
+              <button class="preset-btn-sm btn-preset" id="btnEnableDynamicPatterns" style="flex: 1; font-size: 10px; padding: 4px;">⚡ <span data-i18n="chaos.dynamicPatterns">Dynamiques</span></button>
             </div>
           </div>
 
           <!-- Seed (optionnel) -->
           <div style="margin-top: 10px;">
-            <label class="label-inline text-md">Seed (optionnel):</label>
+            <label class="label-inline text-md" data-i18n="chaos.seed">Seed (optionnel):</label>
             <input type="number" id="chaosSeed" min="0" step="1" value="0" class="input-compact" style="width: 90px;">
-            <span class="unit-label" style="font-size: 11px;">(0=aléatoire)</span>
+            <span class="unit-label" style="font-size: 11px;" data-i18n="chaos.seedHint">(0=aléatoire)</span>
           </div>
         </details>
 
@@ -1404,21 +1404,21 @@
         <!-- Real-time Stats Section -->
         <div id="chaosStats" style="display: none; background: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-            <div><strong>Pattern:</strong> <span id="statPattern" style="color: #C850C0;">--</span></div>
-            <div><strong>Position:</strong> <span id="statPosition" style="color: #2196F3;">--</span> mm</div>
-            <div><strong>Plage:</strong> <span id="statRange" style="color: #2196F3;">--</span> mm</div>
-            <div><strong>Patterns:</strong> <span id="statCount" style="color: #2196F3;">0</span></div>
+            <div><strong data-i18n="chaos.pattern">Pattern:</strong> <span id="statPattern" style="color: #C850C0;">--</span></div>
+            <div><strong data-i18n="common.position">Position:</strong> <span id="statPosition" style="color: #2196F3;">--</span> mm</div>
+            <div><strong data-i18n="chaos.range">Plage:</strong> <span id="statRange" style="color: #2196F3;">--</span> mm</div>
+            <div><strong data-i18n="chaos.patterns">Patterns:</strong> <span id="statCount" style="color: #2196F3;">0</span></div>
           </div>
           <div id="statTimer" style="margin-top: 8px; text-align: center; font-size: 12px;">
-            ⏱️ Temps: <span id="statElapsed">0</span>s
+            ⏱️ <span data-i18n="chaos.time">Temps:</span> <span id="statElapsed">0</span>s
           </div>
         </div>
 
         <!-- Boutons de contrôle -->
         <div class="button-group">
-          <button class="button btn-success" id="btnStartChaos">▶️ Démarrer</button>
-          <button class="button btn-warning" id="btnPauseChaos">⏸ Pause</button>
-          <button class="button btn-danger" id="btnStopChaos">⏹️ Arrêter</button>
+          <button class="button btn-success" id="btnStartChaos">▶️ <span data-i18n="common.start">Démarrer</span></button>
+          <button class="button btn-warning" id="btnPauseChaos">⏸ <span data-i18n="common.pause">Pause</span></button>
+          <button class="button btn-danger" id="btnStopChaos">⏹️ <span data-i18n="common.stop">Arrêter</span></button>
           <button class="button btn-info" id="btnManagePlaylistChaos">
             📋 Playlist (0/20)
           </button>
@@ -1434,31 +1434,31 @@
         
         <!-- Toolbar -->
         <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-          <button class="button btn-success" id="btnAddLine" style="flex: 1; min-width: 110px; padding: 8px; font-size: 13px;">➕ Ajouter</button>
-          <button class="button btn-warning" id="btnClearAll" style="flex: 1; min-width: 110px; padding: 8px; font-size: 13px;">🗑️ Effacer</button>
-          <button class="button btn-primary" id="btnImportSeq" style="flex: 1; min-width: 110px; padding: 8px; font-size: 13px;">📥 Import</button>
-          <button class="button btn-primary" id="btnExportSeq" style="flex: 1; min-width: 110px; padding: 8px; font-size: 13px;">📤 Export</button>
-          <button class="button btn-info" id="btnDownloadTemplate" style="flex: 1; min-width: 110px; padding: 8px; font-size: 13px; background: #17a2b8;" title="Télécharger un template JSON avec exemples">📄 Template</button>
+          <button class="button btn-success" id="btnAddLine" style="flex: 1; min-width: 110px; padding: 8px; font-size: 13px;">➕ <span data-i18n="sequencer.addLine">Ajouter</span></button>
+          <button class="button btn-warning" id="btnClearAll" style="flex: 1; min-width: 110px; padding: 8px; font-size: 13px;">🗑️ <span data-i18n="sequencer.clearAll">Effacer</span></button>
+          <button class="button btn-primary" id="btnImportSeq" style="flex: 1; min-width: 110px; padding: 8px; font-size: 13px;">📥 <span data-i18n="sequencer.importBtn">Import</span></button>
+          <button class="button btn-primary" id="btnExportSeq" style="flex: 1; min-width: 110px; padding: 8px; font-size: 13px;">📤 <span data-i18n="sequencer.exportBtn">Export</span></button>
+          <button class="button btn-info" id="btnDownloadTemplate" style="flex: 1; min-width: 110px; padding: 8px; font-size: 13px; background: #17a2b8;" data-i18n-title="sequencer.templateTooltip" title="Télécharger un template JSON avec exemples">📄 <span data-i18n="sequencer.template">Template</span></button>
         </div>
 
         <!-- Phase 2: Batch Operations Toolbar (hidden by default) -->
         <div id="sequenceBatchToolbar" class="sequence-batch-toolbar">
           <div class="sequence-batch-info">
-            <span id="batchSelectionCount">0 ligne(s) sélectionnée(s)</span>
+            <span id="batchSelectionCount" data-i18n="sequencer.linesSelected">0 ligne(s) sélectionnée(s)</span>
           </div>
           <div class="sequence-batch-actions">
             <button class="sequence-batch-btn" onclick="batchEnableLines(true)">
-              <span>✓</span> Activer
+              <span>✓</span> <span data-i18n="sequencer.enable">Activer</span>
             </button>
             <button class="sequence-batch-btn" onclick="batchEnableLines(false)">
-              <span>✗</span> Désactiver
+              <span>✗</span> <span data-i18n="sequencer.disable">Désactiver</span>
             </button>
             <div id="sequenceTrashZone" class="sequence-trash-zone">
               <span class="trash-icon">🗑️</span>
-              <span>Glisser ici</span>
+              <span data-i18n="sequencer.dragHere">Glisser ici</span>
             </div>
             <button class="sequence-batch-btn" onclick="clearSelection()">
-              <span>✖</span> Annuler
+              <span>✖</span> <span data-i18n="sequencer.cancelSelection">Annuler</span>
             </button>
           </div>
         </div>
@@ -1471,10 +1471,10 @@
                 <th style="padding: 8px 4px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2); width: 30px;">✓</th>
                 <th style="padding: 8px 4px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2); width: 30px;">#</th>
                 <th style="padding: 8px 4px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2); width: 40px;">Type</th>
-                <th style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);">Début<br><small style="font-size: 9px;">(mm)</small></th>
-                <th style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);">Dist.<br><small style="font-size: 9px;">(mm)</small></th>
-                <th style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);">Vitesses<br><small style="font-size: 9px;">A/R</small></th>
-                <th style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);">Décel.</th>
+                <th style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><span data-i18n="sequencer.startCol">Début</span><br><small style="font-size: 9px;">(mm)</small></th>
+                <th style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><span data-i18n="sequencer.distCol">Dist.</span><br><small style="font-size: 9px;">(mm)</small></th>
+                <th style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><span data-i18n="sequencer.speedCol">Vitesses</span><br><small style="font-size: 9px;" data-i18n="sequencer.speedSubCol">A/R</small></th>
+                <th style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2);"><span data-i18n="sequencer.decelCol">Décel.</span></th>
                 <th style="padding: 8px 4px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2); width: 45px;">Cycles</th>
                 <th style="padding: 8px 4px; text-align: center; border-right: 1px solid rgba(255,255,255,0.2); width: 50px;">⏱️<br><small style="font-size: 9px;">(s)</small></th>
                 <th style="padding: 8px 4px; text-align: center;">Actions</th>
@@ -1494,36 +1494,36 @@
         <!-- Permanent Trash Drop Zone -->
         <div id="sequenceTrashDropZone" class="sequence-trash-drop-zone">
           <span class="trash-icon">🗑️</span>
-          <span>Glisser une ligne ici pour la supprimer</span>
+          <span data-i18n="sequencer.trashDrop">Glisser une ligne ici pour la supprimer</span>
         </div>
 
         <!-- Execution Controls -->
         <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
           <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
             <button class="button btn-success" id="btnStartSequence" style="flex: 1; min-width: 130px; font-size: 14px; padding: 10px;">
-              ▶️ Unique
+              ▶️ <span data-i18n="sequencer.singleRun">Unique</span>
             </button>
             <button class="button btn-primary" id="btnLoopSequence" style="flex: 1; min-width: 130px; font-size: 14px; padding: 10px; background: #FF9800;">
-              🔁 Boucle
+              🔁 <span data-i18n="sequencer.loopRun">Boucle</span>
             </button>
             <button class="button btn-warning" id="btnPauseSequence" style="flex: 1; min-width: 90px; font-size: 14px; padding: 10px;" disabled>
-              ⏸️ Pause
+              ⏸️ <span data-i18n="common.pause">Pause</span>
             </button>
             <button class="button btn-danger" id="btnStopSequence" style="flex: 1; min-width: 90px; font-size: 14px; padding: 10px;" disabled>
-              ⏹️ Stop
+              ⏹️ <span data-i18n="common.stop">Stop</span>
             </button>
             <button class="button btn-primary" id="btnSkipLine" style="flex: 1; min-width: 110px; font-size: 14px; padding: 10px; background: #9C27B0;" disabled>
-              ⏭️ Suivant
+              ⏭️ <span data-i18n="sequencer.skipLine">Suivant</span>
             </button>
           </div>
 
           <!-- Sequence Status - COMPACT -->
           <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; padding: 10px 15px; background: white; border-radius: 6px; border: 1px solid #ddd;">
-            <div><span class="text-muted">Mode:</span> <strong id="seqMode" style="color: #333;">Arrêté</strong></div>
-            <div><span class="text-muted">Ligne:</span> <strong id="seqCurrentLine" style="color: #2196F3;">-- / --</strong></div>
-            <div><span class="text-muted">Cycle:</span> <strong id="seqLineCycle" style="color: #4CAF50;">--</strong></div>
-            <div><span class="text-muted">Boucles:</span> <strong id="seqLoopCount" style="color: #FF9800;">0</strong></div>
-            <div><span class="text-muted">⏱️ Pause:</span> <strong id="seqPauseRemaining" style="color: #9C27B0;">-- ms</strong></div>
+            <div><span class="text-muted" data-i18n="sequencer.modeLabel">Mode:</span> <strong id="seqMode" style="color: #333;" data-i18n="sequencer.stopped">Arrêté</strong></div>
+            <div><span class="text-muted" data-i18n="sequencer.lineLabel">Ligne:</span> <strong id="seqCurrentLine" style="color: #2196F3;">-- / --</strong></div>
+            <div><span class="text-muted" data-i18n="sequencer.cycleLabel">Cycle:</span> <strong id="seqLineCycle" style="color: #4CAF50;">--</strong></div>
+            <div><span class="text-muted" data-i18n="sequencer.loopsLabel">Boucles:</span> <strong id="seqLoopCount" style="color: #FF9800;">0</strong></div>
+            <div><span class="text-muted">⏱️ <span data-i18n="sequencer.pauseLabel">Pause:</span></span> <strong id="seqPauseRemaining" style="color: #9C27B0;">-- ms</strong></div>
           </div>
         </div>
 
@@ -1537,7 +1537,7 @@
         
         <!-- Modal Header -->
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
-          <h3 style="margin: 0; font-size: 20px;">✏️ Éditer la ligne #<span id="editLineNumber">--</span></h3>
+          <h3 style="margin: 0; font-size: 20px;">✏️ <span data-i18n="sequencer.editLineTitle">Éditer la ligne #</span><span id="editLineNumber">--</span></h3>
           <button id="btnCloseModal" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 24px; cursor: pointer; width: 35px; height: 35px; border-radius: 50%; line-height: 1;">×</button>
         </div>
 
@@ -1547,70 +1547,70 @@
             
             <!-- Movement Type Selection -->
             <div class="type-selection-row">
-              <label class="label-inline">🎛️ Type:</label>
+              <label class="label-inline">🎛️ <span data-i18n="sequencer.movementType">Type:</span></label>
               <div class="type-selection-buttons">
                 <label class="radio-label-inline">
                   <input type="radio" name="movementType" id="editTypeVaet" value="0" checked style="width: auto;">
-                  <span>🔄 Va-et-vient</span>
+                  <span>🔄 <span data-i18n="sequencer.typeVaet">Va-et-vient</span></span>
                 </label>
                 <label class="radio-label-inline">
                   <input type="radio" name="movementType" id="editTypeOsc" value="1" style="width: auto;">
-                  <span>〰️ Oscillation</span>
+                  <span>〰️ <span data-i18n="sequencer.typeOsc">Oscillation</span></span>
                 </label>
                 <label class="radio-label-inline">
                   <input type="radio" name="movementType" id="editTypeChaos" value="2" style="width: auto;">
-                  <span>🌀 Chaos</span>
+                  <span>🌀 <span data-i18n="sequencer.typeChaos">Chaos</span></span>
                 </label>
                 <label class="radio-label-inline">
                   <input type="radio" name="movementType" id="editTypeCalibration" value="4" style="width: auto;">
-                  <span>📏 Calibration</span>
+                  <span>📏 <span data-i18n="sequencer.typeCalibration">Calibration</span></span>
                 </label>
               </div>
             </div>
 
             <!-- PLAYLIST PRESETS LOADING (for all modes) -->
             <div id="playlistLoaderSimple" style="background: #E3F2FD; padding: 12px; margin: 15px 0; border-radius: 6px; border: 2px solid #2196F3;">
-              <label style="font-weight: 500; color: #1976D2; display: block; margin-bottom: 8px;">📋 Charger un preset Simple:</label>
+              <label style="font-weight: 500; color: #1976D2; display: block; margin-bottom: 8px;">📋 <span data-i18n="sequencer.loadPresetSimple">Charger un preset Simple:</span></label>
               <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                 <select id="editSimplePresetSelect" onchange="previewSequencerPreset('simple', this.value)" style="flex: 1; padding: 8px; border: 1px solid #2196F3; border-radius: 4px;">
-                  <option value="">-- Sélectionner un preset --</option>
+                  <option value="" data-i18n="sequencer.selectPreset">-- Sélectionner un preset --</option>
                 </select>
                 <button type="button" onclick="previewSequencerPreset('simple', document.getElementById('editSimplePresetSelect').value)" style="padding: 8px 12px; background: #64B5F6; color: white; border: none; border-radius: 4px; cursor: pointer;" title="Voir les détails">
                   👁️
                 </button>
               </div>
               <button type="button" onclick="loadPresetIntoSequencerModal('simple')" style="width: 100%; padding: 8px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
-                ⬇️ Charger les valeurs
+                ⬇️ <span data-i18n="sequencer.loadValues">Charger les valeurs</span>
               </button>
             </div>
 
             <div id="playlistLoaderOscillation" style="background: #FFF3E0; padding: 12px; margin: 15px 0; border-radius: 6px; border: 2px solid #FF9800; display: none;">
-              <label style="font-weight: 500; color: #F57C00; display: block; margin-bottom: 8px;">📋 Charger un preset Oscillation:</label>
+              <label style="font-weight: 500; color: #F57C00; display: block; margin-bottom: 8px;">📋 <span data-i18n="sequencer.loadPresetOsc">Charger un preset Oscillation:</span></label>
               <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                 <select id="editOscillationPresetSelect" onchange="previewSequencerPreset('oscillation', this.value)" style="flex: 1; padding: 8px; border: 1px solid #FF9800; border-radius: 4px;">
-                  <option value="">-- Sélectionner un preset --</option>
+                  <option value="" data-i18n="sequencer.selectPreset">-- Sélectionner un preset --</option>
                 </select>
                 <button type="button" onclick="previewSequencerPreset('oscillation', document.getElementById('editOscillationPresetSelect').value)" style="padding: 8px 12px; background: #FFB74D; color: white; border: none; border-radius: 4px; cursor: pointer;" title="Voir les détails">
                   👁️
                 </button>
               </div>
               <button type="button" onclick="loadPresetIntoSequencerModal('oscillation')" style="width: 100%; padding: 8px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
-                ⬇️ Charger les valeurs
+                ⬇️ <span data-i18n="sequencer.loadValues">Charger les valeurs</span>
               </button>
             </div>
 
             <div id="playlistLoaderChaos" style="background: #FCE4EC; padding: 12px; margin: 15px 0; border-radius: 6px; border: 2px solid #E91E63; display: none;">
-              <label style="font-weight: 500; color: #C2185B; display: block; margin-bottom: 8px;">📋 Charger un preset Chaos:</label>
+              <label style="font-weight: 500; color: #C2185B; display: block; margin-bottom: 8px;">📋 <span data-i18n="sequencer.loadPresetChaos">Charger un preset Chaos:</span></label>
               <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                 <select id="editChaosPresetSelect" onchange="previewSequencerPreset('chaos', this.value)" style="flex: 1; padding: 8px; border: 1px solid #E91E63; border-radius: 4px;">
-                  <option value="">-- Sélectionner un preset --</option>
+                  <option value="" data-i18n="sequencer.selectPreset">-- Sélectionner un preset --</option>
                 </select>
                 <button type="button" onclick="previewSequencerPreset('chaos', document.getElementById('editChaosPresetSelect').value)" style="padding: 8px 12px; background: #F06292; color: white; border: none; border-radius: 4px; cursor: pointer;" title="Voir les détails">
                   👁️
                 </button>
               </div>
               <button type="button" onclick="loadPresetIntoSequencerModal('chaos')" style="width: 100%; padding: 8px; background: #E91E63; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
-                ⬇️ Charger les valeurs
+                ⬇️ <span data-i18n="sequencer.loadValues">Charger les valeurs</span>
               </button>
             </div>
 
@@ -1619,11 +1619,11 @@
               <!-- Position & Distance -->
               <div class="grid-2col-12">
                 <div>
-                  <label class="label-inline">Position départ:</label>
+                  <label class="label-inline" data-i18n="sequencer.startPosition">Position départ:</label>
                   <input type="number" name="startPositionMM" id="editStartPos" step="1" min="0" class="input-modal">
                 </div>
                 <div>
-                  <label class="label-inline">Distance (mm):</label>
+                  <label class="label-inline" data-i18n="sequencer.distanceMM">Distance (mm):</label>
                   <input type="number" name="distanceMM" id="editDistance" step="1" min="1" class="input-modal">
                 </div>
               </div>
@@ -1631,32 +1631,32 @@
               <!-- Speeds -->
               <div class="grid-2col-12">
                 <div>
-                  <label class="label-inline">Vitesse aller (/20):</label>
+                  <label class="label-inline" data-i18n="sequencer.speedForward">Vitesse aller (/20):</label>
                   <input type="number" name="speedForward" id="editSpeedFwd" min="0" max="20" step="0.1" value="5.0" class="input-modal">
                 </div>
                 <div>
-                  <label class="label-inline">Vitesse retour (/20):</label>
+                  <label class="label-inline" data-i18n="sequencer.speedBackward">Vitesse retour (/20):</label>
                   <input type="number" name="speedBackward" id="editSpeedBack" min="0" max="20" step="0.1" value="5.0" class="input-modal">
                 </div>
               </div>
 
               <!-- Zone Effects Section (Full ZoneEffectConfig) -->
               <fieldset style="border: 1px solid #667eea; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
-                <legend style="color: #667eea; font-weight: 500; padding: 0 8px; font-size: 12px;">🎯 Effets de Zone</legend>
+                <legend style="color: #667eea; font-weight: 500; padding: 0 8px; font-size: 12px;">🎯 <span data-i18n="sequencer.zoneEffects">Effets de Zone</span></legend>
                 
                 <!-- Zone Size + Positions -->
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap;">
                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
                     <input type="checkbox" name="zoneEnableStart" id="editZoneEnableStart" style="width: 16px; height: 16px;">
-                    <span>Début</span>
+                    <span data-i18n="simple.zoneStart">Début</span>
                   </label>
                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
                     <input type="checkbox" name="zoneEnableEnd" id="editZoneEnableEnd" style="width: 16px; height: 16px;" checked>
-                    <span>Fin</span>
+                    <span data-i18n="simple.zoneEnd">Fin</span>
                   </label>
-                  <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;" title="L'effet suit la destination: au retour, les zones Début/Fin sont inversées">
+                  <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;" data-i18n-title="simple.zoneMirrorTooltip" title="L'effet suit la destination: au retour, les zones Début/Fin sont inversées">
                     <input type="checkbox" name="zoneMirrorOnReturn" id="editZoneMirror" style="width: 16px; height: 16px;">
-                    <span>🔀 Miroir</span>
+                    <span>🔀 <span data-i18n="simple.zoneMirror">Miroir</span></span>
                   </label>
                   <span style="margin-left: 10px; font-size: 13px;">Zone:</span>
                   <input type="number" name="zoneMM" id="editZoneMM" min="10" max="200" step="5" value="50" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
@@ -1666,22 +1666,22 @@
                 <!-- Speed Effect -->
                 <div style="background: #f8f9fa; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
                   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <span style="font-size: 13px; font-weight: 500;">🚀 Vitesse:</span>
+                    <span style="font-size: 13px; font-weight: 500;">🚀 <span data-i18n="simple.speedEffect">Vitesse:</span></span>
                     <select name="speedEffect" id="editSpeedEffect" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
-                      <option value="0">Aucun</option>
-                      <option value="1" selected>Décélération</option>
-                      <option value="2">Accélération</option>
+                      <option value="0" data-i18n="simple.speedEffectNone">Aucun</option>
+                      <option value="1" selected data-i18n="simple.speedEffectDecel">Décélération</option>
+                      <option value="2" data-i18n="simple.speedEffectAccel">Accélération</option>
                     </select>
-                    <span style="font-size: 13px;">Courbe:</span>
+                    <span style="font-size: 13px;" data-i18n="simple.curve">Courbe:</span>
                     <select name="speedCurve" id="editSpeedCurve" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
-                      <option value="0">Linéaire</option>
-                      <option value="1" selected>Sinusoïdal</option>
-                      <option value="2">Triangle Inv.</option>
-                      <option value="3">Sinus Inv.</option>
+                      <option value="0" data-i18n="simple.curveLinear">Linéaire</option>
+                      <option value="1" selected data-i18n="simple.curveSinusoidal">Sinusoïdal</option>
+                      <option value="2" data-i18n="simple.curveTriInv">Triangle Inv.</option>
+                      <option value="3" data-i18n="simple.curveSinInv">Sinus Inv.</option>
                     </select>
                   </div>
                   <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
-                    <span style="font-size: 13px;">Intensité:</span>
+                    <span style="font-size: 13px;" data-i18n="simple.intensity">Intensité:</span>
                     <input type="range" name="speedIntensity" id="editSpeedIntensity" min="0" max="100" step="5" value="75" style="flex: 1; max-width: 150px;">
                     <span id="editSpeedIntensityValue" style="font-weight: bold; color: #667eea; font-size: 13px; min-width: 35px;">75%</span>
                   </div>
@@ -1692,9 +1692,9 @@
                   <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
                       <input type="checkbox" name="randomTurnbackEnabled" id="editRandomTurnback" style="width: 16px; height: 16px;">
-                      <span style="font-weight: 500;">🔄 Retour aléatoire</span>
+                      <span style="font-weight: 500;">🔄 <span data-i18n="sequencer.randomTurnback">Retour aléatoire</span></span>
                     </label>
-                    <span style="font-size: 13px; color: #666;">Chance:</span>
+                    <span style="font-size: 13px; color: #666;" data-i18n="simple.randomTurnbackChance">Chance:</span>
                     <input type="range" name="turnbackChance" id="editTurnbackChance" min="5" max="100" step="5" value="30" style="width: 80px;">
                     <span id="editTurnbackChanceValue" style="font-weight: bold; font-size: 13px; min-width: 35px;">30%</span>
                   </div>
@@ -1705,20 +1705,20 @@
                   <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;">
                     <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
                       <input type="checkbox" name="endPauseEnabled" id="editEndPauseEnabled" style="width: 16px; height: 16px;">
-                      <span style="font-weight: 500;">⏸️ Pause extrémités</span>
+                      <span style="font-weight: 500;">⏸️ <span data-i18n="sequencer.endPause">Pause extrémités</span></span>
                     </label>
                     <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; margin-left: 10px;">
                       <input type="radio" name="editEndPauseMode" value="fixed" id="editEndPauseModeFixed" checked style="width: 14px; height: 14px;">
-                      <span>Fixe</span>
+                      <span data-i18n="common.fixed">Fixe</span>
                     </label>
                     <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
                       <input type="radio" name="editEndPauseMode" value="random" id="editEndPauseModeRandom" style="width: 14px; height: 14px;">
-                      <span>Aléatoire</span>
+                      <span data-i18n="common.random">Aléatoire</span>
                     </label>
                   </div>
                   <!-- Fixed Duration -->
                   <div id="editEndPauseFixedDiv" style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 13px;">Durée:</span>
+                    <span style="font-size: 13px;" data-i18n="common.duration">Durée:</span>
                     <input type="number" name="endPauseDurationSec" id="editEndPauseDuration" min="0.1" max="30" step="0.1" value="1.0" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
                     <span style="font-size: 13px;">s</span>
                   </div>
@@ -1736,22 +1736,22 @@
 
               <!-- Cycle Pause Section (VA-ET-VIENT) -->
               <fieldset style="border: 1px solid #f39c12; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
-                <legend style="color: #f39c12; font-weight: 500; padding: 0 8px; font-size: 12px;">⏸️ Pause entre cycles</legend>
+                <legend style="color: #f39c12; font-weight: 500; padding: 0 8px; font-size: 12px;">⏸️ <span data-i18n="sequencer.cyclePause">Pause entre cycles</span></legend>
                 
                 <div class="flex-gap-15 mb-8 text-md">
                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" name="vaetCyclePauseEnabled" id="editVaetPauseEnabled" style="width: 16px; height: 16px;">
-                    <span>Activer pause</span>
+                    <span data-i18n="sequencer.enablePause">Activer pause</span>
                   </label>
                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" name="vaetCyclePauseIsRandom" id="editVaetPauseRandom" style="width: 16px; height: 16px;">
-                    <span>Aléatoire (range)</span>
+                    <span data-i18n="sequencer.randomRange">Aléatoire (range)</span>
                   </label>
                 </div>
 
                 <div class="grid-2col-12" style="margin-bottom: 8px; gap: 10px;" id="vaetPauseFixedDiv">
                   <div>
-                    <label class="label-inline">Durée pause (s):</label>
+                    <label class="label-inline" data-i18n="sequencer.pauseDuration">Durée pause (s):</label>
                     <input type="number" name="vaetCyclePauseDurationSec" id="editVaetPauseDuration" min="0" max="60" step="0.1" value="0.0" class="input-modal">
                   </div>
                 </div>
@@ -1777,11 +1777,11 @@
               <!-- Center & Amplitude -->
               <div class="grid-2col-12">
                 <div>
-                  <label class="label-inline">Centre (mm):</label>
+                  <label class="label-inline" data-i18n="sequencer.oscCenter">Centre (mm):</label>
                   <input type="number" name="oscCenterPositionMM" id="editOscCenter" step="1" min="0" value="100" class="input-modal">
                 </div>
                 <div>
-                  <label class="label-inline">Amplitude (mm):</label>
+                  <label class="label-inline" data-i18n="sequencer.oscAmplitude">Amplitude (mm):</label>
                   <input type="number" name="oscAmplitudeMM" id="editOscAmplitude" step="1" min="1" value="50" class="input-modal">
                 </div>
               </div>
@@ -1789,15 +1789,15 @@
               <!-- Waveform & Frequency -->
               <div class="grid-2col-12">
                 <div>
-                  <label class="label-inline">Forme d'onde:</label>
+                  <label class="label-inline" data-i18n="sequencer.oscWaveform">Forme d'onde:</label>
                   <select name="oscWaveform" id="editOscWaveform" class="input-modal">
-                    <option value="0">〰️ Sinusoïdal</option>
-                    <option value="1">📐 Triangle</option>
-                    <option value="2">⬜ Carré</option>
+                    <option value="0" data-i18n="sequencer.oscWaveformSine">〰️ Sinusoïdal</option>
+                    <option value="1" data-i18n="sequencer.oscWaveformTriangle">📐 Triangle</option>
+                    <option value="2" data-i18n="sequencer.oscWaveformSquare">⬜ Carré</option>
                   </select>
                 </div>
                 <div>
-                  <label class="label-inline">Fréquence (Hz):</label>
+                  <label class="label-inline" data-i18n="sequencer.oscFrequency">Fréquence (Hz):</label>
                   <input type="number" name="oscFrequencyHz" id="editOscFrequency" step="0.01" min="0.01" max="10" value="0.5" class="input-modal">
                 </div>
               </div>
@@ -1806,44 +1806,44 @@
               <div class="flex-gap-12" style="flex-direction: column; font-size: 12px; margin-bottom: 12px;">
                 <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                   <input type="checkbox" name="oscEnableRampIn" id="editOscRampIn" style="width: 16px; height: 16px;">
-                  <span>Rampe entrée</span>
+                  <span data-i18n="sequencer.oscRampIn">Rampe entrée</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                   <input type="checkbox" name="oscEnableRampOut" id="editOscRampOut" style="width: 16px; height: 16px;">
-                  <span>Rampe sortie</span>
+                  <span data-i18n="sequencer.oscRampOut">Rampe sortie</span>
                 </label>
               </div>
 
               <!-- Ramp Durations -->
               <div class="grid-2col-12">
                 <div>
-                  <label class="label-inline">Durée rampe IN (ms):</label>
+                  <label class="label-inline" data-i18n="sequencer.oscRampInDur">Durée rampe IN (ms):</label>
                   <input type="number" name="oscRampInDurationMs" id="editOscRampInDur" min="100" max="10000" step="100" value="1000" class="input-modal">
                 </div>
                 <div>
-                  <label class="label-inline">Durée rampe OUT (ms):</label>
+                  <label class="label-inline" data-i18n="sequencer.oscRampOutDur">Durée rampe OUT (ms):</label>
                   <input type="number" name="oscRampOutDurationMs" id="editOscRampOutDur" min="100" max="10000" step="100" value="1000" class="input-modal">
                 </div>
               </div>
 
               <!-- Cycle Pause Section (OSCILLATION) -->
               <fieldset style="border: 1px solid #f39c12; border-radius: 6px; padding: 10px; margin-top: 10px;">
-                <legend style="color: #f39c12; font-weight: 500; padding: 0 8px; font-size: 12px;">⏸️ Pause entre cycles</legend>
+                <legend style="color: #f39c12; font-weight: 500; padding: 0 8px; font-size: 12px;">⏸️ <span data-i18n="sequencer.cyclePause">Pause entre cycles</span></legend>
                 
                 <div class="flex-gap-15 mb-8 text-md">
                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" name="oscCyclePauseEnabled" id="editOscPauseEnabled" style="width: 16px; height: 16px;">
-                    <span>Activer pause</span>
+                    <span data-i18n="sequencer.enablePause">Activer pause</span>
                   </label>
                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                     <input type="checkbox" name="oscCyclePauseIsRandom" id="editOscPauseRandom" style="width: 16px; height: 16px;">
-                    <span>Aléatoire (range)</span>
+                    <span data-i18n="sequencer.randomRange">Aléatoire (range)</span>
                   </label>
                 </div>
 
                 <div class="grid-2col-12" style="margin-bottom: 8px; gap: 10px;" id="oscPauseFixedDiv">
                   <div>
-                    <label class="label-inline">Durée pause (s):</label>
+                    <label class="label-inline" data-i18n="sequencer.pauseDuration">Durée pause (s):</label>
                     <input type="number" name="oscCyclePauseDurationSec" id="editOscPauseDuration" min="0" max="60" step="0.1" value="0.0" class="input-modal">
                   </div>
                 </div>
@@ -1869,11 +1869,11 @@
               <!-- Center & Amplitude -->
               <div class="grid-2col-12">
                 <div>
-                  <label class="label-inline">Centre (mm):</label>
+                  <label class="label-inline" data-i18n="sequencer.chaosCenter">Centre (mm):</label>
                   <input type="number" name="chaosCenterPositionMM" id="editChaosCenter" step="1" min="0" value="110" class="input-modal">
                 </div>
                 <div>
-                  <label class="label-inline">Amplitude (mm):</label>
+                  <label class="label-inline" data-i18n="sequencer.chaosAmplitude">Amplitude (mm):</label>
                   <input type="number" name="chaosAmplitudeMM" id="editChaosAmplitude" step="1" min="1" value="50" class="input-modal">
                 </div>
               </div>
@@ -1881,11 +1881,11 @@
               <!-- Speed & Craziness -->
               <div class="grid-2col-12">
                 <div>
-                  <label class="label-inline">Vitesse max (/20):</label>
+                  <label class="label-inline" data-i18n="sequencer.chaosMaxSpeed">Vitesse max (/20):</label>
                   <input type="number" name="chaosMaxSpeedLevel" id="editChaosSpeed" min="1" max="20" step="0.5" value="10" class="input-modal">
                 </div>
                 <div>
-                  <label class="label-inline">🎲 Folie (%):</label>
+                  <label class="label-inline" data-i18n="sequencer.chaosCraziness">🎲 Folie (%):</label>
                   <input type="number" name="chaosCrazinessPercent" id="editChaosCraziness" min="0" max="100" step="5" value="50" class="input-modal">
                 </div>
               </div>
@@ -1893,18 +1893,18 @@
               <!-- Duration & Seed -->
               <div class="grid-2col-12">
                 <div>
-                  <label class="label-inline">⏱️ Durée (s) 5-600:</label>
+                  <label class="label-inline" data-i18n="sequencer.chaosDuration">⏱️ Durée (s) 5-600:</label>
                   <input type="number" name="chaosDurationSeconds" id="editChaosDuration" min="5" max="600" step="5" value="30" class="input-modal">
                 </div>
                 <div>
-                  <label class="label-inline">🌱 Seed (0=aléa):</label>
+                  <label class="label-inline" data-i18n="sequencer.chaosSeed">🌱 Seed (0=aléa):</label>
                   <input type="number" name="chaosSeed" id="editChaosSeed" min="0" max="9999999" step="1" value="0" class="input-modal">
                 </div>
               </div>
 
               <!-- Patterns Selection -->
               <div class="mb-10">
-                <label class="label-inline">🎭 Patterns actifs:</label>
+                <label class="label-inline">🎭 <span data-i18n="sequencer.chaosPatterns">Patterns actifs:</span></label>
                 <div class="grid-4col-patterns">
                   <label class="checkbox-label-sm">
                     <input type="checkbox" name="chaosPattern0" checked style="width: 14px; height: 14px;">
@@ -1960,18 +1960,18 @@
             <!-- Cycles & Pause -->
             <div class="grid-2col-12 mb-12">
               <div id="cyclesFieldDiv">
-                <label class="label-inline">Cycles (1-1000):</label>
+                <label class="label-inline" data-i18n="sequencer.cyclesRange">Cycles (1-1000):</label>
                 <input type="number" name="cycleCount" id="editCycles" min="1" max="1000" step="1" value="1" class="input-modal">
               </div>
               <div id="pauseFieldDiv">
-                <label class="label-inline">⏱️ Pause (s) 0-60:</label>
+                <label class="label-inline" data-i18n="sequencer.pauseAfter">⏱️ Pause (s) 0-60:</label>
                 <input type="number" name="pauseAfterSec" id="editPause" min="0" max="60" step="0.1" value="0" class="input-modal">
               </div>
             </div>
 
             <!-- Validation Error Display -->
             <div id="editValidationErrors" style="display: none; margin-bottom: 10px; padding: 10px; background: #ffebee; border-left: 4px solid #f44336; border-radius: 5px; font-size: 12px;">
-              <div style="font-weight: bold; color: #d32f2f; margin-bottom: 5px;">❌ Erreurs de validation :</div>
+              <div style="font-weight: bold; color: #d32f2f; margin-bottom: 5px;">❌ <span data-i18n="sequencer.validationErrors">Erreurs de validation :</span></div>
               <ul id="editValidationErrorsList" style="margin: 0; padding-left: 20px; color: #c62828; font-size: 13px;">
               </ul>
             </div>
@@ -1979,10 +1979,10 @@
             <!-- Action Buttons -->
             <div class="flex-gap-10 flex-end">
               <button type="submit" id="btnSaveEdit" class="button btn-success" style="padding: 10px 24px; font-size: 14px;">
-                💾 Enregistrer
+                💾 <span data-i18n="sequencer.saveBtn">Enregistrer</span>
               </button>
               <button type="button" id="btnCancelEdit" class="button btn-secondary" style="padding: 10px 24px; font-size: 14px; background: #999;">
-                ❌ Annuler
+                ❌ <span data-i18n="sequencer.cancelBtn">Annuler</span>
               </button>
             </div>
 
