@@ -35,6 +35,7 @@ API_BASE = f"http://{ESP32_IP}/api/fs"
 DATA_DIR = "data"
 JS_DIR = "data/js"
 CSS_DIR = "data/css"
+LANG_DIR = "data/lang"
 HISTORY_DIR = ".history"
 
 # Files to backup automatically (critical user data on ESP32)
@@ -366,6 +367,13 @@ def get_local_files():
             esp_path = '/' + rel_path.replace('\\', '/')
             files[esp_path] = css_file
     
+    # Lang files (JSON translations)
+    if os.path.exists(LANG_DIR):
+        for lang_file in get_all_files_recursive(LANG_DIR, ['.json']):
+            rel_path = os.path.relpath(lang_file, DATA_DIR)
+            esp_path = '/' + rel_path.replace('\\', '/')
+            files[esp_path] = lang_file
+    
     return files
 
 
@@ -393,7 +401,9 @@ def sync_files(esp32_ip=ESP32_IP, delete_orphans=True):
     
     # Filter to only web assets (not stats.json, playlists.json, etc.)
     web_extensions = ['.html', '.js', '.css']
-    remote_web_files = [f for f in remote_files if any(f.endswith(ext) for ext in web_extensions)]
+    remote_web_files = [f for f in remote_files 
+                        if any(f.endswith(ext) for ext in web_extensions) 
+                        or f.startswith('/lang/')]
     remote_paths = set(remote_web_files)
     
     print(f"📡 Remote web files: {len(remote_web_files)}")

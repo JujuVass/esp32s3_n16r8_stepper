@@ -98,7 +98,11 @@ const I18n = (() => {
       }
     }
     
-    if (typeof value !== 'string') return key;
+    // Allow strings and arrays (e.g. states[], dayNames[])
+    if (typeof value !== 'string' && !Array.isArray(value)) return key;
+    
+    // Arrays are returned as-is (no parameter interpolation)
+    if (Array.isArray(value)) return value;
     
     // Replace parameters: {{paramName}}
     if (params) {
