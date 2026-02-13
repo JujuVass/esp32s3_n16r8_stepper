@@ -209,7 +209,7 @@ void setupAPIRoutes() {
   
   // Root route explicitly for faster response
     server.on("/", HTTP_GET, []() {
-      if (Network.isAPMode()) {
+      if (Network.isAPSetupMode()) {
         server.sendHeader("Location", "/setup.html", true);
         server.send(302, "text/plain", "Redirecting to setup.html");
         return;
@@ -1019,7 +1019,7 @@ void setupAPIRoutes() {
     engine->info("📡 WiFi scan requested via API");
     
     // In AP-only mode, we need to be careful with scanning
-    bool wasAPOnly = Network.isAPMode();
+    bool wasAPOnly = Network.isAPSetupMode() || Network.isAPDirectMode();
     
     if (wasAPOnly) {
       engine->info("📡 AP mode: preparing for scan...");
@@ -1113,10 +1113,10 @@ void setupAPIRoutes() {
   // POST /api/wifi/connect - Test and save WiFi credentials
   // We start in AP_STA mode, so testing won't disrupt the AP connection
   server.on("/api/wifi/connect", HTTP_POST, []() {
-    // Block if already connected in STA mode - must use AP mode to configure
-    if (!Network.isAPMode()) {
+    // Block if in STA+AP mode - must use AP_SETUP mode to configure
+    if (Network.isSTAMode()) {
       server.send(403, "application/json", 
-        "{\"success\":false,\"error\":\"WiFi config disabled when connected. Use AP mode (192.168.4.1) to change settings.\",\"hint\":\"Set GPIO18 LOW or clear EEPROM credentials.\"}");
+        "{\"success\":false,\"error\":\"WiFi config disabled when connected. Use AP_SETUP mode (GPIO 19 to GND) to change settings.\",\"hint\":\"Set GPIO19 to GND and reboot.\"}");
       return;
     }
     
@@ -1247,12 +1247,16 @@ void setupAPIRoutes() {
 
   // ========================================================================
   // CAPTIVE PORTAL DETECTION - Handle standard connectivity check URLs
-  // These are requested by OS to detect captive portals
-  // IMPORTANT: Use HTML meta refresh instead of 302 redirect for better compatibility
+  // Only active in AP_SETUP mode (AP_DIRECT serves the full app instead)
   // ========================================================================
   
-  // Helper: Send captive portal redirect page (works better than 302)
+  // Helper: Send captive portal redirect page (only in AP_SETUP mode)
   auto sendCaptivePortalRedirect = []() {
+    // In AP_DIRECT or STA+AP mode, don't redirect - let OS think we have internet
+    if (!Network.isAPSetupMode()) {
+      server.send(204);  // 204 No Content = "we have internet" for most OS
+      return;
+    }
     String html = "<!DOCTYPE html><html><head>";
     html += "<meta http-equiv='refresh' content='0;url=http://192.168.4.1/setup.html'>";
     html += "<title>ESP32 WiFi Setup</title>";
@@ -1313,17 +1317,17 @@ void setupAPIRoutes() {
                     (server.method() == HTTP_OPTIONS) ? "OPTIONS" : "OTHER";
     engine->debug("📥 Request: " + method + " " + uri);
     
-    // En mode AP, tout sauf /setup.html et /api/wifi/* redirige vers /setup.html
-    if (Network.isAPMode()) {
+    // En mode AP_SETUP, tout sauf /setup.html et /api/wifi/* redirige vers /setup.html
+    if (Network.isAPSetupMode()) {
       if (uri != "/setup.html" && !uri.startsWith("/api/wifi")) {
         server.sendHeader("Location", "http://192.168.4.1/setup.html", true);
         server.send(302, "text/plain", "Redirecting to setup.html");
         return;
       }
     } else {
-      // En mode STA, on bloque l'accès à setup.html
+      // En mode STA+AP ou AP_DIRECT, on bloque l'accès à setup.html
       if (uri == "/setup.html") {
-        server.send(404, "text/plain", "Not found: setup.html");
+        server.send(404, "text/plain", "Not found: setup.html (use GPIO 19 to GND for setup mode)");
         return;
       }
     }

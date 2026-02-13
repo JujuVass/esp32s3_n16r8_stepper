@@ -65,6 +65,8 @@ function connectWebSocket(useFallback) {
     
     // Request initial status after connection stabilizes
     setTimeout(function() {
+      // Sync time for AP_DIRECT mode (no NTP available)
+      sendCommand('syncTime', { time: Date.now() });
       sendCommand(WS_CMD.GET_STATUS, {});
     }, 50);
   };

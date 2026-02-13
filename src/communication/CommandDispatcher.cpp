@@ -12,6 +12,7 @@
 
 #include "communication/CommandDispatcher.h"
 #include "communication/StatusBroadcaster.h"
+#include "communication/NetworkManager.h"
 #include "core/UtilityEngine.h"
 #include "movement/CalibrationManager.h"
 #include "movement/SequenceTableManager.h"
@@ -161,6 +162,14 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
     
     if (strcmp(cmd, "getStatus") == 0) {
         sendStatus();
+        return true;
+    }
+    
+    if (strcmp(cmd, "syncTime") == 0) {
+        uint64_t epochMs = doc["time"] | (uint64_t)0;
+        if (epochMs > 0) {
+            Network.syncTimeFromClient(epochMs);
+        }
         return true;
     }
     

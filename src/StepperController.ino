@@ -164,26 +164,30 @@ void setup() {
   engine->info("✅ HTTP (80) + WebSocket (81) servers started");
   
   // ============================================================================
-  // AP MODE: Minimal setup complete - WiFi configuration only
+  // AP_SETUP MODE: Minimal setup complete - WiFi configuration only
   // ============================================================================
-  if (Network.isAPMode()) {
+  if (Network.isAPSetupMode()) {
     setRgbLed(0, 0, 50);  // Start with BLUE (dimmed) - waiting for config
     engine->info("\n╔════════════════════════════════════════════════════════╗");
-    engine->info("║  MODE AP - CONFIGURATION WiFi                          ║");
+    engine->info("║  MODE AP_SETUP - CONFIGURATION WiFi                    ║");
     engine->info("║  Accès: http://192.168.4.1                             ║");
-    engine->info("║  Connectez-vous au réseau: ESP32-Stepper-Setup         ║");
+    engine->info("║  Connectez-vous au réseau: " + String(otaHostname) + "-Setup    ║");
     engine->info("║  LED: Bleu/Rouge clignotant (attente config)           ║");
     engine->info("║       Vert fixe = config OK, Rouge fixe = échec        ║");
     engine->info("╚════════════════════════════════════════════════════════╝\n");
-    return;  // Skip stepper initialization in AP mode
+    return;  // Skip stepper initialization in AP_SETUP mode
   }
   
   // ============================================================================
-  // STA MODE: Full stepper controller initialization
+  // STA+AP or AP_DIRECT: Full stepper controller initialization
   // ============================================================================
   
-  // WiFi connected - LED GREEN
-  setRgbLed(0, 50, 0);  // GREEN = WiFi OK (dimmed)
+  // LED color based on mode
+  if (Network.isSTAMode()) {
+    setRgbLed(0, 50, 0);  // GREEN = WiFi connected + AP
+  } else {
+    setRgbLed(0, 25, 50);  // CYAN = AP Direct mode
+  }
   
   // Command dispatcher and status broadcaster
   Dispatcher.begin(&webSocket);
@@ -215,10 +219,17 @@ void setup() {
   
   config.currentState = STATE_READY;
   engine->info("\n╔════════════════════════════════════════════════════════╗");
-  engine->info("║  WEB INTERFACE READY!                                  ║");
-  engine->info("║  Access: http://" + WiFi.localIP().toString() + "                          ║");
+  if (Network.isSTAMode()) {
+    engine->info("║  WEB INTERFACE READY! (STA+AP)                         ║");
+    engine->info("║  STA: http://" + WiFi.localIP().toString() + "                          ║");
+    engine->info("║  AP:  http://" + WiFi.softAPIP().toString() + "                       ║");
+    engine->info("║  mDNS: http://" + String(otaHostname) + ".local                 ║");
+  } else {
+    engine->info("║  WEB INTERFACE READY! (AP Direct)                      ║");
+    engine->info("║  Access: http://" + WiFi.softAPIP().toString() + "                    ║");
+    engine->info("║  Network: " + String(otaHostname) + "-AP                         ║");
+  }
   engine->info("║  Auto-calibration starts in 1 second...               ║");
-  engine->info("║  LED: Vert (WiFi connecté)                             ║");
   engine->info("╚════════════════════════════════════════════════════════╝\n");
   
   // ============================================================================
@@ -474,9 +485,9 @@ void networkTask(void* param) {
 // ============================================================================
 void loop() {
   // ═══════════════════════════════════════════════════════════════════════════
-  // AP MODE: WiFi configuration only (no dual-core tasks running)
+  // AP_SETUP MODE: WiFi configuration only (no dual-core tasks running)
   // ═══════════════════════════════════════════════════════════════════════════
-  if (Network.isAPMode()) {
+  if (Network.isAPSetupMode()) {
     Network.handleCaptivePortal();
     
     // Blink LED Blue/Red every 500ms

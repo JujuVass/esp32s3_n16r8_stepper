@@ -39,11 +39,19 @@ constexpr int PIN_ENABLE = 15;         // EN- via level shifter
 constexpr int PIN_ALM = 17;            // ALM- via level shifter (input)
 constexpr int PIN_PEND = 16;           // PED- via level shifter (input)
 
-// AP Mode forcing pin (active LOW - connect to GND to force AP mode at boot)
-constexpr int PIN_AP_MODE = 19;        // GND = normal mode, floating = AP mode (INVERTED!)
+// AP Mode forcing pin (GND = AP_SETUP config mode, floating = normal STA+AP or AP_DIRECT)
+constexpr int PIN_AP_MODE = 19;        // GND = AP_SETUP mode, floating = normal
 
 // Onboard RGB LED (WS2812 on Freenove ESP32-S3)
 constexpr int PIN_RGB_LED = 48;
+
+// ============================================================================
+// CONFIGURATION - AP Direct Mode (Full app via WiFi AP)
+// ============================================================================
+// These settings apply when running in AP_DIRECT or STA+AP parallel mode
+constexpr const char* AP_DIRECT_PASSWORD = "";      // Empty = open network, set for WPA2
+constexpr int AP_DIRECT_CHANNEL = 1;                // WiFi channel (1-13, 1 recommended)
+constexpr int AP_DIRECT_MAX_CLIENTS = 4;            // Max simultaneous AP clients (1-10)
 
 // ============================================================================
 // CONFIGURATION - Motor Parameters

@@ -1,13 +1,14 @@
 ﻿/**
  * NetworkManager.h - WiFi Network Management
  * 
- * Two exclusive modes:
- * - AP Mode: For WiFi configuration only (setup.html) + Captive Portal
- * - STA Mode: For stepper control (index.html)
+ * Three network modes:
+ * - AP_SETUP:  PIN_AP_MODE (GPIO 19) is LOW (GND) → Captive Portal + setup.html only
+ * - STA+AP:    WiFi credentials OK → Connected to router + AP parallel (192.168.4.1)
+ * - AP_DIRECT: No credentials / WiFi fail → AP only with full stepper control
  * 
- * AP Mode is activated if:
- * - PIN_AP_MODE (GPIO 19) is HIGH (floating) at boot = AP mode, LOW (GND) = normal mode
- * - No WiFi credentials in EEPROM and no valid defaults
+ * In STA+AP and AP_DIRECT modes, the full stepper app (index.html) is served.
+ * Hardware is initialized in both STA+AP and AP_DIRECT modes.
+ * Only AP_SETUP skips hardware init (configuration-only mode).
  */
 
 #pragma once
@@ -26,31 +27,67 @@ extern UtilityEngine* engine;
 extern void stopMovement();
 extern void Motor_disable();
 
+// ============================================================================
+// NETWORK MODE ENUM
+// ============================================================================
+enum NetworkMode {
+    NET_AP_SETUP,    // GPIO 19 GND → Config-only (setup.html + captive portal)
+    NET_STA_AP,      // WiFi connected + AP parallel → Full app on both interfaces
+    NET_AP_DIRECT    // No WiFi / fail → AP-only with full stepper control
+};
+
 class NetworkManager {
 public:
     static NetworkManager& getInstance();
     
     /**
      * Full network initialization
-     * Determines mode (AP or STA) and starts appropriate services
-     * @return true if in STA mode and connected
+     * Determines mode and starts appropriate services
+     * @return true if STA is connected (NET_STA_AP mode)
      */
     bool begin();
     
     /**
-     * Check if running in AP mode (configuration mode)
+     * Get current network mode
      */
-    bool isAPMode() const { return _apMode; }
+    NetworkMode getMode() const { return _mode; }
     
     /**
-     * Check if running in STA mode (stepper mode)
+     * Check if running in AP_SETUP mode (config only - setup.html)
+     * This is the ONLY mode where hardware is NOT initialized
      */
-    bool isSTAMode() const { return !_apMode; }
+    bool isAPSetupMode() const { return _mode == NET_AP_SETUP; }
     
     /**
-     * Check if WiFi STA is connected (only valid in STA mode)
+     * Check if running in AP_DIRECT mode (full app via AP, no router)
      */
-    bool isConnected() const { return !_apMode && WiFi.status() == WL_CONNECTED; }
+    bool isAPDirectMode() const { return _mode == NET_AP_DIRECT; }
+    
+    /**
+     * Check if running in STA+AP mode (router + AP parallel)
+     */
+    bool isSTAMode() const { return _mode == NET_STA_AP; }
+    
+    /**
+     * Legacy compatibility: isAPMode() returns true ONLY for AP_SETUP
+     * Used by APIRoutes to decide setup.html vs index.html redirect
+     */
+    bool isAPMode() const { return _mode == NET_AP_SETUP; }
+    
+    /**
+     * Check if AP is active (true in both AP_SETUP and AP_DIRECT, and STA+AP)
+     */
+    bool isAPActive() const { return true; }  // AP is always active now
+    
+    /**
+     * Check if STA is connected to a router
+     */
+    bool isConnected() const { return _mode == NET_STA_AP && WiFi.status() == WL_CONNECTED; }
+    
+    /**
+     * Check if hardware should be initialized (all modes except AP_SETUP)
+     */
+    bool shouldInitHardware() const { return _mode != NET_AP_SETUP; }
     
     /**
      * Check if WiFi is configured in EEPROM
@@ -69,12 +106,22 @@ public:
     const String& getIPAddress() const { return _cachedIP; }
     
     /**
+     * Get AP IP address (192.168.4.1)
+     */
+    String getAPIPAddress() const { return WiFi.softAPIP().toString(); }
+    
+    /**
+     * Get number of clients connected to AP
+     */
+    uint8_t getAPClientCount() const { return WiFi.softAPgetStationNum(); }
+    
+    /**
      * Handle OTA in loop - MUST be called in every loop iteration (STA mode only)
      */
     void handleOTA() { if (_otaConfigured) ArduinoOTA.handle(); }
     
     /**
-     * Handle Captive Portal DNS in loop - MUST be called in AP mode
+     * Handle Captive Portal DNS in loop - MUST be called in AP_SETUP mode
      */
     void handleCaptivePortal();
     
@@ -83,6 +130,17 @@ public:
      * Call this periodically in loop() to maintain stable mDNS
      */
     void checkConnectionHealth();
+    
+    /**
+     * Sync system time from client timestamp (used when NTP unavailable)
+     * @param epochMs JavaScript Date.now() value (milliseconds since epoch)
+     */
+    void syncTimeFromClient(uint64_t epochMs);
+    
+    /**
+     * Check if time has been synced (NTP or client)
+     */
+    bool isTimeSynced() const { return _timeSynced; }
     
     /**
      * AP Mode LED blink control (can be disabled after successful config)
@@ -95,11 +153,13 @@ private:
     NetworkManager& operator=(const NetworkManager&) = delete;
     
     // Mode determination
-    bool shouldStartAPMode();
+    bool shouldStartAPSetup();
     
     // Mode-specific initialization
-    void startAPMode();
+    void startAPSetupMode();
+    void startAPDirectMode();
     bool startSTAMode();
+    void startParallelAP();
     
     // STA services
     bool setupMDNS();
@@ -107,8 +167,9 @@ private:
     void setupOTA();
     
     // State
-    bool _apMode = false;
+    NetworkMode _mode = NET_AP_DIRECT;
     bool _otaConfigured = false;
+    bool _timeSynced = false;
     bool _wasConnected = false;              // Track connection state for mDNS re-announce
     unsigned long _lastHealthCheck = 0;      // Last health check timestamp
     unsigned long _lastReconnectAttempt = 0; // Last WiFi reconnect attempt timestamp
@@ -116,7 +177,7 @@ private:
     uint8_t _reconnectAttempts = 0;          // Count of consecutive reconnect attempts
     String _cachedIP;                        // Cached IP address string (avoids WiFi.localIP() calls)
     
-    // Captive Portal DNS server
+    // Captive Portal DNS server (AP_SETUP mode only)
     DNSServer _dnsServer;
     bool _captivePortalActive = false;
 };

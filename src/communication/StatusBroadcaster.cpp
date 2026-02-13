@@ -101,6 +101,10 @@ void StatusBroadcaster::send() {
     doc["sensorsInverted"] = sensorsInverted;  // Sensors inversion mode
     doc["ip"] = Network.getIPAddress();  // Cached IP for WebSocket reconnection
     
+    // Network mode info
+    doc["networkMode"] = (int)Network.getMode();  // 0=AP_SETUP, 1=STA_AP, 2=AP_DIRECT
+    doc["apClients"] = Network.getAPClientCount();  // Number of AP clients
+    
     // ============================================================================
     // MODE-SPECIFIC FIELDS
     // ============================================================================
