@@ -180,8 +180,8 @@ function updateChaosPresets() {
     linkedCheckbox.parentElement.style.opacity = wouldBeValid ? '1' : '0.5';
     linkedCheckbox.parentElement.style.cursor = wouldBeValid ? 'pointer' : 'not-allowed';
     linkedCheckbox.parentElement.title = wouldBeValid 
-      ? 'Lier amplitude au centre' 
-      : `⚠️ Impossible: centre×2 (${currentCenter * 2}mm) > max calibré (${effectiveMax}mm)`;
+      ? t('chaos.amplitudeLinked')
+      : '⚠️ ' + t('chaos.cannotLink', {val: currentCenter * 2, max: effectiveMax});
     
     // If currently linked but now invalid, uncheck it
     if (isLinked && !wouldBeValid) {
@@ -204,10 +204,10 @@ function updatePatternToggleButton() {
   
   if (checkedCount === CHAOS_PATTERNS.length) {
     // All checked → show "Aucun" (next action will uncheck all)
-    btn.textContent = '❌ Aucun';
+    btn.textContent = '❌ ' + t('common.none');
   } else {
     // Some or none checked → show "Tout" (next action will check all)
-    btn.textContent = '✅ Tout';
+    btn.textContent = '✅ ' + t('common.all');
   }
 }
 
@@ -245,9 +245,9 @@ function updateChaosUI(data) {
   if (btnPauseChaos) {
     btnPauseChaos.disabled = !isRunningOrPaused;
     if (isPaused) {
-      btnPauseChaos.innerHTML = '▶ Reprendre';
+      btnPauseChaos.innerHTML = '▶ ' + t('common.resume');
     } else {
-      btnPauseChaos.innerHTML = '⏸ Pause';
+      btnPauseChaos.innerHTML = '⏸ ' + t('common.pause');
     }
   }
   
@@ -321,7 +321,7 @@ function updateChaosUI(data) {
  */
 function startChaos() {
   if (!validateChaosLimits()) {
-    showNotification('Limites invalides: la zone chaos dépasse les limites calibrées', 'error');
+    showNotification(t('chaos.invalidLimits'), 'error');
     return;
   }
   
@@ -349,7 +349,7 @@ function startChaos() {
   
   // Validate at least one pattern selected
   if (!patternsEnabled.some(p => p)) {
-    showNotification('⚠️ Au moins un pattern doit être activé', 'error');
+    showNotification('⚠️ ' + t('chaos.atLeastOnePattern'), 'error');
     return;
   }
   

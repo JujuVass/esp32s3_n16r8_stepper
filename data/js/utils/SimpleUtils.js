@@ -18,12 +18,14 @@
  * MUST match C++ enum DecelMode in Types.h:
  *   DECEL_LINEAR = 0, DECEL_SINE = 1, DECEL_TRIANGLE_INV = 2, DECEL_SINE_INV = 3
  */
-const DECEL_MODE_NAMES = {
-  0: 'Linéaire',
-  1: 'Sinusoïdal',
-  2: 'Triangle Inv.',
-  3: 'Sinus Inv.'
-};
+function getDecelModeNames() {
+  return {
+    0: t('utils.linear'),
+    1: t('utils.sinusoidal'),
+    2: t('utils.triangleInv'),
+    3: t('utils.sineInv')
+  };
+}
 
 // ============================================================================
 // DECELERATION CALCULATION (Pure Function)
@@ -320,15 +322,15 @@ function drawZoneEffectPreviewPure(canvas, config) {
   ctx.font = '10px Arial';
   ctx.fillStyle = '#666';
   ctx.textAlign = 'center';
-  ctx.fillText('Départ', padding, height - 5);
-  ctx.fillText('Arrivée', width - padding, height - 5);
+  ctx.fillText(t('utils.startLabel'), padding, height - 5);
+  ctx.fillText(t('utils.endLabel'), width - padding, height - 5);
   
   // Draw speed indicators
   ctx.textAlign = 'left';
   if (hasSpeedEffect) {
     const isAccel = speedEffect === 2;
-    ctx.fillText(isAccel ? 'Rapide' : 'Normal', padding + 5, padding + 10);
-    ctx.fillText(isAccel ? 'Normal' : 'Lent', padding + 5, height - padding - 5);
+    ctx.fillText(isAccel ? t('utils.fast') : t('utils.normal'), padding + 5, padding + 10);
+    ctx.fillText(isAccel ? t('utils.normal') : t('utils.slow'), padding + 5, height - padding - 5);
   }
 }
 

@@ -151,7 +151,7 @@ function addSequenceLine() {
   
   const errors = validateSequencerLine(newLine, newLine.movementType);
   if (errors.length > 0) {
-    showAlert('Impossible d\'ajouter la ligne :\n\n' + errors.join('\n'), { type: 'error', title: 'Validation' });
+    showAlert(t('sequencer.addValidationFailed') + '\n\n' + errors.join('\n'), { type: 'error', title: 'Validation' });
     return;
   }
   
@@ -159,10 +159,10 @@ function addSequenceLine() {
 }
 
 async function deleteSequenceLine(lineId) {
-  const confirmed = await showConfirm('Supprimer cette ligne ?', {
-    title: 'Supprimer Ligne',
+  const confirmed = await showConfirm(t('sequencer.deleteLineConfirm'), {
+    title: t('sequencer.deleteLineTitle'),
     type: 'danger',
-    confirmText: '🗑️ Supprimer',
+    confirmText: '🗑️ ' + t('common.delete'),
     dangerous: true
   });
   if (confirmed) {
@@ -187,10 +187,10 @@ function toggleSequenceLine(lineId, enabled) {
 }
 
 async function clearSequence() {
-  const confirmed = await showConfirm('Effacer toutes les lignes du tableau ?', {
-    title: 'Effacer Séquence',
+  const confirmed = await showConfirm(t('sequencer.clearConfirm'), {
+    title: t('sequencer.clearTitle'),
     type: 'danger',
-    confirmText: '🗑️ Tout effacer',
+    confirmText: '🗑️ ' + t('sequencer.clearAll'),
     dangerous: true
   });
   if (confirmed) {
@@ -229,21 +229,21 @@ function importSequence() {
         .then(data => {
           if (data.success) {
             console.log('✅ Import successful:', data.message);
-            showAlert('Séquence importée avec succès !', { type: 'success' });
+            showAlert(t('sequencer.importSuccess'), { type: 'success' });
             sendCommand(WS_CMD.GET_SEQUENCE_TABLE, {});
           } else {
             console.error('❌ Import failed:', data.error);
-            showAlert('Erreur import: ' + (data.error || 'Unknown error'), { type: 'error' });
+            showAlert(t('common.error') + ' import: ' + (data.error || 'Unknown error'), { type: 'error' });
           }
         })
         .catch(error => {
           console.error('❌ HTTP request failed:', error);
-          showAlert('Erreur réseau: ' + error.message, { type: 'error' });
+          showAlert(t('sequencer.networkError', {msg: error.message}), { type: 'error' });
         });
         
       } catch (error) {
         console.error('❌ JSON parse error:', error);
-        showAlert('Erreur JSON: ' + error.message, { type: 'error' });
+        showAlert(t('common.error') + ' JSON: ' + error.message, { type: 'error' });
       }
     };
     reader.readAsText(file);
@@ -267,7 +267,7 @@ function downloadTemplate() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   
-  showNotification('📄 Template téléchargé avec documentation complète !', 'success', 3000);
+  showNotification('📄 ' + t('sequencer.templateDownloaded'), 'success', 3000);
 }
 
 // ========================================================================
@@ -277,12 +277,12 @@ function downloadTemplate() {
 function testSequenceLine(lineId) {
   const line = sequenceLines.find(l => l.lineId === lineId);
   if (!line) {
-    showNotification('❌ Ligne introuvable', 'error', 2000);
+    showNotification('❌ ' + t('sequencer.lineNotFound'), 'error', 2000);
     return;
   }
   
   if (AppState.sequencer && AppState.sequencer.isRunning) {
-    showNotification('⚠️ Arrêtez la séquence en cours avant de tester', 'error', 3000);
+    showNotification('⚠️ ' + t('sequencer.stopSequenceFirst'), 'error', 3000);
     return;
   }
   
@@ -384,7 +384,7 @@ function restoreSequenceAfterTest() {
   window.sequenceBackup = null;
   window.testedLineId = null;
   
-  showNotification('✅ Séquence restaurée', 'success', 2000);
+  showNotification('✅ ' + t('sequencer.sequenceRestored'), 'success', 2000);
 }
 
 // ========================================================================
@@ -609,33 +609,33 @@ function validateEditForm() {
   const emptyFieldErrors = [];
   
   if (movementType === 0) {
-    if (form.startPositionMM.value.trim() === '') emptyFieldErrors.push('⚠️ Position de départ est incorrect');
-    if (form.distanceMM.value.trim() === '') emptyFieldErrors.push('⚠️ Distance est incorrect');
-    if (form.speedForward.value.trim() === '') emptyFieldErrors.push('⚠️ Vitesse aller est incorrect');
-    if (form.speedBackward.value.trim() === '') emptyFieldErrors.push('⚠️ Vitesse retour est incorrect');
-    if (form.zoneMM.value.trim() === '') emptyFieldErrors.push('⚠️ Zone effets est incorrect');
+    if (form.startPositionMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.startPosIncorrect'));
+    if (form.distanceMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.distanceIncorrect'));
+    if (form.speedForward.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.speedFwdIncorrect'));
+    if (form.speedBackward.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.speedBwdIncorrect'));
+    if (form.zoneMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.zoneIncorrect'));
   }
   
   if (movementType === 1) {
-    if (form.oscCenterPositionMM.value.trim() === '') emptyFieldErrors.push('⚠️ Centre oscillation est incorrect');
-    if (form.oscAmplitudeMM.value.trim() === '') emptyFieldErrors.push('⚠️ Amplitude oscillation est incorrect');
-    if (form.oscFrequencyHz.value.trim() === '') emptyFieldErrors.push('⚠️ Fréquence est incorrect');
-    if (form.oscRampInDurationMs.value.trim() === '') emptyFieldErrors.push('⚠️ Durée rampe IN est incorrect');
-    if (form.oscRampOutDurationMs.value.trim() === '') emptyFieldErrors.push('⚠️ Durée rampe OUT est incorrect');
+    if (form.oscCenterPositionMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.oscCenterIncorrect'));
+    if (form.oscAmplitudeMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.oscAmplitudeIncorrect'));
+    if (form.oscFrequencyHz.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.freqIncorrect'));
+    if (form.oscRampInDurationMs.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.rampInIncorrect'));
+    if (form.oscRampOutDurationMs.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.rampOutIncorrect'));
   }
   
   if (movementType === 2) {
-    if (form.chaosCenterPositionMM.value.trim() === '') emptyFieldErrors.push('⚠️ Centre chaos est incorrect');
-    if (form.chaosAmplitudeMM.value.trim() === '') emptyFieldErrors.push('⚠️ Amplitude chaos est incorrect');
-    if (form.chaosMaxSpeedLevel.value.trim() === '') emptyFieldErrors.push('⚠️ Vitesse max chaos est incorrect');
-    if (form.chaosCrazinessPercent.value.trim() === '') emptyFieldErrors.push('⚠️ Degré de folie est incorrect');
-    if (form.chaosDurationSeconds.value.trim() === '') emptyFieldErrors.push('⚠️ Durée chaos est incorrect');
-    if (form.chaosSeed.value.trim() === '') emptyFieldErrors.push('⚠️ Seed est incorrect');
+    if (form.chaosCenterPositionMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.chaosCenterIncorrect'));
+    if (form.chaosAmplitudeMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.chaosAmplitudeIncorrect'));
+    if (form.chaosMaxSpeedLevel.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.chaosSpeedIncorrect'));
+    if (form.chaosCrazinessPercent.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.crazinessIncorrect'));
+    if (form.chaosDurationSeconds.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.durationIncorrect'));
+    if (form.chaosSeed.value.trim() === '') emptyFieldErrors.push('⚠️ Seed incorrect');
   }
   
   if (movementType !== 4) {
-    if (movementType !== 2 && form.cycleCount.value.trim() === '') emptyFieldErrors.push('⚠️ Nombre de cycles est incorrect');
-    if (form.pauseAfterSec.value.trim() === '') emptyFieldErrors.push('⚠️ Pause est incorrect');
+    if (movementType !== 2 && form.cycleCount.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.cyclesIncorrect'));
+    if (form.pauseAfterSec.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.pauseIncorrect'));
   }
   
   const line = {
@@ -766,7 +766,7 @@ function populateSequencerDropdown(mode) {
   if (!select) return;
   
   const presets = PlaylistState[mode] || [];
-  select.innerHTML = '<option value="">-- Sélectionner un preset --</option>';
+  select.innerHTML = '<option value="">' + t('sequencer.selectPreset') + '</option>';
   
   const sortedPresets = [...presets].sort((a, b) => b.timestamp - a.timestamp);
   sortedPresets.forEach(preset => {
@@ -823,7 +823,7 @@ function batchEnableLines(enabled) {
     if (line) line.enabled = enabled;
   });
   
-  showNotification(`✅ ${selectedLineIds.size} ligne(s) ${enabled ? 'activée(s)' : 'désactivée(s)'}`, 'success', 2000);
+  showNotification('✅ ' + t('sequencer.linesEnabled', {count: selectedLineIds.size, state: enabled ? t('sequencer.enable') : t('sequencer.disable')}), 'success', 2000);
   clearSelection();
 }
 
@@ -831,10 +831,10 @@ async function batchDeleteLines() {
   if (selectedLineIds.size === 0) return;
   
   const count = selectedLineIds.size;
-  const confirmed = await showConfirm(`Supprimer ${count} ligne(s) sélectionnée(s) ?\n\nCette action est irréversible.`, {
-    title: 'Supprimer Sélection',
+  const confirmed = await showConfirm(t('sequencer.deleteSelection', {count: count}), {
+    title: t('sequencer.deleteSelectionTitle'),
     type: 'danger',
-    confirmText: `🗑️ Supprimer ${count} ligne(s)`,
+    confirmText: '🗑️ ' + t('sequencer.linesDeleted', {count: count}),
     dangerous: true
   });
   
@@ -847,7 +847,7 @@ async function batchDeleteLines() {
     sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: lineId });
   });
   
-  showNotification(`✅ ${count} ligne(s) supprimée(s)`, 'success', 2000);
+  showNotification('✅ ' + t('sequencer.linesDeleted', {count: count}), 'success', 2000);
   clearSelection();
 }
 
@@ -857,7 +857,7 @@ function updateBatchToolbar() {
   
   if (selectedLineIds.size > 0) {
     toolbar.classList.add('visible');
-    countDisplay.textContent = `${selectedLineIds.size} ligne(s) sélectionnée(s)`;
+    countDisplay.textContent = t('sequencer.linesSelected', {count: selectedLineIds.size});
   } else {
     toolbar.classList.remove('visible');
   }
@@ -893,13 +893,13 @@ function initializeTrashZones() {
       
       const count = linesToDelete.length;
       const message = count === 1 ? 
-        `Supprimer la ligne sélectionnée ?` :
-        `Supprimer ${count} lignes sélectionnées ?`;
+        t('sequencer.deleteSingle') :
+        t('sequencer.deleteMultiple', {count: count});
       
       showConfirm(message, {
-        title: 'Supprimer',
+        title: t('common.delete'),
         type: 'danger',
-        confirmText: '🗑️ Supprimer',
+        confirmText: '🗑️ ' + t('common.delete'),
         dangerous: true
       }).then(confirmed => {
         if (!confirmed) return;
@@ -908,7 +908,7 @@ function initializeTrashZones() {
         const sortedIds = linesToDelete.sort((a, b) => b - a);
         sortedIds.forEach(lineId => sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: lineId }));
         
-        showNotification(`✅ ${count} ligne(s) supprimée(s)`, 'success', 2000);
+        showNotification('✅ ' + t('sequencer.linesDeleted', {count: count}), 'success', 2000);
         clearSelection();
       });
       return false;
@@ -934,13 +934,13 @@ function initializeTrashZones() {
       
       const count = linesToDelete.length;
       const message = count === 1 ? 
-        `Supprimer la ligne sélectionnée ?` :
-        `Supprimer ${count} lignes sélectionnées ?`;
+        t('sequencer.deleteSingle') :
+        t('sequencer.deleteMultiple', {count: count});
       
       showConfirm(message, {
-        title: 'Supprimer',
+        title: t('common.delete'),
         type: 'danger',
-        confirmText: '🗑️ Supprimer',
+        confirmText: '🗑️ ' + t('common.delete'),
         dangerous: true
       }).then(confirmed => {
         if (!confirmed) return;
@@ -949,7 +949,7 @@ function initializeTrashZones() {
         const sortedIds = linesToDelete.sort((a, b) => b - a);
         sortedIds.forEach(lineId => sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: lineId }));
         
-        showNotification(`✅ ${count} ligne(s) supprimée(s)`, 'success', 2000);
+        showNotification('✅ ' + t('sequencer.linesDeleted', {count: count}), 'success', 2000);
         clearSelection();
       });
       return false;
@@ -965,8 +965,8 @@ function updateSequenceStatus(status) {
   if (!status) return;
   
   const modeText = status.isRunning 
-    ? (status.isLoopMode ? '🔁 BOUCLE INFINIE' : '▶️ LECTURE UNIQUE')
-    : '⏹️ Arrêté';
+    ? (status.isLoopMode ? '🔁 ' + t('sequencer.loopInfinite') : '▶️ ' + t('sequencer.singlePlay'))
+    : '⏹️ ' + t('sequencer.stopped');
   DOM.seqMode.textContent = modeText;
   DOM.seqMode.style.color = status.isRunning ? '#4CAF50' : '#999';
   
@@ -1003,9 +1003,9 @@ function updateSequenceStatus(status) {
   setButtonState(DOM.btnSkipLine, isRunning);
   
   if (isRunning && status.isPaused) {
-    DOM.btnPauseSequence.innerHTML = '▶️ Reprendre';
+    DOM.btnPauseSequence.innerHTML = '▶️ ' + t('common.resume');
   } else {
-    DOM.btnPauseSequence.innerHTML = '⏸️ Pause';
+    DOM.btnPauseSequence.innerHTML = '⏸️ ' + t('common.pause');
   }
   
   const tbody = document.getElementById('sequenceTableBody');
@@ -1052,7 +1052,7 @@ function renderSequenceTable(data) {
     tbody.innerHTML = `
       <tr><td colspan="9" style="padding: 40px; text-align: center; color: #999;">
         <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
-        <div style="font-size: 16px;">Aucune ligne - Cliquez sur "➕ Ajouter ligne" pour commencer</div>
+        <div style="font-size: 16px;">${t('sequencer.emptyTable')}</div>
       </td></tr>
     `;
     return;

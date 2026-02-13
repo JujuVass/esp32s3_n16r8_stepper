@@ -60,13 +60,13 @@ function updatePlaylistButtonCounters() {
   const btnChaos = document.getElementById('btnManagePlaylistChaos');
   
   if (btnSimple) {
-    btnSimple.innerHTML = '📋 Playlist (' + PlaylistState.simple.length + '/20)';
+    btnSimple.innerHTML = '📋 ' + t('simple.playlist') + ' (' + PlaylistState.simple.length + '/20)';
   }
   if (btnOsc) {
-    btnOsc.innerHTML = '📋 Playlist (' + PlaylistState.oscillation.length + '/20)';
+    btnOsc.innerHTML = '📋 ' + t('simple.playlist') + ' (' + PlaylistState.oscillation.length + '/20)';
   }
   if (btnChaos) {
-    btnChaos.innerHTML = '📋 Playlist (' + PlaylistState.chaos.length + '/20)';
+    btnChaos.innerHTML = '📋 ' + t('simple.playlist') + ' (' + PlaylistState.chaos.length + '/20)';
   }
 }
 
@@ -276,7 +276,7 @@ function refreshPlaylistPresets(mode) {
   
   if (presets.length === 0) {
     console.log('⚠️ No presets found, displaying empty message');
-    listEl.innerHTML = '<div class="empty-state">Aucun preset sauvegardé</div>';
+    listEl.innerHTML = '<div class="empty-state">' + t('playlist.noPresets') + '</div>';
     return;
   }
   
@@ -297,16 +297,16 @@ function refreshPlaylistPresets(mode) {
             <div class="text-xs" style="color: #888;">${new Date(preset.timestamp * 1000).toLocaleString('fr-FR', {dateStyle: 'short', timeStyle: 'short'})}</div>
           </div>
           <div class="flex-gap-6" style="flex-shrink: 0;">
-            <button onclick="loadPresetInMode('${mode}', ${preset.id})" class="btn-mini" title="Charger dans le mode actuel">
+            <button onclick="loadPresetInMode('${mode}', ${preset.id})" class="btn-mini" title="${t('playlist.loadInMode')}">
               ⬇️
             </button>
-            <button onclick="quickAddToSequencer('${mode}', ${preset.id})" class="btn-mini" title="Ajouter direct au séquenceur">
+            <button onclick="quickAddToSequencer('${mode}', ${preset.id})" class="btn-mini" title="${t('playlist.addDirectToSeq')}">
               ➕📋
             </button>
-            <button onclick="renamePlaylistPreset('${mode}', ${preset.id})" class="btn-mini" title="Renommer">
+            <button onclick="renamePlaylistPreset('${mode}', ${preset.id})" class="btn-mini" title="${t('playlist.rename')}">
               ✏️
             </button>
-            <button onclick="deleteFromPlaylist('${mode}', ${preset.id})" class="btn-mini" title="Supprimer">
+            <button onclick="deleteFromPlaylist('${mode}', ${preset.id})" class="btn-mini" title="${t('common.delete')}">
               🗑️
             </button>
             <button class="preset-tooltip-eye" data-preset-id="${preset.id}"
@@ -386,23 +386,23 @@ function addToPlaylist(mode) {
   
   // Validation: refuse infinite durations
   if (mode === 'oscillation' && config.cycleCount === 0) {
-    showNotification('❌ Impossible d\'ajouter: cycles infinis non supportés dans la playlist', 'error', 5000);
+    showNotification('❌ ' + t('playlist.infiniteCycles'), 'error', 5000);
     return;
   }
   if (mode === 'chaos' && config.durationSeconds === 0) {
-    showNotification('❌ Impossible d\'ajouter: durée infinie non supportée dans la playlist', 'error', 5000);
+    showNotification('❌ ' + t('playlist.infiniteDuration'), 'error', 5000);
     return;
   }
   
   // Check limit
   if (PlaylistState[mode].length >= 20) {
-    showNotification('❌ Limite atteinte: maximum 20 presets par mode', 'error', 4000);
+    showNotification('❌ ' + t('playlist.limitReached'), 'error', 4000);
     return;
   }
   
   // Generate default name
   const defaultName = generatePresetName(mode, config);
-  const name = prompt('Nom du preset:', defaultName);
+  const name = prompt(t('playlist.promptName'), defaultName);
   if (!name) return;
   
   // Send to backend
@@ -413,7 +413,7 @@ function addToPlaylist(mode) {
   })
   .then(data => {
     if (data.success) {
-      showNotification('✅ Preset ajouté à la playlist', 'success', 3000);
+      showNotification('✅ ' + t('playlist.addedToPlaylist'), 'success', 3000);
       console.log('✅ Preset added, reloading playlists...');
       // Reload playlists, then refresh modal display
       loadPlaylists(() => {
@@ -421,11 +421,11 @@ function addToPlaylist(mode) {
         refreshPlaylistPresets(mode);
       });
     } else {
-      showNotification('❌ Erreur: ' + (data.error || 'Unknown'), 'error');
+      showNotification('❌ ' + t('common.error') + ': ' + (data.error || 'Unknown'), 'error');
     }
   })
   .catch(error => {
-    showNotification('❌ Erreur réseau: ' + error, 'error');
+    showNotification('❌ ' + t('playlist.networkError', {msg: error}), 'error');
   });
 }
 
@@ -433,10 +433,10 @@ function addToPlaylist(mode) {
  * Delete preset from playlist
  */
 async function deleteFromPlaylist(mode, id) {
-  const confirmed = await showConfirm('Supprimer ce preset de la playlist ?', {
-    title: 'Supprimer Preset',
+  const confirmed = await showConfirm(t('playlist.deleteConfirm'), {
+    title: t('playlist.deleteTitle'),
     type: 'danger',
-    confirmText: '🗑️ Supprimer',
+    confirmText: '🗑️ ' + t('common.delete'),
     dangerous: true
   });
   
@@ -448,15 +448,15 @@ async function deleteFromPlaylist(mode, id) {
   })
   .then(data => {
     if (data.success) {
-      showNotification('✅ Preset supprimé', 'success', 2000);
+      showNotification('✅ ' + t('playlist.presetDeleted'), 'success', 2000);
       // Reload playlists, then refresh modal display
       loadPlaylists(() => refreshPlaylistPresets(mode));
     } else {
-      showNotification('❌ Erreur: ' + (data.error || 'Unknown'), 'error');
+      showNotification('❌ ' + t('common.error') + ': ' + (data.error || 'Unknown'), 'error');
     }
   })
   .catch(error => {
-    showNotification('❌ Erreur réseau: ' + error, 'error');
+    showNotification('❌ ' + t('playlist.networkError', {msg: error}), 'error');
   });
 }
 /**
@@ -466,7 +466,7 @@ function renamePlaylistPreset(mode, id) {
   const preset = PlaylistState[mode].find(p => p.id === id);
   if (!preset) return;
   
-  const newName = prompt('Nouveau nom:', preset.name);
+  const newName = prompt(t('playlist.promptRename'), preset.name);
   if (!newName || newName === preset.name) return;
   
   postWithRetry('/api/playlists/update', {
@@ -476,15 +476,15 @@ function renamePlaylistPreset(mode, id) {
   })
   .then(data => {
     if (data.success) {
-      showNotification('✅ Preset renommé', 'success', 2000);
+      showNotification('✅ ' + t('playlist.presetRenamed'), 'success', 2000);
       // Reload playlists, then refresh modal display
       loadPlaylists(() => refreshPlaylistPresets(mode));
     } else {
-      showNotification('❌ Erreur: ' + (data.error || 'Unknown'), 'error');
+      showNotification('❌ ' + t('common.error') + ': ' + (data.error || 'Unknown'), 'error');
     }
   })
   .catch(error => {
-    showNotification('❌ Erreur réseau: ' + error, 'error');
+    showNotification('❌ ' + t('playlist.networkError', {msg: error}), 'error');
   });
 }
 
@@ -515,7 +515,7 @@ function loadPresetInMode(mode, id) {
   }
   
   closePlaylistModal();
-  showNotification('✅ Preset chargé dans le mode ' + mode, 'info', 2000);
+  showNotification('✅ ' + t('playlist.presetLoaded', {mode: mode}), 'info', 2000);
 }
 
 /**
@@ -631,7 +631,7 @@ function loadSimplePreset(config) {
       const chevron = zoneEffectSection.querySelector('.collapse-icon');
       if (chevron) chevron.textContent = '▼';
     }
-    zoneEffectHeaderText.textContent = '🎯 Effets de Zone - activés';
+    zoneEffectHeaderText.textContent = '🎯 ' + t('simple.zoneEffectsEnabled').replace('🎯 ', '');
   }
   
   // Load cycle pause parameters
@@ -683,7 +683,7 @@ function loadSimplePreset(config) {
         const chevron = pauseSection.querySelector('.collapse-icon');
         if (chevron) chevron.textContent = '▼';
       }
-      pauseHeaderText.textContent = '⏸️ Pause entre cycles - activée';
+      pauseHeaderText.textContent = t('simple.cyclePauseEnabled');
     }
   }
   
@@ -789,7 +789,7 @@ function loadOscillationPreset(config) {
         const chevron = pauseSection.querySelector('.collapse-icon');
         if (chevron) chevron.textContent = '▼';
       }
-      pauseHeaderText.textContent = '⏸️ Pause entre cycles - activée';
+      pauseHeaderText.textContent = t('oscillation.cyclePauseEnabled');
     }
   }
   
@@ -866,7 +866,7 @@ function loadChaosPreset(config) {
 function quickAddToSequencer(mode, presetId) {
   const preset = PlaylistState[mode].find(p => p.id === presetId);
   if (!preset) {
-    showNotification('❌ Preset introuvable', 'error', 2000);
+    showNotification('❌ ' + t('playlist.presetNotFound'), 'error', 2000);
     return;
   }
   
@@ -949,14 +949,14 @@ function quickAddToSequencer(mode, presetId) {
   if (typeof validateSequencerLine === 'function') {
     const errors = validateSequencerLine(newLine, newLine.movementType);
     if (errors.length > 0) {
-      showNotification('❌ Preset invalide pour séquenceur:\n' + errors.join('\n'), 'error', 5000);
+      showNotification('❌ ' + t('playlist.invalidPreset') + '\n' + errors.join('\n'), 'error', 5000);
       return;
     }
   }
   
   // Send to backend
   sendCommand(WS_CMD.ADD_SEQUENCE_LINE, newLine);
-  showNotification('✅ Ligne ajoutée au séquenceur: ' + preset.name, 'success', 3000);
+  showNotification('✅ ' + t('playlist.lineAddedToSeq') + ' ' + preset.name, 'success', 3000);
   
   console.log('✅ Quick Add to sequencer:', preset.name, newLine);
 }
@@ -970,13 +970,13 @@ function loadPresetIntoSequencerModal(mode) {
   const presetId = parseInt(select.value);
   
   if (!presetId) {
-    showNotification('⚠️ Veuillez sélectionner un preset', 'error', 2000);
+    showNotification('⚠️ ' + t('playlist.selectPreset'), 'error', 2000);
     return;
   }
   
   const preset = PlaylistState[mode].find(p => p.id === presetId);
   if (!preset) {
-    showNotification('❌ Preset introuvable', 'error', 2000);
+    showNotification('❌ ' + t('playlist.presetNotFound'), 'error', 2000);
     return;
   }
   
@@ -1053,7 +1053,7 @@ function loadPresetIntoSequencerModal(mode) {
     validateEditForm();
   }
   
-  showNotification('✅ Valeurs chargées depuis: ' + preset.name, 'success', 2000);
+  showNotification('✅ ' + t('playlist.valuesLoaded') + ' ' + preset.name, 'success', 2000);
 }
 
 // ============================================================================

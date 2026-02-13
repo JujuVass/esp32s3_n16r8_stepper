@@ -17,10 +17,10 @@
   <div class="overlay" id="calibrationOverlay">
     <div class="overlay-content">
       <div class="overlay-icon">🔍</div>
-      <div class="overlay-title">Calibration en cours...</div>
-      <div class="overlay-message">Veuillez patienter pendant la recherche des limites</div>
+      <div class="overlay-title" data-i18n="overlay.calibrationTitle">Calibration en cours...</div>
+      <div class="overlay-message" data-i18n="overlay.calibrationMsg">Veuillez patienter pendant la recherche des limites</div>
       <div class="spinner"></div>
-      <div style="color: #999; font-size: 14px; margin-top: 15px;">
+      <div style="color: #999; font-size: 14px; margin-top: 15px;" data-i18n="overlay.calibrationWarn">
         Ne pas interrompre le processus
       </div>
     </div>
@@ -30,10 +30,10 @@
   <div class="overlay" id="rebootOverlay">
     <div class="overlay-content">
       <div class="overlay-icon">🔄</div>
-      <div class="overlay-title">Redémarrage en cours...</div>
-      <div class="overlay-message" id="rebootMessage">Reconnexion automatique dans quelques secondes</div>
+      <div class="overlay-title" data-i18n="overlay.rebootTitle">Redémarrage en cours...</div>
+      <div class="overlay-message" id="rebootMessage" data-i18n="overlay.rebootMsg">Reconnexion automatique dans quelques secondes</div>
       <div class="spinner"></div>
-      <div id="rebootStatus" style="color: #999; font-size: 14px; margin-top: 15px;">
+      <div id="rebootStatus" style="color: #999; font-size: 14px; margin-top: 15px;" data-i18n="overlay.rebootWait">
         Veuillez patienter (~10-15 secondes)
       </div>
     </div>
@@ -42,31 +42,31 @@
   <!-- Playlist Management Modal -->
   <div class="modal" id="playlistModal" onclick="closePlaylistModalOnOverlayClick(event)">
     <div class="modal-content" style="max-width: 650px; max-height: 85vh; display: flex; flex-direction: column;" onclick="event.stopPropagation()">
-      <div class="modal-title">📋 Playlist - <span id="playlistModalTitle">Mode</span></div>
+      <div class="modal-title">📋 <span data-i18n="playlist.title">Playlist -</span> <span id="playlistModalTitle">Mode</span></div>
       
       <!-- Sticky Current Config Preview -->
       <div id="playlistCurrentConfig" style="background: #E3F2FD; padding: 12px; border-radius: 6px; margin-bottom: 12px; flex-shrink: 0;">
-        <div style="font-weight: 500; margin-bottom: 8px; font-size: 13px;">⚙️ Configuration actuelle:</div>
+        <div style="font-weight: 500; margin-bottom: 8px; font-size: 13px;">⚙️ <span data-i18n="playlist.currentConfig">Configuration actuelle:</span></div>
         <div id="playlistCurrentConfigContent" style="font-size: 12px; color: #555;"></div>
         <button class="button btn-success" id="btnAddCurrentToPlaylist" style="margin-top: 8px; width: 100%; padding: 8px; font-size: 13px;">
-          ➕ Ajouter à la playlist
+          ➕ <span data-i18n="playlist.addToPlaylist">Ajouter à la playlist</span>
         </button>
       </div>
       
       <!-- Presets List with Scroll -->
       <div style="flex: 1; overflow-y: auto; overflow-x: visible; border-top: 2px solid #ddd; padding-top: 12px; min-height: 0;">
         <div style="font-weight: 500; margin-bottom: 10px; font-size: 13px; padding: 0 5px;">
-          📦 Presets sauvegardés (<span id="playlistCount">0</span>/20):
+          📦 <span data-i18n="playlist.savedPresets">Presets sauvegardés</span> (<span id="playlistCount">0</span>/20):
         </div>
         
         <!-- Search Input -->
-        <input type="text" id="playlistSearchInput" placeholder="🔍 Rechercher un preset..." 
+        <input type="text" id="playlistSearchInput" placeholder="🔍 Rechercher un preset..." data-i18n-placeholder="playlist.searchPlaceholder" 
                oninput="filterPlaylistPresets(this.value)"
                style="width: 90%; margin: 0 0 10px 0; padding: 8px; border: 2px solid #ddd; border-radius: 6px; font-size: 12px;">
         
         <div id="playlistPresetsList" style="padding-right: 5px; overflow: visible;">
           <!-- Presets will be dynamically inserted here -->
-          <div style="color: #999; font-style: italic; padding: 20px; text-align: center; font-size: 12px;">
+          <div style="color: #999; font-style: italic; padding: 20px; text-align: center; font-size: 12px;" data-i18n="playlist.noPresets">
             Aucun preset sauvegardé
           </div>
         </div>
@@ -75,7 +75,7 @@
       <!-- Sticky Close Button -->
       <div style="border-top: 2px solid #ddd; padding: 12px 0 0 0; margin-top: 12px; background: white; flex-shrink: 0;">
         <button class="button btn-secondary" onclick="closePlaylistModal()" style="width: 100%; padding: 10px; font-size: 14px;">
-          ✖️ Fermer
+          ✖️ <span data-i18n="common.close">Fermer</span>
         </button>
       </div>
     </div>
@@ -87,7 +87,7 @@
   <!-- Mode Change Confirmation Modal -->
   <div class="modal" id="modeChangeModal">
     <div class="modal-content">
-      <div class="modal-title">⚠️ Changement de mode</div>
+      <div class="modal-title">⚠️ <span data-i18n="modal.modeChangeTitle">Changement de mode</span></div>
       <div class="modal-message" id="modalMessage">
         Une opération est en cours. Le changement de mode va arrêter le mouvement et lancer une recalibration.
         <br><br>
@@ -96,15 +96,15 @@
       <div style="margin: 20px 0; padding: 15px; background: #FFF3E0; border-radius: 5px; border: 2px solid #FF9800;">
         <label style="display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: normal;">
           <input type="checkbox" id="bypassCalibrationCheckbox" checked style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;">
-          <span style="color: #FF9800; font-weight: bold;">/!\ Bypasser la calibration complète</span>
+          <span style="color: #FF9800; font-weight: bold;" data-i18n="modal.bypassCalibration">/!\ Bypasser la calibration complète</span>
         </label>
-        <div style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;">
+        <div style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;" data-i18n="modal.bypassCalibrationInfo">
           (Retour rapide au contact début uniquement)
         </div>
       </div>
       <div class="modal-buttons">
-        <button class="button btn-danger" onclick="cancelModeChange()">Annuler</button>
-        <button class="button btn-success" onclick="confirmModeChange()">Confirmer</button>
+        <button class="button btn-danger" onclick="cancelModeChange()" data-i18n="common.cancel">Annuler</button>
+        <button class="button btn-success" onclick="confirmModeChange()" data-i18n="common.confirm">Confirmer</button>
       </div>
     </div>
   </div>
@@ -112,22 +112,22 @@
   <!-- Stop Confirmation Modal -->
   <div class="modal" id="stopModal">
     <div class="modal-content">
-      <div class="modal-title">⏹️ Arrêter le mouvement</div>
-      <div class="modal-message">
+      <div class="modal-title">⏹️ <span data-i18n="modal.stopTitle">Arrêter le mouvement</span></div>
+      <div class="modal-message" data-i18n="modal.stopMessage">
         Voulez-vous arrêter le mouvement en cours ?
       </div>
       <div style="margin: 20px 0; padding: 15px; background: #E3F2FD; border-radius: 5px; border: 2px solid #2196F3;">
         <label style="display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: normal;">
           <input type="checkbox" id="returnToStartCheckbox" checked style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;">
-          <span style="color: #2196F3; font-weight: bold;">🏠 Retour à la position initiale (0mm)</span>
+          <span style="color: #2196F3; font-weight: bold;">🏠 <span data-i18n="modal.returnToStart">Retour à la position initiale (0mm)</span></span>
         </label>
-        <div style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;">
+        <div style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;" data-i18n="modal.returnToStartDisable">
           (Désactiver pour rester à la position actuelle)
         </div>
       </div>
       <div class="modal-buttons">
-        <button class="button btn-secondary" onclick="cancelStopModal()">Annuler</button>
-        <button class="button btn-danger" onclick="confirmStopModal()">⏹️ Arrêter</button>
+        <button class="button btn-secondary" onclick="cancelStopModal()" data-i18n="common.cancel">Annuler</button>
+        <button class="button btn-danger" onclick="confirmStopModal()">⏹️ <span data-i18n="common.stop">Arrêter</span></button>
       </div>
     </div>
   </div>
@@ -135,43 +135,43 @@
   <!-- Modal for Sequencer Limit Warning -->
   <div class="modal" id="sequencerLimitModal">
     <div class="modal-content">
-      <div class="modal-title">⚠️ Passage en Mode Séquenceur</div>
+      <div class="modal-title">⚠️ <span data-i18n="modal.seqLimitTitle">Passage en Mode Séquenceur</span></div>
       <div class="modal-message">
         <div style="background: #E3F2FD; padding: 15px; border-radius: 8px; border-left: 4px solid #2196F3; margin-bottom: 15px;">
-          <div style="font-weight: bold; color: #1976D2; margin-bottom: 8px;">📋 Mode Expert Activé</div>
-          <div style="font-size: 14px; color: #555;">
+          <div style="font-weight: bold; color: #1976D2; margin-bottom: 8px;">📋 <span data-i18n="modal.seqLimitExpertMode">Mode Expert Activé</span></div>
+          <div style="font-size: 14px; color: #555;" data-i18n-html="modal.seqLimitActiveWillDisable">
             La limitation de course active sera <strong>DÉSACTIVÉE</strong> :
           </div>
         </div>
         
         <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px; margin: 15px 0; padding: 15px; background: #FFF3E0; border-radius: 8px;">
-          <div style="font-weight: bold; color: #FF9800;">• Actuel :</div>
+          <div style="font-weight: bold; color: #FF9800;">• <span data-i18n="modal.seqLimitCurrent">Actuel :</span></div>
           <div id="seqModalCurrentLimit" style="color: #FF9800; font-weight: bold;">--</div>
-          <div style="font-weight: bold; color: #4CAF50;">• Après :</div>
+          <div style="font-weight: bold; color: #4CAF50;">• <span data-i18n="modal.seqLimitAfter">Après :</span></div>
           <div id="seqModalAfterLimit" style="color: #4CAF50; font-weight: bold;">--</div>
         </div>
         
         <div style="background: #F5F5F5; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
-          <div style="font-weight: bold; margin-bottom: 8px;">🔧 Raison :</div>
-          <div style="font-size: 13px; color: #666; line-height: 1.5;">
+          <div style="font-weight: bold; margin-bottom: 8px;">🔧 <span data-i18n="modal.seqLimitReason">Raison :</span></div>
+          <div style="font-size: 13px; color: #666; line-height: 1.5;" data-i18n="modal.seqLimitReasonText">
             Le séquenceur peut contenir des lignes de calibration qui réinitialisent cette limite.
           </div>
         </div>
         
         <div style="background: #E8F5E9; padding: 12px; border-radius: 8px; border-left: 4px solid #4CAF50;">
-          <div style="font-weight: bold; color: #2E7D32; margin-bottom: 5px;">💡 En mode séquenceur :</div>
-          <div style="font-size: 13px; color: #555;">
+          <div style="font-weight: bold; color: #2E7D32; margin-bottom: 5px;">💡 <span data-i18n="modal.seqLimitInSeqMode">En mode séquenceur :</span></div>
+          <div style="font-size: 13px; color: #555;" data-i18n-html="modal.seqLimitFullControl">
             Vous avez le <strong>contrôle total</strong> des valeurs de chaque ligne.
           </div>
         </div>
         
-        <div style="margin-top: 20px; text-align: center; font-weight: bold; color: #333;">
+        <div style="margin-top: 20px; text-align: center; font-weight: bold; color: #333;" data-i18n="modal.seqLimitContinue">
           Continuer ?
         </div>
       </div>
       <div class="modal-buttons">
-        <button class="button btn-danger" onclick="cancelSequencerLimitChange()">Annuler</button>
-        <button class="button btn-success" onclick="confirmSequencerLimitChange()">Confirmer</button>
+        <button class="button btn-danger" onclick="cancelSequencerLimitChange()" data-i18n="common.cancel">Annuler</button>
+        <button class="button btn-success" onclick="confirmSequencerLimitChange()" data-i18n="common.confirm">Confirmer</button>
       </div>
     </div>
   </div>
@@ -181,7 +181,7 @@
     <div class="modal-content" style="max-width: 420px;">
       <div class="modal-title">
         <span id="unifiedAlertIcon" style="margin-right: 8px;">ℹ️</span>
-        <span id="unifiedAlertTitle">Information</span>
+        <span id="unifiedAlertTitle" data-i18n="common.info">Information</span>
       </div>
       <div class="modal-message" id="unifiedAlertMessage" style="padding: 15px 0; line-height: 1.6;">
         Message
@@ -197,14 +197,14 @@
     <div class="modal-content" style="max-width: 450px;">
       <div class="modal-title">
         <span id="unifiedConfirmIcon" style="margin-right: 8px;">⚠️</span>
-        <span id="unifiedConfirmTitle">Confirmation</span>
+        <span id="unifiedConfirmTitle" data-i18n="common.confirmation">Confirmation</span>
       </div>
       <div class="modal-message" id="unifiedConfirmMessage" style="padding: 15px 0; line-height: 1.6;">
         Message
       </div>
       <div class="modal-buttons">
-        <button class="button btn-secondary" id="unifiedConfirmCancelBtn" onclick="closeConfirmModal(false)">Annuler</button>
-        <button class="button btn-success" id="unifiedConfirmOkBtn" onclick="closeConfirmModal(true)">Confirmer</button>
+        <button class="button btn-secondary" id="unifiedConfirmCancelBtn" onclick="closeConfirmModal(false)" data-i18n="common.cancel">Annuler</button>
+        <button class="button btn-success" id="unifiedConfirmOkBtn" onclick="closeConfirmModal(true)" data-i18n="common.confirm">Confirmer</button>
       </div>
     </div>
   </div>
@@ -212,30 +212,30 @@
   <!-- WiFi Configuration Modal -->
   <div class="modal" id="wifiConfigModal">
     <div class="modal-content" style="max-width: 450px;">
-      <div class="modal-title">📶 Configuration WiFi</div>
+      <div class="modal-title">📶 <span data-i18n="wifi.configTitle">Configuration WiFi</span></div>
       
       <div style="padding: 15px 0;">
         <!-- Current EEPROM Config Display -->
         <div id="wifiCurrentConfig" style="background: #E3F2FD; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #2196F3;">
-          <div style="font-weight: 500; margin-bottom: 6px; font-size: 13px;">📦 Configuration actuelle en EEPROM:</div>
-          <div id="wifiCurrentSsid" style="font-size: 12px; color: #555; font-family: monospace;">Chargement...</div>
+          <div style="font-weight: 500; margin-bottom: 6px; font-size: 13px;">📦 <span data-i18n="wifi.currentEepromConfig">Configuration actuelle en EEPROM:</span></div>
+          <div id="wifiCurrentSsid" style="font-size: 12px; color: #555; font-family: monospace;" data-i18n="common.loading">Chargement...</div>
         </div>
         
         <!-- Edit Form -->
         <div style="background: #f5f5f5; padding: 15px; border-radius: 6px;">
           <div style="margin-bottom: 12px;">
-            <label style="display: block; font-weight: 500; margin-bottom: 5px; font-size: 13px;">SSID:</label>
-            <input type="text" id="wifiEditSsid" placeholder="Nom du réseau WiFi" 
+            <label style="display: block; font-weight: 500; margin-bottom: 5px; font-size: 13px;" data-i18n="wifi.ssidLabel">SSID:</label>
+            <input type="text" id="wifiEditSsid" placeholder="Nom du réseau WiFi" data-i18n-placeholder="wifi.ssidPlaceholder" 
                    style="width: 100%; padding: 8px; border: 2px solid #ddd; border-radius: 4px; font-size: 13px; font-family: monospace;">
           </div>
           
           <div style="margin-bottom: 12px;">
-            <label style="display: block; font-weight: 500; margin-bottom: 5px; font-size: 13px;">Mot de passe:</label>
-            <input type="password" id="wifiEditPassword" placeholder="Mot de passe WiFi" 
+            <label style="display: block; font-weight: 500; margin-bottom: 5px; font-size: 13px;" data-i18n="wifi.passwordLabel">Mot de passe:</label>
+            <input type="password" id="wifiEditPassword" placeholder="Mot de passe WiFi" data-i18n-placeholder="wifi.passwordPlaceholder" 
                    style="width: 100%; padding: 8px; border: 2px solid #ddd; border-radius: 4px; font-size: 13px; font-family: monospace;">
             <label style="display: flex; align-items: center; margin-top: 5px; cursor: pointer; font-size: 12px; color: #666;">
               <input type="checkbox" id="wifiShowPassword" style="margin-right: 5px;">
-              Afficher le mot de passe
+              <span data-i18n="wifi.showPassword">Afficher le mot de passe</span>
             </label>
           </div>
           
@@ -244,8 +244,8 @@
       </div>
       
       <div class="modal-buttons">
-        <button class="button btn-secondary" onclick="closeWifiConfigModal()">✖️ Annuler</button>
-        <button class="button btn-success" id="btnSaveWifiConfig">💾 Enregistrer</button>
+        <button class="button btn-secondary" onclick="closeWifiConfigModal()">✖️ <span data-i18n="common.cancel">Annuler</span></button>
+        <button class="button btn-success" id="btnSaveWifiConfig">💾 <span data-i18n="common.save">Enregistrer</span></button>
       </div>
     </div>
   </div>
@@ -257,49 +257,50 @@
       <!-- Header Row: État + Actions -->
       <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 15px; background:#E3F2FD; border-bottom:1px solid #BBDEFB;">
         <span style="font-weight:bold; font-size:15px; color:#1976D2;">
-          État: <span id="state" style="color:#333;">Initialisation...</span>
+          <span data-i18n="status.stateLabel">État:</span> <span id="state" style="color:#333;" data-i18n="status.init">Initialisation...</span>
         </span>
         <div style="display:flex; gap:6px;">
-          <button class="btn-compact btn-primary" id="btnCalibrateCommon" title="Calibrer les limites">🔍 Calib</button>
-          <button class="btn-compact btn-info" id="btnShowLogs" title="Afficher logs">📋 Logs</button>
+          <button class="btn-compact" id="btnLangToggle" onclick="I18n.toggleLanguage()" title="Switch to English" style="background: transparent; border: 1px solid #BBDEFB; font-size: 18px; padding: 4px 8px; cursor: pointer; border-radius: 4px;">🇫🇷</button>
+          <button class="btn-compact btn-primary" id="btnCalibrateCommon" title="Calibrer les limites">🔍 <span data-i18n="status.calib">Calib</span></button>
+          <button class="btn-compact btn-info" id="btnShowLogs" title="Afficher logs">📋 <span data-i18n="status.logs">Logs</span></button>
           
-          <button class="btn-compact btn-success" id="btnShowStats" title="Afficher statistiques">📊 Stats</button>
-          <button class="btn-compact" id="btnShowSystem" title="Afficher statistiques système" style="background: #2196F3; color: white;">⚙️ Sys</button>
+          <button class="btn-compact btn-success" id="btnShowStats" title="Afficher statistiques">📊 <span data-i18n="status.stats">Stats</span></button>
+          <button class="btn-compact" id="btnShowSystem" title="Afficher statistiques système" style="background: #2196F3; color: white;">⚙️ <span data-i18n="status.sys">Sys</span></button>
         </div>
       </div>
       
       <!-- Row 2: Position + Course -->
       <div style="padding:6px 15px; font-size:13px; border-bottom:1px solid #f0f0f0;">
-        📍 <strong>Position:</strong> <span id="position">0.0 mm (0 steps)</span>
+        📍 <strong data-i18n="status.position">Position:</strong> <span id="position">0.0 mm (0 steps)</span>
         &nbsp;&nbsp;•&nbsp;&nbsp;
-        <strong>Course:</strong> <span id="sensorsInvertedIcon" title="Capteurs inversés (START↔END)" style="display:none; cursor:help;">🔄</span> <span id="totalDist">-- mm</span>
-        <button id="btnConfigMaxDist" class="btn-icon" title="Limiter course" style="padding:2px 6px; font-size:13px; background:transparent; border:1px solid #ddd; border-radius:3px; cursor:pointer; margin-left:4px;">⚙️</button>
+        <strong data-i18n="status.course">Course:</strong> <span id="sensorsInvertedIcon" title="Capteurs inversés (START↔END)" data-i18n-title="status.sensorsInverted" style="display:none; cursor:help;">🔄</span> <span id="totalDist">-- mm</span>
+        <button id="btnConfigMaxDist" class="btn-icon" title="Limiter course" data-i18n-title="status.limitCourse" style="padding:2px 6px; font-size:13px; background:transparent; border:1px solid #ddd; border-radius:3px; cursor:pointer; margin-left:4px;">⚙️</button>
       </div>
       
       <!-- Max Distance Config Panel (collapsible) -->
       <div id="maxDistConfigPanel" style="display:none; padding:10px 15px; background:#FFF3E0; border-bottom:1px solid #FFE0B2;">
-        <div style="font-weight:bold; color:#FF9800; margin-bottom:6px; font-size:12px;">⚙️ Limitation de course</div>
+        <div style="font-weight:bold; color:#FF9800; margin-bottom:6px; font-size:12px;">⚙️ <span data-i18n="status.courseLimitation">Limitation de course</span></div>
         <div style="font-size:11px; color:#666; margin-bottom:8px;">
-          ℹ️ Limite la zone utilisable sans recalibrer
+          ℹ️ <span data-i18n="status.courseLimitInfo">Limite la zone utilisable sans recalibrer</span>
         </div>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-          <span style="font-size:11px; font-weight:bold; min-width:45px;">Limite:</span>
+          <span style="font-size:11px; font-weight:bold; min-width:45px;" data-i18n="status.limit">Limite:</span>
           <input type="range" id="maxDistLimitSlider" min="50" max="100" value="100" step="1" style="flex:1; height:6px;" disabled>
           <span id="maxDistLimitValue" style="font-weight:bold; font-size:12px; min-width:40px;">100%</span>
           <span id="maxDistLimitMM" style="color:#666; font-size:11px; min-width:70px;">(-- mm)</span>
         </div>
         <div style="display:flex; gap:6px;">
           <button id="btnApplyMaxDistLimit" class="btn-compact btn-success" disabled>✅ OK</button>
-          <button id="btnCancelMaxDistLimit" class="btn-compact btn-secondary">✕ Annuler</button>
+          <button id="btnCancelMaxDistLimit" class="btn-compact btn-secondary">✕ <span data-i18n="common.cancel">Annuler</span></button>
         </div>
-        <div style="font-size:10px; color:#d32f2f; margin-top:6px; display:none;" id="maxDistLimitWarning">
+        <div style="font-size:10px; color:#d32f2f; margin-top:6px; display:none;" id="maxDistLimitWarning" data-i18n="status.modifyReadyOnly">
           ⚠️ Modification en état PRÊT uniquement
         </div>
         <!-- Sensors Inversion Option -->
         <div style="display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:8px; border-top:1px dashed #FFE0B2;">
           <label style="font-size:11px; display:flex; align-items:center; gap:6px; cursor:pointer;">
             <input type="checkbox" id="chkSensorsInverted" style="width:16px; height:16px;">
-            <span>🔄 Inverser START ↔ END</span>
+            <span>🔄 <span data-i18n="status.invertStartEnd">Inverser START ↔ END</span></span>
           </label>
           <span id="sensorsInvertedStatus" style="font-size:10px; color:#666;">(Normal)</span>
         </div>
@@ -307,7 +308,7 @@
       
       <!-- Row 3: Vitesses -->
       <div style="padding:6px 15px; font-size:13px; border-bottom:1px solid #f0f0f0;">
-        ⚡ <strong>Vitesse:</strong> <span id="currentSpeed">↗️ --  •  ↙️ --</span>
+        ⚡ <strong data-i18n="status.speed">Vitesse:</strong> <span id="currentSpeed">↗️ --  •  ↙️ --</span>
         <span style="color:#999; font-size:11px; margin-left:8px;">(-- c/min)</span>
         <span style="margin-left:12px; font-size:16px; cursor:help;" id="speedIcon" title="">⏸️</span>
         <span id="realSpeed" style="font-size:12px; color:#555; margin-left:4px;">0 cm/s</span>
@@ -316,7 +317,7 @@
       <!-- Row 4: Distance + Progress Bar (colonnes fixes) -->
       <div style="padding:6px 15px; font-size:13px; display:grid; grid-template-columns: 280px 1fr 50px; gap:10px; align-items:center; border-bottom:1px solid #f0f0f0;">
         <div style="white-space:nowrap;">
-          📊 <strong>Distance:</strong> <span id="statsRecordingWarning" style="display: none; color: #FF9800; cursor: help; margin-left: 4px;" title="⚠️ Enregistrement des stats désactivé">⚠️</span> <span id="milestoneIcon" style="font-size: 20px; margin-left: 8px; cursor: help; display: inline-block; transition: transform 0.3s;" title=""></span> <span id="totalTraveled">0.000 m</span> <button class="btn-icon" id="btnResetDistanceCommon" title="Réinitialiser distance" style="padding:2px 6px; font-size:13px; background:transparent; border:1px solid #ddd; border-radius:3px; cursor:pointer; margin-left:4px;">↻</button>
+          📊 <strong data-i18n="status.distanceLabel">Distance:</strong> <span id="statsRecordingWarning" style="display: none; color: #FF9800; cursor: help; margin-left: 4px;" title="⚠️ Enregistrement des stats désactivé" data-i18n-title="stats.recordingDisabledWarning">⚠️</span> <span id="milestoneIcon" style="font-size: 20px; margin-left: 8px; cursor: help; display: inline-block; transition: transform 0.3s;" title=""></span> <span id="totalTraveled">0.000 m</span> <button class="btn-icon" id="btnResetDistanceCommon" title="Réinitialiser distance" data-i18n-title="status.resetDistance" style="padding:2px 6px; font-size:13px; background:transparent; border:1px solid #ddd; border-radius:3px; cursor:pointer; margin-left:4px;">↻</button>
           
         </div>
         <div style="height:8px; background:#e0e0e0; border-radius:4px; overflow:hidden;">
@@ -327,7 +328,7 @@
       
       <!-- Pending Changes Alert (conditional) -->
       <div id="pendingChanges" style="display:none; padding:6px 15px; background:#FFF3E0; color:#FF9800; font-weight:bold; font-size:12px; border-bottom:1px solid #FFE0B2;">
-        ⏳ Changements en attente (fin de cycle)
+        ⏳ <span data-i18n="status.pendingChanges">Changements en attente (fin de cycle)</span>
       </div>
       
     </div>
@@ -342,7 +343,7 @@
       <!-- Log Console -->
       <div class="mb-12">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <label style="font-weight: bold; color: #333; font-size: 13px;">Console temps réel:</label>
+          <label style="font-weight: bold; color: #333; font-size: 13px;" data-i18n="system.realTimeConsole">Console temps réel:</label>
           <div style="display: flex; gap: 6px;">
             <button class="button btn-secondary" id="btnClearLogsPanel" style="padding: 4px 10px; font-size: 11px;">🗑️ Effacer</button>
           </div>
@@ -352,24 +353,24 @@
 
       <!-- Debug Controls -->
       <div style="background: #f5f5f5; padding: 10px; border-radius: 6px; margin-bottom: 12px;">
-        <label style="font-weight: bold; color: #333; display: block; margin-bottom: 8px; font-size: 13px;">⚙️ Niveau de debug:</label>
+        <label style="font-weight: bold; color: #333; display: block; margin-bottom: 8px; font-size: 13px;">⚙️ <span data-i18n="system.debugLevel">Niveau de debug:</span></label>
         <div style="display: flex; gap: 8px; align-items: center;">
           <label style="display: flex; align-items: center; cursor: pointer;">
             <input type="checkbox" id="debugLevelCheckbox" style="width: 16px; height: 16px; margin-right: 6px;">
-            <span class="text-md">Activer logs DEBUG (verbose)</span>
+            <span class="text-md" data-i18n="system.enableDebugVerbose">Activer logs DEBUG (verbose)</span>
           </label>
-          <span style="color: #666; font-size: 11px; margin-left: auto;">⚠️ Peut ralentir</span>
+          <span style="color: #666; font-size: 11px; margin-left: auto;">⚠️ <span data-i18n="system.canSlow">Peut ralentir</span></span>
         </div>
       </div>
 
       <!-- Historical Logs -->
       <div style="background: #fff3cd; padding: 10px; border-radius: 6px; border-left: 4px solid #ffc107;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <label style="font-weight: bold; color: #856404; font-size: 13px;">📚 Historique des logs:</label>
-          <button class="button btn-danger" id="btnClearAllLogFiles" style="padding: 4px 10px; font-size: 11px;">🗑️ Nettoyer tout</button>
+          <label style="font-weight: bold; color: #856404; font-size: 13px;">📚 <span data-i18n="system.logHistory">Historique des logs:</span></label>
+          <button class="button btn-danger" id="btnClearAllLogFiles" style="padding: 4px 10px; font-size: 11px;">🗑️ <span data-i18n="system.clearAll">Nettoyer tout</span></button>
         </div>
         <div id="logFilesList" style="max-height: 130px; overflow-y: auto; background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
-          <div style="color: #999; font-style: italic; font-size: 11px;">Chargement de la liste...</div>
+          <div style="color: #999; font-style: italic; font-size: 11px;" data-i18n="system.listLoading">Chargement de la liste...</div>
         </div>
       </div>
     </div>
@@ -378,7 +379,7 @@
     <div id="statsPanel" style="display: none; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #4CAF50; padding-bottom: 8px;">
         <h3 style="margin: 0; color: #4CAF50; font-size: 18px;">
-          📊 Statistiques
+          📊 <span data-i18n="stats.title">Statistiques</span>
         </h3>
         <button id="btnCloseStats" style="background: #f44336; color: white; border: none; padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 14px;">✕</button>
       </div>
@@ -388,15 +389,15 @@
         <table id="statsTable" style="width: 100%; border-collapse: collapse; font-size: 13px;">
           <thead style="position: sticky; top: 0; background: #f5f5f5; z-index: 1;">
             <tr style="border-bottom: 2px solid #4CAF50;">
-              <th style="padding: 8px; text-align: left; font-weight: bold;">Date</th>
-              <th style="padding: 8px; text-align: center; font-weight: bold;">Jour</th>
+              <th style="padding: 8px; text-align: left; font-weight: bold;" data-i18n="stats.dateCol">Date</th>
+              <th style="padding: 8px; text-align: center; font-weight: bold;" data-i18n="stats.dayCol">Jour</th>
               <th style="padding: 8px; text-align: center; font-weight: bold;">🏆</th>
-              <th style="padding: 8px; text-align: right; font-weight: bold;">Distance</th>
+              <th style="padding: 8px; text-align: right; font-weight: bold;" data-i18n="stats.distanceCol">Distance</th>
             </tr>
           </thead>
           <tbody id="statsTableBody">
             <tr>
-              <td colspan="4" style="padding: 20px; text-align: center; color: #999; font-style: italic;">Aucune statistique disponible</td>
+              <td colspan="4" style="padding: 20px; text-align: center; color: #999; font-style: italic;" data-i18n="stats.noStats">Aucune statistique disponible</td>
             </tr>
           </tbody>
         </table>
@@ -404,7 +405,7 @@
       
       <!-- Stats Footer (outside scroll container) -->
       <div style="background: #e8f5e9; border: 2px solid #4CAF50; border-radius: 6px; padding: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; font-weight: bold;">
-        <span>TOTAL</span>
+        <span data-i18n="stats.total">TOTAL</span>
         <span>🏆</span>
         <span id="statsTotalMilestone" style="font-size: 18px;">🎯</span>
         <span id="statsTotalDistance" style="color: #4CAF50; font-size: 15px;">0 km</span>
@@ -413,17 +414,17 @@
       <!-- Stats Action Buttons -->
       <div style="margin-bottom: 20px; text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center;">
         <button id="btnExportStats" class="button" style="padding: 8px 20px; font-size: 13px; background: #4CAF50; color: white;">
-          📥 Exporter
+          📥 <span data-i18n="stats.exportBtn">Exporter</span>
         </button>
         <button id="btnImportStats" class="button" style="padding: 8px 20px; font-size: 13px; background: #2196F3; color: white;">
-          📤 Importer
+          📤 <span data-i18n="stats.importBtn">Importer</span>
         </button>
         <button id="btnClearStats" class="button btn-danger" style="padding: 8px 20px; font-size: 13px;">
-          🗑️ Effacer tout
+          🗑️ <span data-i18n="stats.clearBtn">Effacer tout</span>
         </button>
-        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 8px 12px; background: #f5f5f5; border-radius: 5px; border: 1px solid #ddd;" title="Désactiver pour ignorer les enregistrements des stats">
+        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 8px 12px; background: #f5f5f5; border-radius: 5px; border: 1px solid #ddd;" title="Désactiver pour ignorer les enregistrements des stats" data-i18n-title="stats.disableRecordingTooltip">
           <input type="checkbox" id="statsRecordingEnabled" checked style="width: 16px; height: 16px; cursor: pointer;">
-          <span style="font-size: 12px; color: #666;">Activer sauvegarde</span>
+          <span style="font-size: 12px; color: #666;" data-i18n="stats.enableRecording">Activer sauvegarde</span>
         </label>
       </div>
       
@@ -432,7 +433,7 @@
 
       <!-- Histogram -->
       <div style="background: #f9f9f9; padding: 12px; border-radius: 6px; border: 1px solid #ddd;">
-        <h4 style="margin: 0 0 12px 0; color: #333; font-size: 14px;">📈 Historique (3 mois glissants)</h4>
+        <h4 style="margin: 0 0 12px 0; color: #333; font-size: 14px;">📈 <span data-i18n="stats.historyTitle">Historique (3 mois glissants)</span></h4>
         <canvas id="statsChart" style="max-height: 250px;"></canvas>
       </div>
     </div>
@@ -440,42 +441,42 @@
     <!-- System Stats Panel (hidden by default like Stats panel) -->
     <div id="systemPanel" style="display: none; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #2196F3; padding-bottom: 8px;">
-        <h3 style="margin: 0; color: #2196F3; font-size: 18px;">⚙️ Système</h3>
+        <h3 style="margin: 0; color: #2196F3; font-size: 18px;">⚙️ <span data-i18n="system.title">Système</span></h3>
         <button id="btnCloseSystem" style="background: #f44336; color: white; border: none; padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 14px;">✕</button>
       </div>
 
       <!-- System Stats Grid -->
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 13px;">
         <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
-          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">CPU</div>
+          <div style="color: #666; font-size: 11px; margin-bottom: 4px;" data-i18n="system.cpu">CPU</div>
           <div id="sysCpuFreq" class="value-display">-- MHz</div>
         </div>
         
         <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
-          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">🌡️ Température</div>
+          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">🌡️ <span data-i18n="system.temperature">Température</span></div>
           <div id="sysTemp" class="value-display">-- °C</div>
         </div>
         
         <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
-          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">💾 RAM</div>
+          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">💾 <span data-i18n="system.ram">RAM</span></div>
           <div id="sysRam" class="value-display">-- KB libre</div>
           <div id="sysRamPercent" style="font-size: 11px; color: #666; margin-top: 2px;">--% utilisé</div>
         </div>
         
         <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
-          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">🧠 PSRAM</div>
+          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">🧠 <span data-i18n="system.psram">PSRAM</span></div>
           <div id="sysPsram" class="value-display">-- MB libre</div>
           <div id="sysPsramPercent" style="font-size: 11px; color: #666; margin-top: 2px;">--% utilisé</div>
         </div>
         
         <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <div style="color: #666; font-size: 11px;">📶 WiFi</div>
+            <div style="color: #666; font-size: 11px;">📶 <span data-i18n="system.wifiLabel">WiFi</span></div>
             <div style="display: flex; gap: 4px;">
-              <button id="btnEditWifi" style="background: #FF9800; color: white; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Éditer la config WiFi">
+              <button id="btnEditWifi" style="background: #FF9800; color: white; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Éditer la config WiFi" data-i18n-title="wifi.editWifi">
                 ✏️
               </button>
-              <button id="btnRefreshWifi" style="background: #2196F3; color: white; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Reconnecter le WiFi">
+              <button id="btnRefreshWifi" style="background: #2196F3; color: white; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Reconnecter le WiFi" data-i18n-title="wifi.reconnectWifi">
                 🔄
               </button>
             </div>
@@ -485,7 +486,7 @@
         </div>
         
         <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
-          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">⚡ Uptime</div>
+          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">⚡ <span data-i18n="system.uptime">Uptime</span></div>
           <div id="sysUptime" class="value-display">--</div>
         </div>
       </div>
@@ -493,28 +494,28 @@
       <!-- Network Info Section -->
       <div id="networkInfoSection" style="margin-top: 15px; background: #e3f2fd; padding: 12px; border-radius: 6px; border-left: 4px solid #2196F3;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <div style="font-weight: bold; color: #1976D2; font-size: 13px;">🌐 Réseau</div>
-          <div id="sysDegradedBadge" style="display: none; background: #FF9800; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold;">⚠️ MODE DÉGRADÉ</div>
+          <div style="font-weight: bold; color: #1976D2; font-size: 13px;">🌐 <span data-i18n="wifi.network">Réseau</span></div>
+          <div id="sysDegradedBadge" style="display: none; background: #FF9800; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold;">⚠️ <span data-i18n="wifi.degradedMode">MODE DÉGRADÉ</span></div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
           <div>
-            <div style="color: #666; font-size: 10px;">IP STA (WiFi)</div>
+            <div style="color: #666; font-size: 10px;" data-i18n="wifi.ipSta">IP STA (WiFi)</div>
             <div id="sysIpSta" style="font-weight: bold; color: #333; font-family: monospace;">--</div>
           </div>
           <div>
-            <div style="color: #666; font-size: 10px;">IP AP (Point d'accès)</div>
+            <div style="color: #666; font-size: 10px;" data-i18n="wifi.ipAp">IP AP (Point d'accès)</div>
             <div id="sysIpAp" style="font-weight: bold; color: #333; font-family: monospace;">--</div>
           </div>
           <div>
-            <div style="color: #666; font-size: 10px;">Hostname (mDNS)</div>
+            <div style="color: #666; font-size: 10px;" data-i18n="wifi.hostname">Hostname (mDNS)</div>
             <div id="sysHostname" style="font-weight: bold; color: #2196F3; font-family: monospace;">--</div>
           </div>
           <div>
-            <div style="color: #666; font-size: 10px;">SSID connecté</div>
+            <div style="color: #666; font-size: 10px;" data-i18n="wifi.connectedSsid">SSID connecté</div>
             <div id="sysSsid" style="font-weight: bold; color: #333;">--</div>
           </div>
           <div style="grid-column: span 2;">
-            <div style="color: #666; font-size: 10px;">📡 Clients AP connectés</div>
+            <div style="color: #666; font-size: 10px;">📡 <span data-i18n="wifi.apClients">Clients AP connectés</span></div>
             <div id="sysApClients" style="font-weight: bold; color: #4CAF50;">0</div>
           </div>
         </div>
@@ -522,16 +523,16 @@
 
       <!-- Logging Configuration -->
       <div style="margin-top: 15px; background: #f5f5f5; padding: 12px; border-radius: 6px;">
-        <div style="font-weight: bold; color: #333; font-size: 13px; margin-bottom: 10px;">📋 Configuration des logs</div>
+        <div style="font-weight: bold; color: #333; font-size: 13px; margin-bottom: 10px;">📋 <span data-i18n="system.logConfig">Configuration des logs</span></div>
         
         <!-- Enable/Disable Logging -->
         <div class="mb-10">
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
             <input type="checkbox" id="chkLoggingEnabled" checked style="width: 18px; height: 18px; cursor: pointer;">
-            <span style="font-size: 13px; color: #333;">Activer les logs (console + fichiers)</span>
+            <span style="font-size: 13px; color: #333;" data-i18n="system.enableLogs">Activer les logs (console + fichiers)</span>
           </label>
           <div style="font-size: 11px; color: #666; margin-left: 26px; margin-top: 4px;">
-            ⚠️ Désactiver réduit l'utilisation CPU mais supprime tous les logs
+            ⚠️ <span data-i18n="system.enableLogsWarn">Désactiver réduit l'utilisation CPU mais supprime tous les logs</span>
           </div>
         </div>
         
@@ -539,10 +540,10 @@
         <div style="margin-bottom: 4px;">
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
             <input type="checkbox" id="chkDebugLevel" style="width: 18px; height: 18px; cursor: pointer;">
-            <span style="font-size: 13px; color: #333;">Activer logs DEBUG (verbose)</span>
+            <span style="font-size: 13px; color: #333;" data-i18n="system.debugLogs">Activer logs DEBUG (verbose)</span>
           </label>
           <div style="font-size: 11px; color: #666; margin-left: 26px; margin-top: 4px;">
-            ℹ️ Niveau INFO (messages normaux) par défaut
+            ℹ️ <span data-i18n="system.debugLogsInfo">Niveau INFO (messages normaux) par défaut</span>
           </div>
         </div>
       </div>
@@ -550,28 +551,28 @@
       <!-- Reboot Button Only -->
       <div style="margin-top: 15px; display: flex; gap: 10px;">
         <button id="btnReboot" class="button btn-danger" style="flex: 1; padding: 12px; font-size: 14px; font-weight: bold;">
-          🔄 Redémarrer
+          🔄 <span data-i18n="system.rebootBtn">Redémarrer</span>
         </button>
       </div>
     </div>
 
     <!-- Welcome message (shown before first calibration) -->
     <div class="welcome-message" id="welcomeMessage">
-      <h2>👋 Bienvenue!</h2>
-      <p>🔧 Avant de commencer, veuillez effectuer une calibration pour détecter les limites de course.</p>
-      <p>👆 Cliquez sur le bouton <strong>"🔍 Calibrer"</strong> dans la section "Outils communs" ci-dessus.</p>
+      <h2>👋 <span data-i18n="welcome.title">Bienvenue!</span></h2>
+      <p>🔧 <span data-i18n="welcome.line1">Avant de commencer, veuillez effectuer une calibration pour détecter les limites de course.</span></p>
+      <p>👆 <span data-i18n-html="welcome.line2">Cliquez sur le bouton <strong>"🔍 Calibrer"</strong> dans la section "Outils communs" ci-dessus.</span></p>
       <p style="font-size: 14px; opacity: 0.8; margin-top: 20px;">
-        ⚙️ Les modes de contrôle apparaîtront automatiquement après la calibration.
+        ⚙️ <span data-i18n="welcome.line3">Les modes de contrôle apparaîtront automatiquement après la calibration.</span>
       </p>
     </div>
 
     <!-- Tabs Navigation (after status) -->
     <div class="tabs hidden-until-calibrated" id="tabsContainer">
-      <button class="tab active" data-tab="simple">🔄 Simple</button>
-      <button class="tab" data-tab="pursuit">🎯 Poursuite</button>
-      <button class="tab" data-tab="oscillation">〰️ Oscillation</button>
-      <button class="tab" data-tab="chaos">🎲 Chaos</button>
-      <button class="tab" data-tab="tableau">📋 Séquenceur</button>
+      <button class="tab active" data-tab="simple">🔄 <span data-i18n="tabs.simple">Simple</span></button>
+      <button class="tab" data-tab="pursuit">🎯 <span data-i18n="tabs.pursuit">Poursuite</span></button>
+      <button class="tab" data-tab="oscillation">〰️ <span data-i18n="tabs.oscillation">Oscillation</span></button>
+      <button class="tab" data-tab="chaos">🎲 <span data-i18n="tabs.chaos">Chaos</span></button>
+      <button class="tab" data-tab="tableau">📋 <span data-i18n="tabs.sequencer">Séquenceur</span></button>
     </div>
 
     <!-- MODE SIMPLE Tab Content -->
@@ -582,7 +583,7 @@
       <div class="form-row-compact">
         <div class="form-group-compact d-block">
           <div>
-            <label class="label-inline">Position départ:</label>
+            <label class="label-inline" data-i18n="simple.startPosition">Position départ:</label>
             <input type="number" id="startPosition" min="0" step="1" value="0" class="input-compact">
             <span class="unit-label">mm</span>
           </div>
@@ -605,7 +606,7 @@
         
         <div class="form-group-compact d-block">
           <div>
-            <label class="label-inline">Distance:</label>
+            <label class="label-inline" data-i18n="simple.distance">Distance:</label>
             <input type="number" id="distance" min="0" step="1" value="50" class="input-compact">
             <span class="unit-label">mm</span>
           </div>
@@ -632,22 +633,22 @@
       
       <!-- Speed Mode Toggle - Radio Buttons -->
       <div class="form-group-compact" style="margin-bottom: 15px;">
-        <label class="label-inline">⚙️ Vitesse:</label>
+        <label class="label-inline">⚙️ <span data-i18n="simple.speedLabel">Vitesse:</span></label>
         <div class="radio-inline">
           <label>
             <input type="radio" name="speedMode" id="speedModeUnified" checked>
-            Unifiée
+            <span data-i18n="simple.unified">Unifiée</span>
           </label>
           <label>
             <input type="radio" name="speedMode" id="speedModeSeparate">
-            Séparée
+            <span data-i18n="simple.separate">Séparée</span>
           </label>
         </div>
       </div>
       
       <!-- Unified Speed - Single Line -->
       <div id="speedUnifiedGroup" class="speed-control-inline mb-12">
-        <label class="label-inline">Vitesse:</label>
+        <label class="label-inline" data-i18n="simple.speedLabel">Vitesse:</label>
         <input type="number" id="speedUnified" min="0" max="20" step="0.1" value="5" class="input-compact">
         <button class="preset-btn-sm btn-preset" data-speed-unified="0.5" title="Ultra lent">0.5 🐌</button>
         <button class="preset-btn-sm btn-preset" data-speed-unified="1" title="Très lent">1</button>
@@ -662,7 +663,7 @@
       <!-- Separate Speeds - Stacked -->
       <div id="speedSeparateGroup" style="display: none; margin-bottom: 12px;">
         <div class="speed-control-inline" style="margin-bottom: 8px;">
-          <label class="label-inline">Aller:</label>
+          <label class="label-inline" data-i18n="simple.forward">Aller:</label>
           <input type="number" id="speedForward" min="0" max="20" step="0.1" value="5" class="input-compact">
           <button class="preset-btn-sm btn-preset" data-speed-forward="0.5">0.5 🐌</button>
           <button class="preset-btn-sm btn-preset" data-speed-forward="1">1</button>
@@ -674,7 +675,7 @@
           <button class="preset-btn-sm btn-preset" data-speed-forward="20">20 ⚡</button>
         </div>
         <div class="speed-control-inline">
-          <label class="label-inline">Retour:</label>
+          <label class="label-inline" data-i18n="simple.backward">Retour:</label>
           <input type="number" id="speedBackward" min="0" max="20" step="0.1" value="5" class="input-compact">
           <button class="preset-btn-sm btn-preset" data-speed-backward="0.5">0.5 🐌</button>
           <button class="preset-btn-sm btn-preset" data-speed-backward="1">1</button>
@@ -693,7 +694,7 @@
       <!-- Zone Effects - Collapsible Section -->
       <div class="section-collapsible collapsed" id="zoneEffectSection">
         <div class="section-collapsible-header" onclick="toggleZoneEffectSection()">
-          <span class="collapse-icon">▼</span> <span id="zoneEffectHeaderText">🎯 Effets de Zone - désactivés</span>
+          <span class="collapse-icon">▼</span> <span id="zoneEffectHeaderText" data-i18n="simple.zoneEffectsDisabled">🎯 Effets de Zone - désactivés</span>
         </div>
         
         <div class="section-collapsible-content">
@@ -2000,6 +2001,7 @@
   <script src="/js/ui/milestones.js"></script>  <!-- Must load BEFORE app.js -->
   <script src="/js/ui/speedMilestones.js"></script>  <!-- Speed icons, must load BEFORE app.js -->
   <script src="/js/core/app.js"></script>
+  <script src="/js/core/i18n.js"></script>    <!-- i18n translations (after app.js for _console) -->
   <script src="/js/utils/utils.js"></script>
   <script src="/js/core/DOMManager.js"></script>  <!-- Must load BEFORE main.js -->
   <script src="/js/core/websocket.js"></script>   <!-- WebSocket connection & handlers -->

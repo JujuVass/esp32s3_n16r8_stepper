@@ -97,7 +97,7 @@ function sendOscillationConfig() {
     if (amplitude > 0 && theoreticalSpeed > MAX_SPEED_MM_S) {
       const maxAllowedFreq = MAX_SPEED_MM_S / (2.0 * Math.PI * amplitude);
       showNotification(
-        `⚠️ Fréquence limitée: ${frequency.toFixed(2)} Hz → ${maxAllowedFreq.toFixed(2)} Hz (vitesse max: ${MAX_SPEED_MM_S.toFixed(0)} mm/s)`,
+        '⚠️ ' + t('oscillation.freqLimited', {freq: frequency.toFixed(2), max: maxAllowedFreq.toFixed(2), speed: MAX_SPEED_MM_S.toFixed(0)}),
         'error',
         4000
       );
@@ -222,8 +222,8 @@ function updateOscillationPresets() {
     linkedCheckbox.parentElement.style.opacity = wouldBeValid ? '1' : '0.5';
     linkedCheckbox.parentElement.style.cursor = wouldBeValid ? 'pointer' : 'not-allowed';
     linkedCheckbox.parentElement.title = wouldBeValid 
-      ? 'Lier amplitude au centre' 
-      : `⚠️ Impossible: centre×2 (${currentCenter * 2}mm) > max calibré (${effectiveMax}mm)`;
+      ? t('oscillation.amplitudeLinked')
+      : '⚠️ ' + t('oscillation.cannotLink', {val: currentCenter * 2, max: effectiveMax});
     
     // If currently linked but now invalid, uncheck it
     if (isLinked && !wouldBeValid) {
@@ -250,7 +250,7 @@ function updateOscillationPresets() {
       btn.style.cursor = isValid ? 'pointer' : 'not-allowed';
       btn.title = isValid 
         ? `${frequencyValue} Hz (${theoreticalSpeed.toFixed(0)} mm/s)` 
-        : `⚠️ ${frequencyValue} Hz dépasserait ${MAX_SPEED_MM_S} mm/s (${theoreticalSpeed.toFixed(0)} mm/s calculé)`;
+        : '⚠️ ' + t('oscillation.freqExceed', {freq: frequencyValue, max: MAX_SPEED_MM_S, calc: theoreticalSpeed.toFixed(0)});
     }
   });
 }
@@ -267,7 +267,7 @@ function sendOscCyclePauseConfig() {
   
   // 🆕 VALIDATION: Min doit être ≤ Max (seulement si random activé)
   if (isRandom && minSec > maxSec) {
-    showNotification('⚠️ Pause Min (' + minSec.toFixed(1) + 's) doit être ≤ Max (' + maxSec.toFixed(1) + 's)', 'warning');
+    showNotification('⚠️ ' + t('oscillation.pauseMinMax', {min: minSec.toFixed(1), max: maxSec.toFixed(1)}), 'warning');
     // Auto-correction: ajuster Max = Min
     maxSec = minSec;
     document.getElementById('oscCyclePauseMax').value = maxSec;
@@ -288,7 +288,7 @@ function sendOscCyclePauseConfig() {
  */
 function startOscillation() {
   if (!validateOscillationLimits()) {
-    showNotification('Limites invalides: ajustez le centre ou l\'amplitude', 'error');
+    showNotification(t('oscillation.limitWarning'), 'error');
     return;
   }
   
@@ -345,15 +345,15 @@ function updateOscillationUI(data) {
     DOM.oscCompletedCycles.textContent = 
       data.oscillationState.completedCycles;
     
-    let rampStatus = 'Aucune';
+    let rampStatus = t('common.none');
     if (data.oscillationState.isTransitioning) {
-      rampStatus = '🔄 Transition fréquence...';
+      rampStatus = t('oscillation.rampTransition');
     } else if (data.oscillationState.isRampingIn) {
-      rampStatus = '📈 Rampe entrée';
+      rampStatus = t('oscillation.rampInLabel');
     } else if (data.oscillationState.isRampingOut) {
-      rampStatus = '📉 Rampe sortie';
+      rampStatus = '📉 ' + t('oscillation.rampOut');
     } else if (data.operationMode === 3 && data.state === SystemState.RUNNING) {
-      rampStatus = '✅ Stabilisé';
+      rampStatus = t('oscillation.rampStable');
     }
     DOM.oscRampStatus.textContent = rampStatus;
     
@@ -403,7 +403,7 @@ function updateOscillationUI(data) {
         DOM.oscFrequency.style.backgroundColor = '#ffe8e8';
         DOM.oscFrequency.style.fontWeight = 'bold';
         DOM.oscFrequency.style.color = '#d32f2f';
-        DOM.oscFrequency.title = `⚠️ Fréquence limitée de ${data.oscillation.frequencyHz.toFixed(2)} Hz à ${displayFreq.toFixed(2)} Hz (vitesse max: 300 mm/s)`;
+        DOM.oscFrequency.title = '⚠️ ' + t('oscillation.freqLimitTitle', {from: data.oscillation.frequencyHz.toFixed(2), to: displayFreq.toFixed(2)});
       } else {
         DOM.oscFrequency.style.backgroundColor = '';
         DOM.oscFrequency.style.fontWeight = '';
@@ -461,10 +461,10 @@ function updateOscillationUI(data) {
       // Sync collapsed state with backend enabled state
       if (isEnabled && isCollapsed) {
         sectionOsc.classList.remove('collapsed');
-        headerTextOsc.textContent = '⏸️ Pause entre cycles - activée';
+        headerTextOsc.textContent = t('oscillation.cyclePauseEnabled');
       } else if (!isEnabled && !isCollapsed) {
         sectionOsc.classList.add('collapsed');
-        headerTextOsc.textContent = '⏸️ Pause entre cycles - désactivée';
+        headerTextOsc.textContent = t('oscillation.cyclePauseDisabled');
       }
       
       // Sync radio buttons

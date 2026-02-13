@@ -157,14 +157,14 @@ function enablePursuitMode() {
   if (AppState.system.currentState === SystemState.CALIBRATING) {
     DOM.pursuitActiveCheckbox.checked = false;
     AppState.pursuit.active = false;
-    showAlert('Veuillez attendre la fin de la calibration', { type: 'warning', title: 'Calibration en cours' });
+    showAlert(t('overlay.calibrationTitle'), { type: 'warning', title: t('overlay.calibrationTitle') });
     return;
   }
   
   AppState.pursuit.active = true;
   
   // Update button state
-  DOM.btnActivatePursuit.textContent = '⏸ Pause Poursuite';
+  DOM.btnActivatePursuit.textContent = '⏸ ' + t('pursuit.pausePursuit');
   DOM.btnActivatePursuit.classList.remove('btn-success');
   DOM.btnActivatePursuit.classList.add('btn-warning');
   
@@ -198,11 +198,9 @@ function disablePursuitMode() {
   AppState.pursuit.active = false;
   
   // Update button state
-  DOM.btnActivatePursuit.textContent = '▶ Démarrer';
+  DOM.btnActivatePursuit.textContent = '▶ ' + t('common.start');
   DOM.btnActivatePursuit.classList.remove('btn-warning');
   DOM.btnActivatePursuit.classList.add('btn-success');
-  
-  // Disable gauge interaction visually
   DOM.gaugeContainer.style.opacity = '0.5';
   DOM.gaugeContainer.style.cursor = 'not-allowed';
   DOM.gaugeContainer.style.pointerEvents = 'none';
@@ -433,7 +431,7 @@ function initPursuitModeOnLoad() {
   AppState.pursuit.active = false;
   
   // Reset button text
-  DOM.btnActivatePursuit.textContent = '▶ Démarrer';
+  DOM.btnActivatePursuit.textContent = '▶ ' + t('common.start');
   DOM.btnActivatePursuit.classList.remove('btn-warning');
   DOM.btnActivatePursuit.classList.add('btn-success');
   

@@ -28,7 +28,7 @@ const MOVEMENT_TYPE = {
 // Short names for sequence table display (SIN/TRI/SQR)
 const WAVEFORM_SHORT = ['SIN', 'TRI', 'SQR'];
 const SPEED_CURVE_LABELS = ['Lin', 'Sin', 'Tri⁻¹', 'Sin⁻¹'];
-const SPEED_EFFECT_LABELS = ['', 'Décel', 'Accel'];
+function getSpeedEffectLabels() { return ['', t('seqUtils.decel'), t('seqUtils.accel')]; }
 
 // Legacy alias for backward compatibility
 const DECEL_MODE_LABELS = SPEED_CURVE_LABELS;
@@ -48,14 +48,14 @@ function getTypeDisplay(movementType, line) {
   
   if (movementType === MOVEMENT_TYPE.VA_ET_VIENT) {
     typeIcon = '↔️';
-    typeName = 'Va-et-vient';
+    typeName = t('utils.backAndForth');
     typeInfo = `<div style="font-size: 10px; line-height: 1.2;">
       <div>${line.startPositionMM.toFixed(1)}mm</div>
       <div>±${line.distanceMM.toFixed(1)}mm</div>
     </div>`;
   } else if (movementType === MOVEMENT_TYPE.OSCILLATION) {
     typeIcon = '〰️';
-    typeName = 'Oscillation';
+    typeName = t('utils.oscillation');
     const waveformName = WAVEFORM_SHORT[line.oscWaveform] || '?';
     typeInfo = `<div style="font-size: 10px; line-height: 1.2;">
       <div>C:${line.oscCenterPositionMM ? line.oscCenterPositionMM.toFixed(0) : '100'}mm</div>
@@ -64,17 +64,17 @@ function getTypeDisplay(movementType, line) {
     </div>`;
   } else if (movementType === MOVEMENT_TYPE.CHAOS) {
     typeIcon = '🌀';
-    typeName = 'Chaos';
+    typeName = t('utils.chaos');
     typeInfo = `<div style="font-size: 10px; line-height: 1.2;">
       <div>⏱️${line.chaosDurationSeconds || 30}s</div>
       <div>🎲${line.chaosCrazinessPercent ? line.chaosCrazinessPercent.toFixed(0) : '50'}%</div>
     </div>`;
   } else if (movementType === MOVEMENT_TYPE.CALIBRATION) {
     typeIcon = '📏';
-    typeName = 'Calibration';
+    typeName = t('utils.calibration');
     typeInfo = `<div style="font-size: 10px; line-height: 1.2;">
-      <div>Calibration</div>
-      <div>complète</div>
+      <div>${t('utils.calibration')}</div>
+      <div>${t('seqUtils.complete')}</div>
     </div>`;
   }
   
@@ -130,7 +130,7 @@ function getDecelSummary(line, movementType) {
   // Speed effect
   let effectLine = '';
   if (ze.speedEffect > 0) {
-    const effectName = SPEED_EFFECT_LABELS[ze.speedEffect] || 'Eff';
+    const effectName = getSpeedEffectLabels()[ze.speedEffect] || 'Eff';
     const curveName = SPEED_CURVE_LABELS[ze.speedCurve] || '';
     effectLine = `${effectName} ${curveName} ${ze.speedIntensity}%`;
   }
@@ -275,7 +275,7 @@ function getSequenceTemplateDoc() {
       }]
     },
     DOCUMENTATION: {
-      "Note": "Template minimal - Voir documentation complète pour plus d'options"
+      "Note": "Minimal template - See full documentation for more options"
     }
   };
 }
@@ -291,12 +291,12 @@ function getSequenceTemplateDoc() {
  */
 function getMovementTypeName(movementType) {
   const names = {
-    [MOVEMENT_TYPE.VA_ET_VIENT]: 'Va-et-vient',
-    [MOVEMENT_TYPE.OSCILLATION]: 'Oscillation',
-    [MOVEMENT_TYPE.CHAOS]: 'Chaos',
-    [MOVEMENT_TYPE.CALIBRATION]: 'Calibration'
+    [MOVEMENT_TYPE.VA_ET_VIENT]: t('utils.backAndForth'),
+    [MOVEMENT_TYPE.OSCILLATION]: t('utils.oscillation'),
+    [MOVEMENT_TYPE.CHAOS]: t('utils.chaos'),
+    [MOVEMENT_TYPE.CALIBRATION]: t('utils.calibration')
   };
-  return names[movementType] || 'Inconnu';
+  return names[movementType] || t('utils.unknown');
 }
 
 /**

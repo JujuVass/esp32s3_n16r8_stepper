@@ -28,8 +28,8 @@
  * - chart: Chart.js instance reference
  */
 
-// Day names for display (constants - not moved to AppState)
-const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+// Day names for display - functions using i18n
+function getDayNames() { return t('stats.dayNames') || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; }
 const dayIcons = ['🚴', '🏃', '🏁', '🏀', '🔴', '🏓', '⚪'];
 
 // ============================================================================
@@ -52,7 +52,7 @@ function loadStatsData() {
       const tbody = document.getElementById('statsTableBody');
       if (tbody) {
         tbody.innerHTML = 
-          '<tr><td colspan="4" class="empty-state text-error">❌ Erreur de chargement</td></tr>';
+          '<tr><td colspan="4" class="empty-state text-error">❌ ' + t('stats.loadingError') + '</td></tr>';
       }
     });
 }
@@ -75,7 +75,7 @@ function displayStatsTable(stats) {
   }
   
   if (!stats || stats.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Aucune statistique disponible</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">' + t('stats.noStats') + '</td></tr>';
     totalEl.textContent = '0 km';
     return;
   }
@@ -103,12 +103,12 @@ function displayStatsTable(stats) {
     const distanceMeters = distanceMM / 1000;
     const milestoneInfo = getMilestoneInfo(distanceMeters);
     const milestoneIcon = milestoneInfo.current ? milestoneInfo.current.emoji : '🏁';
-    const milestoneName = milestoneInfo.current ? milestoneInfo.current.name : 'Démarrage';
+    const milestoneName = milestoneInfo.current ? milestoneInfo.current.name : t('stats.startup');
     
     // Build tooltip with milestone info
     let milestoneTooltip = milestoneInfo.current 
       ? `${milestoneInfo.current.emoji} ${milestoneInfo.current.name} (${milestoneInfo.current.threshold}m)` 
-      : '🏁 Démarrage';
+      : '🏁 ' + t('stats.startup');
     if (milestoneInfo.current && milestoneInfo.current.location !== "-") {
       milestoneTooltip += ` - ${milestoneInfo.current.location}`;
     }
@@ -117,7 +117,7 @@ function displayStatsTable(stats) {
     row.style.borderBottom = '1px solid #f0f0f0';
     row.innerHTML = `
       <td class="stats-cell">${entry.date}</td>
-      <td class="stats-cell text-md">${dayNames[dayIndex]}</td>
+      <td class="stats-cell text-md">${getDayNames()[dayIndex]}</td>
       <td class="stats-cell" style="font-size: 18px; cursor: help;" title="${milestoneTooltip}">${milestoneIcon}</td>
       <td class="stats-cell text-right font-mono">${displayDistance}</td>
     `;
@@ -152,7 +152,7 @@ function updateTotalMilestone(totalMM) {
   const totalMeters = totalMM / 1000;
   const totalMilestoneInfo = getMilestoneInfo(totalMeters);
   const totalMilestoneIcon = totalMilestoneInfo.current ? totalMilestoneInfo.current.emoji : '🏁';
-  const totalMilestoneName = totalMilestoneInfo.current ? totalMilestoneInfo.current.name : 'Démarrage';
+  const totalMilestoneName = totalMilestoneInfo.current ? totalMilestoneInfo.current.name : t('stats.startup');
   
   // Build tooltip with progress to next milestone
   let totalTooltip = totalMilestoneInfo.current 
@@ -163,10 +163,10 @@ function updateTotalMilestone(totalMM) {
   }
   
   if (totalMilestoneInfo.next) {
-    totalTooltip += `\n\n⏳️ Prochain: ${totalMilestoneInfo.next.emoji} ${totalMilestoneInfo.next.name} (${totalMilestoneInfo.next.threshold}m)`;
-    totalTooltip += `\n📊 Progression: ${totalMilestoneInfo.progress.toFixed(0)}%`;
+    totalTooltip += `\n\n⏳️ ${t('stats.next')}: ${totalMilestoneInfo.next.emoji} ${totalMilestoneInfo.next.name} (${totalMilestoneInfo.next.threshold}m)`;
+    totalTooltip += `\n📊 ${t('stats.progression')}: ${totalMilestoneInfo.progress.toFixed(0)}%`;
   } else {
-    totalTooltip += '\n\n🏆 Objectif final atteint!';
+    totalTooltip += '\n\n🏆 ' + t('stats.finalGoalReached');
   }
   
   totalMilestoneEl.textContent = totalMilestoneIcon;
@@ -227,7 +227,8 @@ function displayStatsChart(stats) {
     const week = weeklyData[weekKey];
     const start = week.startDate.getDate();
     const end = week.endDate.getDate();
-    const month = week.startDate.toLocaleDateString('fr-FR', { month: 'short' });
+    const locale = (typeof I18n !== 'undefined' && I18n.getLang() === 'en') ? 'en-US' : 'fr-FR';
+    const month = week.startDate.toLocaleDateString(locale, { month: 'short' });
     return `${start}-${end} ${month}`;
   });
   
@@ -304,7 +305,7 @@ function renderStatsChart(labels, distances, sortedWeeks, weeklyData) {
     data: {
       labels: labels,
       datasets: [{
-        label: 'Distance hebdomadaire (m)',
+        label: t('stats.weeklyDistance'),
         data: distances,
         backgroundColor: 'rgba(76, 175, 80, 0.6)',
         borderColor: 'rgba(76, 175, 80, 1)',
@@ -322,7 +323,7 @@ function renderStatsChart(labels, distances, sortedWeeks, weeklyData) {
           callbacks: {
             title: function(context) {
               const weekKey = sortedWeeks[context[0].dataIndex];
-              return `Semaine ${weekKey.split('-')[1]} (${labels[context[0].dataIndex]})`;
+              return `${t('stats.week')} ${weekKey.split('-')[1]} (${labels[context[0].dataIndex]})`;
             },
             label: function(context) {
               const value = parseFloat(context.parsed.y);
@@ -333,7 +334,7 @@ function renderStatsChart(labels, distances, sortedWeeks, weeklyData) {
               const week = weeklyData[weekKey];
               if (!week) return '';
               
-              const lines = [`${week.days.length} jour(s) actif(s)`];
+              const lines = [`${week.days.length} ${t('stats.activeDays')}`];
               
               if (week.currentMilestone) {
                 lines.push('');
@@ -350,13 +351,13 @@ function renderStatsChart(labels, distances, sortedWeeks, weeklyData) {
           beginAtZero: true,
           title: {
             display: true,
-            text: 'Distance (m)'
+            text: t('stats.distanceM')
           }
         },
         x: {
           title: {
             display: true,
-            text: 'Semaines (90 derniers jours)'
+            text: t('stats.weeks90days')
           },
           ticks: {
             maxRotation: 45,
@@ -437,10 +438,10 @@ function closeStatsPanel() {
  * Clear all statistics
  */
 async function clearAllStats() {
-  const confirmed = await showConfirm('Supprimer TOUTES les statistiques ?\n\nCette action est irréversible.\nLe compteur de distance (RAZ) n\'est PAS supprimé.', {
-    title: 'Effacer Statistiques',
+  const confirmed = await showConfirm(t('stats.clearConfirm'), {
+    title: t('stats.clearTitle'),
     type: 'danger',
-    confirmText: '🗑️ Tout effacer',
+    confirmText: '🗑️ ' + t('stats.clearAll'),
     dangerous: true
   });
   
@@ -448,14 +449,14 @@ async function clearAllStats() {
     postWithRetry('/api/stats/clear', {})
       .then(data => {
         if (data.success) {
-          showAlert('Statistiques effacées', { type: 'success' });
+          showAlert(t('stats.statsCleared'), { type: 'success' });
           loadStatsData();  // Refresh display
         } else {
-          showAlert('Erreur: ' + (data.error || 'Unknown'), { type: 'error' });
+          showAlert(t('common.error') + ': ' + (data.error || 'Unknown'), { type: 'error' });
         }
       })
       .catch(error => {
-        showAlert('Erreur réseau: ' + error, { type: 'error' });
+        showAlert(t('stats.networkError') + ': ' + error, { type: 'error' });
       });
   }
 }
@@ -489,7 +490,7 @@ function exportStats() {
     })
     .catch(error => {
       console.error('❌ Export error:', error);
-      showAlert('Erreur export: ' + error.message, { type: 'error' });
+      showAlert(t('stats.exportError') + ': ' + error.message, { type: 'error' });
     });
 }
 
@@ -509,7 +510,7 @@ function handleStatsFileImport(e) {
   if (!file) return;
   
   if (!file.name.endsWith('.json')) {
-    showAlert('Fichier invalide. Utilisez un fichier JSON exporté.', { type: 'error' });
+    showAlert(t('stats.invalidFile'), { type: 'error' });
     e.target.value = ''; // Reset file input
     return;
   }
@@ -521,24 +522,24 @@ function handleStatsFileImport(e) {
       
       // Validate structure
       if (!importData.stats || !Array.isArray(importData.stats)) {
-        throw new Error('Format JSON invalide (manque "stats" array)');
+        throw new Error(t('stats.invalidJsonFormat'));
       }
       
       // Confirm import (show preview)
       const entryCount = importData.stats.length;
-      const exportDate = importData.exportDate || 'inconnu';
+      const exportDate = importData.exportDate || t('stats.unknown');
       const totalKm = importData.totalDistanceMM ? (importData.totalDistanceMM / 1000000).toFixed(3) : '?';
       
-      const confirmMsg = `Importer les statistiques ?\n\n` +
-                       `📅 Date export: ${exportDate}\n` +
-                       `📊 Entrées: ${entryCount}\n` +
-                       `📏 Distance totale: ${totalKm} km\n\n` +
-                       `⚠️ Ceci va ÉCRASER les statistiques actuelles !`;
+      const confirmMsg = t('stats.importConfirm') + `\n\n` +
+                       `📅 ${t('stats.exportDate')}: ${exportDate}\n` +
+                       `📊 ${t('stats.entries')}: ${entryCount}\n` +
+                       `📏 ${t('stats.totalDistance')}: ${totalKm} km\n\n` +
+                       `⚠️ ${t('stats.importWarning')}`;
       
       showConfirm(confirmMsg, {
-        title: '📤 Import Statistiques',
+        title: '📤 ' + t('stats.importTitle'),
         type: 'warning',
-        confirmText: 'Importer',
+        confirmText: t('stats.import'),
         dangerous: true
       }).then(confirmed => {
         if (!confirmed) {
@@ -550,22 +551,22 @@ function handleStatsFileImport(e) {
         postWithRetry('/api/stats/import', importData)
         .then(data => {
           if (data.success) {
-            showAlert(`Import réussi !\n\n📊 ${data.entriesImported} entrées importées\n📏 Total: ${(data.totalDistanceMM / 1000000).toFixed(3)} km`, { type: 'success', title: 'Import OK' });
+            showAlert(t('stats.importSuccess', {count: data.entriesImported, total: (data.totalDistanceMM / 1000000).toFixed(3)}), { type: 'success', title: t('stats.importOk') });
             loadStatsData();  // Refresh display
           } else {
-            showAlert('Erreur import: ' + (data.error || 'Unknown'), { type: 'error' });
+            showAlert(t('stats.importError') + ': ' + (data.error || 'Unknown'), { type: 'error' });
           }
           e.target.value = ''; // Reset file input
         })
         .catch(error => {
-          showAlert('Erreur réseau: ' + error.message, { type: 'error' });
+          showAlert(t('stats.networkError') + ': ' + error.message, { type: 'error' });
           console.error('Import error:', error);
           e.target.value = ''; // Reset file input
         });
       });
       
     } catch (error) {
-      showAlert('Erreur parsing JSON: ' + error.message, { type: 'error' });
+      showAlert(t('stats.jsonParseError') + ': ' + error.message, { type: 'error' });
       console.error('JSON parse error:', error);
       e.target.value = ''; // Reset file input
     }
@@ -596,10 +597,10 @@ function updateMilestones(totalTraveledMM) {
     }
     
     if (milestoneInfo.next) {
-      tooltip += `\n\n⏭️ Prochain: ${milestoneInfo.next.emoji} ${milestoneInfo.next.name} (${milestoneInfo.next.threshold}m)`;
-      tooltip += `\n📊 Progression: ${milestoneInfo.progress.toFixed(0)}%`;
+      tooltip += `\n\n⏭️ ${t('stats.next')}: ${milestoneInfo.next.emoji} ${milestoneInfo.next.name} (${milestoneInfo.next.threshold}m)`;
+      tooltip += `\n📊 ${t('stats.progression')}: ${milestoneInfo.progress.toFixed(0)}%`;
     } else {
-      tooltip += `\n\n🎉 Dernier jalon atteint!`;
+      tooltip += `\n\n🎉 ${t('stats.lastMilestoneReached')}`;
     }
     
     DOM.milestoneIcon.textContent = milestoneInfo.current.emoji;
@@ -631,9 +632,9 @@ function updateMilestones(totalTraveledMM) {
         DOM.milestoneIcon.classList.add('milestone-achievement');
         
         // Show celebration notification
-        let message = `🎉 Jalon atteint: ${milestoneInfo.current.emoji} (${newThreshold}m)`;
+        let message = `🎉 ${t('stats.milestoneReached')}: ${milestoneInfo.current.emoji} (${newThreshold}m)`;
         if (milestoneInfo.next) {
-          message += `\n⏭️ Prochain: ${milestoneInfo.next.emoji} (${milestoneInfo.next.threshold}m) - ${milestoneInfo.progress.toFixed(0)}%`;
+          message += `\n⏭️ ${t('stats.next')}: ${milestoneInfo.next.emoji} (${milestoneInfo.next.threshold}m) - ${milestoneInfo.progress.toFixed(0)}%`;
         }
         showNotification(message, 'milestone');
       }
@@ -648,7 +649,7 @@ function updateMilestones(totalTraveledMM) {
     // No milestone reached yet - mark as initialized anyway
     AppState.milestone.initialized = true;
     if (milestoneInfo.next) {
-      const tooltip = `⏭️ Prochain: ${milestoneInfo.next.emoji} ${milestoneInfo.next.name} (${milestoneInfo.next.threshold}m)\n📊 Progression: ${milestoneInfo.progress.toFixed(0)}%`;
+      const tooltip = `⏭️ ${t('stats.next')}: ${milestoneInfo.next.emoji} ${milestoneInfo.next.name} (${milestoneInfo.next.threshold}m)\n📊 ${t('stats.progression')}: ${milestoneInfo.progress.toFixed(0)}%`;
       DOM.milestoneIcon.textContent = '🐜';
       DOM.milestoneIcon.title = tooltip;
     } else {

@@ -28,10 +28,10 @@ function calibrateMotor() {
  * Reset total distance counter
  */
 async function resetTotalDistance() {
-  const confirmed = await showConfirm('Réinitialiser le compteur de distance parcourue ?', {
-    title: 'RAZ Compteur',
+  const confirmed = await showConfirm(t('tools.resetDistanceConfirm'), {
+    title: t('tools.resetDistanceTitle'),
     type: 'warning',
-    confirmText: 'Réinitialiser',
+    confirmText: t('common.reset'),
     dangerous: true
   });
   if (confirmed) {
@@ -90,7 +90,7 @@ function closeLogsPanel() {
  */
 function clearLogsPanel() {
   const logEl = document.getElementById('logConsolePanel');
-  if (logEl) logEl.textContent = '(logs effacés)';
+  if (logEl) logEl.textContent = t('tools.logsCleared');
 }
 
 /**
@@ -122,17 +122,17 @@ function handleDebugLevelChange(isChecked) {
  * Clear all log files
  */
 async function clearAllLogFiles() {
-  const confirmed = await showConfirm('Supprimer TOUS les fichiers de logs ?\n\nCette action est irréversible.', {
-    title: 'Suppression Logs',
+  const confirmed = await showConfirm(t('tools.deleteAllLogs'), {
+    title: t('tools.deleteLogsTitle'),
     type: 'danger',
-    confirmText: '🗑️ Supprimer',
+    confirmText: '🗑️ ' + t('common.delete'),
     dangerous: true
   });
   
   if (confirmed) {
     postWithRetry('/logs/clear', {})
       .then(data => {
-        showAlert(data.message || 'Logs supprimés avec succès !', { type: 'success', title: 'Succès' });
+        showAlert(data.message || t('tools.logsDeletedSuccess'), { type: 'success', title: t('common.success') });
         loadLogFilesList();  // Refresh list
       })
       .catch(error => {
@@ -156,7 +156,7 @@ async function loadLogFilesList() {
     const links = doc.querySelectorAll('a');
     
     if (links.length === 0) {
-      DOM.logFilesList.innerHTML = '<div class="text-light italic text-sm">Aucun fichier de log</div>';
+      DOM.logFilesList.innerHTML = '<div class="text-light italic text-sm">' + t('tools.noLogFiles') + '</div>';
       return;
     }
     
@@ -182,7 +182,7 @@ async function loadLogFilesList() {
       downloadLink.href = url;
       downloadLink.target = '_blank';
       downloadLink.style.cssText = 'background: #2196F3; color: white; padding: 4px 10px; border-radius: 3px; text-decoration: none; font-size: 11px;';
-      downloadLink.textContent = '📥 Télécharger';
+      downloadLink.textContent = '📥 ' + t('tools.downloadBtn');
       
       itemDiv.appendChild(filenameSpan);
       itemDiv.appendChild(downloadLink);
@@ -192,7 +192,7 @@ async function loadLogFilesList() {
     DOM.logFilesList.innerHTML = '';  // Clear first
     DOM.logFilesList.appendChild(container);
   } catch (error) {
-    DOM.logFilesList.innerHTML = '<div class="text-error text-sm">Erreur de chargement</div>';
+    DOM.logFilesList.innerHTML = '<div class="text-error text-sm">' + t('tools.loadError') + '</div>';
   }
 }
 
@@ -257,10 +257,10 @@ function closeSystemPanel() {
  * Refresh WiFi connection
  */
 async function refreshWifi() {
-  const confirmed = await showConfirm('📶 Reconnecter le WiFi ?\n\nCela peut interrompre brièvement la connexion (~2-3 secondes).', {
-    title: 'Reconnexion WiFi',
+  const confirmed = await showConfirm('📶 ' + t('tools.reconnectWifi'), {
+    title: t('tools.reconnectWifiTitle'),
     type: 'info',
-    confirmText: 'Reconnecter'
+    confirmText: t('tools.reconnectBtn')
   });
   
   if (confirmed) {
@@ -283,8 +283,8 @@ async function refreshWifi() {
     const modalButton = document.getElementById('unifiedAlertOkBtn');
     
     modalIcon.textContent = '📶';
-    modalTitle.textContent = 'Reconnexion WiFi';
-    modalMessage.innerHTML = 'Reconnexion en cours...<br><br><span id="wifiReconnectStatus">Envoi de la commande...</span>';
+    modalTitle.textContent = t('tools.reconnectWifiTitle');
+    modalMessage.innerHTML = t('tools.reconnecting') + '<br><br><span id="wifiReconnectStatus">' + t('tools.sendingCommand') + '</span>';
     modalButton.style.display = 'none'; // Hide button during process
     modal.classList.add('active');
     
@@ -304,12 +304,12 @@ async function refreshWifi() {
       .then(response => response.json())
       .then(data => {
         console.log('📶 WiFi reconnect command acknowledged:', data);
-        statusSpan.textContent = 'Déconnexion WiFi...';
+        statusSpan.textContent = t('tools.wifiDisconnecting');
       })
       .catch(error => {
         // Expected error: network will be interrupted during WiFi reconnect
         console.log('📶 WiFi reconnect in progress (network interruption expected)');
-        statusSpan.textContent = 'Déconnexion WiFi...';
+        statusSpan.textContent = t('tools.wifiDisconnecting');
       });
     
     // Wait for WiFi to reconnect, then verify connection
@@ -320,7 +320,7 @@ async function refreshWifi() {
     const checkConnection = function() {
       attempts++;
       console.log(`📶 Checking connection (attempt ${attempts}/${maxAttempts})...`);
-      statusSpan.textContent = `Vérification connexion (${attempts}/${maxAttempts})...`;
+      statusSpan.textContent = t('tools.checkingConnection', {attempts: attempts, max: maxAttempts});
       
       fetch('/api/ping', { method: 'GET' })
         .then(response => {
@@ -332,8 +332,8 @@ async function refreshWifi() {
             
             // Update modal to success
             modalIcon.textContent = '✅';
-            modalTitle.textContent = 'Reconnexion réussie';
-            modalMessage.innerHTML = 'WiFi reconnecté avec succès !';
+            modalTitle.textContent = t('tools.reconnectSuccess');
+            modalMessage.innerHTML = t('tools.wifiReconnected');
             modalButton.textContent = 'OK';
             modalButton.style.display = '';
             modalButton.onclick = function() { modal.classList.remove('active'); };
@@ -372,8 +372,8 @@ async function refreshWifi() {
             
             // Update modal to error
             modalIcon.textContent = '❌';
-            modalTitle.textContent = 'Échec de reconnexion';
-            modalMessage.innerHTML = 'La reconnexion WiFi a échoué.<br>Vérifiez votre connexion réseau.';
+            modalTitle.textContent = t('tools.reconnectFailed');
+            modalMessage.innerHTML = t('tools.reconnectFailedMsg');
             modalButton.textContent = 'Fermer';
             modalButton.style.display = '';
             modalButton.onclick = function() { modal.classList.remove('active'); };
@@ -397,7 +397,7 @@ async function refreshWifi() {
     
     // Start checking after 3 seconds (give WiFi time to disconnect/reconnect)
     setTimeout(function() {
-      statusSpan.textContent = 'Attente reconnexion WiFi...';
+      statusSpan.textContent = t('tools.waitingReconnect');
       setTimeout(checkConnection, 1000);
     }, 2000);
   }
@@ -407,10 +407,10 @@ async function refreshWifi() {
  * Reboot ESP32
  */
 async function rebootESP32() {
-  const confirmed = await showConfirm('Redémarrer l\'ESP32 ?\n\nLa connexion sera interrompue pendant ~10-15 secondes.', {
-    title: 'Redémarrage ESP32',
+  const confirmed = await showConfirm(t('tools.rebootConfirm'), {
+    title: t('tools.rebootTitle'),
     type: 'warning',
-    confirmText: '🔄 Redémarrer',
+    confirmText: '🔄 ' + t('tools.rebootBtn'),
     dangerous: true
   });
   
@@ -459,7 +459,7 @@ function reconnectAfterReboot() {
   const tryReconnect = function() {
     attempts++;
     console.log('🔄 Reconnection attempt ' + attempts + '/' + maxAttempts);
-    updateRebootStatus('Tentative de reconnexion...', 'Essai ' + attempts + '/' + maxAttempts);
+    updateRebootStatus(t('tools.reconnectAttempt'), t('tools.reconnectAttemptSub', {attempts: attempts, max: maxAttempts}));
     
     // Test HTTP connection first using ping endpoint
     fetch('/api/ping', { 
@@ -473,7 +473,7 @@ function reconnectAfterReboot() {
       .then(data => {
         console.log('✅ HTTP connection restored! Uptime:', data.uptime, 'ms');
         httpConnected = true;
-        updateRebootStatus('HTTP OK - Reconnexion WebSocket...', '🌐 Connexion en cours...');
+        updateRebootStatus(t('tools.httpOkWsConnecting'), '🌐 ...');
         
         // Now try WebSocket connection
         if (!wsConnected) {
@@ -488,7 +488,7 @@ function reconnectAfterReboot() {
               if (AppState.ws && AppState.ws.readyState === WebSocket.OPEN) {
                 wsConnected = true;
                 console.log('✅ WebSocket reconnected!');
-                updateRebootStatus('Connexion rétablie !', '✅ Rechargement de la page...');
+                updateRebootStatus(t('tools.connectionRestored'), '✅ ' + t('tools.reloadingPage'));
                 
                 // Both HTTP and WS are connected - wait 2 more seconds for stability
                 console.log('⏳ Waiting for system stability...');
@@ -504,7 +504,7 @@ function reconnectAfterReboot() {
                   setTimeout(tryReconnect, 1000);
                 } else {
                   document.getElementById('rebootOverlay').style.display = 'none';
-                  showAlert('HTTP OK mais WebSocket ne répond pas.\n\nRecharger la page manuellement (F5).', { type: 'error' });
+                  showAlert(t('tools.httpOkWsFailed'), { type: 'error' });
                 }
               }
             }, 1500);
@@ -515,7 +515,7 @@ function reconnectAfterReboot() {
               setTimeout(tryReconnect, 1000);
             } else {
               document.getElementById('rebootOverlay').style.display = 'none';
-              showAlert('Impossible de reconnecter le WebSocket.\n\nVeuillez recharger la page manuellement (F5).', { type: 'error' });
+              showAlert(t('tools.wsReconnectFailed'), { type: 'error' });
             }
           }
         }
@@ -526,7 +526,7 @@ function reconnectAfterReboot() {
           setTimeout(tryReconnect, 1000);
         } else {
           document.getElementById('rebootOverlay').style.display = 'none';
-          showAlert('Impossible de se reconnecter à l\'ESP32.\n\nVeuillez recharger la page manuellement (F5).', { type: 'error' });
+          showAlert(t('tools.espReconnectFailed'), { type: 'error' });
         }
       });
   };
@@ -603,7 +603,7 @@ function saveLoggingPreferences() {
     })
     .catch(error => {
       console.error('❌ Error saving logging preferences:', error);
-      showAlert('Erreur lors de la sauvegarde des préférences de log', { type: 'error' });
+      showAlert(t('tools.logPrefSaveError'), { type: 'error' });
     });
 }
 
@@ -648,8 +648,8 @@ function updateSystemStats(system) {
     const ramFreeMB = (system.heapFree / 1024).toFixed(1);
     const ramTotalMB = (system.heapTotal / 1024).toFixed(1);
     const ramUsedPercent = parseFloat(system.heapUsedPercent);
-    document.getElementById('sysRam').textContent = ramFreeMB + ' KB libre / ' + ramTotalMB + ' KB';
-    document.getElementById('sysRamPercent').textContent = ramUsedPercent.toFixed(1) + '% utilisé';
+    document.getElementById('sysRam').textContent = ramFreeMB + ' KB ' + t('tools.free') + ' / ' + ramTotalMB + ' KB';
+    document.getElementById('sysRamPercent').textContent = ramUsedPercent.toFixed(1) + '% ' + t('tools.used');
   }
   
   // PSRAM
@@ -657,8 +657,8 @@ function updateSystemStats(system) {
     const psramFreeMB = (system.psramFree / 1024 / 1024).toFixed(1);
     const psramTotalMB = (system.psramTotal / 1024 / 1024).toFixed(1);
     const psramUsedPercent = parseFloat(system.psramUsedPercent);
-    document.getElementById('sysPsram').textContent = psramFreeMB + ' MB libre / ' + psramTotalMB + ' MB';
-    document.getElementById('sysPsramPercent').textContent = psramUsedPercent.toFixed(1) + '% utilisé';
+    document.getElementById('sysPsram').textContent = psramFreeMB + ' MB ' + t('tools.free') + ' / ' + psramTotalMB + ' MB';
+    document.getElementById('sysPsramPercent').textContent = psramUsedPercent.toFixed(1) + '% ' + t('tools.used');
   }
   
   // WiFi - delegate to pure function
@@ -674,11 +674,11 @@ function updateSystemStats(system) {
       qualityColor = wifiInfo.color;
     } else {
       // Fallback
-      if (rssi >= -50) { quality = 'Excellent'; qualityColor = '#4CAF50'; }
-      else if (rssi >= -60) { quality = 'Très bon'; qualityColor = '#8BC34A'; }
-      else if (rssi >= -70) { quality = 'Bon'; qualityColor = '#FFC107'; }
-      else if (rssi >= -80) { quality = 'Faible'; qualityColor = '#FF9800'; }
-      else { quality = 'Très faible'; qualityColor = '#f44336'; }
+      if (rssi >= -50) { quality = t('wifi.qualityExcellent'); qualityColor = '#4CAF50'; }
+      else if (rssi >= -60) { quality = t('wifi.qualityVeryGood'); qualityColor = '#8BC34A'; }
+      else if (rssi >= -70) { quality = t('wifi.qualityGood'); qualityColor = '#FFC107'; }
+      else if (rssi >= -80) { quality = t('wifi.qualityWeak'); qualityColor = '#FF9800'; }
+      else { quality = t('wifi.qualityVeryWeak'); qualityColor = '#f44336'; }
     }
     
     const qualityEl = document.getElementById('sysWifiQuality');
@@ -729,13 +729,13 @@ function updateSystemStats(system) {
     // Disable mDNS link in AP mode
     if (system.apMode) {
       hostnameEl.style.color = '#999';
-      hostnameEl.title = 'mDNS indisponible en mode AP';
+      hostnameEl.title = t('wifi.mdnsUnavailable');
     } else {
       hostnameEl.style.color = '#2196F3';
     }
   }
   if (system.ssid !== undefined) {
-    document.getElementById('sysSsid').textContent = system.ssid || '(non connecté)';
+    document.getElementById('sysSsid').textContent = system.ssid || t('wifi.notConnected');
   }
   if (system.apClients !== undefined) {
     const apClientsEl = document.getElementById('sysApClients');

@@ -30,7 +30,7 @@ function sendSimpleCyclePauseConfig() {
   
   // Validation: Min must be ≤ Max (only if random mode enabled)
   if (isRandom && minSec > maxSec) {
-    showNotification('⚠️ Pause Min (' + minSec.toFixed(1) + 's) doit être ≤ Max (' + maxSec.toFixed(1) + 's)', 'warning');
+    showNotification('⚠️ ' + t('simple.pauseMinMax', {min: minSec.toFixed(1), max: maxSec.toFixed(1)}), 'warning');
     // Auto-correction: adjust Max = Min
     maxSec = minSec;
     document.getElementById('cyclePauseMax').value = maxSec;
@@ -183,10 +183,10 @@ function updateSimpleUI(data) {
       // Sync collapsed state with backend enabled state
       if (isEnabled && isCollapsed) {
         section.classList.remove('collapsed');
-        headerText.textContent = '⏸️ Pause entre cycles - activée';
+        headerText.textContent = t('simple.cyclePauseEnabled');
       } else if (!isEnabled && !isCollapsed) {
         section.classList.add('collapsed');
-        headerText.textContent = '⏸️ Pause entre cycles - désactivée';
+        headerText.textContent = t('simple.cyclePauseDisabled');
       }
       
       // Sync radio buttons

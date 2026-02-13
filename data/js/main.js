@@ -96,7 +96,7 @@
         
         speedElement.innerHTML = '🌊 ' + displaySpeed.toFixed(0) + ' mm/s' + (isLimited ? ' ⚠️' : '');
         if (cpmSpan) {
-          cpmSpan.textContent = '(pic, f=' + data.oscillation.frequencyHz.toFixed(2) + ' Hz' + (isLimited ? ', limité' : '') + ')';
+          cpmSpan.textContent = '(pic, f=' + data.oscillation.frequencyHz.toFixed(2) + ' Hz' + (isLimited ? ', ' + t('status.speedLimited') : '') + ')';
         }
       } else if (currentMode === 'chaos' && data.chaos && data.chaos.maxSpeedLevel !== undefined) {
         // CHAOS MODE: Show max speed level
@@ -114,7 +114,7 @@
         }
       } else if (currentMode === 'sequencer') {
         // SEQUENCER MODE: Show mode indicator
-        speedElement.innerHTML = '- (mode séquence)';
+        speedElement.innerHTML = '- ' + t('status.sequenceMode');
         if (cpmSpan) {
           cpmSpan.textContent = '';
         }
@@ -191,7 +191,7 @@
       if (speedIconEl) {
         speedIconEl.textContent = speedInfo.current.emoji;
         speedIconEl.title = speedInfo.current.name + 
-          (speedInfo.next ? ' → prochain: ' + speedInfo.next.emoji + ' ' + speedInfo.next.name + ' (' + speedInfo.next.threshold + ' cm/s)' : ' (max!)');
+          (speedInfo.next ? ' → ' + t('common.next', {}) + ': ' + speedInfo.next.emoji + ' ' + speedInfo.next.name + ' (' + speedInfo.next.threshold + ' cm/s)' : ' (max!)');
       }
       
       if (realSpeedEl) {
@@ -363,10 +363,10 @@
         }
       }
       
-      const stateText = ['Initialisation', 'Calibration...', 'Prêt', 'En marche', 'En pause', 'Erreur'];
+      const stateText = t('states') || ['Initialisation', 'Calibration...', 'Prêt', 'En marche', 'En pause', 'Erreur'];
       const stateClass = ['state-init', 'state-calibrating', 'state-ready', 'state-running', 'state-paused', 'state-error'];
       
-      let displayText = stateText[data.state] || 'Inconnu';
+      let displayText = stateText[data.state] || t('common.error');
       if (data.errorMessage && data.errorMessage !== '') {
         displayText += ' ⚠️ ' + data.errorMessage;
       }
@@ -495,12 +495,12 @@
       const pendingChanges = document.getElementById('pendingChanges');
       if (data.hasPending) {
         pendingChanges.style.display = 'block';
-        pendingChanges.textContent = '⏳ Changements en attente: ' + 
+        pendingChanges.textContent = '⏳ ' + t('status.pendingChanges') + ': ' + 
           data.pendingStartPos.toFixed(1) + ' mm → ' + 
           (data.pendingStartPos + data.pendingDist).toFixed(1) + ' mm (' +
           data.pendingDist.toFixed(1) + 'mm) @ ' + 
-          'Aller: ' + data.pendingMotion.speedLevelForward.toFixed(1) + '/20, ' +
-          'Retour: ' + data.pendingMotion.speedLevelBackward.toFixed(1) + '/20 (fin de cycle)';
+          t('simple.forward') + ' ' + data.pendingMotion.speedLevelForward.toFixed(1) + '/20, ' +
+          t('simple.backward') + ' ' + data.pendingMotion.speedLevelBackward.toFixed(1) + '/20';
       } else {
         pendingChanges.style.display = 'none';
       }
@@ -550,7 +550,7 @@
       // Update sensors inverted UI
       if (data.sensorsInverted !== undefined) {
         DOM.chkSensorsInverted.checked = data.sensorsInverted;
-        DOM.sensorsInvertedStatus.textContent = data.sensorsInverted ? '(Inversé)' : '(Normal)';
+        DOM.sensorsInvertedStatus.textContent = data.sensorsInverted ? '(' + t('common.inverted') + ')' : '(' + t('common.normal') + ')';
         // Update icon next to "Course:"
         const invertedIcon = document.getElementById('sensorsInvertedIcon');
         if (invertedIcon) {
@@ -628,6 +628,9 @@
     window.addEventListener('load', function() {
       // Initialize DOM cache FIRST (performance optimization)
       initDOMCache();
+      
+      // Initialize i18n system (loads translations, applies data-i18n attributes)
+      I18n.init();
       
       // Initialize speed limits based on maxSpeedLevel constant
       initSpeedLimits();

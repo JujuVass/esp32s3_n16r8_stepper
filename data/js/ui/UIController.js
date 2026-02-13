@@ -370,7 +370,7 @@ function confirmSequencerLimitChange() {
   
   // Show confirmation notification
   setTimeout(function() {
-    showNotification('✅ Limite réinitialisée à 100% (mode séquenceur)', 3000);
+    showNotification('✅ ' + t('sequencer.limitReset'), 3000);
   }, 100);
   
   // Now actually switch to sequencer tab
@@ -406,15 +406,15 @@ function initUIListeners() {
         const modalMessage = document.getElementById('modalMessage');
         if (isPursuitActive()) {
           modalMessage.innerHTML = 
-            'Le mode poursuite est actuellement actif. Le changement de mode va :<br>' +
-            '• Désactiver le mode poursuite<br>' +
-            '• Retourner au point de départ pour vérifier le contact<br>' +
-            '• Lancer une calibration si nécessaire<br><br>' +
-            '<strong>Voulez-vous continuer ?</strong>';
+            t('modal.pursuitRunning') + '<br>' +
+            '• ' + t('modal.pursuitDisable') + '<br>' +
+            '• ' + t('modal.pursuitReturn') + '<br>' +
+            '• ' + t('modal.pursuitCalibrate') + '<br><br>' +
+            '<strong>' + t('modal.modeChangeContinue') + '</strong>';
         } else {
           modalMessage.innerHTML = 
-            'Une opération est en cours. Le changement de mode va arrêter le mouvement et lancer une recalibration.<br><br>' +
-            '<strong>Voulez-vous continuer ?</strong>';
+            t('modal.modeChangeRunning') + '<br><br>' +
+            '<strong>' + t('modal.modeChangeContinue') + '</strong>';
         }
         
         // Show confirmation modal
@@ -486,11 +486,11 @@ function showAlert(message, options = {}) {
     
     // Auto-generate title if not provided
     const modalTitle = title || {
-      info: 'Information',
-      success: 'Succès',
-      warning: 'Attention',
-      error: 'Erreur'
-    }[type] || 'Information';
+      info: t('common.info'),
+      success: t('common.success'),
+      warning: t('common.warning'),
+      error: t('common.error')
+    }[type] || t('common.info');
     
     // Update modal content
     const modal = document.getElementById('unifiedAlertModal');
@@ -533,10 +533,10 @@ function closeAlertModal() {
 function showConfirm(message, options = {}) {
   return new Promise((resolve) => {
     const {
-      title = 'Confirmation',
+      title = t('common.confirmation'),
       type = 'warning',
-      confirmText = 'Confirmer',
-      cancelText = 'Annuler',
+      confirmText = t('common.confirm'),
+      cancelText = t('common.cancel'),
       dangerous = false
     } = options;
     
@@ -599,7 +599,7 @@ function openWifiConfigModal() {
         currentConfigDiv.textContent = '✅ ' + data.ssid;
         document.getElementById('wifiEditSsid').value = data.ssid;
       } else {
-        currentConfigDiv.innerHTML = '<em style="color: #999;">Aucune configuration en EEPROM</em>';
+        currentConfigDiv.innerHTML = '<em style="color: #999;">' + t('wifi.notConnected') + '</em>';
         document.getElementById('wifiEditSsid').value = '';
       }
       document.getElementById('wifiEditPassword').value = '';
@@ -607,7 +607,7 @@ function openWifiConfigModal() {
     })
     .catch(error => {
       console.error('Failed to load WiFi config:', error);
-      document.getElementById('wifiCurrentSsid').innerHTML = '<em style="color: #F44336;">❌ Erreur de chargement</em>';
+      document.getElementById('wifiCurrentSsid').innerHTML = '<em style="color: #F44336;">❌ ' + t('tools.loadError') + '</em>';
     });
   
   modal.classList.add('active');
@@ -633,26 +633,26 @@ function saveWifiConfig() {
   
   // Validation
   if (!ssid) {
-    showWifiEditStatus('❌ Le SSID ne peut pas être vide', 'error');
+    showWifiEditStatus('❌ ' + t('wifi.ssidEmpty'), 'error');
     return;
   }
   
   if (ssid.length > 32) {
-    showWifiEditStatus('❌ Le SSID est trop long (max 32 caractères)', 'error');
+    showWifiEditStatus('❌ ' + t('wifi.ssidTooLong'), 'error');
     return;
   }
   
   if (password.length > 64) {
-    showWifiEditStatus('❌ Le mot de passe est trop long (max 64 caractères)', 'error');
+    showWifiEditStatus('❌ ' + t('wifi.passwordTooLong'), 'error');
     return;
   }
   
   // Disable save button during request
   const saveBtn = document.getElementById('btnSaveWifiConfig');
   saveBtn.disabled = true;
-  saveBtn.textContent = '⏳ Enregistrement...';
+  saveBtn.textContent = '⏳ ' + t('common.loading');
   
-  showWifiEditStatus('💾 Enregistrement en EEPROM...', 'info');
+  showWifiEditStatus('💾 ' + t('common.save') + '...', 'info');
   
   // Send to backend
   fetch('/api/wifi/save', {
@@ -663,25 +663,25 @@ function saveWifiConfig() {
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        showWifiEditStatus('✅ Configuration enregistrée avec succès !', 'success');
+        showWifiEditStatus('✅ ' + t('wifi.configSaved'), 'success');
         setTimeout(() => {
           closeWifiConfigModal();
           // Show notification
           if (typeof showNotification === 'function') {
-            showNotification('📶 WiFi configuré : ' + ssid, 'info');
+            showNotification('📶 ' + t('wifi.wifiConfigured', {ssid: ssid}), 'info');
           }
         }, 1500);
       } else {
-        showWifiEditStatus('❌ Erreur : ' + (data.message || 'Échec de l\'enregistrement'), 'error');
+        showWifiEditStatus('❌ ' + t('wifi.saveFailed', {msg: data.message || ''}), 'error');
         saveBtn.disabled = false;
-        saveBtn.textContent = '💾 Enregistrer';
+        saveBtn.textContent = '💾 ' + t('common.save');
       }
     })
     .catch(error => {
       console.error('WiFi save error:', error);
-      showWifiEditStatus('❌ Erreur de communication avec l\'ESP32', 'error');
+      showWifiEditStatus('❌ ' + t('common.error'), 'error');
       saveBtn.disabled = false;
-      saveBtn.textContent = '💾 Enregistrer';
+      saveBtn.textContent = '💾 ' + t('common.save');
     });
 }
 

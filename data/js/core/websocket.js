@@ -55,7 +55,7 @@ function connectWebSocket(useFallback) {
     // Update status display
     const stateEl = document.getElementById('state');
     if (stateEl) {
-      stateEl.textContent = 'Connecté au contrôleur';
+      stateEl.textContent = t('status.connectedToController');
     }
     
     // Initialize UI elements that depend on connection
@@ -83,7 +83,7 @@ function connectWebSocket(useFallback) {
       
     } catch (e) {
       console.error('WebSocket parse error:', e, 'Raw data:', event.data);
-      showNotification('Erreur de communication avec l\'ESP32', 'error');
+      showNotification(t('common.error') + ': ' + e.message, 'error');
     }
   };
   
@@ -110,7 +110,7 @@ function connectWebSocket(useFallback) {
     
     const stateEl = document.getElementById('state');
     if (stateEl) {
-      stateEl.textContent = 'Déconnecté - Reconnexion...';
+      stateEl.textContent = t('status.disconnectedReconnecting');
     }
     
     // Auto-reconnect after delay (normal mode, will use IP if available)
@@ -132,10 +132,10 @@ function connectWebSocket(useFallback) {
     
     const stateEl = document.getElementById('state');
     if (stateEl) {
-      stateEl.textContent = 'Erreur de connexion';
+      stateEl.textContent = t('status.errorState');
     }
     
-    showNotification('Erreur WebSocket - Vérifiez la connexion', 'error');
+    showNotification(t('status.wsError'), 'error');
   };
 }
 
