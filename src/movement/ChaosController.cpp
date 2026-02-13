@@ -1078,7 +1078,7 @@ void ChaosController::start() {
     // Move to center if needed
     float currentPosMM = currentStep / (float)STEPS_PER_MM;
     if (abs(currentPosMM - chaos.centerPositionMM) > 1.0) {
-        engine->info("🎯 Déplacement vers le centre: " + String(chaos.centerPositionMM, 1) + " mm");
+        engine->info("🎯 Moving to center: " + String(chaos.centerPositionMM, 1) + " mm");
         targetStep = (long)(chaos.centerPositionMM * STEPS_PER_MM);
         
         Motor.enable();
@@ -1097,14 +1097,14 @@ void ChaosController::start() {
         }
         
         if (currentStep != targetStep) {
-            engine->warn("⚠️ Timeout lors du positionnement au centre");
+            engine->warn("⚠️ Timeout during center positioning");
             engine->error("❌ Chaos mode aborted - failed to reach center position");
             
             chaosState.isRunning = false;
             config.currentState = STATE_READY;
             Motor.disable();
             
-            Status.sendError("Impossible d'atteindre le centre - timeout après 30s. Vérifiez que le moteur peut bouger librement.");
+            Status.sendError("Cannot reach center - timeout after 30s. Check that the motor can move freely.");
             return;
         }
     }
@@ -1127,12 +1127,12 @@ void ChaosController::start() {
     engine->info("🎲 Chaos mode started");
     engine->info("   Centre: " + String(chaos.centerPositionMM, 1) + " mm");
     engine->info("   Amplitude: ±" + String(chaos.amplitudeMM, 1) + " mm");
-    engine->info("   Vitesse max: " + String(chaos.maxSpeedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0));
-    engine->info("   Degré de folie: " + String(chaos.crazinessPercent, 0) + " %");
+    engine->info("   Max speed: " + String(chaos.maxSpeedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0));
+    engine->info("   Craziness: " + String(chaos.crazinessPercent, 0) + " %");
     if (chaos.durationSeconds > 0) {
-        engine->info("   Durée: " + String(chaos.durationSeconds) + " s");
+        engine->info("   Duration: " + String(chaos.durationSeconds) + " s");
     } else {
-        engine->info("   Durée: INFINIE");
+        engine->info("   Duration: INFINITE");
     }
     if (chaos.seed > 0) {
         engine->info("   Seed: " + String(chaos.seed));
@@ -1151,10 +1151,10 @@ void ChaosController::stop() {
     chaosState.isRunning = false;
     
     engine->info(String("🛑 Chaos mode stopped:\n") +
-          "   Patterns exécutés: " + String(chaosState.patternsExecuted) + "\n" +
+          "   Patterns executed: " + String(chaosState.patternsExecuted) + "\n" +
           "   Min position: " + String(chaosState.minReachedMM, 1) + " mm\n" +
           "   Max position: " + String(chaosState.maxReachedMM, 1) + " mm\n" +
-          "   Plage couverte: " + String(chaosState.maxReachedMM - chaosState.minReachedMM, 1) + " mm");
+          "   Range covered: " + String(chaosState.maxReachedMM - chaosState.minReachedMM, 1) + " mm");
     
     config.currentState = STATE_READY;
     currentMovement = MOVEMENT_VAET;

@@ -58,7 +58,7 @@ bool CalibrationManager::handleFailure() {
     m_attemptCount++;
     if (m_attemptCount >= MAX_CALIBRATION_RETRIES) {
         if (m_errorCallback) {
-            m_errorCallback("❌ ERROR: Calibration échouée après " + String(MAX_CALIBRATION_RETRIES) + " tentatives");
+            m_errorCallback("❌ ERROR: Calibration failed after " + String(MAX_CALIBRATION_RETRIES) + " attempts");
         }
         m_attemptCount = 0;
     }
@@ -130,9 +130,9 @@ bool CalibrationManager::findContact(bool moveForward, uint8_t contactPin, const
         long minExpectedSteps = (long)(HARD_MIN_DISTANCE_MM * STEPS_PER_MM);
         
         if (detectedSteps < minExpectedSteps) {
-            engine->error("❌ Opto END détecté trop tôt (" + 
+            engine->error("❌ Opto END detected too early (" + 
                          String(detectedSteps) + " < " + String(minExpectedSteps) + " steps)");
-            engine->error("→ Vérifier le câblage ou la position des optos");
+            engine->error("→ Check wiring or opto sensor positions");
             return false;  // Fail without infinite retry
         }
     }
@@ -236,7 +236,7 @@ bool CalibrationManager::startCalibration() {
         m_attemptCount++;
         if (m_attemptCount >= MAX_CALIBRATION_RETRIES) {
             if (m_errorCallback) {
-                m_errorCallback("❌ Distance calibrée trop courte (" + 
+                m_errorCallback("❌ Calibrated distance too short (" + 
                               String(m_totalDistanceMM, 1) + " mm)");
             }
             Motor.disable();
@@ -245,13 +245,13 @@ bool CalibrationManager::startCalibration() {
             return false;
         }
         
-        engine->warn("⚠️ Distance trop courte - Retry " + String(m_attemptCount));
+        engine->warn("⚠️ Distance too short - Retry " + String(m_attemptCount));
         serviceWebSocket(500);
         return startCalibration();  // Recursive retry
     }
     
     if (m_totalDistanceMM > HARD_MAX_DISTANCE_MM) {
-        engine->warn("⚠️ Distance limitée à " + String(HARD_MAX_DISTANCE_MM, 1) + " mm");
+        engine->warn("⚠️ Distance limited to " + String(HARD_MAX_DISTANCE_MM, 1) + " mm");
         m_totalDistanceMM = HARD_MAX_DISTANCE_MM;
         m_maxStep = (long)(m_totalDistanceMM * STEPS_PER_MM);
         config.maxStep = m_maxStep;
@@ -276,7 +276,7 @@ bool CalibrationManager::startCalibration() {
         m_attemptCount++;
         if (m_attemptCount >= MAX_CALIBRATION_RETRIES) {
             if (m_errorCallback) {
-                m_errorCallback("❌ Calibration échouée - erreur trop grande");
+                m_errorCallback("❌ Calibration failed - error too large");
             }
             Motor.disable();
             config.currentState = STATE_ERROR;
@@ -362,14 +362,14 @@ bool CalibrationManager::returnToStart() {
         
         if (emergencySteps >= MAX_EMERGENCY) {
             if (m_errorCallback) {
-                m_errorCallback("❌ Impossible de décoller du contact END");
+                m_errorCallback("❌ Cannot release from END contact");
             }
             Motor.disable();
             config.currentState = STATE_ERROR;
             return false;
         }
         
-        engine->info("✓ Décollement réussi (" + String(emergencySteps) + " steps)");
+        engine->info("✓ Release successful (" + String(emergencySteps) + " steps)");
         delay(200);
     }
     
@@ -389,7 +389,7 @@ bool CalibrationManager::returnToStart() {
         
         if (currentStep < -CALIBRATION_ERROR_MARGIN_STEPS) {
             if (m_errorCallback) {
-                m_errorCallback("❌ Impossible de retourner au contact START");
+                m_errorCallback("❌ Cannot return to START contact");
             }
             Motor.disable();
             config.currentState = STATE_ERROR;

@@ -408,9 +408,9 @@ void BaseMovementControllerClass::checkAndTriggerRandomTurnback(float distanceIn
             // Execute turnback - first trigger pause if enabled
             if (zoneEffect.endPauseEnabled) {
                 triggerEndPause();
-                engine->debug("🔄⏸️ Retour aléatoire + pause à " + String(distanceIntoZone, 1) + "mm");
+                engine->debug("🔄⏸️ Random turnback + pause at " + String(distanceIntoZone, 1) + "mm");
             } else {
-                engine->debug("🔄 Retour aléatoire exécuté à " + String(distanceIntoZone, 1) + "mm dans la zone");
+                engine->debug("🔄 Random turnback executed at " + String(distanceIntoZone, 1) + "mm into zone");
             }
             movingForward = !movingForward;
             zoneEffect.hasPendingTurnback = false;
@@ -438,9 +438,9 @@ void BaseMovementControllerClass::checkAndTriggerRandomTurnback(float distanceIn
             float maxTurnback = zoneEffect.zoneMM * 0.9;
             zoneEffect.turnbackPointMM = minTurnback + (random(0, 1000) / 1000.0) * (maxTurnback - minTurnback);
             zoneEffect.hasPendingTurnback = true;
-            engine->debug("🔄 Retour aléatoire planifié à " + String(zoneEffect.turnbackPointMM, 1) + "mm (tirage=" + String(roll) + " < " + String(zoneEffect.turnbackChance) + "%)");
+            engine->debug("🔄 Random turnback planned at " + String(zoneEffect.turnbackPointMM, 1) + "mm (roll=" + String(roll) + " < " + String(zoneEffect.turnbackChance) + "%)");
         } else {
-            engine->debug("🎲 Pas de retour (tirage=" + String(roll) + " >= " + String(zoneEffect.turnbackChance) + "%)");
+            engine->debug("🎲 No turnback (roll=" + String(roll) + " >= " + String(zoneEffect.turnbackChance) + "%)");
         }
     }
 }
@@ -466,7 +466,7 @@ bool BaseMovementControllerClass::checkAndHandleEndPause() {
     if (elapsed >= zoneEffect.pauseDurationMs) {
         // Pause complete
         zoneEffect.isPausing = false;
-        engine->debug("⏸️ Fin pause extrémité (" + String(zoneEffect.pauseDurationMs) + "ms)");
+        engine->debug("⏸️ End pause complete (" + String(zoneEffect.pauseDurationMs) + "ms)");
         return false;
     }
     
@@ -490,7 +490,7 @@ void BaseMovementControllerClass::triggerEndPause() {
     
     zoneEffect.isPausing = true;
     zoneEffect.pauseStartMs = millis();
-    engine->debug("⏸️ Pause extrémité: " + String(zoneEffect.pauseDurationMs) + "ms");
+    engine->debug("⏸️ End pause: " + String(zoneEffect.pauseDurationMs) + "ms");
 }
 
 // ============================================================================
@@ -522,16 +522,16 @@ void BaseMovementControllerClass::validateZoneEffect() {
     // Enforce minimum zone size (10mm)
     if (zoneEffect.zoneMM < 0) {
         zoneEffect.zoneMM = 10.0;
-        engine->warn("⚠️ Zone négative détectée, corrigée à 10 mm");
+        engine->warn("⚠️ Negative zone detected, corrected to 10 mm");
     } else if (zoneEffect.zoneMM < 10.0) {
         zoneEffect.zoneMM = 10.0;
-        engine->warn("⚠️ Zone augmentée à 10 mm (minimum)");
+        engine->warn("⚠️ Zone increased to 10 mm (minimum)");
     }
     
     // Enforce maximum zone size
     if (zoneEffect.zoneMM > maxAllowedZone) {
-        engine->warn("⚠️ Zone réduite de " + String(zoneEffect.zoneMM, 1) + " mm à " + 
-              String(maxAllowedZone, 1) + " mm (max pour amplitude de " + 
+        engine->warn("⚠️ Zone reduced from " + String(zoneEffect.zoneMM, 1) + " mm to " + 
+              String(maxAllowedZone, 1) + " mm (max for amplitude of " + 
               String(movementAmplitudeMM, 1) + " mm)");
         
         zoneEffect.zoneMM = maxAllowedZone;
@@ -617,7 +617,7 @@ void BaseMovementControllerClass::togglePause() {
         // 🆕 CORRECTION: Reset timer en mode oscillation pour éviter le saut de phase lors de la reprise
         if (wasPaused && currentMovement == MOVEMENT_OSC) {
             oscillationState.lastPhaseUpdateMs = millis();
-            engine->debug("🔄 Phase gelée après pause (évite à-coup)");
+            engine->debug("🔄 Phase frozen after pause (avoids jerk)");
         }
         
         engine->info(config.currentState == STATE_PAUSED ? "Paused" : "Resumed");
@@ -695,7 +695,7 @@ void BaseMovementControllerClass::start(float distMM, float speedLevel) {
     
     // Block start if in error state
     if (config.currentState == STATE_ERROR) {
-        Status.sendError("❌ Impossible de démarrer: Système en état ERREUR - Utilisez 'Retour Départ' ou recalibrez");
+        Status.sendError("❌ Cannot start: System in ERROR state - Use 'Return to Start' or recalibrate");
         return;
     }
     
@@ -706,7 +706,7 @@ void BaseMovementControllerClass::start(float distMM, float speedLevel) {
     // Validate and limit distance if needed
     if (motion.startPositionMM + distMM > config.totalDistanceMM) {
         if (motion.startPositionMM >= config.totalDistanceMM) {
-            Status.sendError("❌ ERROR: Position de départ dépasse le maximum");
+            Status.sendError("❌ ERROR: Start position exceeds maximum");
             return;
         }
         distMM = config.totalDistanceMM - motion.startPositionMM;
@@ -831,7 +831,7 @@ void BaseMovementControllerClass::process() {
             // End of pause, resume movement
             motionPauseState.isPausing = false;
             movingForward = true;  // Resume forward direction
-            engine->debug("▶️ Fin pause cycle VAET");
+            engine->debug("▶️ End cycle pause VAET");
         }
         // During pause, don't step
         return;
@@ -1062,7 +1062,7 @@ bool BaseMovementControllerClass::handleCyclePause() {
     motionPauseState.isPausing = true;
     motionPauseState.pauseStartMs = millis();
     
-    engine->debug("⏸️ Pause cycle VAET: " + String(motionPauseState.currentPauseDuration) + "ms");
+    engine->debug("⏸️ Cycle pause VAET: " + String(motionPauseState.currentPauseDuration) + "ms");
     
     return true;  // Pausing, don't reverse direction yet
 }

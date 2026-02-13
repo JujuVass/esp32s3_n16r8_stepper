@@ -71,7 +71,7 @@ void StatusBroadcaster::send() {
     bool canStart = (config.totalDistanceMM > 0);  // Show UI after calibration
     String errorMessage = "";
     if (!canStart) {
-        errorMessage = "Recalibration nécessaire";
+        errorMessage = "Recalibration required";
     }
     
     bool canCalibrate = (config.currentState == STATE_READY || 

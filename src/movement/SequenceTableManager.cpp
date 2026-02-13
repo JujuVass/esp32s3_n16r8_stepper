@@ -40,7 +40,7 @@ SequenceTableManager::SequenceTableManager() {
 
 int SequenceTableManager::addLine(SequenceLine newLine) {
   if (sequenceLineCount >= MAX_SEQUENCE_LINES) {
-    Status.sendError("❌ Séquenceur plein! Max 20 lignes");
+    Status.sendError("❌ Sequencer full! Max 20 lines");
     return -1;
   }
   
@@ -48,7 +48,7 @@ int SequenceTableManager::addLine(SequenceLine newLine) {
   sequenceTable[sequenceLineCount] = newLine;
   sequenceLineCount++;
   
-  engine->info("✅ Ligne ajoutée: ID=" + String(newLine.lineId) + " | Pos:" + 
+  engine->info("✅ Line added: ID=" + String(newLine.lineId) + " | Pos:" + 
         String(newLine.startPositionMM, 1) + "mm, Dist:" + String(newLine.distanceMM, 1) + "mm");
   
   return newLine.lineId;
@@ -58,7 +58,7 @@ bool SequenceTableManager::deleteLine(int lineId) {
   int idx = findLineIndex(lineId);
   
   if (idx == -1) {
-    Status.sendError("❌ Ligne non trouvée");
+    Status.sendError("❌ Line not found");
     return false;
   }
   
@@ -68,7 +68,7 @@ bool SequenceTableManager::deleteLine(int lineId) {
   }
   
   sequenceLineCount--;
-  engine->info("🗑️ Ligne supprimée: ID=" + String(lineId));
+  engine->info("🗑️ Line deleted: ID=" + String(lineId));
   
   return true;
 }
@@ -77,14 +77,14 @@ bool SequenceTableManager::updateLine(int lineId, SequenceLine updatedLine) {
   int idx = findLineIndex(lineId);
   
   if (idx == -1) {
-    Status.sendError("❌ Ligne non trouvée");
+    Status.sendError("❌ Line not found");
     return false;
   }
   
   updatedLine.lineId = lineId;  // Keep original ID
   sequenceTable[idx] = updatedLine;
   
-  engine->info("✏️ Ligne mise à jour: ID=" + String(lineId));
+  engine->info("✏️ Line updated: ID=" + String(lineId));
   return true;
 }
 
@@ -103,7 +103,7 @@ bool SequenceTableManager::moveLine(int lineId, int direction) {
   sequenceTable[idx] = sequenceTable[newIdx];
   sequenceTable[newIdx] = temp;
   
-  engine->info(String("↕️ Ligne déplacée: ID=") + String(lineId) + " | " + 
+  engine->info(String("↕️ Line moved: ID=") + String(lineId) + " | " + 
         String(idx + 1) + " → " + String(newIdx + 1));
   
   return true;
@@ -135,7 +135,7 @@ bool SequenceTableManager::reorderLine(int lineId, int newIndex) {
   // Place the line at new position
   sequenceTable[newIndex] = lineToMove;
   
-  engine->info(String("🔄 Ligne réordonnée: ID=") + String(lineId) + " | " + 
+  engine->info(String("🔄 Line reordered: ID=") + String(lineId) + " | " + 
         String(oldIndex + 1) + " → " + String(newIndex + 1));
   
   return true;
@@ -147,8 +147,8 @@ bool SequenceTableManager::toggleLine(int lineId, bool enabled) {
   if (idx == -1) return false;
   
   sequenceTable[idx].enabled = enabled;
-  engine->info(String(enabled ? "✓" : "✗") + " Ligne ID=" + String(lineId) + 
-        (enabled ? " activée" : " désactivée"));
+  engine->info(String(enabled ? "✓" : "✗") + " Line ID=" + String(lineId) + 
+        (enabled ? " enabled" : " disabled"));
   return true;
 }
 
@@ -164,7 +164,7 @@ int SequenceTableManager::duplicateLine(int lineId) {
 void SequenceTableManager::clear() {
   sequenceLineCount = 0;
   config.nextLineId = 1;  // Phase 4D: Use config.nextLineId
-  engine->info("🗑️ Tableau vidé");
+  engine->info("🗑️ Table cleared");
 }
 
 // ============================================================================
@@ -464,7 +464,7 @@ String SequenceTableManager::exportToJson() {
 // ============================================================================
 
 int SequenceTableManager::importFromJson(String jsonData) {
-  engine->debug(String("📤 JSON reçu (") + String(jsonData.length()) + " chars): " + 
+  engine->debug(String("📤 JSON received (") + String(jsonData.length()) + " chars): " + 
         jsonData.substring(0, min(200, (int)jsonData.length())));
   
   // Clear existing table
@@ -474,32 +474,32 @@ int SequenceTableManager::importFromJson(String jsonData) {
   DeserializationError error = deserializeJson(importDoc, jsonData);
   if (error) {
     engine->error("JSON parse error: " + String(error.c_str()));
-    Status.sendError("❌ JSON invalide: " + String(error.c_str()));
+    Status.sendError("❌ Invalid JSON: " + String(error.c_str()));
     return -1;
   }
   
   // Validate sequenceLineCount
   int importLineCount = importDoc["sequenceLineCount"] | 0;
   if (importLineCount <= 0 || importLineCount > MAX_SEQUENCE_LINES) {
-    Status.sendError("❌ JSON invalide ou trop de lignes");
+    Status.sendError("❌ Invalid JSON or too many lines");
     return -1;
   }
   
   // Validate lines array
   if (!importDoc["lines"].is<JsonArray>()) {
-    Status.sendError("❌ Array 'lines' non trouvé ou invalide");
+    Status.sendError("❌ 'lines' array not found or invalid");
     return -1;
   }
   
   JsonArray linesArray = importDoc["lines"].as<JsonArray>();
-  engine->info(String("📥 Import: ") + String(importLineCount) + " lignes");
+  engine->info(String("📥 Import: ") + String(importLineCount) + " lines");
   
   int maxLineId = 0;
   int importedCount = 0;
   
   for (JsonObject lineObj : linesArray) {
     if (sequenceLineCount >= MAX_SEQUENCE_LINES) {
-      engine->warn("⚠️ Table pleine, arrêt import");
+      engine->warn("⚠️ Table full, stopping import");
       break;
     }
     
@@ -517,8 +517,8 @@ int SequenceTableManager::importFromJson(String jsonData) {
   
   config.nextLineId = maxLineId + 1;  // Phase 4D: Use config.nextLineId
   
-  engine->info(String("✅ ") + String(importedCount) + " lignes importées");
-  engine->info(String("📢 nextLineId mis à jour: ") + String(config.nextLineId));
+  engine->info(String("✅ ") + String(importedCount) + " lines imported");
+  engine->info(String("📢 nextLineId updated: ") + String(config.nextLineId));
   
   return importedCount;
 }

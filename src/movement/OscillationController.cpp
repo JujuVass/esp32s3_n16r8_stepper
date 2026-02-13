@@ -140,10 +140,10 @@ void OscillationControllerClass::start() {
     engine->info(String("✅ Oscillation started:\n") +
           "   Centre: " + String(oscillation.centerPositionMM, 1) + " mm\n" +
           "   Amplitude: ±" + String(oscillation.amplitudeMM, 1) + " mm\n" +
-          "   Fréquence: " + String(oscillation.frequencyHz, 3) + " Hz\n" +
-          "   Forme: " + waveformName + "\n" +
-          "   Rampe entrée: " + String(oscillation.enableRampIn ? "OUI" : "NON") + "\n" +
-          "   Rampe sortie: " + String(oscillation.enableRampOut ? "OUI" : "NON"));
+          "   Frequency: " + String(oscillation.frequencyHz, 3) + " Hz\n" +
+          "   Waveform: " + waveformName + "\n" +
+          "   Ramp in: " + String(oscillation.enableRampIn ? "YES" : "NO") + "\n" +
+          "   Ramp out: " + String(oscillation.enableRampOut ? "YES" : "NO"));
 }
 
 void OscillationControllerClass::process() {
@@ -232,7 +232,7 @@ void OscillationControllerClass::process() {
     bool isCatchUp = (errorMM > OSC_CATCH_UP_THRESHOLD_MM);
     
     if (isCatchUp && !catchUpWarningLogged_) {
-        engine->warn("⚠️ OSC Catch-up activé: erreur de " + String(errorMM, 1) + "mm (seuil: " + String(OSC_CATCH_UP_THRESHOLD_MM, 1) + "mm)");
+        engine->warn("⚠️ OSC Catch-up enabled: error of " + String(errorMM, 1) + "mm (threshold: " + String(OSC_CATCH_UP_THRESHOLD_MM, 1) + "mm)");
         catchUpWarningLogged_ = true;
     }
     
@@ -261,8 +261,8 @@ float OscillationControllerClass::calculatePosition() {
             // Log warning (throttled to avoid spam)
             static unsigned long lastSpeedLimitLog = 0;
             if (currentMs - lastSpeedLimitLog > 5000) {
-                engine->warn("⚠️ Fréquence réduite: " + String(oscillation.frequencyHz, 2) + " Hz → " + 
-                      String(effectiveFrequency, 2) + " Hz (vitesse max: " + 
+                engine->warn("⚠️ Frequency reduced: " + String(oscillation.frequencyHz, 2) + " Hz → " + 
+                      String(effectiveFrequency, 2) + " Hz (max speed: " + 
                       String(OSC_MAX_SPEED_MM_S, 0) + " mm/s)");
                 lastSpeedLimitLog = currentMs;
             }
@@ -305,7 +305,7 @@ float OscillationControllerClass::calculatePosition() {
             // Transition complete
             oscillationState.isTransitioning = false;
             effectiveFrequency = oscillation.frequencyHz;
-            engine->info("✅ Transition terminée: " + String(effectiveFrequency, 3) + " Hz");
+            engine->info("✅ Transition complete: " + String(effectiveFrequency, 3) + " Hz");
         }
     }
     
@@ -404,7 +404,7 @@ float OscillationControllerClass::calculatePosition() {
             // Transition complete
             oscillationState.isAmplitudeTransitioning = false;
             effectiveAmplitude = oscillation.amplitudeMM;
-            engine->info("✅ Amplitude transition terminée: " + String(effectiveAmplitude, 1) + " mm");
+            engine->info("✅ Amplitude transition complete: " + String(effectiveAmplitude, 1) + " mm");
         }
     }
     
@@ -478,7 +478,7 @@ float OscillationControllerClass::calculatePosition() {
             // Transition complete
             oscillationState.isCenterTransitioning = false;
             effectiveCenterMM = oscillation.centerPositionMM;
-            engine->info("✅ Centre transition terminée: " + String(effectiveCenterMM, 1) + " mm");
+            engine->info("✅ Center transition complete: " + String(effectiveCenterMM, 1) + " mm");
         }
     }
     
@@ -490,12 +490,12 @@ float OscillationControllerClass::calculatePosition() {
     float maxPositionMM = config.maxStep / STEPS_PER_MM;
     
     if (targetPositionMM < minPositionMM) {
-        engine->warn("⚠️ OSC: Limité par START (" + String(targetPositionMM, 1) + "→" + String(minPositionMM, 1) + "mm)");
+        engine->warn("⚠️ OSC: Limited by START (" + String(targetPositionMM, 1) + "→" + String(minPositionMM, 1) + "mm)");
         targetPositionMM = minPositionMM;
     }
     
     if (targetPositionMM > maxPositionMM) {
-        engine->warn("⚠️ OSC: Limité par END (" + String(targetPositionMM, 1) + "→" + String(maxPositionMM, 1) + "mm)");
+        engine->warn("⚠️ OSC: Limited by END (" + String(targetPositionMM, 1) + "→" + String(maxPositionMM, 1) + "mm)");
         targetPositionMM = maxPositionMM;
     }
     
@@ -514,12 +514,12 @@ bool OscillationControllerClass::validateAmplitude(float centerMM, float amplitu
     float maxRequired = centerMM + amplitudeMM;
     
     if (minRequired < 0) {
-        errorMsg = "Amplitude trop grande: position minimum < 0 mm (" + String(minRequired, 1) + "mm)";
+        errorMsg = "Amplitude too large: minimum position < 0 mm (" + String(minRequired, 1) + "mm)";
         return false;
     }
     
     if (maxRequired > maxAllowed) {
-        errorMsg = "Amplitude trop grande: position maximum > " + String(maxAllowed, 1) + " mm (" + String(maxRequired, 1) + "mm)";
+        errorMsg = "Amplitude too large: maximum position > " + String(maxAllowed, 1) + " mm (" + String(maxRequired, 1) + "mm)";
         if (maxDistanceLimitPercent < 100.0) {
             errorMsg += " [Limitation " + String(maxDistanceLimitPercent, 0) + "%]";
         }
@@ -545,7 +545,7 @@ bool OscillationControllerClass::handleCyclePause() {
         oscillationState.lastPhaseUpdateMs = millis();  // Reset le timer pour éviter deltaMs énorme
         
         oscPauseState.isPausing = false;
-        engine->debug("▶️ Fin pause cycle OSC (" + String(pauseDuration) + "ms) - Phase gelée");
+        engine->debug("▶️ End cycle pause OSC (" + String(pauseDuration) + "ms) - Phase frozen");
         return false;  // Pause complete, can continue
     }
     
@@ -561,9 +561,9 @@ bool OscillationControllerClass::handleInitialPositioning() {
     // DEBUG: Log position actuelle au premier appel
     if (firstPositioningCall_) {
         float currentMM = currentStep / STEPS_PER_MM;
-        engine->debug("🚀 Début positionnement: Position=" + String(currentMM, 1) + 
-              "mm → Cible=" + String(targetPositionMM, 1) + 
-              "mm (erreur=" + String(errorSteps) + " steps = " + 
+        engine->debug("🚀 Start positioning: Position=" + String(currentMM, 1) + 
+              "mm → Target=" + String(targetPositionMM, 1) + 
+              "mm (error=" + String(errorSteps) + " steps = " + 
               String(errorSteps / STEPS_PER_MM, 1) + "mm)");
         firstPositioningCall_ = false;
     }
@@ -602,7 +602,7 @@ bool OscillationControllerClass::handleInitialPositioning() {
         oscillationState.startTimeMs = millis();  // Reset timer for oscillation
         oscillationState.rampStartMs = millis();  // 🔧 FIX: Reset ramp timer AFTER positioning
         oscillationState.lastPhaseUpdateMs = 0;   // Reset phase tracking
-        engine->debug("✅ Positionnement terminé - Démarrage rampe");
+        engine->debug("✅ Positioning complete - Starting ramp");
         return false;  // Positioning complete
     }
     
@@ -619,7 +619,7 @@ bool OscillationControllerClass::checkSafetyContacts(long targetStep) {
     float distanceToEndLimitMM = config.totalDistanceMM - maxOscPositionMM;
     if (distanceToEndLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
         if (targetStep >= config.maxStep && Contacts.isEndActive()) {
-            Status.sendError("❌ OSCILLATION: Contact END atteint de manière inattendue (amplitude proche limite)");
+            Status.sendError("❌ OSCILLATION: END contact reached unexpectedly (amplitude near limit)");
             config.currentState = STATE_PAUSED;  // Stop movement (single source of truth)
             return false;
         }
@@ -628,7 +628,7 @@ bool OscillationControllerClass::checkSafetyContacts(long targetStep) {
     // Test START contact uniquement si oscillation approche de la limite basse
     if (minOscPositionMM <= HARD_DRIFT_TEST_ZONE_MM) {
         if (targetStep <= config.minStep && Contacts.isStartActive()) {
-            Status.sendError("❌ OSCILLATION: Contact START atteint de manière inattendue (amplitude proche limite)");
+            Status.sendError("❌ OSCILLATION: START contact reached unexpectedly (amplitude near limit)");
             config.currentState = STATE_PAUSED;  // Stop movement (single source of truth)
             return false;
         }

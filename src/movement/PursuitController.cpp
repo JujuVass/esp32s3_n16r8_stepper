@@ -41,7 +41,7 @@ void PursuitControllerClass::begin() {
 void PursuitControllerClass::move(float targetPositionMM, float maxSpeedLevel) {
     // Safety check: calibration required
     if (config.totalDistanceMM == 0) {
-        Status.sendError("❌ Mode Pursuit nécessite une calibration d'abord!");
+        Status.sendError("❌ Pursuit mode requires calibration first!");
         return;
     }
     
@@ -192,7 +192,7 @@ bool PursuitControllerClass::checkSafetyContacts(bool moveForward) {
             if (Contacts.isEndActive()) {
                 pursuit.isMoving = false;
                 pursuit.targetStep = currentStep;
-                Status.sendError("❌ PURSUIT: Contact END atteint - arrêt sécurité");
+                Status.sendError("❌ PURSUIT: END contact reached - safety stop");
                 config.currentState = STATE_ERROR;
                 return false;
             }
@@ -205,7 +205,7 @@ bool PursuitControllerClass::checkSafetyContacts(bool moveForward) {
             if (Contacts.isStartActive()) {
                 pursuit.isMoving = false;
                 pursuit.targetStep = currentStep;
-                Status.sendError("❌ PURSUIT: Contact START atteint - arrêt sécurité");
+                Status.sendError("❌ PURSUIT: START contact reached - safety stop");
                 config.currentState = STATE_ERROR;
                 return false;
             }

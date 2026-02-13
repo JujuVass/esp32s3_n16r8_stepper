@@ -107,7 +107,7 @@ bool CommandDispatcher::parseJsonCommand(const String& jsonStr, JsonDocument& do
     
     if (error) {
         engine->error("JSON parse error: " + String(error.c_str()));
-        Status.sendError("❌ Commande JSON invalide: " + String(error.c_str()));
+        Status.sendError("❌ Invalid JSON command: " + String(error.c_str()));
         return false;
     }
     
@@ -206,12 +206,12 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
         float percent = doc["percent"] | 100.0;
         
         if (percent < 50.0 || percent > 100.0) {
-            Status.sendError("⚠️ Limite doit être entre 50% et 100% (reçu: " + String(percent, 0) + "%)");
+            Status.sendError("⚠️ Limit must be between 50% and 100% (received: " + String(percent, 0) + "%)");
             return true;
         }
         
         if (config.currentState != STATE_READY) {
-            Status.sendError("⚠️ Modification limite impossible - Système doit être en état PRÊT");
+            Status.sendError("⚠️ Cannot change limit - System must be in READY state");
             return true;
         }
         
@@ -231,7 +231,7 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
         
         // Allow change only when stopped (READY, INIT, or ERROR states)
         if (config.currentState == STATE_RUNNING || config.currentState == STATE_CALIBRATING) {
-            Status.sendError("⚠️ Arrêter le mouvement avant de changer le mode capteurs");
+            Status.sendError("⚠️ Stop movement before changing sensor mode");
             return true;
         }
         
@@ -241,8 +241,8 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
         // Force recalibration (physical positions have changed meaning)
         config.currentState = STATE_INIT;
         
-        engine->info(String("🔄 Mode capteurs: ") + (inverted ? "INVERSÉ (START↔END)" : "NORMAL"));
-        engine->warn("⚠️ Recalibration nécessaire après changement de mode");
+        engine->info(String("🔄 Sensor mode: ") + (inverted ? "INVERTED (START↔END)" : "NORMAL"));
+        engine->warn("⚠️ Recalibration required after sensor mode change");
         
         sendStatus();
         return true;
@@ -422,8 +422,8 @@ bool CommandDispatcher::handleCyclePauseCommands(const char* cmd, JsonDocument& 
         motion.cyclePause.minPauseSec = minPauseSec;
         motion.cyclePause.maxPauseSec = maxPauseSec;
         
-        engine->info(String("⏸️ Pause cycle VAET: ") + (enabled ? "activée" : "désactivée") +
-              " | Mode: " + (isRandom ? "aléatoire" : "fixe") +
+        engine->info(String("⏸️ Cycle pause VAET: ") + (enabled ? "enabled" : "disabled") +
+              " | Mode: " + (isRandom ? "random" : "fixed") +
               " | " + (isRandom ? String(minPauseSec, 1) + "-" + String(maxPauseSec, 1) + "s" : String(pauseDurationSec, 1) + "s"));
         
         sendStatus();
@@ -447,8 +447,8 @@ bool CommandDispatcher::handleCyclePauseCommands(const char* cmd, JsonDocument& 
         oscillation.cyclePause.minPauseSec = minPauseSec;
         oscillation.cyclePause.maxPauseSec = maxPauseSec;
         
-        engine->info(String("⏸️ Pause cycle OSC: ") + (enabled ? "activée" : "désactivée") +
-              " | Mode: " + (isRandom ? "aléatoire" : "fixe") +
+        engine->info(String("⏸️ Cycle pause OSC: ") + (enabled ? "enabled" : "disabled") +
+              " | Mode: " + (isRandom ? "random" : "fixed") +
               " | " + (isRandom ? String(minPauseSec, 1) + "-" + String(maxPauseSec, 1) + "s" : String(pauseDurationSec, 1) + "s"));
         
         sendStatus();
@@ -465,11 +465,11 @@ bool CommandDispatcher::handleCyclePauseCommands(const char* cmd, JsonDocument& 
 bool CommandDispatcher::handlePursuitCommands(const char* cmd, JsonDocument& doc) {
     if (strcmp(cmd, "enablePursuitMode") == 0) {
         if (config.currentState == STATE_CALIBRATING) {
-            Status.sendError("⚠️ Impossible d'activer le mode Pursuit: calibration en cours");
+            Status.sendError("⚠️ Cannot enable Pursuit mode: calibration in progress");
             return true;
         }
         if (config.currentState == STATE_ERROR) {
-            Status.sendError("⚠️ Impossible d'activer le mode Pursuit: système en état erreur");
+            Status.sendError("⚠️ Cannot enable Pursuit mode: system in error state");
             return true;
         }
         
@@ -488,7 +488,7 @@ bool CommandDispatcher::handlePursuitCommands(const char* cmd, JsonDocument& doc
             }
         }
         
-        engine->debug("✅ Mode Pursuit activé");
+        engine->debug("✅ Pursuit mode enabled");
         sendStatus();
         return true;
     }
@@ -523,11 +523,11 @@ bool CommandDispatcher::handlePursuitCommands(const char* cmd, JsonDocument& doc
 bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, const String& message) {
     if (strcmp(cmd, "startChaos") == 0) {
         if (config.currentState == STATE_CALIBRATING) {
-            Status.sendError("⚠️ Impossible de démarrer le mode Chaos: calibration en cours");
+            Status.sendError("⚠️ Cannot start Chaos mode: calibration in progress");
             return true;
         }
         if (config.currentState == STATE_ERROR) {
-            Status.sendError("⚠️ Impossible de démarrer le mode Chaos: système en état erreur");
+            Status.sendError("⚠️ Cannot start Chaos mode: system in error state");
             return true;
         }
         
@@ -756,7 +756,7 @@ bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument&
     
     if (strcmp(cmd, "startOscillation") == 0) {
         if (config.currentState == STATE_INIT || config.currentState == STATE_CALIBRATING) {
-            Status.sendError("⚠️ Calibration requise avant de démarrer l'oscillation");
+            Status.sendError("⚠️ Calibration required before starting oscillation");
             return true;
         }
         
@@ -805,7 +805,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         
         String validationError = SeqTable.validatePhysics(newLine);
         if (validationError.length() > 0) {
-            Status.sendError("❌ Ligne invalide : " + validationError);
+            Status.sendError("❌ Invalid line: " + validationError);
             return true;
         }
         
@@ -815,19 +815,19 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
             if (!validateAndReport(Validators::speed(newLine.speedBackward, errorMsg), errorMsg)) return true;
         } else if (newLine.movementType == MOVEMENT_OSC) {
             if (newLine.oscFrequencyHz <= 0 || newLine.oscFrequencyHz > 10.0) {
-                Status.sendError("❌ Frequency doit être 0.01-10 Hz");
+                Status.sendError("❌ Frequency must be 0.01-10 Hz");
                 return true;
             }
         } else if (newLine.movementType == MOVEMENT_CHAOS) {
             if (!validateAndReport(Validators::speed(newLine.chaosMaxSpeedLevel, errorMsg), errorMsg)) return true;
             if (newLine.chaosDurationSeconds < 1 || newLine.chaosDurationSeconds > 3600) {
-                Status.sendError("❌ Duration doit être 1-3600 secondes");
+                Status.sendError("❌ Duration must be 1-3600 seconds");
                 return true;
             }
         }
         
         if (newLine.cycleCount < 1 || newLine.cycleCount > 9999) {
-            Status.sendError("❌ Cycle count doit être 1-9999 (reçu: " + String(newLine.cycleCount) + ")");
+            Status.sendError("❌ Cycle count must be 1-9999 (received: " + String(newLine.cycleCount) + ")");
             return true;
         }
         
@@ -839,7 +839,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     if (strcmp(cmd, "deleteSequenceLine") == 0) {
         int lineId = doc["lineId"] | -1;
         if (lineId < 0) {
-            Status.sendError("❌ Line ID invalide");
+            Status.sendError("❌ Invalid Line ID");
             return true;
         }
         SeqTable.deleteLine(lineId);
@@ -853,7 +853,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         
         String validationError = SeqTable.validatePhysics(updatedLine);
         if (validationError.length() > 0) {
-            Status.sendError("❌ Ligne invalide : " + validationError);
+            Status.sendError("❌ Invalid line: " + validationError);
             return true;
         }
         
@@ -974,10 +974,10 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
                 SeqTable.importFromJson(jsonData);
                 SeqTable.broadcast();
             } else {
-                Status.sendError("❌ Erreur parsing JSON: dataEnd invalide");
+                Status.sendError("❌ JSON parsing error: invalid dataEnd");
             }
         } else {
-            Status.sendError("❌ Erreur parsing JSON: champ jsonData introuvable");
+            Status.sendError("❌ JSON parsing error: jsonData field not found");
         }
         return true;
     }

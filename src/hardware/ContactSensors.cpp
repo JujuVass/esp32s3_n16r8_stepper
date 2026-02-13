@@ -161,7 +161,7 @@ bool ContactSensors::checkHardDriftEnd() {
                   String(currentPos, 1) + "mm (currentStep: " + String(currentStep) + 
                   " | " + String(distanceToLimitMM, 1) + "mm from limit)");
             
-            Status.sendError("❌ ERREUR CRITIQUE: Opto END déclenché - Position dérivée au-delà du buffer de sécurité");
+            Status.sendError("❌ CRITICAL ERROR: Opto END triggered - Position drifted beyond safety buffer");
             
             stopMovement();
             config.currentState = STATE_ERROR;
@@ -190,7 +190,7 @@ bool ContactSensors::checkHardDriftStart() {
                   String(currentPos, 1) + "mm (currentStep: " + String(currentStep) + 
                   " | " + String(distanceToStartMM, 1) + "mm from start)");
             
-            Status.sendError("❌ ERREUR CRITIQUE: Opto START déclenché - Position dérivée au-delà du buffer de sécurité");
+            Status.sendError("❌ CRITICAL ERROR: Opto START triggered - Position drifted beyond safety buffer");
             
             stopMovement();
             config.currentState = STATE_ERROR;

@@ -60,12 +60,12 @@ void SequenceExecutor::start(bool loopMode) {
     }
     
     if (enabledCount == 0) {
-        Status.sendError("❌ Aucune ligne active à exécuter!");
+        Status.sendError("❌ No active lines to execute!");
         return;
     }
     
     if (config.currentState != STATE_READY) {
-        Status.sendError("❌ Système pas prêt (calibration requise?)");
+        Status.sendError("❌ System not ready (calibration required?)");
         return;
     }
     
@@ -90,9 +90,9 @@ void SequenceExecutor::start(bool loopMode) {
     }
     
     engine->info(String("═══════════════════════════════════════════\n") +
-          "▶️ SÉQUENCE DÉMARRÉE - Mode: " + (loopMode ? "BOUCLE INFINIE" : "LECTURE UNIQUE") + "\n" +
+          "▶️ SEQUENCE STARTED - Mode: " + (loopMode ? "INFINITE LOOP" : "SINGLE PLAY") + "\n" +
           "   isLoopMode = " + (seqState.isLoopMode ? "TRUE" : "FALSE") + "\n" +
-          "   Lignes actives: " + String(enabledCount) + " / " + String(sequenceLineCount) + "\n" +
+          "   Active lines: " + String(enabledCount) + " / " + String(sequenceLineCount) + "\n" +
           "═══════════════════════════════════════════");
 }
 
@@ -115,11 +115,11 @@ void SequenceExecutor::stop() {
     unsigned long elapsedSec = (millis() - seqState.sequenceStartTime) / 1000;
     
     String loopInfo = seqState.isLoopMode ? 
-        String("\n   Boucles complétées: ") + String(seqState.loopCount) : "";
+        String("\n   Loops completed: ") + String(seqState.loopCount) : "";
     
     engine->info(String("═══════════════════════════════════════════\n") +
-          "⏹️ SÉQUENCE ARRÊTÉE\n" +
-          "   Durée: " + String(elapsedSec) + "s" + loopInfo + "\n" +
+          "⏹️ SEQUENCE STOPPED\n" +
+          "   Duration: " + String(elapsedSec) + "s" + loopInfo + "\n" +
           "═══════════════════════════════════════════");
 }
 
@@ -131,11 +131,11 @@ void SequenceExecutor::togglePause() {
     if (seqState.isPaused) {
         // Pause current movement (config.currentState is single source of truth)
         config.currentState = STATE_PAUSED;
-        engine->info("⏸️ Séquence en pause");
+        engine->info("⏸️ Sequence paused");
     } else {
         // Resume movement
         config.currentState = STATE_RUNNING;
-        engine->info("▶️ Séquence reprise");
+        engine->info("▶️ Sequence resumed");
     }
 }
 
@@ -146,7 +146,7 @@ void SequenceExecutor::skipToNextLine() {
     seqState.currentCycleInLine = sequenceTable[seqState.currentLineIndex].cycleCount;
     stopMovement();
     
-    engine->info("⏭️ Ligne suivante...");
+    engine->info("⏭️ Next line...");
 }
 
 // ============================================================================
@@ -203,7 +203,7 @@ void SequenceExecutor::onMovementComplete() {
         seqState.currentCycleInLine++;
         config.currentState = STATE_READY;  // Signal sequencer that cycle is complete
         
-        engine->info("✅ Cycle terminé - retour séquenceur");
+        engine->info("✅ Cycle complete - returning to sequencer");
         sendStatus();
     } else {
         // Standalone mode: movement is complete, return to ready state
@@ -214,7 +214,7 @@ void SequenceExecutor::onMovementComplete() {
             engine->incrementDailyStats(motion.targetDistanceMM);
         }
         
-        engine->info("✅ Mouvement terminé (STANDALONE)");
+        engine->info("✅ Movement complete (STANDALONE)");
     }
 }
 
@@ -262,11 +262,11 @@ void SequenceExecutor::positionForNextLine() {
     // Validate target position against effective limits
     float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
     if (targetPositionMM < 0) {
-        engine->warn("⚠️ Position cible négative (" + String(targetPositionMM, 1) + "mm) - ajustée à 0mm");
+        engine->warn("⚠️ Target position negative (" + String(targetPositionMM, 1) + "mm) - adjusted to 0mm");
         targetPositionMM = 0;
     }
     if (targetPositionMM > maxAllowed) {
-        engine->warn("⚠️ Position cible (" + String(targetPositionMM, 1) + "mm) dépasse limite (" + String(maxAllowed, 1) + "mm) - ajustée");
+        engine->warn("⚠️ Target position (" + String(targetPositionMM, 1) + "mm) exceeds limit (" + String(maxAllowed, 1) + "mm) - adjusted");
         targetPositionMM = maxAllowed;
     }
     
@@ -275,7 +275,7 @@ void SequenceExecutor::positionForNextLine() {
     
     // Only move if we're not already at target (tolerance: 1mm)
     if (abs(currentPosMM - targetPositionMM) > 1.0) {
-        engine->info("🎯 Repositionnement: " + String(currentPosMM, 1) + "mm → " + String(targetPositionMM, 1) + "mm");
+    engine->info("🎯 Repositioning: " + String(currentPosMM, 1) + "mm → " + String(targetPositionMM, 1) + "mm");
         
         // CRITICAL: Stop previous movement completely before repositioning
         chaosState.isRunning = false;
@@ -316,9 +316,9 @@ void SequenceExecutor::positionForNextLine() {
         config.currentState = STATE_READY;
         
         if (currentStep != targetStepPos) {
-            engine->warn("⚠️ Timeout repositionnement - position: " + String(currentStep / (float)STEPS_PER_MM, 1) + "mm");
+            engine->warn("⚠️ Repositioning timeout - position: " + String(currentStep / (float)STEPS_PER_MM, 1) + "mm");
         } else {
-            engine->info("✅ Repositionnement terminé");
+            engine->info("✅ Repositioning complete");
         }
     }
 }
@@ -345,7 +345,7 @@ bool SequenceExecutor::checkAndHandleSequenceEnd() {
             seqState.loopCount++;
             
             engine->info("───────────────────────────────────────────");
-            engine->info("🔁 Boucle #" + String(seqState.loopCount) + " terminée - Redémarrage...");
+            engine->info("🔁 Loop #" + String(seqState.loopCount) + " complete - Restarting...");
             engine->info("───────────────────────────────────────────");
         }
         // Single read mode: stop
@@ -353,10 +353,10 @@ bool SequenceExecutor::checkAndHandleSequenceEnd() {
             unsigned long elapsedSec = (millis() - seqState.sequenceStartTime) / 1000;
             
             engine->info("═══════════════════════════════════════════");
-            engine->info("✅ SÉQUENCE TERMINÉE (LECTURE UNIQUE)!");
-            engine->info("   Lignes exécutées: " + String(sequenceLineCount));
-            engine->info("   Durée totale: " + String(elapsedSec) + "s");
-            engine->info("   Mode: " + String(seqState.isLoopMode ? "BOUCLE" : "UNIQUE"));
+            engine->info("✅ SEQUENCE COMPLETE (SINGLE PLAY)!");
+            engine->info("   Lines executed: " + String(sequenceLineCount));
+            engine->info("   Total duration: " + String(elapsedSec) + "s");
+            engine->info("   Mode: " + String(seqState.isLoopMode ? "LOOP" : "SINGLE"));
             engine->info("═══════════════════════════════════════════");
             
             // NEW ARCHITECTURE: Auto-return to 0.0mm and full cleanup
@@ -365,7 +365,7 @@ bool SequenceExecutor::checkAndHandleSequenceEnd() {
             
             // Return to START contact (position 0.0mm) if not already there
             if (currentStep != 0) {
-                engine->info("🏠 Retour automatique au contact START...");
+                engine->info("🏠 Auto-return to START contact...");
                 long startReturnStep = currentStep;
                 
                 Motor.setDirection(false);  // Backward to START
@@ -385,7 +385,7 @@ bool SequenceExecutor::checkAndHandleSequenceEnd() {
                 }
                 
                 float returnedMM = (startReturnStep - currentStep) / STEPS_PER_MM;
-                engine->info("✓ Retour terminé: " + String(returnedMM, 1) + "mm → Position 0.0mm");
+                engine->info("✓ Return complete: " + String(returnedMM, 1) + "mm → Position 0.0mm");
             }
             
             // Full cleanup of variables
@@ -396,7 +396,7 @@ bool SequenceExecutor::checkAndHandleSequenceEnd() {
             hasReachedStartStep = false;
             config.currentState = STATE_READY;
             
-            engine->info("✓ Système prêt pour le prochain cycle");
+            engine->info("✓ System ready for next cycle");
             sendStatus();           // Send sequenceStatus (isRunning=false)
             ::sendStatus();         // Send global status (canStart=true) to re-enable buttons
             return false;  // Sequence ended
@@ -419,7 +419,7 @@ bool SequenceExecutor::checkAndHandleSequenceEnd() {
         if (seqState.isLoopMode) {
             seqState.currentLineIndex = 0;
             seqState.loopCount++;
-            engine->info("🔁 Boucle #" + String(seqState.loopCount) + " - Redémarrage...");
+            engine->info("🔁 Loop #" + String(seqState.loopCount) + " - Restarting...");
         } else {
             seqState.isRunning = false;
             engine->info("📡 Setting isRunning=false, sending status updates...");
@@ -516,7 +516,7 @@ void SequenceExecutor::startVaEtVientLine(SequenceLine* line) {
     
     seqState.lineStartTime = millis();
     
-    engine->info(String("▶️ Ligne ") + String(seqState.currentLineIndex + 1) + "/" + String(sequenceLineCount) + 
+    engine->info(String("▶️ Line ") + String(seqState.currentLineIndex + 1) + "/" + String(sequenceLineCount) + 
           " | 🔄 VA-ET-VIENT | Cycle " + String(seqState.currentCycleInLine + 1) + "/" + String(line->cycleCount) + 
           " | " + String(line->startPositionMM, 1) + "mm → " + 
           String(line->startPositionMM + line->distanceMM, 1) + "mm | Speed: " + 
@@ -577,15 +577,15 @@ void SequenceExecutor::startOscillationLine(SequenceLine* line) {
     oscillationState.accumulatedPhase = initialPhase;
     oscillationState.lastPhaseUpdateMs = millis();
     
-    engine->debug("📍 Oscillation démarre depuis position actuelle: " + String(currentPosMM, 1) + 
+    engine->debug("📍 Oscillation starts from current position: " + String(currentPosMM, 1) + 
           "mm (phase initiale: " + String(initialPhase, 3) + ", relativePos: " + String(relativePos, 2) + ")");
     
     String waveformName = "SINE";
     if (line->oscWaveform == OSC_TRIANGLE) waveformName = "TRIANGLE";
     if (line->oscWaveform == OSC_SQUARE) waveformName = "SQUARE";
     
-    engine->info(String("▶️ Ligne ") + String(seqState.currentLineIndex + 1) + "/" + String(sequenceLineCount) + 
-          " | 〰️ OSCILLATION (" + String(line->cycleCount) + " cycles internes)" +
+    engine->info(String("▶️ Line ") + String(seqState.currentLineIndex + 1) + "/" + String(sequenceLineCount) + 
+          " | 〰️ OSCILLATION (" + String(line->cycleCount) + " internal cycles)" +
           " | Centre: " + String(line->oscCenterPositionMM, 1) + "mm | Amp: ±" + 
           String(line->oscAmplitudeMM, 1) + "mm | " + waveformName + " @ " + 
           String(line->oscFrequencyHz, 2) + " Hz");
@@ -612,9 +612,9 @@ void SequenceExecutor::startChaosLine(SequenceLine* line) {
     // Start chaos mode (delegated to ChaosController module)
     Chaos.start();
     
-    engine->info(String("▶️ Ligne ") + String(seqState.currentLineIndex + 1) + "/" + String(sequenceLineCount) + 
+    engine->info(String("▶️ Line ") + String(seqState.currentLineIndex + 1) + "/" + String(sequenceLineCount) + 
           " | 🌀 CHAOS | Cycle " + String(seqState.currentCycleInLine + 1) + "/" + String(line->cycleCount) + 
-          " | Durée: " + String(line->chaosDurationSeconds) + "s | Centre: " + 
+          " | Duration: " + String(line->chaosDurationSeconds) + "s | Centre: " + 
           String(line->chaosCenterPositionMM, 1) + "mm ±" + 
           String(line->chaosAmplitudeMM, 1) + "mm | Speed: " + 
           String(line->chaosMaxSpeedLevel, 1) + " | Madness: " + 
@@ -624,8 +624,8 @@ void SequenceExecutor::startChaosLine(SequenceLine* line) {
 }
 
 void SequenceExecutor::startCalibrationLine(SequenceLine* line) {
-    engine->info(String("▶️ Ligne ") + String(seqState.currentLineIndex + 1) + "/" + String(sequenceLineCount) + 
-          " | 📏 CALIBRATION | Lancement calibration complète...");
+    engine->info(String("▶️ Line ") + String(seqState.currentLineIndex + 1) + "/" + String(sequenceLineCount) + 
+          " | 📏 CALIBRATION | Starting full calibration...");
     
     seqState.lineStartTime = millis();
     
@@ -690,7 +690,7 @@ void SequenceExecutor::process() {
                 seqState.isWaitingPause = true;
                 seqState.pauseEndTime = millis() + currentLine->pauseAfterMs;
                 
-                engine->info("⏸️ Pause ligne: " + String(currentLine->pauseAfterMs / 1000.0, 1) + "s");
+                engine->info("⏸️ Line pause: " + String(currentLine->pauseAfterMs / 1000.0, 1) + "s");
                 
                 sendStatus();
                 return;
@@ -733,7 +733,7 @@ void SequenceExecutor::process() {
                     break;
                     
                 default:
-                    engine->warn("⚠️ Type de mouvement inconnu: " + String(currentLine->movementType));
+                    engine->warn("⚠️ Unknown movement type: " + String(currentLine->movementType));
                     seqState.currentCycleInLine++;  // Skip this line
                     break;
             }

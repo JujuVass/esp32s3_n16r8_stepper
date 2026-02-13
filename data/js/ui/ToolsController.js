@@ -408,7 +408,7 @@ async function refreshWifi() {
  */
 async function rebootESP32() {
   const confirmed = await showConfirm('Redémarrer l\'ESP32 ?\n\nLa connexion sera interrompue pendant ~10-15 secondes.', {
-    title: '⚠️ Redémarrage ESP32',
+    title: 'Redémarrage ESP32',
     type: 'warning',
     confirmText: '🔄 Redémarrer',
     dangerous: true
