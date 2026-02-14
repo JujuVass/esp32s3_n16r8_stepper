@@ -434,56 +434,44 @@ bool CommandDispatcher::handleDecelZoneCommands(const char* cmd, JsonDocument& d
 
 bool CommandDispatcher::handleCyclePauseCommands(const char* cmd, JsonDocument& doc) {
     if (strcmp(cmd, "updateCyclePause") == 0) {
-        bool enabled = doc["enabled"] | false;
-        bool isRandom = doc["isRandom"] | false;
-        float pauseDurationSec = doc["pauseDurationSec"] | 1.5;
-        float minPauseSec = doc["minPauseSec"] | 1.5;
-        float maxPauseSec = doc["maxPauseSec"] | 5.0;
-        
-        if (minPauseSec < 0.1) minPauseSec = 0.1;
-        if (maxPauseSec < minPauseSec) maxPauseSec = minPauseSec + 0.5;
-        if (pauseDurationSec < 0.1) pauseDurationSec = 0.1;
-        
-        motion.cyclePause.enabled = enabled;
-        motion.cyclePause.isRandom = isRandom;
-        motion.cyclePause.pauseDurationSec = pauseDurationSec;
-        motion.cyclePause.minPauseSec = minPauseSec;
-        motion.cyclePause.maxPauseSec = maxPauseSec;
-        
-        engine->info(String("⏸️ Cycle pause VAET: ") + (enabled ? "enabled" : "disabled") +
-              " | Mode: " + (isRandom ? "random" : "fixed") +
-              " | " + (isRandom ? String(minPauseSec, 1) + "-" + String(maxPauseSec, 1) + "s" : String(pauseDurationSec, 1) + "s"));
-        
+        applyCyclePauseConfig(motion.cyclePause, doc, "VAET");
         sendStatus();
         return true;
     }
     
     if (strcmp(cmd, "updateCyclePauseOsc") == 0) {
-        bool enabled = doc["enabled"] | false;
-        bool isRandom = doc["isRandom"] | false;
-        float pauseDurationSec = doc["pauseDurationSec"] | 1.5;
-        float minPauseSec = doc["minPauseSec"] | 1.5;
-        float maxPauseSec = doc["maxPauseSec"] | 5.0;
-        
-        if (minPauseSec < 0.1) minPauseSec = 0.1;
-        if (maxPauseSec < minPauseSec) maxPauseSec = minPauseSec + 0.5;
-        if (pauseDurationSec < 0.1) pauseDurationSec = 0.1;
-        
-        oscillation.cyclePause.enabled = enabled;
-        oscillation.cyclePause.isRandom = isRandom;
-        oscillation.cyclePause.pauseDurationSec = pauseDurationSec;
-        oscillation.cyclePause.minPauseSec = minPauseSec;
-        oscillation.cyclePause.maxPauseSec = maxPauseSec;
-        
-        engine->info(String("⏸️ Cycle pause OSC: ") + (enabled ? "enabled" : "disabled") +
-              " | Mode: " + (isRandom ? "random" : "fixed") +
-              " | " + (isRandom ? String(minPauseSec, 1) + "-" + String(maxPauseSec, 1) + "s" : String(pauseDurationSec, 1) + "s"));
-        
+        applyCyclePauseConfig(oscillation.cyclePause, doc, "OSC");
         sendStatus();
         return true;
     }
     
     return false;
+}
+
+/**
+ * Shared cycle pause configuration logic
+ * Validates, clamps, and applies pause parameters from JSON to target config
+ */
+void CommandDispatcher::applyCyclePauseConfig(CyclePauseConfig& target, JsonDocument& doc, const char* label) {
+    bool enabled = doc["enabled"] | false;
+    bool isRandom = doc["isRandom"] | false;
+    float pauseDurationSec = doc["pauseDurationSec"] | 1.5;
+    float minPauseSec = doc["minPauseSec"] | 1.5;
+    float maxPauseSec = doc["maxPauseSec"] | 5.0;
+    
+    if (minPauseSec < 0.1) minPauseSec = 0.1;
+    if (maxPauseSec < minPauseSec) maxPauseSec = minPauseSec + 0.5;
+    if (pauseDurationSec < 0.1) pauseDurationSec = 0.1;
+    
+    target.enabled = enabled;
+    target.isRandom = isRandom;
+    target.pauseDurationSec = pauseDurationSec;
+    target.minPauseSec = minPauseSec;
+    target.maxPauseSec = maxPauseSec;
+    
+    engine->info(String("⏸️ Cycle pause ") + label + ": " + (enabled ? "enabled" : "disabled") +
+          " | Mode: " + (isRandom ? "random" : "fixed") +
+          " | " + (isRandom ? String(minPauseSec, 1) + "-" + String(maxPauseSec, 1) + "s" : String(pauseDurationSec, 1) + "s"));
 }
 
 // ============================================================================

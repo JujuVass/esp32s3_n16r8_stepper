@@ -21,6 +21,9 @@ ContactSensors& ContactSensors::getInstance() {
     return instance;
 }
 
+// Global accessor
+ContactSensors& Contacts = ContactSensors::getInstance();
+
 // ============================================================================
 // INITIALIZATION
 // ============================================================================

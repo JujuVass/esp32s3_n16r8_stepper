@@ -23,6 +23,9 @@ NetworkManager& NetworkManager::getInstance() {
     return instance;
 }
 
+// Global accessor
+NetworkManager& Network = NetworkManager::getInstance();
+
 // ============================================================================
 // MODE DETERMINATION - Should we enter AP_SETUP (config-only)?
 // GPIO 19: GND (LOW) = normal operation, floating (HIGH via pull-up) = AP_SETUP

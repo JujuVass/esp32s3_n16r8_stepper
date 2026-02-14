@@ -211,11 +211,10 @@ private:
 };
 
 // ============================================================================
-// CONVENIENCE MACRO
+// GLOBAL ACCESSOR (singleton reference)
 // ============================================================================
-// Global accessor for simplified syntax
 // Usage: Calibration.startCalibration() instead of CalibrationManager::getInstance().startCalibration()
 
-#define Calibration CalibrationManager::getInstance()
+extern CalibrationManager& Calibration;
 
 #endif // CALIBRATION_MANAGER_H

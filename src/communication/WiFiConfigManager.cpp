@@ -35,6 +35,9 @@ WiFiConfigManager& WiFiConfigManager::getInstance() {
     return instance;
 }
 
+// Global accessor
+WiFiConfigManager& WiFiConfig = WiFiConfigManager::getInstance();
+
 // ============================================================================
 // CONFIGURATION CHECK
 // ============================================================================

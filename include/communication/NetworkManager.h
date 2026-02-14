@@ -183,5 +183,5 @@ private:
     bool _captivePortalActive = false;
 };
 
-// Global access macro
-#define Network NetworkManager::getInstance()
+// Global accessor (singleton reference)
+extern NetworkManager& Network;

@@ -40,6 +40,7 @@ private:
     bool m_initialized = false;
 };
 
-#define Contacts ContactSensors::getInstance()
+// Global accessor (singleton reference)
+extern ContactSensors& Contacts;
 
 #endif // CONTACT_SENSORS_H

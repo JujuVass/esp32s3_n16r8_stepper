@@ -151,6 +151,15 @@ private:
      * @return true if validation passed
      */
     bool validateAndReport(bool isValid, const String& errorMsg);
+    
+    /**
+     * Apply cycle pause configuration from JSON to a CyclePauseConfig struct
+     * Shared logic for both Simple (updateCyclePause) and Oscillation (updateCyclePauseOsc)
+     * @param target Reference to the CyclePauseConfig to update
+     * @param doc JSON document with pause parameters
+     * @param label Log label (e.g., "VAET" or "OSC")
+     */
+    void applyCyclePauseConfig(CyclePauseConfig& target, JsonDocument& doc, const char* label);
 };
 
 // ============================================================================

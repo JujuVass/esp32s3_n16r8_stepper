@@ -129,5 +129,5 @@ private:
     mutable bool _eepromWriteInProgress = false;
 };
 
-// Global access macro
-#define WiFiConfig WiFiConfigManager::getInstance()
+// Global accessor (singleton reference)
+extern WiFiConfigManager& WiFiConfig;

@@ -23,6 +23,9 @@ CalibrationManager& CalibrationManager::getInstance() {
     return instance;
 }
 
+// Global accessor
+CalibrationManager& Calibration = CalibrationManager::getInstance();
+
 // ============================================================================
 // INITIALIZATION
 // ============================================================================

@@ -491,15 +491,18 @@
       }
       
       // Show pending changes indicator
-      const pendingChanges = document.getElementById('pendingChanges');
-      if (data.hasPending) {
+      const pendingChanges = DOM.pendingChanges;
+      if (data.hasPending && data.pendingMotion) {
+        const pm = data.pendingMotion;
+        const startPos = parseFloat(pm.startPositionMM);
+        const dist = parseFloat(pm.distanceMM);
         pendingChanges.style.display = 'block';
         pendingChanges.textContent = '⏳ ' + t('status.pendingChanges') + ': ' + 
-          data.pendingStartPos.toFixed(1) + ' mm → ' + 
-          (data.pendingStartPos + data.pendingDist).toFixed(1) + ' mm (' +
-          data.pendingDist.toFixed(1) + 'mm) @ ' + 
-          t('simple.forward') + ' ' + data.pendingMotion.speedLevelForward.toFixed(1) + '/20, ' +
-          t('simple.backward') + ' ' + data.pendingMotion.speedLevelBackward.toFixed(1) + '/20';
+          startPos.toFixed(1) + ' mm → ' + 
+          (startPos + dist).toFixed(1) + ' mm (' +
+          dist.toFixed(1) + 'mm) @ ' + 
+          t('simple.forward') + ' ' + parseFloat(pm.speedLevelForward).toFixed(1) + '/20, ' +
+          t('simple.backward') + ' ' + parseFloat(pm.speedLevelBackward).toFixed(1) + '/20';
       } else {
         pendingChanges.style.display = 'none';
       }

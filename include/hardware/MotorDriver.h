@@ -147,11 +147,10 @@ private:
 };
 
 // ============================================================================
-// CONVENIENCE MACROS
+// GLOBAL ACCESSOR (singleton reference)
 // ============================================================================
-// Global accessor for simplified syntax throughout codebase
 // Usage: Motor.step() instead of MotorDriver::getInstance().step()
 
-#define Motor MotorDriver::getInstance()
+extern MotorDriver& Motor;
 
 #endif // MOTOR_DRIVER_H

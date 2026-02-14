@@ -174,8 +174,6 @@ void StatusBroadcaster::addVaEtVientFields(JsonDocument& doc) {
     // Motion-specific derived values
     float cyclesPerMinForward = BaseMovement.speedLevelToCyclesPerMin(motion.speedLevelForward);
     float cyclesPerMinBackward = BaseMovement.speedLevelToCyclesPerMin(motion.speedLevelBackward);
-    float avgCyclesPerMin = (cyclesPerMinForward + cyclesPerMinBackward) / 2.0;
-    float avgSpeedLevel = (motion.speedLevelForward + motion.speedLevelBackward) / 2.0;
     
     // Motion object (nested)
     JsonObject motionObj = doc["motion"].to<JsonObject>();
@@ -204,17 +202,6 @@ void StatusBroadcaster::addVaEtVientFields(JsonDocument& doc) {
         pauseObj["remainingMs"] = 0;
     }
     
-    // Legacy fields (backward compatibility)
-    doc["startPositionMM"] = serialized(String(motion.startPositionMM, 2));
-    doc["targetDistMM"] = serialized(String(motion.targetDistanceMM, 2));
-    doc["targetDistanceMM"] = serialized(String(motion.targetDistanceMM, 2));
-    doc["speedLevelForward"] = serialized(String(motion.speedLevelForward, 1));
-    doc["speedLevelBackward"] = serialized(String(motion.speedLevelBackward, 1));
-    doc["speedLevelAvg"] = serialized(String(avgSpeedLevel, 1));
-    doc["cyclesPerMinForward"] = serialized(String(cyclesPerMinForward, 1));
-    doc["cyclesPerMinBackward"] = serialized(String(cyclesPerMinBackward, 1));
-    doc["cyclesPerMinAvg"] = serialized(String(avgCyclesPerMin, 1));
-    
     // Pending motion
     doc["hasPending"] = pendingMotion.hasChanges;
     if (pendingMotion.hasChanges) {
@@ -223,12 +210,6 @@ void StatusBroadcaster::addVaEtVientFields(JsonDocument& doc) {
         pendingObj["distanceMM"] = serialized(String(pendingMotion.distanceMM, 2));
         pendingObj["speedLevelForward"] = serialized(String(pendingMotion.speedLevelForward, 1));
         pendingObj["speedLevelBackward"] = serialized(String(pendingMotion.speedLevelBackward, 1));
-        
-        // Legacy pending fields
-        doc["pendingStartPos"] = serialized(String(pendingMotion.startPositionMM, 2));
-        doc["pendingDist"] = serialized(String(pendingMotion.distanceMM, 2));
-        doc["pendingSpeedLevelForward"] = serialized(String(pendingMotion.speedLevelForward, 1));
-        doc["pendingSpeedLevelBackward"] = serialized(String(pendingMotion.speedLevelBackward, 1));
     } else {
         doc["hasPending"] = false;
     }
@@ -246,9 +227,6 @@ void StatusBroadcaster::addVaEtVientFields(JsonDocument& doc) {
     zoneObj["speedEffect"] = (int)zoneEffect.speedEffect;
     zoneObj["speedCurve"] = (int)zoneEffect.speedCurve;
     zoneObj["speedIntensity"] = serialized(String(zoneEffect.speedIntensity, 0));
-    // Legacy aliases for backward compatibility
-    zoneObj["effectPercent"] = serialized(String(zoneEffect.speedIntensity, 0));
-    zoneObj["mode"] = (int)zoneEffect.speedCurve;
     
     // Random turnback
     zoneObj["randomTurnbackEnabled"] = zoneEffect.randomTurnbackEnabled;
