@@ -707,18 +707,17 @@
             <button class="preset-btn-sm btn-preset" data-zone-mm="25">25</button>
             <button class="preset-btn-sm btn-preset active" data-zone-mm="50">50</button>
             <button class="preset-btn-sm btn-preset" data-zone-mm="75">75</button>
-            <span style="margin-left: 10px; font-size: 13px;">-</span>
-            <label style="margin-left: 5px; font-size: 13px;">
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px; padding-left: 4px; font-size: 13px;">
+            <label style="cursor: pointer;">
               <input type="checkbox" id="zoneEffectStart" checked style="margin-right: 3px;">
               <span data-i18n="simple.zoneStart">Début</span>
             </label>
-            <label style="margin-left: 10px; font-size: 13px;">
+            <label style="cursor: pointer;">
               <input type="checkbox" id="zoneEffectEnd" checked style="margin-right: 3px;">
               <span data-i18n="simple.zoneEnd">Fin</span>
             </label>
-          </div>
-          <div style="margin: -5px 0 8px 0; padding-left: 4px;">
-            <label style="font-size: 13px; color: #666;" data-i18n-title="simple.zoneMirrorTooltip" title="Les zones Début/Fin restent liées à leur position physique quel que soit le sens du mouvement">
+            <label style="cursor: pointer; color: #666;" data-i18n-title="simple.zoneMirrorTooltip" title="Les zones Début/Fin restent liées à leur position physique quel que soit le sens du mouvement">
               <input type="checkbox" id="zoneEffectMirror" style="margin-right: 3px;">
               &#x1F4CC; <span data-i18n="simple.zoneMirror">Position physique</span>
             </label>
