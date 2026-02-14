@@ -113,7 +113,13 @@ function showNotification(message, type = 'info', duration = null) {
 
   const notification = document.createElement('div');
   notification.className = 'notification notification-' + type;
-  notification.innerHTML = `<span class="notif-icon">${icon}</span><span>${message}</span>`;
+  // Safe: use textContent to prevent XSS from WebSocket messages
+  const iconSpan = document.createElement('span');
+  iconSpan.className = 'notif-icon';
+  iconSpan.textContent = icon;
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = message;
+  notification.append(iconSpan, msgSpan);
 
   // Store timeout ID to allow cancellation
   let timeoutId = null;

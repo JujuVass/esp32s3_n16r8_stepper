@@ -127,6 +127,12 @@ void StatusBroadcaster::send() {
         addSystemStats(doc);
     }
     
+    // Check for JSON overflow (heap fragmentation could truncate document)
+    if (doc.overflowed()) {
+        engine->warn("⚠️ JSON doc overflowed - status broadcast skipped");
+        return;
+    }
+    
     // Serialize to String and broadcast
     String output;
     serializeJson(doc, output);

@@ -96,6 +96,7 @@ private:
 };
 
 // Atomic flags (no mutex needed - set from Core 0, read from Core 1)
+// Safe: bool and long are 32-bit on ESP32 Xtensa → single-instruction read/write
 extern volatile bool emergencyStop;
 extern volatile bool requestCalibration;    // Trigger calibration from motorTask
 extern volatile bool calibrationInProgress; // When true, networkTask skips webSocket/server
@@ -111,7 +112,7 @@ extern SystemConfig config;
 // MOTION VARIABLES
 // ============================================================================
 
-extern volatile long currentStep;
+extern volatile long currentStep;           // Safe: 32-bit on ESP32 Xtensa (atomic read/write)
 extern long startStep;
 extern long targetStep;
 extern bool movingForward;

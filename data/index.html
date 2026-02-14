@@ -1994,34 +1994,34 @@
 
   </div>
 
-  <!-- External JavaScript Modules -->
+  <!-- External JavaScript Modules (defer: parallel download, ordered execution after DOM) -->
   <!-- Libraries -->
-  <script src="/js/lib/Sortable.min.js"></script>  <!-- Drag & drop library -->
+  <script defer src="/js/lib/Sortable.min.js"></script>  <!-- Drag & drop library -->
   <!-- Core (load first) -->
-  <script src="/js/ui/milestones.js"></script>  <!-- Must load BEFORE app.js -->
-  <script src="/js/ui/speedMilestones.js"></script>  <!-- Speed icons, must load BEFORE app.js -->
-  <script src="/js/core/app.js"></script>
-  <script src="/js/core/i18n.js"></script>    <!-- i18n translations (after app.js for _console) -->
-  <script src="/js/utils/utils.js"></script>
-  <script src="/js/core/DOMManager.js"></script>  <!-- Must load BEFORE main.js -->
-  <script src="/js/core/websocket.js"></script>   <!-- WebSocket connection & handlers -->
+  <script defer src="/js/ui/milestones.js"></script>  <!-- Must load BEFORE app.js -->
+  <script defer src="/js/ui/speedMilestones.js"></script>  <!-- Speed icons, must load BEFORE app.js -->
+  <script defer src="/js/core/app.js"></script>
+  <script defer src="/js/core/i18n.js"></script>    <!-- i18n translations (after app.js for _console) -->
+  <script defer src="/js/utils/utils.js"></script>
+  <script defer src="/js/core/DOMManager.js"></script>  <!-- Must load BEFORE main.js -->
+  <script defer src="/js/core/websocket.js"></script>   <!-- WebSocket connection & handlers -->
   <!-- UI -->
-  <script src="/js/ui/StatsController.js"></script>  <!-- Stats panel, display & charts -->
-  <script src="/js/ui/ToolsController.js"></script>  <!-- Common tools (calib, logs, sys) -->
-  <script src="/js/ui/UIController.js"></script>  <!-- Tab navigation & modals -->
+  <script defer src="/js/ui/StatsController.js"></script>  <!-- Stats panel, display & charts -->
+  <script defer src="/js/ui/ToolsController.js"></script>  <!-- Common tools (calib, logs, sys) -->
+  <script defer src="/js/ui/UIController.js"></script>  <!-- Tab navigation & modals -->
   <!-- Utils (load before controllers) -->
-  <script src="/js/utils/PlaylistUtils.js"></script>  <!-- Playlist utility functions (names, tooltips) -->
-  <script src="/js/utils/SimpleUtils.js"></script>  <!-- Simple mode utilities (decel preview) -->
-  <script src="/js/utils/SequenceUtils.js"></script>  <!-- Sequence display utilities -->
+  <script defer src="/js/utils/PlaylistUtils.js"></script>  <!-- Playlist utility functions (names, tooltips) -->
+  <script defer src="/js/utils/SimpleUtils.js"></script>  <!-- Simple mode utilities (decel preview) -->
+  <script defer src="/js/utils/SequenceUtils.js"></script>  <!-- Sequence display utilities -->
   <!-- Controllers -->
-  <script src="/js/controllers/PlaylistController.js"></script>  <!-- Playlist management for all modes -->
-  <script src="/js/controllers/SimpleController.js"></script>  <!-- Simple mode control -->
-  <script src="/js/controllers/PursuitController.js"></script>  <!-- Pursuit mode gauge control -->
-  <script src="/js/controllers/OscillationController.js"></script>  <!-- Oscillation mode control -->
-  <script src="/js/controllers/ChaosController.js"></script>    <!-- Chaos mode control -->
-  <script src="/js/controllers/SequenceController.js"></script>  <!-- Sequence table management -->
+  <script defer src="/js/controllers/PlaylistController.js"></script>  <!-- Playlist management for all modes -->
+  <script defer src="/js/controllers/SimpleController.js"></script>  <!-- Simple mode control -->
+  <script defer src="/js/controllers/PursuitController.js"></script>  <!-- Pursuit mode gauge control -->
+  <script defer src="/js/controllers/OscillationController.js"></script>  <!-- Oscillation mode control -->
+  <script defer src="/js/controllers/ChaosController.js"></script>    <!-- Chaos mode control -->
+  <script defer src="/js/controllers/SequenceController.js"></script>  <!-- Sequence table management -->
   <!-- Main (load last) -->
-  <script src="/js/main.js"></script>
+  <script defer src="/js/main.js"></script>
 
 </body>
 </html>
