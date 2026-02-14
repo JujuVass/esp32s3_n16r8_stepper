@@ -157,6 +157,7 @@ private:
     bool cyclesCompleteLogged_ = false;      // Prevent duplicate completion logs
     bool firstPositioningCall_ = true;       // Track first positioning call for debug
     bool catchUpWarningLogged_ = false;      // Prevent duplicate catch-up warnings
+    unsigned long lastStepMicros_ = 0;       // Own step timing (decoupled from BaseMovement global)
     
     // ========================================================================
     // INTERNAL HELPERS

@@ -142,6 +142,7 @@ extern MotionConfig motion;
 extern PendingMotionConfig pendingMotion;
 extern CyclePauseState motionPauseState;
 extern ZoneEffectConfig zoneEffect;  // Zone effects (speed + special effects) - Owned by BaseMovementController.cpp
+extern ZoneEffectState zoneEffectState;  // Zone effects runtime state - Owned by BaseMovementController.cpp
 
 // ============================================================================
 // STATISTICS TRACKING

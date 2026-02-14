@@ -222,14 +222,6 @@ struct ZoneEffectConfig {
   float endPauseMinSec;       // Random mode: minimum duration
   float endPauseMaxSec;       // Random mode: maximum duration
   
-  // === Runtime State (not persisted) ===
-  bool hasPendingTurnback;    // Turnback decision made for this pass
-  bool hasRolledForTurnback;  // Already rolled dice for this zone entry (prevents multiple rolls)
-  float turnbackPointMM;      // Where to turn back (distance into zone)
-  bool isPausing;             // Currently in end pause
-  unsigned long pauseStartMs; // When pause started
-  unsigned long pauseDurationMs; // Current pause duration
-  
   ZoneEffectConfig() :
     enabled(false),
     enableStart(true),
@@ -245,13 +237,7 @@ struct ZoneEffectConfig {
     endPauseIsRandom(false),
     endPauseDurationSec(1.0),
     endPauseMinSec(0.5),
-    endPauseMaxSec(2.0),
-    hasPendingTurnback(false),
-    hasRolledForTurnback(false),
-    turnbackPointMM(0.0),
-    isPausing(false),
-    pauseStartMs(0),
-    pauseDurationMs(0) {}
+    endPauseMaxSec(2.0) {}
     
   // Legacy getter for backward compatibility (effectPercent)
   float getEffectPercent() const { return speedIntensity; }
@@ -260,6 +246,25 @@ struct ZoneEffectConfig {
   // Legacy getter for mode (maps to speedCurve when speedEffect is DECEL)
   SpeedCurve getMode() const { return speedCurve; }
   void setMode(SpeedCurve m) { speedCurve = m; }
+};
+
+// Runtime state for zone effects (separated from config for clean copy semantics)
+// When SequenceExecutor copies zone config from a line, state is simply reset
+struct ZoneEffectState {
+  bool hasPendingTurnback;       // Turnback decision made for this pass
+  bool hasRolledForTurnback;     // Already rolled dice for this zone entry
+  float turnbackPointMM;         // Where to turn back (distance into zone)
+  bool isPausing;                // Currently in end pause
+  unsigned long pauseStartMs;    // When pause started
+  unsigned long pauseDurationMs; // Current pause duration
+  
+  ZoneEffectState() :
+    hasPendingTurnback(false),
+    hasRolledForTurnback(false),
+    turnbackPointMM(0.0),
+    isPausing(false),
+    pauseStartMs(0),
+    pauseDurationMs(0) {}
 };
 
 // Legacy alias
@@ -519,8 +524,7 @@ struct SequenceLine {
   float speedBackward;
   
   // VA-ET-VIENT Zone Effects (DRY: uses same struct as standalone mode)
-  // NOTE: Runtime state fields (hasPendingTurnback, isPausing, etc.) are ignored
-  // and will be managed by the global zoneEffect at execution time
+  // Runtime state is managed separately by zoneEffectState global
   ZoneEffectConfig vaetZoneEffect;
   
   // VA-ET-VIENT cycle pause

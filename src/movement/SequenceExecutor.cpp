@@ -291,6 +291,8 @@ void SequenceExecutor::positionForNextLine() {
         // Blocking move to target position at moderate speed (990 µs = speed 5.0)
         unsigned long positioningStart = millis();
         unsigned long lastStepTime = micros();
+        unsigned long lastWsService = millis();
+        unsigned long lastStatusUpdate = millis();
         const unsigned long stepDelay = 990;  // Same speed as normal VAET (5.0)
         
         while (currentStep != targetStepPos && (millis() - positioningStart < 30000)) {  // 30s timeout
@@ -306,12 +308,23 @@ void SequenceExecutor::positionForNextLine() {
                 }
                 lastStepTime = now;
             }
-            yield();  // Allow ESP32 to handle other tasks (WebSocket, etc.)
-            if (_webSocket) _webSocket->loop();  // Keep WebSocket alive
+            yield();  // Allow ESP32 to handle other tasks
+            
+            // Service network + send periodic status feedback
+            unsigned long nowMs = millis();
+            if (nowMs - lastWsService >= 10) {
+                if (_webSocket) _webSocket->loop();
+                server.handleClient();
+                lastWsService = nowMs;
+            }
+            if (nowMs - lastStatusUpdate >= 250) {
+                Status.send();
+                lastStatusUpdate = nowMs;
+            }
         }
         
-        // Repositioning complete - restore state
-        config.currentState = STATE_READY;
+        // Note: Do NOT set config.currentState here — caller (startNextLine) 
+        // will immediately set STATE_RUNNING, avoiding a visible READY→RUNNING flip-flop
         
         if (currentStep != targetStepPos) {
             engine->warn("⚠️ Repositioning timeout - position: " + String(currentStep / (float)STEPS_PER_MM, 1) + "mm");
@@ -459,14 +472,9 @@ void SequenceExecutor::startVaEtVientLine(SequenceLine* line) {
     if (motion.speedLevelBackward > MAX_SPEED_LEVEL) motion.speedLevelBackward = MAX_SPEED_LEVEL;
     
     // Copy zone effect configuration from sequence line (DRY: embedded ZoneEffectConfig)
-    // Copy all settings, then reset runtime state
+    // Runtime state is automatically clean via separate ZoneEffectState
     zoneEffect = line->vaetZoneEffect;
-    zoneEffect.hasPendingTurnback = false;
-    zoneEffect.hasRolledForTurnback = false;
-    zoneEffect.turnbackPointMM = 0.0;
-    zoneEffect.isPausing = false;
-    zoneEffect.pauseStartMs = 0;
-    zoneEffect.pauseDurationMs = 0;
+    zoneEffectState = ZoneEffectState();  // Reset all runtime state
     
     // Apply cycle pause configuration from sequence line
     motion.cyclePause.enabled = line->vaetCyclePauseEnabled;

@@ -1082,16 +1082,39 @@ void ChaosController::start() {
         targetStep = (long)(chaos.centerPositionMM * STEPS_PER_MM);
         
         Motor.enable();
+        bool moveForward = (targetStep > currentStep);
+        Motor.setDirection(moveForward);
+        
+        // Use calibrated speed (speed 5.0 ≈ 990µs) instead of fixed 500µs
+        const unsigned long stepDelay = 990;
         unsigned long positioningStart = millis();
         unsigned long lastWsService = millis();
+        unsigned long lastStatusUpdate = millis();
+        unsigned long lastStepTime = micros();
+        
         while (currentStep != targetStep && (millis() - positioningStart < 30000)) {
-            doStep();
-            delayMicroseconds(500);
+            unsigned long nowMicros = micros();
+            if (nowMicros - lastStepTime >= stepDelay) {
+                if (moveForward) {
+                    Motor.step();
+                    currentStep++;
+                } else {
+                    Motor.step();
+                    currentStep--;
+                }
+                lastStepTime = nowMicros;
+            }
             
-            if (millis() - lastWsService >= 10) {
+            // Service network + send status feedback every 250ms
+            unsigned long nowMs = millis();
+            if (nowMs - lastWsService >= 10) {
                 webSocket.loop();
                 server.handleClient();
-                lastWsService = millis();
+                lastWsService = nowMs;
+            }
+            if (nowMs - lastStatusUpdate >= 250) {
+                Status.send();
+                lastStatusUpdate = nowMs;
             }
             yield();
         }
@@ -1102,9 +1125,11 @@ void ChaosController::start() {
             
             chaosState.isRunning = false;
             config.currentState = STATE_READY;
+            currentMovement = MOVEMENT_VAET;
             Motor.disable();
             
             Status.sendError("Cannot reach center - timeout after 30s. Check that the motor can move freely.");
+            Status.send();
             return;
         }
     }

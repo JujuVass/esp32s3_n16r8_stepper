@@ -976,26 +976,12 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     }
     
     if (strcmp(cmd, "importSequence") == 0) {
-        int dataStart = message.indexOf("\"jsonData\":\"");
-        if (dataStart > 0) {
-            dataStart += 12;
-            int dataEnd = message.lastIndexOf("\"}");
-            
-            if (dataEnd > dataStart) {
-                String jsonData = message.substring(dataStart, dataEnd);
-                
-                jsonData.replace("\\\"", "\"");
-                jsonData.replace("\\n", "");
-                jsonData.replace("\\r", "");
-                jsonData.replace("\\t", "");
-                
-                SeqTable.importFromJson(jsonData);
-                SeqTable.broadcast();
-            } else {
-                Status.sendError("❌ JSON parsing error: invalid dataEnd");
-            }
+        const char* jsonData = doc["jsonData"];
+        if (jsonData) {
+            SeqTable.importFromJson(String(jsonData));
+            SeqTable.broadcast();
         } else {
-            Status.sendError("❌ JSON parsing error: jsonData field not found");
+            Status.sendError("❌ Import error: missing jsonData field");
         }
         return true;
     }

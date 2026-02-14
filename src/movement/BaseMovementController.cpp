@@ -18,6 +18,7 @@
 // ZONE EFFECT STATE - Owned by BaseMovementController (integrated)
 // ============================================================================
 ZoneEffectConfig zoneEffect;
+ZoneEffectState zoneEffectState;
 
 // ============================================================================
 // SINGLETON INSTANCE
@@ -397,14 +398,14 @@ void BaseMovementControllerClass::checkAndTriggerRandomTurnback(float distanceIn
     }
     
     // Don't trigger turnback if we're currently pausing
-    if (zoneEffect.isPausing) {
+    if (zoneEffectState.isPausing) {
         return;
     }
     
     // Check if we already have a pending turnback
-    if (zoneEffect.hasPendingTurnback) {
+    if (zoneEffectState.hasPendingTurnback) {
         // Check if we've reached the turnback point
-        if (distanceIntoZone >= zoneEffect.turnbackPointMM) {
+        if (distanceIntoZone >= zoneEffectState.turnbackPointMM) {
             // Execute turnback - first trigger pause if enabled
             if (zoneEffect.endPauseEnabled) {
                 triggerEndPause();
@@ -413,21 +414,21 @@ void BaseMovementControllerClass::checkAndTriggerRandomTurnback(float distanceIn
                 engine->debug("🔄 Random turnback executed at " + String(distanceIntoZone, 1) + "mm into zone");
             }
             movingForward = !movingForward;
-            zoneEffect.hasPendingTurnback = false;
+            zoneEffectState.hasPendingTurnback = false;
             // Don't reset hasRolledForTurnback here - it will be reset when we exit the zone
         }
         return;
     }
     
     // If we already rolled the dice for this zone entry, don't roll again
-    if (zoneEffect.hasRolledForTurnback) {
+    if (zoneEffectState.hasRolledForTurnback) {
         return;
     }
     
     // We just entered the zone - roll the dice ONCE
     if (distanceIntoZone < 2.0) {  // Just entered (within first 2mm)
         // Mark that we've rolled for this zone entry
-        zoneEffect.hasRolledForTurnback = true;
+        zoneEffectState.hasRolledForTurnback = true;
         
         // Roll the dice
         int roll = random(100);
@@ -436,9 +437,9 @@ void BaseMovementControllerClass::checkAndTriggerRandomTurnback(float distanceIn
             // Don't turn back in the first 10% or last 10% of the zone
             float minTurnback = zoneEffect.zoneMM * 0.1;
             float maxTurnback = zoneEffect.zoneMM * 0.9;
-            zoneEffect.turnbackPointMM = minTurnback + (random(0, 1000) / 1000.0) * (maxTurnback - minTurnback);
-            zoneEffect.hasPendingTurnback = true;
-            engine->debug("🔄 Random turnback planned at " + String(zoneEffect.turnbackPointMM, 1) + "mm (roll=" + String(roll) + " < " + String(zoneEffect.turnbackChance) + "%)");
+            zoneEffectState.turnbackPointMM = minTurnback + (random(0, 1000) / 1000.0) * (maxTurnback - minTurnback);
+            zoneEffectState.hasPendingTurnback = true;
+            engine->debug("🔄 Random turnback planned at " + String(zoneEffectState.turnbackPointMM, 1) + "mm (roll=" + String(roll) + " < " + String(zoneEffect.turnbackChance) + "%)");
         } else {
             engine->debug("🎲 No turnback (roll=" + String(roll) + " >= " + String(zoneEffect.turnbackChance) + "%)");
         }
@@ -446,9 +447,9 @@ void BaseMovementControllerClass::checkAndTriggerRandomTurnback(float distanceIn
 }
 
 void BaseMovementControllerClass::resetRandomTurnback() {
-    zoneEffect.hasPendingTurnback = false;
-    zoneEffect.hasRolledForTurnback = false;  // Reset the roll flag too
-    zoneEffect.turnbackPointMM = 0.0;
+    zoneEffectState.hasPendingTurnback = false;
+    zoneEffectState.hasRolledForTurnback = false;  // Reset the roll flag too
+    zoneEffectState.turnbackPointMM = 0.0;
 }
 
 // ============================================================================
@@ -457,16 +458,16 @@ void BaseMovementControllerClass::resetRandomTurnback() {
 
 bool BaseMovementControllerClass::checkAndHandleEndPause() {
     // If not pausing, nothing to do
-    if (!zoneEffect.isPausing) {
+    if (!zoneEffectState.isPausing) {
         return false;
     }
     
     // Check if pause duration has elapsed
-    unsigned long elapsed = millis() - zoneEffect.pauseStartMs;
-    if (elapsed >= zoneEffect.pauseDurationMs) {
+    unsigned long elapsed = millis() - zoneEffectState.pauseStartMs;
+    if (elapsed >= zoneEffectState.pauseDurationMs) {
         // Pause complete
-        zoneEffect.isPausing = false;
-        engine->debug("⏸️ End pause complete (" + String(zoneEffect.pauseDurationMs) + "ms)");
+        zoneEffectState.isPausing = false;
+        engine->debug("⏸️ End pause complete (" + String(zoneEffectState.pauseDurationMs) + "ms)");
         return false;
     }
     
@@ -483,14 +484,14 @@ void BaseMovementControllerClass::triggerEndPause() {
     if (zoneEffect.endPauseIsRandom) {
         float minMs = zoneEffect.endPauseMinSec * 1000.0;
         float maxMs = zoneEffect.endPauseMaxSec * 1000.0;
-        zoneEffect.pauseDurationMs = (unsigned long)(minMs + (random(0, 1000) / 1000.0) * (maxMs - minMs));
+        zoneEffectState.pauseDurationMs = (unsigned long)(minMs + (random(0, 1000) / 1000.0) * (maxMs - minMs));
     } else {
-        zoneEffect.pauseDurationMs = (unsigned long)(zoneEffect.endPauseDurationSec * 1000.0);
+        zoneEffectState.pauseDurationMs = (unsigned long)(zoneEffect.endPauseDurationSec * 1000.0);
     }
     
-    zoneEffect.isPausing = true;
-    zoneEffect.pauseStartMs = millis();
-    engine->debug("⏸️ End pause: " + String(zoneEffect.pauseDurationMs) + "ms");
+    zoneEffectState.isPausing = true;
+    zoneEffectState.pauseStartMs = millis();
+    engine->debug("⏸️ End pause: " + String(zoneEffectState.pauseDurationMs) + "ms");
 }
 
 // ============================================================================
@@ -879,7 +880,7 @@ void BaseMovementControllerClass::process() {
             float distanceIntoZone = zoneEffect.zoneMM - distanceFromEnd;
             checkAndTriggerRandomTurnback(distanceIntoZone, false);
             // If pause was triggered, exit early
-            if (zoneEffect.isPausing) {
+            if (zoneEffectState.isPausing) {
                 return;
             }
         }
@@ -889,7 +890,7 @@ void BaseMovementControllerClass::process() {
             float distanceIntoZone = zoneEffect.zoneMM - distanceFromEnd;
             checkAndTriggerRandomTurnback(distanceIntoZone, true);
             // If pause was triggered, exit early
-            if (zoneEffect.isPausing) {
+            if (zoneEffectState.isPausing) {
                 return;
             }
         }

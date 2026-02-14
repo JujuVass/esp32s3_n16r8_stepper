@@ -132,6 +132,7 @@ void OscillationControllerClass::start() {
     firstPositioningCall_ = true;
     cyclesCompleteLogged_ = false;
     catchUpWarningLogged_ = false;
+    lastStepMicros_ = micros();
     
     String waveformName = "SINE";
     if (oscillation.waveform == OSC_TRIANGLE) waveformName = "TRIANGLE";
@@ -219,7 +220,7 @@ void OscillationControllerClass::process() {
     
     // Use minimum step delay (speed is controlled by effective frequency, not delay)
     unsigned long currentMicros = micros();
-    unsigned long elapsedMicros = currentMicros - lastStepMicros;
+    unsigned long elapsedMicros = currentMicros - lastStepMicros_;
     
     if (elapsedMicros < OSC_MIN_STEP_DELAY_MICROS) {
         return;  // Too early for next step
@@ -239,7 +240,7 @@ void OscillationControllerClass::process() {
     // Execute steps
     executeSteps(targetStep, isCatchUp);
     
-    lastStepMicros = currentMicros;
+    lastStepMicros_ = currentMicros;
 }
 
 // ============================================================================
@@ -573,7 +574,7 @@ bool OscillationControllerClass::handleInitialPositioning() {
     }
     
     unsigned long currentMicros = micros();
-    unsigned long elapsedMicros = currentMicros - lastStepMicros;
+    unsigned long elapsedMicros = currentMicros - lastStepMicros_;
     
     if (elapsedMicros < OSC_POSITIONING_STEP_DELAY_MICROS) {
         return true;  // Trop tôt pour le prochain step
@@ -593,7 +594,7 @@ bool OscillationControllerClass::handleInitialPositioning() {
         currentStep--;
     }
     
-    lastStepMicros = currentMicros;
+    lastStepMicros_ = currentMicros;
     
     // Désactiver le positionnement initial quand on est au centre
     long absErrorSteps = abs(errorSteps);
