@@ -11,8 +11,8 @@
 // ✓ Single initialization point (setup)
 // ✓ Consistent error handling across modules
 // ✓ Reusable in other ESP32 projects
-// ✓ Reduces global state variables (8 → 1)
 // ✓ Type-safe logging with compile-time level checking
+// ✓ SystemConfig holds SSoT fields only (no duplication with globals)
 // ============================================================================
 
 #ifndef UTILITY_ENGINE_H
@@ -24,7 +24,7 @@
 #include <LittleFS.h>
 #include <time.h>
 #include <string>
-#include "Types.h"  // For SystemConfig struct members
+#include "Types.h"  // For SystemState, ExecutionContext enums
 
 // ============================================================================
 // CONFIGURATION
@@ -57,85 +57,41 @@ struct LogEntry {
 };
 
 // ============================================================================
-// SYSTEM CONFIGURATION STRUCT - Phase 3.2
+// SYSTEM CONFIGURATION STRUCT - Refactored (Code Review #9)
 // ============================================================================
-// Central aggregation of all critical system state variables
-// Provides unified load/save interface for persistence (config.json)
-// Maps 33+ global variables into coherent configuration object
+// Single Source of Truth (SSoT) for fields that are NOT duplicated as globals.
+// Runtime-volatile state (motion, oscillation, chaos, pursuit, etc.) lives
+// in dedicated globals declared in GlobalState.h and module headers.
+//
+// Fields kept here: core system state, calibration results, contact persistence,
+// and sequencer ID counter. All other runtime state uses globals directly.
 // ============================================================================
 struct SystemConfig {
   
   // ========================================================================
-  // SYSTEM STATE
+  // SYSTEM STATE (SSoT - used by all modules via config.currentState)
   // ========================================================================
   SystemState currentState;         // Current operation state (INIT, RUNNING, PAUSED, etc.)
   ExecutionContext executionContext; // Execution context (STANDALONE vs SEQUENCER)
-  MovementType currentMovement;      // Current movement type (VAET, OSC, CHAOS, PURSUIT, CALIB)
-  bool needsInitialCalibration;      // Flag: system requires recalibration
   
   // ========================================================================
-  // POSITION LIMITS & CALIBRATION
+  // CALIBRATION RESULTS (SSoT - written by CalibrationManager)
   // ========================================================================
   long minStep;                      // Minimum position (after START contact)
   long maxStep;                      // Maximum position (before END contact)
   float totalDistanceMM;             // Total travel distance (mm)
-  float maxDistanceLimitPercent;     // Safety limit on motion (default 100%)
-  float effectiveMaxDistanceMM;      // Calculated limit based on percentage
   
   // ========================================================================
-  // CONTACT SENSING & DRIFT DETECTION
+  // CONTACT SENSING PERSISTENCE
   // ========================================================================
   int lastStartContactState;         // Last read START contact state
   int lastEndContactState;           // Last read END contact state
   bool currentMotorDirection;        // Current motor direction (HIGH/LOW)
-  bool wasAtStart;                   // Flag: was at START position
-  float measuredCyclesPerMinute;     // Measured speed (cycles/min)
   
   // ========================================================================
-  // MOTION EXECUTION STATE
+  // SEQUENCER (SSoT - auto-increment ID, used by SequenceTableManager)
   // ========================================================================
-  bool isPaused;                     // Is motion currently paused?
-  bool movingForward;                // Direction of current motion
-  long startStep;                    // Start position for current move
-  long targetStep;                   // Target position for current move
-  bool hasReachedStartStep;          // Has reached startStep at least once
-  // Note: lastStepForDistance moved to global StatsTracking struct
-  
-  // ========================================================================
-  // VA-ET-VIENT MODE
-  // ========================================================================
-  // NOTE: MotionConfig is the global 'motion' variable (GlobalState.h)
-  // NOT a member of SystemConfig - avoids duplication issues
-  
-  // ========================================================================
-  // OSCILLATION MODE
-  // ========================================================================
-  OscillationConfig oscillation;     // Oscillation configuration
-  OscillationState oscillationState; // Oscillation runtime state
-  float actualOscillationSpeedMMS;   // Actual oscillation speed (mm/s)
-  
-  // ========================================================================
-  // PURSUIT MODE
-  // ========================================================================
-  PursuitState pursuit;              // Pursuit state and configuration
-  
-  // ========================================================================
-  // DECELERATION ZONE
-  // ========================================================================
-  DecelZoneConfig decelZone;         // Deceleration configuration
-  
-  // ========================================================================
-  // CHAOS MODE
-  // ========================================================================
-  ChaosRuntimeConfig chaos;          // Chaos mode configuration
-  ChaosExecutionState chaosState;    // Chaos mode runtime state
-  
-  // ========================================================================
-  // SEQUENCER
-  // ========================================================================
-  int sequenceLineCount;             // Number of loaded sequence lines
   int nextLineId;                    // Auto-increment ID counter
-  SequenceExecutionState seqState;   // Sequencer runtime state
   
   // ========================================================================
   // CONSTRUCTOR - Initialize all fields to defaults
@@ -143,34 +99,13 @@ struct SystemConfig {
   SystemConfig() :
     currentState(STATE_INIT),
     executionContext(CONTEXT_STANDALONE),
-    currentMovement(MOVEMENT_VAET),
-    needsInitialCalibration(true),
     minStep(0),
     maxStep(0),
     totalDistanceMM(0),
-    maxDistanceLimitPercent(100.0),
-    effectiveMaxDistanceMM(0.0),
     lastStartContactState(HIGH),
     lastEndContactState(HIGH),
     currentMotorDirection(HIGH),
-    wasAtStart(false),
-    measuredCyclesPerMinute(0),
-    isPaused(false),
-    movingForward(true),
-    startStep(0),
-    targetStep(0),
-    hasReachedStartStep(false),
-    // NOTE: motion is now a global variable (GlobalState.h), not a member
-    oscillation(),
-    oscillationState(),
-    actualOscillationSpeedMMS(0.0),
-    pursuit(),
-    decelZone(),
-    chaos(),
-    chaosState(),
-    sequenceLineCount(0),
-    nextLineId(1),
-    seqState() {}
+    nextLineId(1) {}
 };
 
 // ============================================================================
@@ -376,28 +311,6 @@ public:
    * @return Number of files deleted
    */
   int clearAllFiles();
-  
-  // ========================================================================
-  // SYSTEM CONFIGURATION PERSISTENCE - Phase 3.2
-  // ========================================================================
-  
-  /**
-   * Load system configuration from config.json
-   * Deserializes and populates SystemConfig struct from persistent storage
-   * @param config Reference to SystemConfig struct to populate
-   * @param configPath Path to config file (default: "/config.json")
-   * @return true if successful, false on error (file not found, parse error, etc.)
-   */
-  bool loadSystemConfig(SystemConfig& config, const String& configPath = "/config.json");
-  
-  /**
-   * Save system configuration to config.json
-   * Serializes SystemConfig struct to persistent storage
-   * @param config Reference to SystemConfig struct to save
-   * @param configPath Path to config file (default: "/config.json")
-   * @return true if successful, false on error
-   */
-  bool saveSystemConfig(const SystemConfig& config, const String& configPath = "/config.json");
   
   // ========================================================================
   // WEBSOCKET INTERFACE (Relay functions)
