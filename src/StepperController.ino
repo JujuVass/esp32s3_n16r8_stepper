@@ -454,15 +454,15 @@ void networkTask(void* param) {
     if (!calibrationInProgress) {
       server.handleClient();
       webSocket.loop();
-    }
     
-    // ═══════════════════════════════════════════════════════════════════════
-    // STATUS BROADCAST (every 100ms)
-    // ═══════════════════════════════════════════════════════════════════════
-    static unsigned long lastUpdate = 0;
-    if (millis() - lastUpdate > STATUS_UPDATE_INTERVAL_MS) {
-      lastUpdate = millis();
-      sendStatus();  // Can take 100ms+ without affecting motor!
+      // ═══════════════════════════════════════════════════════════════════════
+      // STATUS BROADCAST (every 100ms)
+      // ═══════════════════════════════════════════════════════════════════════
+      static unsigned long lastUpdate = 0;
+      if (millis() - lastUpdate > STATUS_UPDATE_INTERVAL_MS) {
+        lastUpdate = millis();
+        sendStatus();  // Uses webSocket.broadcastTXT - must not run concurrently with Core 1
+      }
     }
     
     // ═══════════════════════════════════════════════════════════════════════

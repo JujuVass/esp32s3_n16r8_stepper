@@ -38,20 +38,21 @@ SequenceTableManager::SequenceTableManager() {
 // CRUD OPERATIONS
 // ============================================================================
 
-int SequenceTableManager::addLine(SequenceLine newLine) {
+int SequenceTableManager::addLine(const SequenceLine& newLine) {
   if (sequenceLineCount >= MAX_SEQUENCE_LINES) {
     Status.sendError("❌ Sequencer full! Max 20 lines");
     return -1;
   }
   
-  newLine.lineId = config.nextLineId++;  // Phase 4D: Use config.nextLineId
   sequenceTable[sequenceLineCount] = newLine;
+  sequenceTable[sequenceLineCount].lineId = config.nextLineId++;  // Assign ID after copy
+  int assignedId = sequenceTable[sequenceLineCount].lineId;
   sequenceLineCount++;
   
-  engine->info("✅ Line added: ID=" + String(newLine.lineId) + " | Pos:" + 
+  engine->info("✅ Line added: ID=" + String(assignedId) + " | Pos:" + 
         String(newLine.startPositionMM, 1) + "mm, Dist:" + String(newLine.distanceMM, 1) + "mm");
   
-  return newLine.lineId;
+  return assignedId;
 }
 
 bool SequenceTableManager::deleteLine(int lineId) {
@@ -73,7 +74,7 @@ bool SequenceTableManager::deleteLine(int lineId) {
   return true;
 }
 
-bool SequenceTableManager::updateLine(int lineId, SequenceLine updatedLine) {
+bool SequenceTableManager::updateLine(int lineId, const SequenceLine& updatedLine) {
   int idx = findLineIndex(lineId);
   
   if (idx == -1) {
@@ -81,8 +82,8 @@ bool SequenceTableManager::updateLine(int lineId, SequenceLine updatedLine) {
     return false;
   }
   
-  updatedLine.lineId = lineId;  // Keep original ID
   sequenceTable[idx] = updatedLine;
+  sequenceTable[idx].lineId = lineId;  // Keep original ID
   
   engine->info("✏️ Line updated: ID=" + String(lineId));
   return true;

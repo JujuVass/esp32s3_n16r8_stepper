@@ -57,7 +57,7 @@ public:
    * @param newLine Line to add
    * @return lineId if successful, -1 if table is full
    */
-  int addLine(SequenceLine newLine);
+  int addLine(const SequenceLine& newLine);
   
   /**
    * Delete a line by ID
@@ -72,7 +72,7 @@ public:
    * @param updatedLine New line data
    * @return true if updated, false if not found
    */
-  bool updateLine(int lineId, SequenceLine updatedLine);
+  bool updateLine(int lineId, const SequenceLine& updatedLine);
   
   /**
    * Move a line up (-1) or down (+1)
