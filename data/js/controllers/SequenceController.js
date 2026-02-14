@@ -31,6 +31,13 @@ const seqState = AppState.sequence;
 // Local read alias (array reference — reads go through this, writes use setSequenceLines)
 let sequenceLines = seqState.lines;
 
+// Local aliases for sequence state properties (avoids implicit globals)
+let editingLineId = seqState.editingLineId;
+let isLoadingEditForm = seqState.isLoadingEditForm;
+let selectedLineIds = seqState.selectedIds;   // Set — initialized in app.js
+let lastSelectedIndex = seqState.lastSelectedIndex;
+let draggedLineId = null;
+
 // Helper getters/setters for commonly accessed properties
 function getSequenceLines() { return seqState.lines; }
 function setSequenceLines(lines) { seqState.lines = lines; sequenceLines = lines; }
@@ -291,7 +298,7 @@ function testSequenceLine(lineId) {
   });
   
   setTimeout(() => {
-    console.log('🔍 About to disable buttons before startSequence, isTestingLine=', window.isTestingLine);
+    console.log('🔍 About to disable buttons before startSequence, isTestingLine=', seqState.isTestingLine);
     if (DOM.btnStartSequence) {
       setButtonState(DOM.btnStartSequence, false);
       console.log('✅ btnStartSequence disabled via setButtonState');
@@ -951,11 +958,11 @@ function updateSequenceStatus(status) {
   
   const isRunning = status.isRunning;
   
-  if (!isRunning && window.isTestingLine) {
+  if (!isRunning && seqState.isTestingLine) {
     setTimeout(() => { restoreSequenceAfterTest(); }, 500);
   }
   
-  if (!isRunning && !window.isTestingLine) {
+  if (!isRunning && !seqState.isTestingLine) {
     // When sequence ends normally, force canStart to true (backend confirmed sequence is done)
     AppState.system.canStart = true;
     const canStart = canStartOperation();
@@ -1043,7 +1050,7 @@ function renderSequenceTable(data) {
   initializeTrashZones();
   initSequenceSortable();  // Initialize SortableJS drag & drop
   
-  if (window.isTestingLine) {
+  if (seqState.isTestingLine) {
     document.querySelectorAll('[id^="btnTestLine_"]').forEach(btn => {
       btn.disabled = true;
       btn.style.opacity = '0.5';

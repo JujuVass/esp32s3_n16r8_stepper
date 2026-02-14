@@ -101,6 +101,8 @@ extern volatile bool emergencyStop;
 extern volatile bool requestCalibration;    // Trigger calibration from motorTask
 extern volatile bool calibrationInProgress; // When true, networkTask skips webSocket/server
                                             // (CalibrationManager handles them internally)
+extern volatile bool blockingMoveInProgress; // When true, networkTask skips webSocket/server
+                                             // (blocking move loops service them from Core 1)
 
 // ============================================================================
 // CORE SYSTEM STATE

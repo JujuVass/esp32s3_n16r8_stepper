@@ -38,6 +38,9 @@
 extern ChaosRuntimeConfig chaos;
 extern ChaosExecutionState chaosState;
 
+// Pattern names array (defined in ChaosController.cpp, shared with StatusBroadcaster)
+extern const char* const CHAOS_PATTERN_NAMES[];
+
 // ============================================================================
 // CHAOS CONTROLLER CLASS
 // ============================================================================
@@ -134,6 +137,34 @@ private:
      * @return true if direction was forced
      */
     inline bool forceDirectionAtLimits(float currentPos, float minLimit, float maxLimit, bool& movingFwd);
+    
+    /**
+     * DRY helper: compute speed multiplier + pattern duration from base config
+     */
+    inline void calcSpeedAndDuration(const ChaosBaseConfig& cfg, float craziness,
+                                      float durationMaxFactor,
+                                      float& speedMultiplier, unsigned long& patternDuration);
+    
+    /**
+     * DRY helper: set target position based on chaosState.movingForward
+     */
+    inline void setDirectionalTarget(float amplitude, float minLimit, float maxLimit);
+    
+    /**
+     * DRY helper: shared multi-phase pattern handler (BruteForce/Liberator)
+     */
+    void handleMultiPhase(const ChaosBaseConfig& cfg, const ChaosMultiPhaseExt& multi_cfg,
+                          const ChaosDirectionExt& dir_cfg, float craziness,
+                          float effectiveMinLimit, float effectiveMaxLimit,
+                          float& speedMultiplier, unsigned long& patternDuration);
+    
+    /**
+     * DRY helper: shared multi-phase AtTarget handler (BruteForce/Liberator)
+     */
+    void handleMultiPhaseAtTarget(float effectiveMinLimit, float effectiveMaxLimit,
+                                   uint8_t& phase, float speedBase0, float speedScale0,
+                                   float speedBase2, float speedScale2,
+                                   const char* emoji, const char* name);
     
     // ========================================================================
     // PATTERN HANDLERS

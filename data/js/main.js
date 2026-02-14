@@ -451,8 +451,10 @@
           const containerHeight = DOM.gaugeContainer ? DOM.gaugeContainer.offsetHeight : 500;
           const limitPixelPosition = containerHeight - (limitPercent * containerHeight);
           
+          if (DOM.gaugeLimitLine) {
           DOM.gaugeLimitLine.style.top = limitPixelPosition + 'px';
           DOM.gaugeLimitLine.style.display = 'block';
+          }
         } else if (DOM.gaugeLimitLine) {
           DOM.gaugeLimitLine.style.display = 'none';
         }
@@ -492,6 +494,7 @@
       
       // Show pending changes indicator
       const pendingChanges = DOM.pendingChanges;
+      if (pendingChanges) {
       if (data.hasPending && data.pendingMotion) {
         const pm = data.pendingMotion;
         const startPos = parseFloat(pm.startPositionMM);
@@ -505,6 +508,7 @@
           t('simple.backward') + ' ' + parseFloat(pm.speedLevelBackward).toFixed(1) + '/20';
       } else {
         pendingChanges.style.display = 'none';
+      }
       }
       
       // Update oscillation UI (delegated to OscillationController.js)

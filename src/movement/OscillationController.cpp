@@ -45,11 +45,12 @@ static void initSineTable() {
 static float fastSine(float phase) {
     initSineTable();  // Ensure table is initialized
     float indexFloat = phase * SINE_TABLE_SIZE;
-    int index = (int)indexFloat % SINE_TABLE_SIZE;
+    // Safe modulo: C++ signed % can return negative, so double-mod to guarantee positive
+    int index = ((int)indexFloat % SINE_TABLE_SIZE + SINE_TABLE_SIZE) % SINE_TABLE_SIZE;
     int nextIndex = (index + 1) % SINE_TABLE_SIZE;
     
     // Linear interpolation for smooth transitions
-    float fraction = indexFloat - (int)indexFloat;
+    float fraction = indexFloat - floorf(indexFloat);
     return sineTable[index] + (sineTable[nextIndex] - sineTable[index]) * fraction;
 }
 #endif
@@ -355,18 +356,7 @@ float OscillationControllerClass::calculatePosition() {
         
         // 🆕 NOUVEAU: Vérifier si pause entre cycles activée
         if (oscillation.cyclePause.enabled) {
-            // Calculer durée de pause
-            if (oscillation.cyclePause.isRandom) {
-                // 🆕 SÉCURITÉ: Garantir min ≤ max (défense en profondeur)
-                float minVal = min(oscillation.cyclePause.minPauseSec, oscillation.cyclePause.maxPauseSec);
-                float maxVal = max(oscillation.cyclePause.minPauseSec, oscillation.cyclePause.maxPauseSec);
-                float range = maxVal - minVal;
-                float randomOffset = (float)random(0, 10000) / 10000.0;
-                float pauseSec = minVal + (randomOffset * range);
-                oscPauseState.currentPauseDuration = (unsigned long)(pauseSec * 1000);
-            } else {
-                oscPauseState.currentPauseDuration = (unsigned long)(oscillation.cyclePause.pauseDurationSec * 1000);
-            }
+            oscPauseState.currentPauseDuration = oscillation.cyclePause.calculateDurationMs();
             
             oscPauseState.isPausing = true;
             oscPauseState.pauseStartMs = millis();
@@ -585,14 +575,14 @@ bool OscillationControllerClass::handleInitialPositioning() {
     Motor.setDirection(moveForward);
     Motor.step();
     
-    // Track distance using StatsTracking
-    stats.trackDelta(currentStep);
-    
     if (moveForward) {
         currentStep++;
     } else {
         currentStep--;
     }
+    
+    // Track distance using StatsTracking (AFTER currentStep update)
+    stats.trackDelta(currentStep);
     
     lastStepMicros_ = currentMicros;
     

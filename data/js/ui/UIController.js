@@ -419,7 +419,8 @@ function initUIListeners() {
  * State for the unified modal system
  */
 const ModalState = {
-  resolveCallback: null,
+  alertResolveCallback: null,
+  confirmResolveCallback: null,
   rejectCallback: null
 };
 
@@ -465,7 +466,7 @@ function showAlert(message, options = {}) {
     DOM.unifiedAlertOkBtn.textContent = buttonText;
     
     // Set callback
-    ModalState.resolveCallback = resolve;
+    ModalState.alertResolveCallback = resolve;
     
     // Show modal
     DOM.unifiedAlertModal.classList.add('active');
@@ -477,9 +478,9 @@ function showAlert(message, options = {}) {
  */
 function closeAlertModal() {
   DOM.unifiedAlertModal.classList.remove('active');
-  if (ModalState.resolveCallback) {
-    ModalState.resolveCallback();
-    ModalState.resolveCallback = null;
+  if (ModalState.alertResolveCallback) {
+    ModalState.alertResolveCallback();
+    ModalState.alertResolveCallback = null;
   }
 }
 
@@ -524,7 +525,7 @@ function showConfirm(message, options = {}) {
     confirmBtn.className = dangerous ? 'button btn-danger' : 'button btn-success';
     
     // Set callback
-    ModalState.resolveCallback = resolve;
+    ModalState.confirmResolveCallback = resolve;
     
     // Show modal
     DOM.unifiedConfirmModal.classList.add('active');
@@ -537,9 +538,9 @@ function showConfirm(message, options = {}) {
  */
 function closeConfirmModal(confirmed) {
   DOM.unifiedConfirmModal.classList.remove('active');
-  if (ModalState.resolveCallback) {
-    ModalState.resolveCallback(confirmed);
-    ModalState.resolveCallback = null;
+  if (ModalState.confirmResolveCallback) {
+    ModalState.confirmResolveCallback(confirmed);
+    ModalState.confirmResolveCallback = null;
   }
 }
 

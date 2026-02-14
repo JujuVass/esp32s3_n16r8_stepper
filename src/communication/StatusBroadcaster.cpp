@@ -323,8 +323,7 @@ void StatusBroadcaster::addChaosFields(JsonDocument& doc) {
     chaosStateObj["isRunning"] = chaosState.isRunning;
     chaosStateObj["currentPattern"] = (int)chaosState.currentPattern;
     
-    const char* patternNames[] = {"ZIGZAG", "SWEEP", "PULSE", "DRIFT", "BURST", "WAVE", "PENDULUM", "SPIRAL", "BREATHING", "BRUTE_FORCE", "LIBERATOR"};
-    chaosStateObj["patternName"] = patternNames[chaosState.currentPattern];
+    chaosStateObj["patternName"] = CHAOS_PATTERN_NAMES[chaosState.currentPattern];
     
     chaosStateObj["targetPositionMM"] = serialized(String(chaosState.targetPositionMM, 2));
     chaosStateObj["currentSpeedLevel"] = serialized(String(chaosState.currentSpeedLevel, 1));

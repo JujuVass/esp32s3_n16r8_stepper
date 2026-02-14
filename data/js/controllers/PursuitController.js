@@ -33,6 +33,7 @@
  * - totalDistanceMM, currentPositionMM, targetMM, isDragging, lastCommandTime
  */
 const PURSUIT_COMMAND_INTERVAL = 20;  // Send command max every 20ms (50Hz)
+let pursuitLoopGeneration = 0;         // Generation counter to prevent duplicate loops
 
 // ============================================================================
 // GAUGE DISPLAY FUNCTIONS
@@ -113,12 +114,17 @@ function sendPursuitCommand() {
  * Pursuit command loop - sends commands periodically while pursuit is active
  */
 function startPursuitLoop() {
-  if (!AppState.pursuit.active) return;
+  const myGeneration = ++pursuitLoopGeneration;
   
-  sendPursuitCommand();
-  
-  // Continue loop
-  setTimeout(startPursuitLoop, PURSUIT_COMMAND_INTERVAL);
+  function loop() {
+    if (!AppState.pursuit.active || myGeneration !== pursuitLoopGeneration) return;
+    
+    sendPursuitCommand();
+    
+    // Continue loop
+    setTimeout(loop, PURSUIT_COMMAND_INTERVAL);
+  }
+  loop();
 }
 
 // ============================================================================
@@ -196,6 +202,7 @@ function enablePursuitMode() {
  */
 function disablePursuitMode() {
   AppState.pursuit.active = false;
+  pursuitLoopGeneration++;  // Invalidate any running pursuit loop
   
   // Update button state
   DOM.btnActivatePursuit.textContent = '▶ ' + t('common.start');

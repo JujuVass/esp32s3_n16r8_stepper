@@ -118,56 +118,38 @@ void BaseMovementControllerClass::setStartPosition(float startMM) {
 }
 
 void BaseMovementControllerClass::setSpeedForward(float speedLevel) {
-    MutexGuard guard(motionMutex);
-    if (!guard) {
-        engine->warn("setSpeedForward: mutex timeout");
-        return;
-    }
-    
-    float oldSpeedLevel = motion.speedLevelForward;
-    bool wasRunning = (config.currentState == STATE_RUNNING);
-    
-    if (wasRunning) {
-        // Queue change for end of cycle
-        if (!pendingMotion.hasChanges) {
-            initPendingFromCurrent();
-        }
-        pendingMotion.speedLevelForward = speedLevel;
-        pendingMotion.hasChanges = true;
-        
-        engine->debug(String("⏳ Forward speed queued: ") + String(oldSpeedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0) + " → " + 
-              String(speedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0) + " (" + String(speedLevelToCyclesPerMin(speedLevel), 0) + " c/min)");
-    } else {
-        motion.speedLevelForward = speedLevel;
-        engine->debug(String("✓ Forward speed: ") + String(speedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0) + " (" + 
-              String(speedLevelToCyclesPerMin(speedLevel), 0) + " c/min)");
-        calculateStepDelay();
-    }
+    setSpeedInternal(speedLevel, true);
 }
 
 void BaseMovementControllerClass::setSpeedBackward(float speedLevel) {
+    setSpeedInternal(speedLevel, false);
+}
+
+void BaseMovementControllerClass::setSpeedInternal(float speedLevel, bool isForward) {
     MutexGuard guard(motionMutex);
     if (!guard) {
-        engine->warn("setSpeedBackward: mutex timeout");
+        engine->warn(isForward ? "setSpeedForward: mutex timeout" : "setSpeedBackward: mutex timeout");
         return;
     }
     
-    float oldSpeedLevel = motion.speedLevelBackward;
+    const char* dirName = isForward ? "Forward" : "Backward";
+    float& currentLevel = isForward ? motion.speedLevelForward : motion.speedLevelBackward;
+    float& pendingLevel = isForward ? pendingMotion.speedLevelForward : pendingMotion.speedLevelBackward;
+    float oldSpeedLevel = currentLevel;
     bool wasRunning = (config.currentState == STATE_RUNNING);
     
     if (wasRunning) {
-        // Queue change for end of cycle
         if (!pendingMotion.hasChanges) {
             initPendingFromCurrent();
         }
-        pendingMotion.speedLevelBackward = speedLevel;
+        pendingLevel = speedLevel;
         pendingMotion.hasChanges = true;
         
-        engine->debug(String("⏳ Backward speed queued: ") + String(oldSpeedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0) + " → " + 
+        engine->debug(String("⏳ ") + dirName + " speed queued: " + String(oldSpeedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0) + " → " + 
               String(speedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0) + " (" + String(speedLevelToCyclesPerMin(speedLevel), 0) + " c/min)");
     } else {
-        motion.speedLevelBackward = speedLevel;
-        engine->debug(String("✓ Backward speed: ") + String(speedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0) + " (" + 
+        currentLevel = speedLevel;
+        engine->debug(String("✓ ") + dirName + " speed: " + String(speedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0) + " (" + 
               String(speedLevelToCyclesPerMin(speedLevel), 0) + " c/min)");
         calculateStepDelay();
     }
@@ -175,6 +157,12 @@ void BaseMovementControllerClass::setSpeedBackward(float speedLevel) {
 
 void BaseMovementControllerClass::setCyclePause(bool enabled, float durationSec, 
                                               bool isRandom, float minSec, float maxSec) {
+    MutexGuard guard(motionMutex);
+    if (!guard) {
+        engine->warn("setCyclePause: mutex timeout");
+        return;
+    }
+    
     motion.cyclePause.enabled = enabled;
     motion.cyclePause.pauseDurationSec = durationSec;
     motion.cyclePause.isRandom = isRandom;
@@ -1049,20 +1037,7 @@ bool BaseMovementControllerClass::handleCyclePause() {
         return false;  // No pause, continue
     }
     
-    // Calculate pause duration
-    if (motion.cyclePause.isRandom) {
-        // Random mode: pick value between min and max
-        // Safety: ensure min ≤ max (defense in depth)
-        float minVal = min(motion.cyclePause.minPauseSec, motion.cyclePause.maxPauseSec);
-        float maxVal = max(motion.cyclePause.minPauseSec, motion.cyclePause.maxPauseSec);
-        float range = maxVal - minVal;
-        float randomOffset = (float)random(0, 10000) / 10000.0;  // 0.0 to 1.0
-        float pauseSec = minVal + (randomOffset * range);
-        motionPauseState.currentPauseDuration = (unsigned long)(pauseSec * 1000);
-    } else {
-        // Fixed mode
-        motionPauseState.currentPauseDuration = (unsigned long)(motion.cyclePause.pauseDurationSec * 1000);
-    }
+    motionPauseState.currentPauseDuration = motion.cyclePause.calculateDurationMs();
     
     // Start pause
     motionPauseState.isPausing = true;

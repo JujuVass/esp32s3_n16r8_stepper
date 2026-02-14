@@ -468,10 +468,10 @@ function initMainNumericConstraints() {
     // VA-ET-VIENT (Simple mode)
     'startPosition', 'distance', 'speedUnified', 'speedForward', 'speedBackward',
     // OSCILLATION
-    'oscCenterPosition', 'oscAmplitude', 'oscFrequency', 'oscSpeed',
+    'oscCenter', 'oscAmplitude', 'oscFrequency',
     'oscRampInDuration', 'oscRampOutDuration',
     // CHAOS
-    'chaosCenterPos', 'chaosAmplitude', 'chaosSpeed', 'chaosCraziness',
+    'chaosCenterPos', 'chaosAmplitude', 'chaosMaxSpeed', 'chaosCraziness',
     'chaosDuration', 'chaosSeed'
   ];
   applyNumericConstraints(mainNumericInputs);
@@ -507,16 +507,17 @@ async function fetchWithRetry(url, options = {}, retryConfig = {}) {
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // Create AbortController for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      // Create AbortController for timeout only if no external signal provided
+      const hasExternalSignal = !!options.signal;
+      const controller = hasExternalSignal ? null : new AbortController();
+      const timeoutId = hasExternalSignal ? null : setTimeout(() => controller.abort(), timeout);
       
       const response = await fetch(url, {
         ...options,
         signal: options.signal || controller.signal
       });
       
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       
       // Success - return response
       if (attempt > 0 && !silent) {

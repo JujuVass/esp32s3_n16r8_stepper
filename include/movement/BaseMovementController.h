@@ -300,6 +300,11 @@ private:
     unsigned long _cycleCounter = 0;
     
     /**
+     * Internal helper for setSpeedForward/setSpeedBackward (DRY)
+     */
+    void setSpeedInternal(float speedLevel, bool isForward);
+    
+    /**
      * Initialize pending changes struct with current values
      */
     void initPendingFromCurrent();

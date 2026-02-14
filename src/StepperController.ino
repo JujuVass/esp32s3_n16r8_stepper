@@ -107,6 +107,7 @@ SemaphoreHandle_t stateMutex = NULL;
 volatile bool emergencyStop = false;
 volatile bool requestCalibration = false;  // Flag to trigger calibration from Core 1
 volatile bool calibrationInProgress = false;  // Cooperative flag: networkTask skips webSocket/server
+volatile bool blockingMoveInProgress = false;  // Cooperative flag: networkTask skips webSocket/server during blocking moves
 
 // ============================================================================
 // WEB SERVER INSTANCES
@@ -449,9 +450,9 @@ void networkTask(void* param) {
     Network.handleOTA();
     Network.checkConnectionHealth();
     
-    // HTTP server and WebSocket - skip during calibration
-    // (CalibrationManager handles them internally via serviceWebSocket())
-    if (!calibrationInProgress) {
+    // HTTP server and WebSocket - skip during calibration or blocking moves
+    // (CalibrationManager/blocking loops handle them internally via serviceWebSocket())
+    if (!calibrationInProgress && !blockingMoveInProgress) {
       server.handleClient();
       webSocket.loop();
     

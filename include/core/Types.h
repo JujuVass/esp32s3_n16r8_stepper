@@ -85,6 +85,17 @@ struct CyclePauseConfig {
     isRandom(false),
     minPauseSec(0.5),
     maxPauseSec(5.0) {}
+
+  /** DRY: Calculate pause duration in ms (random or fixed) */
+  unsigned long calculateDurationMs() const {
+    if (isRandom) {
+      float minVal = min(minPauseSec, maxPauseSec);
+      float maxVal = max(minPauseSec, maxPauseSec);
+      float randomOffset = (float)random(0, 10000) / 10000.0f;
+      return (unsigned long)((minVal + randomOffset * (maxVal - minVal)) * 1000);
+    }
+    return (unsigned long)(pauseDurationSec * 1000);
+  }
 };
 
 struct CyclePauseState {

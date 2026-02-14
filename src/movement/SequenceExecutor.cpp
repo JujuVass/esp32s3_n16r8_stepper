@@ -311,6 +311,9 @@ bool SequenceExecutor::blockingMoveToStep(long targetStepPos, unsigned long time
     unsigned long lastStatusUpdate = millis();
     const unsigned long stepDelay = 990;  // Speed 5.0
     
+    // Cooperative flag: networkTask will skip webSocket/server during blocking move
+    blockingMoveInProgress = true;
+    
     while (currentStep != targetStepPos && (millis() - moveStart < timeoutMs)) {
         unsigned long now = micros();
         if (now - lastStepTime >= stepDelay) {
@@ -335,6 +338,8 @@ bool SequenceExecutor::blockingMoveToStep(long targetStepPos, unsigned long time
             lastStatusUpdate = nowMs;
         }
     }
+    
+    blockingMoveInProgress = false;  // Resume normal networkTask operation
     
     return (currentStep == targetStepPos);
 }
@@ -366,14 +371,15 @@ void SequenceExecutor::completeSequence(bool autoReturnToStart) {
         if (blockingMoveToStep(0)) {
             engine->info("✓ Return complete: " + String(startPosMM, 1) + "mm → Position 0.0mm");
         } else {
-            engine->warn("⚠️ Return timeout at " + String(currentStep / (float)STEPS_PER_MM, 1) + "mm");
+            engine->warn("⚠️ Return timeout at " + String(currentStep / (float)STEPS_PER_MM, 1) + "mm - position NOT reset");
         }
     }
     
-    // Full cleanup
-    currentStep = 0;
-    startStep = 0;
-    targetStep = 0;
+    // Full cleanup - only reset position if actually at physical zero
+    if (currentStep == 0) {
+        startStep = 0;
+        targetStep = 0;
+    }
     movingForward = true;
     hasReachedStartStep = false;
     config.currentState = STATE_READY;

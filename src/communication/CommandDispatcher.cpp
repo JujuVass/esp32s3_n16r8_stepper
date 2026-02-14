@@ -136,6 +136,12 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
     }
     
     if (strcmp(cmd, "start") == 0) {
+        // Guard: reject if calibration is pending or in progress
+        if (requestCalibration || calibrationInProgress) {
+            Status.sendError("⚠️ Calibration pending - cannot start movement");
+            return true;
+        }
+        
         float dist = doc["distance"] | motion.targetDistanceMM;
         float spd = doc["speed"] | motion.speedLevelForward;
         
