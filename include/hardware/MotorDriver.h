@@ -56,13 +56,15 @@ public:
     
     /**
      * Enable motor driver (start holding torque)
-     * HSS86 ENABLE is active LOW
+     * HSS86 ENABLE is active LOW, but BSS138 level shifter inverts the signal
+     * MCU HIGH → level shifter → Driver LOW (enabled)
      */
     void enable();
     
     /**
      * Disable motor driver (release torque)
-     * HSS86 ENABLE is active LOW, so we set HIGH to disable
+     * HSS86 ENABLE is active LOW, but BSS138 level shifter inverts the signal
+     * MCU LOW → level shifter → Driver HIGH (disabled)
      */
     void disable();
     

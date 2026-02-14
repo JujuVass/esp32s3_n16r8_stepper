@@ -97,7 +97,9 @@ private:
 
 // Atomic flags (no mutex needed - set from Core 0, read from Core 1)
 extern volatile bool emergencyStop;
-extern volatile bool requestCalibration;   // Trigger calibration from motorTask
+extern volatile bool requestCalibration;    // Trigger calibration from motorTask
+extern volatile bool calibrationInProgress; // When true, networkTask skips webSocket/server
+                                            // (CalibrationManager handles them internally)
 
 // ============================================================================
 // CORE SYSTEM STATE

@@ -5,6 +5,7 @@
 #include "hardware/MotorDriver.h"
 #include "core/UtilityEngine.h"
 #include "core/GlobalState.h"  // For sensorsInverted
+#include <math.h>              // For ceilf()
 
 // ============================================================================
 // ISR FOR PEND SIGNAL (counts all transitions for debugging)
@@ -68,12 +69,14 @@ void MotorDriver::init() {
 
 void MotorDriver::step() {
     // HSS86 requires minimum 2.5µs pulse width
-    // We use STEP_PULSE_MICROS for safety margin
+    // STEP_PULSE_MICROS is float (2.5f), but delayMicroseconds() takes uint32_t
+    // We ceil to 3µs to guarantee we exceed the minimum spec
+    static constexpr uint32_t PULSE_DELAY_US = (uint32_t)ceilf(STEP_PULSE_MICROS);
     
     digitalWrite(PIN_PULSE, HIGH);
-    delayMicroseconds(STEP_PULSE_MICROS);
+    delayMicroseconds(PULSE_DELAY_US);
     digitalWrite(PIN_PULSE, LOW);
-    delayMicroseconds(STEP_PULSE_MICROS);
+    delayMicroseconds(PULSE_DELAY_US);
 }
 
 // ============================================================================
@@ -108,7 +111,8 @@ bool MotorDriver::getDirection() const {
 void MotorDriver::enable() {
     if (m_enabled) return;  // Already enabled
     
-    // HSS86 ENABLE is active LOW
+    // HSS86 ENABLE is active LOW, BSS138 level shifter inverts:
+    // MCU HIGH → Driver LOW (enabled)
     digitalWrite(PIN_ENABLE, HIGH);
     m_enabled = true;
 }
@@ -116,7 +120,8 @@ void MotorDriver::enable() {
 void MotorDriver::disable() {
     if (!m_enabled) return;  // Already disabled
     
-    // HSS86 ENABLE is active LOW, set HIGH to disable
+    // HSS86 ENABLE is active LOW, BSS138 level shifter inverts:
+    // MCU LOW → Driver HIGH (disabled)
     digitalWrite(PIN_ENABLE, LOW);
     m_enabled = false;
 }

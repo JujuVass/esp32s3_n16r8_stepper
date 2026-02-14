@@ -56,30 +56,30 @@ constexpr int AP_DIRECT_MAX_CLIENTS = 4;            // Max simultaneous AP clien
 // ============================================================================
 // CONFIGURATION - Motor Parameters
 // ============================================================================
-const int STEPS_PER_REV = 800;
-const float MM_PER_REV = 100.0;  // HTD 5M belt, 20T pulley (5mm pitch  20 teeth = 100mm)
-const float STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // 8.0 steps/mm
+constexpr int STEPS_PER_REV = 800;
+constexpr float MM_PER_REV = 100.0f;  // HTD 5M belt, 20T pulley (5mm pitch × 20 teeth = 100mm)
+constexpr float STEPS_PER_MM = STEPS_PER_REV / MM_PER_REV;  // 8.0 steps/mm
 
 // ============================================================================
 // CONFIGURATION - Drift Correction (Safety Offset)
 // ============================================================================
 // Safety offset from physical contacts (matches calibration offset)
-// Why 10? Position 0 is set 10 steps AFTER START contact release
-// maxStep is set 10 steps BEFORE END contact
+// Why 20? Position 0 is set 20 steps AFTER START contact release
+// maxStep is set 20 steps BEFORE END contact
 // This creates a buffer zone for drift tolerance
-const int SAFETY_OFFSET_STEPS = 20;  // 10 steps = 1.25mm @ 8.0 steps/mm
+constexpr int SAFETY_OFFSET_STEPS = 20;  // 20 steps = 2.5mm @ 8.0 steps/mm
 
 // Hard drift detection zone (only test physical contacts when close to limits)
 // Why 20mm? Balance between performance (88% less tests) and safety (~133 steps buffer)
 // Reduces false positives and CPU overhead while maintaining excellent protection
-const float HARD_DRIFT_TEST_ZONE_MM = 20.0;  // ~160 steps @ 8.0 steps/mm
+constexpr float HARD_DRIFT_TEST_ZONE_MM = 20.0f;  // ~160 steps @ 8.0 steps/mm
 
 // ============================================================================
 // CONFIGURATION - Step Timing
 // ============================================================================
-const int STEP_PULSE_MICROS = 2.5;   // HSS86 requires min 2.5Âµs (used for HIGH + LOW)
-const float STEP_EXECUTION_TIME_MICROS = STEP_PULSE_MICROS * 2.0;  // Total: 10Âµs per step
-const int DIR_CHANGE_DELAY_MICROS = 15;  // HSS86 driver requires time to process direction changes
+constexpr float STEP_PULSE_MICROS = 2.5f;   // HSS86 requires min 2.5µs (ceiled to 3µs in MotorDriver)
+constexpr float STEP_EXECUTION_TIME_MICROS = STEP_PULSE_MICROS * 2.0f;  // Theoretical: 5µs (actual: 6µs after ceil)
+constexpr int DIR_CHANGE_DELAY_MICROS = 15;  // HSS86 driver requires time to process direction changes
 
 // ============================================================================
 // CONFIGURATION - Calibration Constants
@@ -87,103 +87,103 @@ const int DIR_CHANGE_DELAY_MICROS = 15;  // HSS86 driver requires time to proces
 // WebSocket servicing during calibration
 // Why 20? At 10Âµs/step (5Âµs HIGH + 5Âµs LOW), 20 steps = 200Âµs
 // This ensures WebSocket keeps connection alive without interfering with timing
-const int WEBSOCKET_SERVICE_INTERVAL_STEPS = 20;
+constexpr int WEBSOCKET_SERVICE_INTERVAL_STEPS = 20;
 
-const int CALIB_DELAY = 2000;  // 2ms per step = 500 steps/sec (safer for heavy loads)
+constexpr int CALIB_DELAY = 2000;  // 2ms per step = 500 steps/sec (safer for heavy loads)
 
 // Safety limit for contact search
 // Why 3000? At 6.67 steps/mm, 3000 steps = 450mm (well above physical max ~200mm)
 // Prevents infinite loop if contact sensor fails
-const int CALIBRATION_MAX_STEPS = 3000;
+constexpr int CALIBRATION_MAX_STEPS = 3000;
 
 // Speed reduction for precise positioning
 // Why 3? Slows down by 3Ã— (e.g., 5ms â†’ 15ms per step)
 // Reduces mechanical shock when contacting limit switches
-const int CALIBRATION_SLOW_FACTOR = 3;
+constexpr int CALIBRATION_SLOW_FACTOR = 3;
 
 // Acceptable position error after full calibration cycle
 // Why 5%? Allows ~10 steps drift on 200-step movement (realistic for belt drive)
 // Higher tolerance needed due to HSS86 closed-loop microstepping variance
-const float MAX_CALIBRATION_ERROR_PERCENT = 5.0;
+constexpr float MAX_CALIBRATION_ERROR_PERCENT = 5.0f;
 
 // Maximum retry attempts before failure
 // Why 3? Balances reliability (retry transient issues) vs speed (don't retry forever)
-const int MAX_CALIBRATION_RETRIES = 3;
+constexpr int MAX_CALIBRATION_RETRIES = 3;
 
 // Safety margin for return verification
 // Why 1000? 1000 steps = 150mm @ 6.67 steps/mm
 // If we move 150mm backward without hitting START contact, something is wrong
-const int CALIBRATION_ERROR_MARGIN_STEPS = 1000;
+constexpr int CALIBRATION_ERROR_MARGIN_STEPS = 1000;
 
 // ============================================================================
 // CONFIGURATION - Oscillation Mode Constants
 // ============================================================================
 // Phase tracking and position tolerances
-const float OSC_INITIAL_POSITIONING_TOLERANCE_MM = 2.0;  // Â±2mm considered "at center"
-const float OSC_RAMP_START_DELAY_MS = 500.0;  // Wait 500ms before starting ramp-in
+constexpr float OSC_INITIAL_POSITIONING_TOLERANCE_MM = 2.0f;  // ±2mm considered "at center"
+constexpr float OSC_RAMP_START_DELAY_MS = 500.0f;  // Wait 500ms before starting ramp-in
 
 // Step timing for oscillation phases
-const unsigned long OSC_POSITIONING_STEP_DELAY_MICROS = 2000;  // Slow initial positioning (25mm/s)
-const unsigned long OSC_MIN_STEP_DELAY_MICROS = 50;  // Minimum delay for oscillation (ultra-high resolution: 33kHz)
-const int OSC_MAX_STEPS_PER_CATCH_UP = 2;  // Max steps per loop iteration (anti-jerk)
+constexpr unsigned long OSC_POSITIONING_STEP_DELAY_MICROS = 2000;  // Slow initial positioning (25mm/s)
+constexpr unsigned long OSC_MIN_STEP_DELAY_MICROS = 50;  // Minimum delay for oscillation (ultra-high resolution: 33kHz)
+constexpr int OSC_MAX_STEPS_PER_CATCH_UP = 2;  // Max steps per loop iteration (anti-jerk)
 
 // Sine wave lookup table (optional performance optimization)
 #define USE_SINE_LOOKUP_TABLE true  // Enable pre-calculated sine table (saves ~13Âµs per call)
-const int SINE_TABLE_SIZE = 1024;  // 1024 points = 0.1% precision, 4KB RAM
+constexpr int SINE_TABLE_SIZE = 1024;  // 1024 points = 0.1% precision, 4KB RAM
 
 // Smooth transitions
-const unsigned long OSC_FREQ_TRANSITION_DURATION_MS = 1000;  // Smooth 1000ms frequency interpolation
-const unsigned long OSC_CENTER_TRANSITION_DURATION_MS = 1000;  // Smooth 1000ms center position interpolation
-const unsigned long OSC_AMPLITUDE_TRANSITION_DURATION_MS = 1000;  // Smooth 1000ms amplitude interpolation
-const float OSC_CATCH_UP_THRESHOLD_MM = 3.0;  // Only trigger catch-up if position error > 5mm (prevents continuous jerks)
+constexpr unsigned long OSC_FREQ_TRANSITION_DURATION_MS = 1000;  // Smooth 1000ms frequency interpolation
+constexpr unsigned long OSC_CENTER_TRANSITION_DURATION_MS = 1000;  // Smooth 1000ms center position interpolation
+constexpr unsigned long OSC_AMPLITUDE_TRANSITION_DURATION_MS = 1000;  // Smooth 1000ms amplitude interpolation
+constexpr float OSC_CATCH_UP_THRESHOLD_MM = 3.0f;  // Only trigger catch-up if position error > 3mm (prevents continuous jerks)
 
 // Debug logging intervals (reduce noise)
-const unsigned long OSC_DEBUG_LOG_INTERVAL_MS = 5000;  // General debug logs every 5s (was 2s)
-const unsigned long OSC_TRANSITION_LOG_INTERVAL_MS = 200;  // Transition logs every 200ms (was 100ms)
+constexpr unsigned long OSC_DEBUG_LOG_INTERVAL_MS = 5000;  // General debug logs every 5s (was 2s)
+constexpr unsigned long OSC_TRANSITION_LOG_INTERVAL_MS = 200;  // Transition logs every 200ms (was 100ms)
 
 // ============================================================================
 // CONFIGURATION - Chaos Mode
 // ============================================================================
 // Why 50000Âµs? Chaos mode: max step delay = 50ms = 20 steps/sec (minimum sane speed)
-const unsigned long CHAOS_MAX_STEP_DELAY_MICROS = 50000;
+constexpr unsigned long CHAOS_MAX_STEP_DELAY_MICROS = 50000;
 
 // Why 500ms? Sequence status: update frequency during wait (balance responsiveness vs traffic)
-const unsigned long SEQUENCE_STATUS_UPDATE_MS = 500;
+constexpr unsigned long SEQUENCE_STATUS_UPDATE_MS = 500;
 
 // ============================================================================
 // CONFIGURATION - doStep() Safety Thresholds
 // ============================================================================
 
 // Why 10? Consider "at start" if within 10 steps of minStep (for wasAtStart flag)
-const long WASATSTART_THRESHOLD_STEPS = 10;
+constexpr long WASATSTART_THRESHOLD_STEPS = 10;
 
 // Hard mechanical limits for safety
-const float HARD_MAX_DISTANCE_MM = 365.0;
-const float HARD_MIN_DISTANCE_MM = 250.0;
+constexpr float HARD_MAX_DISTANCE_MM = 365.0f;
+constexpr float HARD_MIN_DISTANCE_MM = 250.0f;
 
 // ============================================================================
 // CONFIGURATION - Speed Limits MAXGLOSPE
 // ============================================================================
-const float MAX_SPEED_LEVEL = 35.0;  // Maximum speed level for all modes (1-30)
+constexpr float MAX_SPEED_LEVEL = 35.0f;  // Maximum speed level for all modes (1-35)
 
 // Adaptive speed limiting for oscillation (uses MAX_SPEED_LEVEL for consistency)
-// MAX_SPEED_LEVEL * 10.0 = max speed in mm/s (e.g., 30 * 10 = 300 mm/s)
-const float OSC_MAX_SPEED_MM_S = MAX_SPEED_LEVEL * 20.0;  // Maximum oscillation speed (adaptive delay kicks in above this)
+// MAX_SPEED_LEVEL * 20.0 = max speed in mm/s (e.g., 35 * 20 = 700 mm/s)
+constexpr float OSC_MAX_SPEED_MM_S = MAX_SPEED_LEVEL * 20.0f;  // Maximum oscillation speed (adaptive delay kicks in above this)
 
 // ============================================================================
 // CONFIGURATION - Loop Timing
 // ============================================================================
-const unsigned long WEBSERVICE_INTERVAL_US = 3000;    // Service WebSocket every 3ms
-const unsigned long STATUS_UPDATE_INTERVAL_MS = 100;  // Send status every 100ms
-const unsigned long SUMMARY_LOG_INTERVAL_MS = 30000;  // Print summary every 60s
+constexpr unsigned long WEBSERVICE_INTERVAL_US = 3000;    // Service WebSocket every 3ms
+constexpr unsigned long STATUS_UPDATE_INTERVAL_MS = 100;  // Send status every 100ms
+constexpr unsigned long SUMMARY_LOG_INTERVAL_MS = 30000;  // Print summary every 30s
 
 // ============================================================================
 // CONFIGURATION - Speed Compensation
 // ============================================================================
 // System overhead compensation factor (WebSocket, direction changes, debouncing)
-// Why 1.20? Measured overhead is ~20% (1450ms actual vs 1200ms theoretical)
 // Applied to step delay calculation to compensate for system delays
-const float SPEED_COMPENSATION_FACTOR = 1;  // +20% faster to compensate overhead
+// Set to 1.0 = no compensation (disabled). Set to 1.20 for +20% compensation if needed.
+constexpr float SPEED_COMPENSATION_FACTOR = 1.0f;  // 1.0 = disabled (no compensation applied)
 
 // ============================================================================
 // CONFIGURATION - HSS86 Feedback Monitoring

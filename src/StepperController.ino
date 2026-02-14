@@ -106,6 +106,7 @@ SemaphoreHandle_t motionMutex = NULL;
 SemaphoreHandle_t stateMutex = NULL;
 volatile bool emergencyStop = false;
 volatile bool requestCalibration = false;  // Flag to trigger calibration from Core 1
+volatile bool calibrationInProgress = false;  // Cooperative flag: networkTask skips webSocket/server
 
 // ============================================================================
 // WEB SERVER INSTANCES
@@ -297,17 +298,14 @@ void motorTask(void* param) {
       requestCalibration = false;
       engine->info("=== Manual calibration requested ===");
       
-      // Suspend network task during calibration
-      if (networkTaskHandle != NULL) {
-        vTaskSuspend(networkTaskHandle);
-      }
+      // Cooperative flag: networkTask will skip webSocket/server during calibration
+      // (CalibrationManager handles them internally via serviceWebSocket())
+      calibrationInProgress = true;
       
       Calibration.startCalibration();
       
-      // Resume network task
-      if (networkTaskHandle != NULL) {
-        vTaskResume(networkTaskHandle);
-      }
+      // Resume normal networkTask operation
+      calibrationInProgress = false;
     }
     
     // ═══════════════════════════════════════════════════════════════════════
@@ -323,19 +321,15 @@ void motorTask(void* param) {
         calibrationStarted = true;
         engine->info("=== Starting automatic calibration ===");
         
-        // IMPORTANT: Suspend network task during calibration to avoid race condition
-        // CalibrationManager calls webSocket.loop() and server.handleClient() internally
-        if (networkTaskHandle != NULL) {
-          vTaskSuspend(networkTaskHandle);
-        }
+        // Cooperative flag: networkTask will skip webSocket/server during calibration
+        // (CalibrationManager handles them internally via serviceWebSocket())
+        calibrationInProgress = true;
         
         Calibration.startCalibration();
         needsInitialCalibration = false;
         
-        // Resume network task after calibration
-        if (networkTaskHandle != NULL) {
-          vTaskResume(networkTaskHandle);
-        }
+        // Resume normal networkTask operation
+        calibrationInProgress = false;
       }
     }
     
@@ -455,9 +449,12 @@ void networkTask(void* param) {
     Network.handleOTA();
     Network.checkConnectionHealth();
     
-    // HTTP server and WebSocket - these can block!
-    server.handleClient();
-    webSocket.loop();
+    // HTTP server and WebSocket - skip during calibration
+    // (CalibrationManager handles them internally via serviceWebSocket())
+    if (!calibrationInProgress) {
+      server.handleClient();
+      webSocket.loop();
+    }
     
     // ═══════════════════════════════════════════════════════════════════════
     // STATUS BROADCAST (every 100ms)
