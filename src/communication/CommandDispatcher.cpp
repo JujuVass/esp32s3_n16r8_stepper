@@ -740,48 +740,6 @@ bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument&
         return true;
     }
     
-    if (strcmp(cmd, "setCyclePause") == 0) {
-        const char* mode = doc["mode"];
-        
-        if (mode && strcmp(mode, "simple") == 0) {
-            motion.cyclePause.enabled = doc["enabled"] | false;
-            motion.cyclePause.isRandom = doc["isRandom"] | false;
-            motion.cyclePause.pauseDurationSec = doc["durationSec"] | 0.0f;
-            
-            float minSec = doc["minSec"] | 0.5f;
-            float maxSec = doc["maxSec"] | 3.0f;
-            
-            if (minSec > maxSec) {
-                float temp = minSec;
-                minSec = maxSec;
-                maxSec = temp;
-            }
-            
-            motion.cyclePause.minPauseSec = min(minSec, 60.0f);
-            motion.cyclePause.maxPauseSec = min(maxSec, 60.0f);
-            
-        } else if (mode && strcmp(mode, "oscillation") == 0) {
-            oscillation.cyclePause.enabled = doc["enabled"] | false;
-            oscillation.cyclePause.isRandom = doc["isRandom"] | false;
-            oscillation.cyclePause.pauseDurationSec = doc["durationSec"] | 0.0f;
-            
-            float minSec = doc["minSec"] | 0.5f;
-            float maxSec = doc["maxSec"] | 3.0f;
-            
-            if (minSec > maxSec) {
-                float temp = minSec;
-                minSec = maxSec;
-                maxSec = temp;
-            }
-            
-            oscillation.cyclePause.minPauseSec = min(minSec, 60.0f);
-            oscillation.cyclePause.maxPauseSec = min(maxSec, 60.0f);
-        }
-        
-        sendStatus();
-        return true;
-    }
-    
     if (strcmp(cmd, "startOscillation") == 0) {
         if (config.currentState == STATE_INIT || config.currentState == STATE_CALIBRATING) {
             Status.sendError("⚠️ Calibration required before starting oscillation");

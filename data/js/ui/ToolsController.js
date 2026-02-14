@@ -47,8 +47,8 @@ async function resetTotalDistance() {
  * Toggle logs panel visibility
  */
 function toggleLogsPanel() {
-  const panel = document.getElementById('logsPanel');
-  const btn = document.getElementById('btnShowLogs');
+  const panel = DOM.logsPanel;
+  const btn = DOM.btnShowLogs;
   
   if (panel.style.display === 'none') {
     panel.style.display = 'block';
@@ -62,7 +62,7 @@ function toggleLogsPanel() {
     // Load current debug level state
     getWithRetry('/api/system/logging/preferences', { silent: true })
       .then(data => {
-        const chkDebug = document.getElementById('debugLevelCheckbox');
+        const chkDebug = DOM.debugLevelCheckbox;
         if (chkDebug) {
           chkDebug.checked = (data.logLevel === 3); // DEBUG = 3
         }
@@ -79,17 +79,17 @@ function toggleLogsPanel() {
  * Close logs panel
  */
 function closeLogsPanel() {
-  document.getElementById('logsPanel').style.display = 'none';
-  document.getElementById('btnShowLogs').innerHTML = '📋 Logs';
-  document.getElementById('btnShowLogs').style.background = '#17a2b8';
-  document.getElementById('btnShowLogs').style.color = 'white';
+  DOM.logsPanel.style.display = 'none';
+  DOM.btnShowLogs.innerHTML = '📋 Logs';
+  DOM.btnShowLogs.style.background = '#17a2b8';
+  DOM.btnShowLogs.style.color = 'white';
 }
 
 /**
  * Clear logs console panel
  */
 function clearLogsPanel() {
-  const logEl = document.getElementById('logConsolePanel');
+  const logEl = DOM.logConsolePanel;
   if (logEl) logEl.textContent = t('tools.logsCleared');
 }
 
@@ -108,7 +108,7 @@ function handleDebugLevelChange(isChecked) {
       console.log('💾 Log level saved:', isChecked ? 'DEBUG' : 'INFO');
       
       // Also update the checkbox in Sys panel
-      const chkDebug = document.getElementById('chkDebugLevel');
+      const chkDebug = DOM.chkDebugLevel;
       if (chkDebug) {
         chkDebug.checked = isChecked;
       }
@@ -204,8 +204,8 @@ async function loadLogFilesList() {
  * Toggle system panel visibility
  */
 function toggleSystemPanel() {
-  const panel = document.getElementById('systemPanel');
-  const btn = document.getElementById('btnShowSystem');
+  const panel = DOM.systemPanel;
+  const btn = DOM.btnShowSystem;
   
   if (panel.style.display === 'none') {
     panel.style.display = 'block';
@@ -231,8 +231,8 @@ function toggleSystemPanel() {
  * Close system panel
  */
 function closeSystemPanel() {
-  const panel = document.getElementById('systemPanel');
-  const btn = document.getElementById('btnShowSystem');
+  const panel = DOM.systemPanel;
+  const btn = DOM.btnShowSystem;
   
   panel.style.display = 'none';
   btn.innerHTML = '⚙️ Sys';
@@ -254,7 +254,7 @@ async function refreshWifi() {
   });
   
   if (confirmed) {
-    const btn = document.getElementById('btnRefreshWifi');
+    const btn = DOM.btnRefreshWifi;
     const originalText = btn.innerHTML;
     
     // Set flag to prevent WebSocket auto-reconnect during WiFi refresh
@@ -266,11 +266,11 @@ async function refreshWifi() {
     btn.style.opacity = '0.5';
     
     // Show persistent modal during reconnection (like calibration)
-    const modal = document.getElementById('unifiedAlertModal');
-    const modalIcon = document.getElementById('unifiedAlertIcon');
-    const modalTitle = document.getElementById('unifiedAlertTitle');
-    const modalMessage = document.getElementById('unifiedAlertMessage');
-    const modalButton = document.getElementById('unifiedAlertOkBtn');
+    const modal = DOM.unifiedAlertModal;
+    const modalIcon = DOM.unifiedAlertIcon;
+    const modalTitle = DOM.unifiedAlertTitle;
+    const modalMessage = DOM.unifiedAlertMessage;
+    const modalButton = DOM.unifiedAlertOkBtn;
     
     modalIcon.textContent = '📶';
     modalTitle.textContent = t('tools.reconnectWifiTitle');
@@ -406,7 +406,7 @@ async function rebootESP32() {
   
   if (confirmed) {
     // Show reboot overlay
-    document.getElementById('rebootOverlay').style.display = 'flex';
+    DOM.rebootOverlay.style.display = 'flex';
     
     // Send reboot command
     fetch('/api/system/reboot', { method: 'POST' })
@@ -440,8 +440,8 @@ function reconnectAfterReboot() {
   let wsConnected = false;
   
   const updateRebootStatus = function(message, subMessage) {
-    const msgEl = document.getElementById('rebootMessage');
-    const statusEl = document.getElementById('rebootStatus');
+    const msgEl = DOM.rebootMessage;
+    const statusEl = DOM.rebootStatus;
     if (msgEl) msgEl.textContent = message;
     if (statusEl) statusEl.textContent = subMessage || '';
   };
@@ -484,7 +484,7 @@ function reconnectAfterReboot() {
                 console.log('⏳ Waiting for system stability...');
                 setTimeout(function() {
                   console.log('✅ System stable - reloading page...');
-                  document.getElementById('rebootOverlay').style.display = 'none';
+                  DOM.rebootOverlay.style.display = 'none';
                   location.reload(true); // Force reload from server
                 }, 2000);
               } else {
@@ -493,7 +493,7 @@ function reconnectAfterReboot() {
                 if (attempts < maxAttempts) {
                   setTimeout(tryReconnect, 1000);
                 } else {
-                  document.getElementById('rebootOverlay').style.display = 'none';
+                  DOM.rebootOverlay.style.display = 'none';
                   showAlert(t('tools.httpOkWsFailed'), { type: 'error' });
                 }
               }
@@ -504,7 +504,7 @@ function reconnectAfterReboot() {
             if (attempts < maxAttempts) {
               setTimeout(tryReconnect, 1000);
             } else {
-              document.getElementById('rebootOverlay').style.display = 'none';
+              DOM.rebootOverlay.style.display = 'none';
               showAlert(t('tools.wsReconnectFailed'), { type: 'error' });
             }
           }
@@ -515,7 +515,7 @@ function reconnectAfterReboot() {
         if (attempts < maxAttempts) {
           setTimeout(tryReconnect, 1000);
         } else {
-          document.getElementById('rebootOverlay').style.display = 'none';
+          DOM.rebootOverlay.style.display = 'none';
           showAlert(t('tools.espReconnectFailed'), { type: 'error' });
         }
       });
@@ -535,9 +535,9 @@ function loadLoggingPreferences() {
   getWithRetry('/api/system/logging/preferences', { silent: true })
     .then(data => {
       // Set checkboxes
-      const chkEnabled = document.getElementById('chkLoggingEnabled');
-      const chkDebug = document.getElementById('chkDebugLevel');
-      const btnShowLogs = document.getElementById('btnShowLogs');
+      const chkEnabled = DOM.chkLoggingEnabled;
+      const chkDebug = DOM.chkDebugLevel;
+      const btnShowLogs = DOM.btnShowLogs;
       
       chkEnabled.checked = data.loggingEnabled;
       chkDebug.checked = (data.logLevel === 3); // LOG_DEBUG = 3
@@ -567,8 +567,8 @@ function loadLoggingPreferences() {
  * Save logging preferences to ESP32 EEPROM
  */
 function saveLoggingPreferences() {
-  const chkEnabled = document.getElementById('chkLoggingEnabled');
-  const chkDebug = document.getElementById('chkDebugLevel');
+  const chkEnabled = DOM.chkLoggingEnabled;
+  const chkDebug = DOM.chkDebugLevel;
   
   const preferences = {
     loggingEnabled: chkEnabled.checked,
@@ -584,7 +584,7 @@ function saveLoggingPreferences() {
       console.log('💾 Logging preferences saved:', data);
       
       // Update Logs button visibility
-      const btnShowLogs = document.getElementById('btnShowLogs');
+      const btnShowLogs = DOM.btnShowLogs;
       if (!preferences.loggingEnabled) {
         btnShowLogs.style.display = 'none';
       } else {
@@ -615,21 +615,20 @@ function updateSystemStats(system) {
   
   // CPU frequency
   if (system.cpuFreqMHz !== undefined) {
-    document.getElementById('sysCpuFreq').textContent = system.cpuFreqMHz + ' MHz';
+    DOM.sysCpuFreq.textContent = system.cpuFreqMHz + ' MHz';
   }
   
   // Temperature
   if (system.temperatureC !== undefined) {
     const temp = parseFloat(system.temperatureC);
-    const tempEl = document.getElementById('sysTemp');
-    tempEl.textContent = temp.toFixed(1) + ' °C';
+    DOM.sysTemp.textContent = temp.toFixed(1) + ' °C';
     // Color coding based on temperature
     if (temp > 80) {
-      tempEl.style.color = '#f44336'; // Red - hot
+      DOM.sysTemp.style.color = '#f44336'; // Red - hot
     } else if (temp > 70) {
-      tempEl.style.color = '#FF9800'; // Orange - warm
+      DOM.sysTemp.style.color = '#FF9800'; // Orange - warm
     } else {
-      tempEl.style.color = '#333'; // Normal
+      DOM.sysTemp.style.color = '#333'; // Normal
     }
   }
   
@@ -638,8 +637,8 @@ function updateSystemStats(system) {
     const ramFreeMB = (system.heapFree / 1024).toFixed(1);
     const ramTotalMB = (system.heapTotal / 1024).toFixed(1);
     const ramUsedPercent = parseFloat(system.heapUsedPercent);
-    document.getElementById('sysRam').textContent = ramFreeMB + ' KB ' + t('tools.free') + ' / ' + ramTotalMB + ' KB';
-    document.getElementById('sysRamPercent').textContent = ramUsedPercent.toFixed(1) + '% ' + t('tools.used');
+    DOM.sysRam.textContent = ramFreeMB + ' KB ' + t('tools.free') + ' / ' + ramTotalMB + ' KB';
+    DOM.sysRamPercent.textContent = ramUsedPercent.toFixed(1) + '% ' + t('tools.used');
   }
   
   // PSRAM
@@ -647,14 +646,14 @@ function updateSystemStats(system) {
     const psramFreeMB = (system.psramFree / 1024 / 1024).toFixed(1);
     const psramTotalMB = (system.psramTotal / 1024 / 1024).toFixed(1);
     const psramUsedPercent = parseFloat(system.psramUsedPercent);
-    document.getElementById('sysPsram').textContent = psramFreeMB + ' MB ' + t('tools.free') + ' / ' + psramTotalMB + ' MB';
-    document.getElementById('sysPsramPercent').textContent = psramUsedPercent.toFixed(1) + '% ' + t('tools.used');
+    DOM.sysPsram.textContent = psramFreeMB + ' MB ' + t('tools.free') + ' / ' + psramTotalMB + ' MB';
+    DOM.sysPsramPercent.textContent = psramUsedPercent.toFixed(1) + '% ' + t('tools.used');
   }
   
   // WiFi - delegate to pure function
   if (system.wifiRssi !== undefined) {
     const rssi = system.wifiRssi;
-    document.getElementById('sysWifi').textContent = rssi + ' dBm';
+    DOM.sysWifi.textContent = rssi + ' dBm';
     
     // Use pure function if available (from formatting.js)
     let quality, qualityColor;
@@ -671,9 +670,8 @@ function updateSystemStats(system) {
       else { quality = t('wifi.qualityVeryWeak'); qualityColor = '#f44336'; }
     }
     
-    const qualityEl = document.getElementById('sysWifiQuality');
-    qualityEl.textContent = quality;
-    qualityEl.style.color = qualityColor;
+    DOM.sysWifiQuality.textContent = quality;
+    DOM.sysWifiQuality.style.color = qualityColor;
   }
   
   // Uptime - delegate to pure function
@@ -693,15 +691,14 @@ function updateSystemStats(system) {
           ? `${minutes}m ${seconds}s`
           : `${seconds}s`;
     }
-    document.getElementById('sysUptime').textContent = uptimeStr;
+    DOM.sysUptime.textContent = uptimeStr;
   }
   
   // Network info (IP addresses, hostname)
   if (system.ipSta !== undefined) {
-    const ipStaEl = document.getElementById('sysIpSta');
-    ipStaEl.textContent = system.ipSta;
+    DOM.sysIpSta.textContent = system.ipSta;
     // Gray out if degraded mode (0.0.0.0)
-    ipStaEl.style.color = (system.ipSta === '0.0.0.0') ? '#999' : '#333';
+    DOM.sysIpSta.style.color = (system.ipSta === '0.0.0.0') ? '#999' : '#333';
     
     // Cache IP for faster WebSocket reconnection (avoids mDNS resolution delay)
     if (system.ipSta !== '0.0.0.0' && !AppState.espIpAddress) {
@@ -710,42 +707,38 @@ function updateSystemStats(system) {
     }
   }
   if (system.ipAp !== undefined) {
-    document.getElementById('sysIpAp').textContent = system.ipAp;
+    DOM.sysIpAp.textContent = system.ipAp;
   }
   if (system.hostname !== undefined) {
-    const hostnameEl = document.getElementById('sysHostname');
-    hostnameEl.textContent = system.hostname + '.local';
-    hostnameEl.title = 'http://' + system.hostname + '.local';
+    DOM.sysHostname.textContent = system.hostname + '.local';
+    DOM.sysHostname.title = 'http://' + system.hostname + '.local';
     // Disable mDNS link in AP mode
     if (system.apMode) {
-      hostnameEl.style.color = '#999';
-      hostnameEl.title = t('wifi.mdnsUnavailable');
+      DOM.sysHostname.style.color = '#999';
+      DOM.sysHostname.title = t('wifi.mdnsUnavailable');
     } else {
-      hostnameEl.style.color = '#2196F3';
+      DOM.sysHostname.style.color = '#2196F3';
     }
   }
   if (system.ssid !== undefined) {
-    document.getElementById('sysSsid').textContent = system.ssid || t('wifi.notConnected');
+    DOM.sysSsid.textContent = system.ssid || t('wifi.notConnected');
   }
   if (system.apClients !== undefined) {
-    const apClientsEl = document.getElementById('sysApClients');
-    apClientsEl.textContent = system.apClients;
-    apClientsEl.style.color = system.apClients > 0 ? '#4CAF50' : '#999';
+    DOM.sysApClients.textContent = system.apClients;
+    DOM.sysApClients.style.color = system.apClients > 0 ? '#4CAF50' : '#999';
   }
   
   // AP Mode indicator
   if (system.apMode !== undefined) {
-    const badge = document.getElementById('sysDegradedBadge');
-    const section = document.getElementById('networkInfoSection');
     if (system.apMode) {
-      badge.style.display = '';
-      badge.textContent = t('tools.apModeBadge');
-      section.style.borderLeftColor = '#FF9800';
-      section.style.background = '#fff3e0';
+      DOM.sysDegradedBadge.style.display = '';
+      DOM.sysDegradedBadge.textContent = t('tools.apModeBadge');
+      DOM.networkInfoSection.style.borderLeftColor = '#FF9800';
+      DOM.networkInfoSection.style.background = '#fff3e0';
     } else {
-      badge.style.display = 'none';
-      section.style.borderLeftColor = '#2196F3';
-      section.style.background = '#e3f2fd';
+      DOM.sysDegradedBadge.style.display = 'none';
+      DOM.networkInfoSection.style.borderLeftColor = '#2196F3';
+      DOM.networkInfoSection.style.background = '#e3f2fd';
     }
   }
 }
@@ -806,31 +799,30 @@ function initToolsListeners() {
   console.log('🔧 Initializing Tools listeners...');
   
   // ===== CALIBRATION & RESET =====
-  document.getElementById('btnCalibrateCommon').addEventListener('click', calibrateMotor);
-  document.getElementById('btnResetDistanceCommon').addEventListener('click', resetTotalDistance);
+  DOM.btnCalibrateCommon.addEventListener('click', calibrateMotor);
+  DOM.btnResetDistanceCommon.addEventListener('click', resetTotalDistance);
   
   // ===== LOGS PANEL =====
-  document.getElementById('btnShowLogs').addEventListener('click', toggleLogsPanel);
-  document.getElementById('btnCloseLogs').addEventListener('click', closeLogsPanel);
-  document.getElementById('btnClearLogsPanel').addEventListener('click', clearLogsPanel);
-  document.getElementById('debugLevelCheckbox').addEventListener('change', function() {
+  DOM.btnShowLogs.addEventListener('click', toggleLogsPanel);
+  DOM.btnCloseLogs.addEventListener('click', closeLogsPanel);
+  DOM.btnClearLogsPanel.addEventListener('click', clearLogsPanel);
+  DOM.debugLevelCheckbox.addEventListener('change', function() {
     handleDebugLevelChange(this.checked);
   });
-  document.getElementById('btnClearAllLogFiles').addEventListener('click', clearAllLogFiles);
+  DOM.btnClearAllLogFiles.addEventListener('click', clearAllLogFiles);
   
   // ===== SYSTEM PANEL =====
-  document.getElementById('btnShowSystem').addEventListener('click', toggleSystemPanel);
-  document.getElementById('btnCloseSystem').addEventListener('click', closeSystemPanel);
-  document.getElementById('btnRefreshWifi').addEventListener('click', refreshWifi);
-  document.getElementById('btnReboot').addEventListener('click', rebootESP32);
+  DOM.btnShowSystem.addEventListener('click', toggleSystemPanel);
+  DOM.btnCloseSystem.addEventListener('click', closeSystemPanel);
+  DOM.btnRefreshWifi.addEventListener('click', refreshWifi);
+  DOM.btnReboot.addEventListener('click', rebootESP32);
   
   // ===== LOGGING PREFERENCES =====
-  document.getElementById('chkLoggingEnabled').addEventListener('change', function() {
+  DOM.chkLoggingEnabled.addEventListener('change', function() {
     saveLoggingPreferences();
     
     // Disable DEBUG checkbox if logging is disabled
-    const chkDebug = document.getElementById('chkDebugLevel');
-    chkDebug.disabled = !this.checked;
+    DOM.chkDebugLevel.disabled = !this.checked;
     
     if (!this.checked) {
       console.log('🔇 Logging disabled - all logs (console + files) stopped');
@@ -839,7 +831,7 @@ function initToolsListeners() {
     }
   });
   
-  document.getElementById('chkDebugLevel').addEventListener('change', function() {
+  DOM.chkDebugLevel.addEventListener('change', function() {
     saveLoggingPreferences();
     
     if (this.checked) {

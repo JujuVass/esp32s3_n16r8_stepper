@@ -122,7 +122,7 @@ private:
     
     /**
      * Handler 7/8: Oscillation mode commands
-     * Commands: setOscillation, setCyclePause, startOscillation, stopOscillation
+     * Commands: setOscillation, startOscillation, stopOscillation
      */
     bool handleOscillationCommands(const char* cmd, JsonDocument& doc, const String& message);
     

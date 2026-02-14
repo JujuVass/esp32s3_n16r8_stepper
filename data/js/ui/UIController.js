@@ -55,7 +55,7 @@ function switchTab(tabName) {
         '100% (' + totalCourse.toFixed(1) + ' mm)';
       
       // Show modal and ABORT tab switch
-      document.getElementById('sequencerLimitModal').classList.add('active');
+      DOM.sequencerLimitModal.classList.add('active');
       return; // Don't switch tab yet!
     }
   }
@@ -103,7 +103,7 @@ function switchTab(tabName) {
       ? (totalMM * AppState.pursuit.maxDistLimitPercent / 100)
       : totalMM;
     
-    const oscCenterField = document.getElementById('oscCenter');
+    const oscCenterField = DOM.oscCenter;
     if (oscCenterField && effectiveMax > 0) {
       // Always set to effective center
       oscCenterField.value = (effectiveMax / 2).toFixed(1);
@@ -192,11 +192,11 @@ function isSystemRunning() {
  * Cancel mode change and close modal
  */
 function cancelModeChange() {
-  document.getElementById('modeChangeModal').classList.remove('active');
+  DOM.modeChangeModal.classList.remove('active');
   AppState.system.pendingModeSwitch = null;
   
   // Reset checkbox
-  document.getElementById('bypassCalibrationCheckbox').checked = false;
+  DOM.bypassCalibrationCheckbox.checked = false;
   
   // Restore previous tab selection
   document.querySelectorAll('.tab').forEach(tab => {
@@ -209,8 +209,8 @@ function cancelModeChange() {
  * Confirm mode change and proceed with calibration/return
  */
 function confirmModeChange() {
-  const bypassCalibration = document.getElementById('bypassCalibrationCheckbox').checked;
-  document.getElementById('modeChangeModal').classList.remove('active');
+  const bypassCalibration = DOM.bypassCalibrationCheckbox.checked;
+  DOM.modeChangeModal.classList.remove('active');
   
   // If pursuit is active, disable it first
   if (isPursuitActive()) {
@@ -234,7 +234,7 @@ function confirmModeChange() {
     }
     
     // Reset checkbox for next time
-    document.getElementById('bypassCalibrationCheckbox').checked = false;
+    DOM.bypassCalibrationCheckbox.checked = false;
     
     // Actually switch the tab after starting calibration/return
     if (AppState.system.pendingModeSwitch) {
@@ -252,24 +252,24 @@ function confirmModeChange() {
  * Show stop confirmation modal
  */
 function showStopModal() {
-  document.getElementById('stopModal').classList.add('active');
+  DOM.stopModal.classList.add('active');
 }
 
 /**
  * Cancel stop and close modal
  */
 function cancelStopModal() {
-  document.getElementById('stopModal').classList.remove('active');
+  DOM.stopModal.classList.remove('active');
   // Reset checkbox for next time (keep checked by default)
-  document.getElementById('returnToStartCheckbox').checked = true;
+  DOM.returnToStartCheckbox.checked = true;
 }
 
 /**
  * Confirm stop with mode-specific handling
  */
 function confirmStopModal() {
-  const shouldReturnToStart = document.getElementById('returnToStartCheckbox').checked;
-  document.getElementById('stopModal').classList.remove('active');
+  const shouldReturnToStart = DOM.returnToStartCheckbox.checked;
+  DOM.stopModal.classList.remove('active');
   
   // Mode-specific stop command lookup
   const STOP_COMMANDS = {
@@ -294,7 +294,7 @@ function confirmStopModal() {
   }
   
   // Reset checkbox for next time (keep checked by default)
-  document.getElementById('returnToStartCheckbox').checked = true;
+  DOM.returnToStartCheckbox.checked = true;
 }
 
 // ============================================================================
@@ -305,7 +305,7 @@ function confirmStopModal() {
  * Cancel sequencer limit change and return to previous tab
  */
 function cancelSequencerLimitChange() {
-  document.getElementById('sequencerLimitModal').classList.remove('active');
+  DOM.sequencerLimitModal.classList.remove('active');
   
   // Return to previous tab
   const prevTab = AppState.system.currentMode || 'simple';
@@ -328,7 +328,7 @@ function cancelSequencerLimitChange() {
  * Confirm sequencer limit change and switch to sequencer tab
  */
 function confirmSequencerLimitChange() {
-  document.getElementById('sequencerLimitModal').classList.remove('active');
+  DOM.sequencerLimitModal.classList.remove('active');
   
   // Reset limit to 100%
   sendCommand(WS_CMD.SET_MAX_DISTANCE_LIMIT, { limitPercent: 100 });
@@ -384,7 +384,7 @@ function initUIListeners() {
         
         // Show confirmation modal
         AppState.system.pendingModeSwitch = targetMode;
-        document.getElementById('modeChangeModal').classList.add('active');
+        DOM.modeChangeModal.classList.add('active');
       } else {
         // Safe to switch immediately
         switchTab(targetMode);
@@ -458,18 +458,17 @@ function showAlert(message, options = {}) {
     }[type] || t('common.info');
     
     // Update modal content
-    const modal = document.getElementById('unifiedAlertModal');
-    document.getElementById('unifiedAlertIcon').textContent = config.icon;
-    document.getElementById('unifiedAlertTitle').textContent = modalTitle;
-    document.getElementById('unifiedAlertTitle').style.color = config.color;
-    document.getElementById('unifiedAlertMessage').innerHTML = message.replace(/\n/g, '<br>');
-    document.getElementById('unifiedAlertOkBtn').textContent = buttonText;
+    DOM.unifiedAlertIcon.textContent = config.icon;
+    DOM.unifiedAlertTitle.textContent = modalTitle;
+    DOM.unifiedAlertTitle.style.color = config.color;
+    DOM.unifiedAlertMessage.innerHTML = message.replace(/\n/g, '<br>');
+    DOM.unifiedAlertOkBtn.textContent = buttonText;
     
     // Set callback
     ModalState.resolveCallback = resolve;
     
     // Show modal
-    modal.classList.add('active');
+    DOM.unifiedAlertModal.classList.add('active');
   });
 }
 
@@ -477,7 +476,7 @@ function showAlert(message, options = {}) {
  * Close alert modal and resolve promise
  */
 function closeAlertModal() {
-  document.getElementById('unifiedAlertModal').classList.remove('active');
+  DOM.unifiedAlertModal.classList.remove('active');
   if (ModalState.resolveCallback) {
     ModalState.resolveCallback();
     ModalState.resolveCallback = null;
@@ -514,14 +513,13 @@ function showConfirm(message, options = {}) {
     const config = typeConfig[type] || typeConfig.warning;
     
     // Update modal content
-    const modal = document.getElementById('unifiedConfirmModal');
-    document.getElementById('unifiedConfirmIcon').textContent = config.icon;
-    document.getElementById('unifiedConfirmTitle').textContent = title;
-    document.getElementById('unifiedConfirmTitle').style.color = config.color;
-    document.getElementById('unifiedConfirmMessage').innerHTML = message.replace(/\n/g, '<br>');
-    document.getElementById('unifiedConfirmCancelBtn').textContent = cancelText;
+    DOM.unifiedConfirmIcon.textContent = config.icon;
+    DOM.unifiedConfirmTitle.textContent = title;
+    DOM.unifiedConfirmTitle.style.color = config.color;
+    DOM.unifiedConfirmMessage.innerHTML = message.replace(/\n/g, '<br>');
+    DOM.unifiedConfirmCancelBtn.textContent = cancelText;
     
-    const confirmBtn = document.getElementById('unifiedConfirmOkBtn');
+    const confirmBtn = DOM.unifiedConfirmOkBtn;
     confirmBtn.textContent = confirmText;
     confirmBtn.className = dangerous ? 'button btn-danger' : 'button btn-success';
     
@@ -529,7 +527,7 @@ function showConfirm(message, options = {}) {
     ModalState.resolveCallback = resolve;
     
     // Show modal
-    modal.classList.add('active');
+    DOM.unifiedConfirmModal.classList.add('active');
   });
 }
 
@@ -538,7 +536,7 @@ function showConfirm(message, options = {}) {
  * @param {boolean} confirmed - Whether user confirmed
  */
 function closeConfirmModal(confirmed) {
-  document.getElementById('unifiedConfirmModal').classList.remove('active');
+  DOM.unifiedConfirmModal.classList.remove('active');
   if (ModalState.resolveCallback) {
     ModalState.resolveCallback(confirmed);
     ModalState.resolveCallback = null;

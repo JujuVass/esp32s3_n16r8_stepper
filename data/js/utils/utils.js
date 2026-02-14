@@ -13,7 +13,8 @@
  * - getISOWeek: ISO 8601 week number calculation
  * - canStartOperation: System readiness check
  * - setButtonState: Button state management
- * - setupEditableInput: Input edit tracking
+ * - setupEditableInput: Input edit tracking (Simple mode)
+ * - setupEditableOscInput: Input edit tracking (Oscillation mode, with debounced input)
  * - setupPresetButtons: Preset button setup
  * - sendCommand: WebSocket command sender
  * 
@@ -298,6 +299,57 @@ function setupEditableInput(elementId, editingKey, onChangeCallback) {
     }
     AppState.editing.input = null;
   });
+}
+
+/**
+ * Setup standard edit-tracking listeners for an oscillation input element
+ * Uses AppState.editing.oscField and supports optional debounced input validation
+ * @param {string} elementId - The ID of the input element
+ * @param {Object} options - Configuration options
+ * @param {Function} [options.onBlur] - Callback on blur (e.g., validate + send config)
+ * @param {Function} [options.onChange] - Callback on change (for select elements)
+ * @param {Function} [options.onInput] - Debounced callback on input (e.g., live validation)
+ * @param {number} [options.debounceMs=300] - Debounce delay for onInput
+ */
+function setupEditableOscInput(elementId, options = {}) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  
+  element.addEventListener('mousedown', function() {
+    AppState.editing.oscField = elementId;
+    this.focus();
+  });
+  element.addEventListener('focus', function() {
+    AppState.editing.oscField = elementId;
+  });
+  
+  if (options.onBlur) {
+    element.addEventListener('blur', function() {
+      AppState.editing.oscField = null;
+      options.onBlur(this.value, this);
+    });
+  } else {
+    element.addEventListener('blur', function() {
+      AppState.editing.oscField = null;
+    });
+  }
+  
+  if (options.onChange) {
+    element.addEventListener('change', function() {
+      AppState.editing.oscField = null;
+      options.onChange(this.value, this);
+    });
+  }
+  
+  if (options.onInput) {
+    const delay = options.debounceMs || 300;
+    element.addEventListener('input', function() {
+      clearTimeout(AppState.oscillation.validationTimer);
+      AppState.oscillation.validationTimer = setTimeout(() => {
+        options.onInput(this.value, this);
+      }, delay);
+    });
+  }
 }
 
 /**

@@ -212,24 +212,49 @@ function initDOMCache() {
 
   // System stats display
   DOM.sysUptime = document.getElementById('sysUptime');
-  DOM.sysHeapFree = document.getElementById('sysHeapFree');
-  DOM.sysHeapMin = document.getElementById('sysHeapMin');
-  DOM.sysPsramFree = document.getElementById('sysPsramFree');
-  DOM.sysWifiRssi = document.getElementById('sysWifiRssi');
-  DOM.sysWifiIp = document.getElementById('sysWifiIp');
   DOM.sysCpuFreq = document.getElementById('sysCpuFreq');
-  DOM.sysFlashSize = document.getElementById('sysFlashSize');
+  DOM.sysTemp = document.getElementById('sysTemp');
+  DOM.sysRam = document.getElementById('sysRam');
+  DOM.sysRamPercent = document.getElementById('sysRamPercent');
+  DOM.sysPsram = document.getElementById('sysPsram');
+  DOM.sysPsramPercent = document.getElementById('sysPsramPercent');
+  DOM.sysWifi = document.getElementById('sysWifi');
+  DOM.sysWifiQuality = document.getElementById('sysWifiQuality');
+  DOM.sysIpSta = document.getElementById('sysIpSta');
+  DOM.sysIpAp = document.getElementById('sysIpAp');
+  DOM.sysHostname = document.getElementById('sysHostname');
+  DOM.sysSsid = document.getElementById('sysSsid');
+  DOM.sysApClients = document.getElementById('sysApClients');
+  DOM.sysDegradedBadge = document.getElementById('sysDegradedBadge');
+  DOM.networkInfoSection = document.getElementById('networkInfoSection');
 
   // ========================================================================
   // MODALS & OVERLAYS
   // ========================================================================
   DOM.calibrationOverlay = document.getElementById('calibrationOverlay');
   DOM.rebootOverlay = document.getElementById('rebootOverlay');
+  DOM.rebootMessage = document.getElementById('rebootMessage');
+  DOM.rebootStatus = document.getElementById('rebootStatus');
   DOM.stopModal = document.getElementById('stopModal');
   DOM.modeChangeModal = document.getElementById('modeChangeModal');
   DOM.sequencerLimitModal = document.getElementById('sequencerLimitModal');
   DOM.playlistModal = document.getElementById('playlistModal');
   DOM.pendingChanges = document.getElementById('pendingChanges');
+
+  // Unified Alert Modal
+  DOM.unifiedAlertModal = document.getElementById('unifiedAlertModal');
+  DOM.unifiedAlertIcon = document.getElementById('unifiedAlertIcon');
+  DOM.unifiedAlertTitle = document.getElementById('unifiedAlertTitle');
+  DOM.unifiedAlertMessage = document.getElementById('unifiedAlertMessage');
+  DOM.unifiedAlertOkBtn = document.getElementById('unifiedAlertOkBtn');
+
+  // Unified Confirm Modal
+  DOM.unifiedConfirmModal = document.getElementById('unifiedConfirmModal');
+  DOM.unifiedConfirmIcon = document.getElementById('unifiedConfirmIcon');
+  DOM.unifiedConfirmTitle = document.getElementById('unifiedConfirmTitle');
+  DOM.unifiedConfirmMessage = document.getElementById('unifiedConfirmMessage');
+  DOM.unifiedConfirmOkBtn = document.getElementById('unifiedConfirmOkBtn');
+  DOM.unifiedConfirmCancelBtn = document.getElementById('unifiedConfirmCancelBtn');
 
   // Modal controls
   DOM.returnToStartCheckbox = document.getElementById('returnToStartCheckbox');

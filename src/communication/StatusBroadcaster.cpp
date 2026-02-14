@@ -183,6 +183,8 @@ void StatusBroadcaster::addVaEtVientFields(JsonDocument& doc) {
     motionObj["targetDistanceMM"] = serialized(String(motion.targetDistanceMM, 2));
     motionObj["speedLevelForward"] = serialized(String(motion.speedLevelForward, 1));
     motionObj["speedLevelBackward"] = serialized(String(motion.speedLevelBackward, 1));
+    motionObj["cyclesPerMinForward"] = serialized(String(cyclesPerMinForward, 1));
+    motionObj["cyclesPerMinBackward"] = serialized(String(cyclesPerMinBackward, 1));
     
     // Cycle pause config & state
     JsonObject pauseObj = motionObj["cyclePause"].to<JsonObject>();

@@ -118,10 +118,10 @@
         if (cpmSpan) {
           cpmSpan.textContent = '';
         }
-      } else if (currentMode === 'simple' && data.motion && data.cyclesPerMinForward !== undefined && data.cyclesPerMinBackward !== undefined) {
+      } else if (currentMode === 'simple' && data.motion && data.motion.cyclesPerMinForward !== undefined && data.motion.cyclesPerMinBackward !== undefined) {
         // SIMPLE MODE: Show forward/backward speeds with cycles/min
         if (data.motion.speedLevelForward !== undefined && data.motion.speedLevelBackward !== undefined) {
-          const avgCpm = ((data.cyclesPerMinForward + data.cyclesPerMinBackward) / 2).toFixed(0);
+          const avgCpm = ((parseFloat(data.motion.cyclesPerMinForward) + parseFloat(data.motion.cyclesPerMinBackward)) / 2).toFixed(0);
           speedElement.innerHTML = 
             '↗️ ' + data.motion.speedLevelForward.toFixed(1) + 
             '&nbsp;&nbsp;•&nbsp;&nbsp;' +
@@ -215,10 +215,9 @@
         if (AppState.editing.input !== 'startPosition' && document.activeElement !== DOM.startPosition && data.motion.startPositionMM !== undefined) {
           DOM.startPosition.value = data.motion.startPositionMM.toFixed(1);
         }
-      }
-      
-      if (data.targetDistMM !== undefined && AppState.editing.input !== 'distance' && document.activeElement !== DOM.distance) {
-        DOM.distance.value = data.targetDistMM.toFixed(1);
+        if (data.motion.targetDistanceMM !== undefined && AppState.editing.input !== 'distance' && document.activeElement !== DOM.distance) {
+          DOM.distance.value = parseFloat(data.motion.targetDistanceMM).toFixed(1);
+        }
       }
       
       // Update speed values based on unified/separate mode
@@ -233,11 +232,11 @@
           if (AppState.editing.input !== 'speedBackward' && document.activeElement !== DOM.speedBackward && data.motion.speedLevelBackward !== undefined) {
             DOM.speedBackward.value = data.motion.speedLevelBackward.toFixed(1);
           }
-          if (DOM.speedForwardInfo && data.cyclesPerMinForward !== undefined) {
-            DOM.speedForwardInfo.textContent = '≈ ' + data.cyclesPerMinForward.toFixed(0) + ' cycles/min';
+          if (DOM.speedForwardInfo && data.motion.cyclesPerMinForward !== undefined) {
+            DOM.speedForwardInfo.textContent = '≈ ' + parseFloat(data.motion.cyclesPerMinForward).toFixed(0) + ' cycles/min';
           }
-          if (DOM.speedBackwardInfo && data.cyclesPerMinBackward !== undefined) {
-            DOM.speedBackwardInfo.textContent = '≈ ' + data.cyclesPerMinBackward.toFixed(0) + ' cycles/min';
+          if (DOM.speedBackwardInfo && data.motion.cyclesPerMinBackward !== undefined) {
+            DOM.speedBackwardInfo.textContent = '≈ ' + parseFloat(data.motion.cyclesPerMinBackward).toFixed(0) + ' cycles/min';
           }
         } else {
           // UNIFIED MODE: show current speed (should be same for both directions)
@@ -252,8 +251,8 @@
               DOM.speedBackward.value = data.motion.speedLevelBackward.toFixed(1);
             }
           }
-          if (DOM.speedUnifiedInfo && data.cyclesPerMinForward !== undefined && data.cyclesPerMinBackward !== undefined) {
-            const avgCyclesPerMin = (data.cyclesPerMinForward + data.cyclesPerMinBackward) / 2.0;
+          if (DOM.speedUnifiedInfo && data.motion.cyclesPerMinForward !== undefined && data.motion.cyclesPerMinBackward !== undefined) {
+            const avgCyclesPerMin = (parseFloat(data.motion.cyclesPerMinForward) + parseFloat(data.motion.cyclesPerMinBackward)) / 2.0;
             DOM.speedUnifiedInfo.textContent = '≈ ' + avgCyclesPerMin.toFixed(0) + ' cycles/min';
           }
         }
@@ -595,7 +594,7 @@
     // SIMPLE MODE - Loaded from SimpleController.js
     // ============================================================================
     // Note: Simple mode functions loaded from external module:
-    // - sendSimpleCyclePauseConfig(), startSimpleMode(), pauseSimpleMode(), stopSimpleMode()
+    // - startSimpleMode(), pauseSimpleMode(), stopSimpleMode()
     // - handleSpeedModeChange(), initSimpleListeners()
     // Event listeners initialized via initSimpleListeners() in window.load
     

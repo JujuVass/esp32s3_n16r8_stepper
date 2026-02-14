@@ -157,7 +157,6 @@ const WS_CMD = Object.freeze({
   SET_DISTANCE: 'setDistance',
   SET_SPEED_FORWARD: 'setSpeedForward',
   SET_SPEED_BACKWARD: 'setSpeedBackward',
-  SET_CYCLE_PAUSE: 'setCyclePause',
   SET_DECEL_ZONE: 'setDecelZone',
   SET_ZONE_EFFECT: 'setZoneEffect',
   SET_MAX_DISTANCE_LIMIT: 'setMaxDistanceLimit',

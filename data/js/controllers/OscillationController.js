@@ -256,34 +256,6 @@ function updateOscillationPresets() {
 }
 
 /**
- * Send oscillation cycle pause configuration
- */
-function sendOscCyclePauseConfig() {
-  const enabled = document.getElementById('oscCyclePauseEnabled')?.checked || false;
-  const isRandom = document.getElementById('oscCyclePauseRandom')?.checked || false;
-  const durationSec = parseFloat(document.getElementById('oscCyclePauseDuration')?.value || 0);
-  let minSec = parseFloat(document.getElementById('oscCyclePauseMin')?.value || 0.5);
-  let maxSec = parseFloat(document.getElementById('oscCyclePauseMax')?.value || 3.0);
-  
-  // 🆕 VALIDATION: Min doit être ≤ Max (seulement si random activé)
-  if (isRandom && minSec > maxSec) {
-    showNotification('⚠️ ' + t('oscillation.pauseMinMax', {min: minSec.toFixed(1), max: maxSec.toFixed(1)}), 'warning');
-    // Auto-correction: ajuster Max = Min
-    maxSec = minSec;
-    document.getElementById('oscCyclePauseMax').value = maxSec;
-  }
-  
-  sendCommand(WS_CMD.SET_CYCLE_PAUSE, {
-    mode: 'oscillation',
-    enabled: enabled,
-    isRandom: isRandom,
-    durationSec: durationSec,
-    minSec: minSec,
-    maxSec: maxSec
-  });
-}
-
-/**
  * Start oscillation mode
  */
 function startOscillation() {
@@ -517,116 +489,42 @@ function updateOscillationUI(data) {
  * Called from main.js on window load
  */
 function initOscillationListeners() {
-  // Oscillation input editing protection + real-time update
-  // Use mousedown to catch spinner clicks BEFORE focus + force focus immediately
+  // ===== EDITABLE INPUTS (using setupEditableOscInput from utils.js) =====
   
-  // Center position
-  document.getElementById('oscCenter').addEventListener('mousedown', function() {
-    AppState.editing.oscField = 'oscCenter';
-    this.focus();
-  });
-  document.getElementById('oscCenter').addEventListener('focus', function() {
-    AppState.editing.oscField = 'oscCenter';
-  });
-  document.getElementById('oscCenter').addEventListener('blur', function() {
-    AppState.editing.oscField = null;
-    validateOscillationLimits();
-    sendOscillationConfig();
-  });
-  document.getElementById('oscCenter').addEventListener('input', function() {
-    clearTimeout(AppState.oscillation.validationTimer);
-    AppState.oscillation.validationTimer = setTimeout(validateOscillationLimits, 300);
+  // Center position: validate + send on blur, live validation on input
+  setupEditableOscInput('oscCenter', {
+    onBlur: () => { validateOscillationLimits(); sendOscillationConfig(); },
+    onInput: () => validateOscillationLimits()
   });
   
-  // Amplitude
-  document.getElementById('oscAmplitude').addEventListener('mousedown', function() {
-    AppState.editing.oscField = 'oscAmplitude';
-    this.focus();
-  });
-  document.getElementById('oscAmplitude').addEventListener('focus', function() {
-    AppState.editing.oscField = 'oscAmplitude';
-  });
-  document.getElementById('oscAmplitude').addEventListener('blur', function() {
-    AppState.editing.oscField = null;
-    validateOscillationLimits();
-    sendOscillationConfig();
-  });
-  document.getElementById('oscAmplitude').addEventListener('input', function() {
-    clearTimeout(AppState.oscillation.validationTimer);
-    AppState.oscillation.validationTimer = setTimeout(validateOscillationLimits, 300);
+  // Amplitude: validate + send on blur, live validation on input
+  setupEditableOscInput('oscAmplitude', {
+    onBlur: () => { validateOscillationLimits(); sendOscillationConfig(); },
+    onInput: () => validateOscillationLimits()
   });
   
-  // Waveform
-  document.getElementById('oscWaveform').addEventListener('mousedown', function() {
-    AppState.editing.oscField = 'oscWaveform';
-    this.focus();
-  });
-  document.getElementById('oscWaveform').addEventListener('focus', function() {
-    AppState.editing.oscField = 'oscWaveform';
-  });
-  document.getElementById('oscWaveform').addEventListener('change', function() {
-    AppState.editing.oscField = null;
-    sendOscillationConfig();
+  // Waveform (select): send on change
+  setupEditableOscInput('oscWaveform', {
+    onChange: () => sendOscillationConfig()
   });
   
-  // Frequency
-  document.getElementById('oscFrequency').addEventListener('mousedown', function() {
-    AppState.editing.oscField = 'oscFrequency';
-    this.focus();
-  });
-  document.getElementById('oscFrequency').addEventListener('focus', function() {
-    AppState.editing.oscField = 'oscFrequency';
-  });
-  document.getElementById('oscFrequency').addEventListener('blur', function() {
-    AppState.editing.oscField = null;
-    validateOscillationLimits();
-    sendOscillationConfig();
-  });
-  document.getElementById('oscFrequency').addEventListener('input', function() {
-    clearTimeout(AppState.oscillation.validationTimer);
-    AppState.oscillation.validationTimer = setTimeout(() => {
-      validateOscillationLimits();
-      updateOscillationPresets();
-    }, 300);
+  // Frequency: validate + send on blur, live validation + preset update on input
+  setupEditableOscInput('oscFrequency', {
+    onBlur: () => { validateOscillationLimits(); sendOscillationConfig(); },
+    onInput: () => { validateOscillationLimits(); updateOscillationPresets(); }
   });
   
-  // Ramp In Duration
-  document.getElementById('oscRampInDuration').addEventListener('mousedown', function() {
-    AppState.editing.oscField = 'oscRampInDuration';
-    this.focus();
+  // Ramp durations: send on blur only
+  setupEditableOscInput('oscRampInDuration', {
+    onBlur: () => sendOscillationConfig()
   });
-  document.getElementById('oscRampInDuration').addEventListener('focus', function() {
-    AppState.editing.oscField = 'oscRampInDuration';
-  });
-  document.getElementById('oscRampInDuration').addEventListener('blur', function() {
-    AppState.editing.oscField = null;
-    sendOscillationConfig();
+  setupEditableOscInput('oscRampOutDuration', {
+    onBlur: () => sendOscillationConfig()
   });
   
-  // Ramp Out Duration
-  document.getElementById('oscRampOutDuration').addEventListener('mousedown', function() {
-    AppState.editing.oscField = 'oscRampOutDuration';
-    this.focus();
-  });
-  document.getElementById('oscRampOutDuration').addEventListener('focus', function() {
-    AppState.editing.oscField = 'oscRampOutDuration';
-  });
-  document.getElementById('oscRampOutDuration').addEventListener('blur', function() {
-    AppState.editing.oscField = null;
-    sendOscillationConfig();
-  });
-  
-  // Cycle Count
-  document.getElementById('oscCycleCount').addEventListener('mousedown', function() {
-    AppState.editing.oscField = 'oscCycleCount';
-    this.focus();
-  });
-  document.getElementById('oscCycleCount').addEventListener('focus', function() {
-    AppState.editing.oscField = 'oscCycleCount';
-  });
-  document.getElementById('oscCycleCount').addEventListener('blur', function() {
-    AppState.editing.oscField = null;
-    sendOscillationConfig();
+  // Cycle count: send on blur only
+  setupEditableOscInput('oscCycleCount', {
+    onBlur: () => sendOscillationConfig()
   });
   
   // Ramp toggles
@@ -640,22 +538,7 @@ function initOscillationListeners() {
     sendOscillationConfig();
   });
   
-  // Cycle Pause listeners (Oscillation mode)
-  if (document.getElementById('oscCyclePauseEnabled')) {
-    document.getElementById('oscCyclePauseEnabled').addEventListener('change', sendOscCyclePauseConfig);
-  }
-  if (document.getElementById('oscCyclePauseRandom')) {
-    document.getElementById('oscCyclePauseRandom').addEventListener('change', sendOscCyclePauseConfig);
-  }
-  if (document.getElementById('oscCyclePauseDuration')) {
-    document.getElementById('oscCyclePauseDuration').addEventListener('change', sendOscCyclePauseConfig);
-  }
-  if (document.getElementById('oscCyclePauseMin')) {
-    document.getElementById('oscCyclePauseMin').addEventListener('change', sendOscCyclePauseConfig);
-  }
-  if (document.getElementById('oscCyclePauseMax')) {
-    document.getElementById('oscCyclePauseMax').addEventListener('change', sendOscCyclePauseConfig);
-  }
+  // Note: Cycle Pause listeners are handled by createCyclePauseHandlers() in initCyclePauseHandlers()
   
   // Start/Stop/Pause buttons
   document.getElementById('btnStartOscillation').addEventListener('click', startOscillation);
@@ -771,7 +654,6 @@ function initOscillationListeners() {
 // - validateOscillationLimits()
 // - sendOscillationConfig()
 // - updateOscillationPresets()
-// - sendOscCyclePauseConfig()
 // - startOscillation(), stopOscillation(), pauseOscillation()
 // - updateOscillationUI(data) - Called from main.js updateUI()
 // - initOscillationListeners()

@@ -710,17 +710,16 @@ function loadSimplePreset(config) {
     });
   }
   
-  // Send cycle pause config to backend
+  // Send cycle pause config to backend (unified API)
   const pauseCmd = {
-    mode: 'simple',
     enabled: pauseEnabled,
     isRandom: pauseIsRandom,
-    durationSec: config.cyclePauseDurationSec || 0.0,
-    minSec: config.cyclePauseMinSec || 0.5,
-    maxSec: config.cyclePauseMaxSec || 3.0
+    pauseDurationSec: config.cyclePauseDurationSec || 0.0,
+    minPauseSec: config.cyclePauseMinSec || 0.5,
+    maxPauseSec: config.cyclePauseMaxSec || 3.0
   };
-  console.log('🔧 Sending setCyclePause:', pauseCmd);
-  sendCommand(WS_CMD.SET_CYCLE_PAUSE, pauseCmd);
+  console.log('🔧 Sending updateCyclePause:', pauseCmd);
+  sendCommand(WS_CMD.UPDATE_CYCLE_PAUSE, pauseCmd);
   
   console.log('✅ Simple preset loaded | Zone Effects:', ze.enabled);
 }

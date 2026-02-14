@@ -15,38 +15,6 @@
  */
 
 // ============================================================================
-// SIMPLE MODE - Cycle Pause Configuration
-// ============================================================================
-
-/**
- * Send cycle pause configuration for Simple mode
- */
-function sendSimpleCyclePauseConfig() {
-  const enabled = document.getElementById('cyclePauseEnabled')?.checked || false;
-  const isRandom = document.getElementById('cyclePauseRandom')?.checked || false;
-  const durationSec = parseFloat(document.getElementById('cyclePauseDuration')?.value || 0);
-  let minSec = parseFloat(document.getElementById('cyclePauseMin')?.value || 0.5);
-  let maxSec = parseFloat(document.getElementById('cyclePauseMax')?.value || 3.0);
-  
-  // Validation: Min must be ≤ Max (only if random mode enabled)
-  if (isRandom && minSec > maxSec) {
-    showNotification('⚠️ ' + t('simple.pauseMinMax', {min: minSec.toFixed(1), max: maxSec.toFixed(1)}), 'warning');
-    // Auto-correction: adjust Max = Min
-    maxSec = minSec;
-    document.getElementById('cyclePauseMax').value = maxSec;
-  }
-  
-  sendCommand(WS_CMD.SET_CYCLE_PAUSE, {
-    mode: 'simple',
-    enabled: enabled,
-    isRandom: isRandom,
-    durationSec: durationSec,
-    minSec: minSec,
-    maxSec: maxSec
-  });
-}
-
-// ============================================================================
 // SIMPLE MODE - Start/Stop Actions
 // ============================================================================
 
@@ -303,122 +271,34 @@ function initSimpleListeners() {
   document.getElementById('btnPause').addEventListener('click', pauseSimpleMode);
   document.getElementById('btnStop').addEventListener('click', stopSimpleMode);
   
-  // ===== START POSITION INPUT =====
-  const startPositionEl = document.getElementById('startPosition');
-  startPositionEl.addEventListener('mousedown', function() {
-    AppState.editing.input = 'startPosition';
-    this.focus();
-  });
-  startPositionEl.addEventListener('focus', function() {
-    AppState.editing.input = 'startPosition';
-  });
-  startPositionEl.addEventListener('blur', function() {
-    AppState.editing.input = null;
-  });
-  startPositionEl.addEventListener('change', function() {
-    const startPos = parseFloat(this.value);
-    sendCommand(WS_CMD.SET_START_POSITION, {startPosition: startPos});
-    AppState.editing.input = null;
-    updateSimpleRelativePresets();  // 🆕 Update relative presets
+  // ===== EDITABLE INPUTS (using setupEditableInput from utils.js) =====
+  setupEditableInput('startPosition', 'startPosition', function(value) {
+    sendCommand(WS_CMD.SET_START_POSITION, {startPosition: parseFloat(value)});
+    updateSimpleRelativePresets();
   });
   
-  // ===== DISTANCE INPUT =====
-  const distanceEl = document.getElementById('distance');
-  distanceEl.addEventListener('mousedown', function() {
-    AppState.editing.input = 'distance';
-    this.focus();
-  });
-  distanceEl.addEventListener('focus', function() {
-    AppState.editing.input = 'distance';
-  });
-  distanceEl.addEventListener('blur', function() {
-    AppState.editing.input = null;
-  });
-  distanceEl.addEventListener('change', function() {
-    const distance = parseFloat(this.value);
-    sendCommand(WS_CMD.SET_DISTANCE, {distance: distance});
-    AppState.editing.input = null;
-    updateSimpleRelativePresets();  // 🆕 Update relative presets
+  setupEditableInput('distance', 'distance', function(value) {
+    sendCommand(WS_CMD.SET_DISTANCE, {distance: parseFloat(value)});
+    updateSimpleRelativePresets();
   });
   
-  // ===== UNIFIED SPEED INPUT =====
-  const speedUnifiedEl = document.getElementById('speedUnified');
-  speedUnifiedEl.addEventListener('mousedown', function() {
-    AppState.editing.input = 'speedUnified';
-    this.focus();
-  });
-  speedUnifiedEl.addEventListener('focus', function() {
-    AppState.editing.input = 'speedUnified';
-  });
-  speedUnifiedEl.addEventListener('blur', function() {
-    AppState.editing.input = null;
-  });
-  speedUnifiedEl.addEventListener('change', function() {
-    const speed = parseFloat(this.value);
-    
-    // Update hidden separate fields for consistency
+  setupEditableInput('speedUnified', 'speedUnified', function(value) {
+    const speed = parseFloat(value);
     document.getElementById('speedForward').value = speed;
     document.getElementById('speedBackward').value = speed;
-    
-    // Send both commands to ESP32
     sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: speed});
     sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: speed});
-    
-    AppState.editing.input = null;
   });
   
-  // ===== FORWARD SPEED INPUT =====
-  const speedForwardEl = document.getElementById('speedForward');
-  speedForwardEl.addEventListener('mousedown', function() {
-    AppState.editing.input = 'speedForward';
-    this.focus();
-  });
-  speedForwardEl.addEventListener('focus', function() {
-    AppState.editing.input = 'speedForward';
-  });
-  speedForwardEl.addEventListener('blur', function() {
-    AppState.editing.input = null;
-  });
-  speedForwardEl.addEventListener('change', function() {
-    const speed = parseFloat(this.value);
-    sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: speed});
-    AppState.editing.input = null;
+  setupEditableInput('speedForward', 'speedForward', function(value) {
+    sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: parseFloat(value)});
   });
   
-  // ===== BACKWARD SPEED INPUT =====
-  const speedBackwardEl = document.getElementById('speedBackward');
-  speedBackwardEl.addEventListener('mousedown', function() {
-    AppState.editing.input = 'speedBackward';
-    this.focus();
-  });
-  speedBackwardEl.addEventListener('focus', function() {
-    AppState.editing.input = 'speedBackward';
-  });
-  speedBackwardEl.addEventListener('blur', function() {
-    AppState.editing.input = null;
-  });
-  speedBackwardEl.addEventListener('change', function() {
-    const speed = parseFloat(this.value);
-    sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: speed});
-    AppState.editing.input = null;
+  setupEditableInput('speedBackward', 'speedBackward', function(value) {
+    sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: parseFloat(value)});
   });
   
-  // ===== CYCLE PAUSE LISTENERS =====
-  if (document.getElementById('cyclePauseEnabled')) {
-    document.getElementById('cyclePauseEnabled').addEventListener('change', sendSimpleCyclePauseConfig);
-  }
-  if (document.getElementById('cyclePauseRandom')) {
-    document.getElementById('cyclePauseRandom').addEventListener('change', sendSimpleCyclePauseConfig);
-  }
-  if (document.getElementById('cyclePauseDuration')) {
-    document.getElementById('cyclePauseDuration').addEventListener('change', sendSimpleCyclePauseConfig);
-  }
-  if (document.getElementById('cyclePauseMin')) {
-    document.getElementById('cyclePauseMin').addEventListener('change', sendSimpleCyclePauseConfig);
-  }
-  if (document.getElementById('cyclePauseMax')) {
-    document.getElementById('cyclePauseMax').addEventListener('change', sendSimpleCyclePauseConfig);
-  }
+  // Note: Cycle Pause listeners are handled by createCyclePauseHandlers() in initCyclePauseHandlers()
   
   // ===== START POSITION PRESETS =====
   document.querySelectorAll('[data-start]').forEach(btn => {
@@ -971,13 +851,23 @@ function createCyclePauseHandlers(cfg) {
     const section = cfg.getSectionFn();
     const enabled = !section.classList.contains('collapsed');
     const isRandom = document.getElementById('pauseModeRandom' + s).checked;
+    let minPauseSec = parseFloat(document.getElementById('cyclePauseMin' + s).value);
+    let maxPauseSec = parseFloat(document.getElementById('cyclePauseMax' + s).value);
+    
+    // Validation: Min must be ≤ Max (only in random mode)
+    if (isRandom && minPauseSec > maxPauseSec) {
+      const modeKey = s ? 'oscillation' : 'simple';
+      showNotification('⚠️ ' + t(modeKey + '.pauseMinMax', {min: minPauseSec.toFixed(1), max: maxPauseSec.toFixed(1)}), 'warning');
+      maxPauseSec = minPauseSec;
+      document.getElementById('cyclePauseMax' + s).value = maxPauseSec;
+    }
     
     sendCommand(cfg.wsCmd, {
       enabled: enabled,
       isRandom: isRandom,
       pauseDurationSec: parseFloat(document.getElementById('cyclePauseDuration' + s).value),
-      minPauseSec: parseFloat(document.getElementById('cyclePauseMin' + s).value),
-      maxPauseSec: parseFloat(document.getElementById('cyclePauseMax' + s).value)
+      minPauseSec: minPauseSec,
+      maxPauseSec: maxPauseSec
     });
   };
   
