@@ -11,6 +11,7 @@ freenove_esp32s3n8r8_stepper.code-workspace
 
 # Secrets (credentials - NEVER commit)
 include/core/Secrets.h
+secrets.ini
 
 # History backups from upload_html.py (ESP32 stats, playlists)
 .history/

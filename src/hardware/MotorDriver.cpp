@@ -5,7 +5,6 @@
 #include "hardware/MotorDriver.h"
 #include "core/UtilityEngine.h"
 #include "core/GlobalState.h"  // For sensorsInverted
-#include <math.h>              // For ceilf()
 
 // ============================================================================
 // ISR FOR PEND SIGNAL (counts all transitions for debugging)
@@ -68,15 +67,11 @@ void MotorDriver::init() {
 // ============================================================================
 
 void MotorDriver::step() {
-    // HSS86 requires minimum 2.5µs pulse width
-    // STEP_PULSE_MICROS is float (2.5f), but delayMicroseconds() takes uint32_t
-    // We ceil to 3µs to guarantee we exceed the minimum spec
-    static constexpr uint32_t PULSE_DELAY_US = (uint32_t)ceilf(STEP_PULSE_MICROS);
-    
+    // HSS86 requires minimum 2.5µs pulse width → using 3µs (STEP_PULSE_MICROS)
     digitalWrite(PIN_PULSE, HIGH);
-    delayMicroseconds(PULSE_DELAY_US);
+    delayMicroseconds(STEP_PULSE_MICROS);
     digitalWrite(PIN_PULSE, LOW);
-    delayMicroseconds(PULSE_DELAY_US);
+    delayMicroseconds(STEP_PULSE_MICROS);
 }
 
 // ============================================================================

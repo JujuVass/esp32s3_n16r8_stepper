@@ -77,8 +77,8 @@ constexpr float HARD_DRIFT_TEST_ZONE_MM = 20.0f;  // ~160 steps @ 8.0 steps/mm
 // ============================================================================
 // CONFIGURATION - Step Timing
 // ============================================================================
-constexpr float STEP_PULSE_MICROS = 2.5f;   // HSS86 requires min 2.5µs (ceiled to 3µs in MotorDriver)
-constexpr float STEP_EXECUTION_TIME_MICROS = STEP_PULSE_MICROS * 2.0f;  // Theoretical: 5µs (actual: 6µs after ceil)
+constexpr int STEP_PULSE_MICROS = 3;         // HSS86 requires min 2.5µs → rounded up to 3µs
+constexpr int STEP_EXECUTION_TIME_MICROS = STEP_PULSE_MICROS * 2;  // Total: 6µs per step (HIGH + LOW)
 constexpr int DIR_CHANGE_DELAY_MICROS = 15;  // HSS86 driver requires time to process direction changes
 
 // ============================================================================
