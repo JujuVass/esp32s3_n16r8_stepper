@@ -368,27 +368,12 @@ bool UtilityEngine::createDirectory(const String& path) {
 
 uint32_t UtilityEngine::getTotalBytes() const {
   if (!littleFsMounted) return 0;
-  
-  // LittleFS total size (depends on partition defined in platformio.ini)
-  // For ESP32-S3 with default config: 8MB SPIFFS
-  return 8 * 1024 * 1024;  // 8MB
+  return LittleFS.totalBytes();
 }
 
 uint32_t UtilityEngine::getUsedBytes() const {
   if (!littleFsMounted) return 0;
-  
-  File root = LittleFS.open("/");
-  if (!root) return 0;
-  
-  uint32_t used = 0;
-  File file = root.openNextFile();
-  
-  while (file) {
-    used += file.size();
-    file = root.openNextFile();
-  }
-  
-  return used;
+  return LittleFS.usedBytes();
 }
 
 float UtilityEngine::getDiskUsagePercent() const {

@@ -209,10 +209,8 @@ void SequenceExecutor::onMovementComplete() {
         // Standalone mode: movement is complete, return to ready state
         config.currentState = STATE_READY;
         
-        // Auto-increment daily statistics with distance traveled
-        if (motion.targetDistanceMM > 0) {
-            engine->incrementDailyStats(motion.targetDistanceMM);
-        }
+        // Note: Daily stats are saved via saveCurrentSessionStats() called in stop()
+        // No need for incrementDailyStats() here - it would cause double-counting
         
         engine->info("✅ Movement complete (STANDALONE)");
     }

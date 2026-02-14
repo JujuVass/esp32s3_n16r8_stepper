@@ -21,7 +21,7 @@
 #include "Types.h"
 
 // Note: GlobalState.h provides all extern declarations
-// But we need these before GlobalState might be included
+// These are needed here because Validators.h may be included before GlobalState.h
 extern float effectiveMaxDistanceMM;
 extern float maxDistanceLimitPercent;
 extern SystemConfig config;

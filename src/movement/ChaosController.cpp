@@ -470,6 +470,7 @@ void ChaosController::handleCalm(float craziness, float effectiveMinLimit, float
     chaosState.isInPatternPause = false;
     chaosState.patternStartTime = millis();
     chaosState.targetPositionMM = chaos.centerPositionMM;
+    chaosState.lastCalmSineValue = 0.0;  // Reset sine tracking for fresh CALM start
 }
 
 void ChaosController::handleBruteForce(float craziness, float effectiveMinLimit, float effectiveMaxLimit,
@@ -694,10 +695,9 @@ void ChaosController::processCalm(float effectiveMinLimit, float effectiveMaxLim
     targetStep = (long)(chaosState.targetPositionMM * STEPS_PER_MM);
     
     // Random pause at peaks
-    static float lastSineValue = 0.0;
-    bool crossedThreshold = (abs(lastSineValue) <= CALM_PAUSE.pauseTriggerThreshold && 
+    bool crossedThreshold = (abs(chaosState.lastCalmSineValue) <= CALM_PAUSE.pauseTriggerThreshold && 
                             abs(sineValue) > CALM_PAUSE.pauseTriggerThreshold);
-    lastSineValue = sineValue;
+    chaosState.lastCalmSineValue = sineValue;
     
     if (crossedThreshold && random(10000) < (int)(CALM_PAUSE.pauseChancePercent * 100)) {
         chaosState.isInPatternPause = true;

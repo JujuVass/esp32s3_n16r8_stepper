@@ -465,6 +465,7 @@ struct ChaosExecutionState {
   bool isInPatternPause;             // Currently in pattern's internal pause phase
   unsigned long pauseStartTime;      // When pattern pause started
   unsigned long pauseDuration;       // Duration of current pattern pause
+  float lastCalmSineValue;           // Last sine value for CALM peak detection
   
   // BRUTE FORCE specific state (3-phase: fast in, slow out, pause)
   uint8_t brutePhase;                // 0=aller rapide, 1=retour lent, 2=pause
@@ -496,6 +497,7 @@ struct ChaosExecutionState {
     isInPatternPause(false),
     pauseStartTime(0),
     pauseDuration(0),
+    lastCalmSineValue(0.0),
     brutePhase(0),
     liberatorPhase(0),
     stepDelay(1000),

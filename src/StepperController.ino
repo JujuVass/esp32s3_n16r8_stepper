@@ -2,7 +2,7 @@
 // ESP32-S3 STEPPER MOTOR CONTROLLER WITH WEB INTERFACE
 // ============================================================================
 // Hardware: ESP32-S3, HSS86 Driver (closed loop), NEMA34 8NM Motor
-// Mechanics: HTD 5M belt, 18T pulley → 90mm/rev → 6.67 steps/mm
+// Mechanics: HTD 5M belt, 20T pulley → 100mm/rev → 8.0 steps/mm
 // Features: Automatic calibration, va-et-vient motion, web control
 // ============================================================================
 

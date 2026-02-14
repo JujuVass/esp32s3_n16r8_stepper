@@ -79,12 +79,11 @@ void MotorDriver::step() {
 // ============================================================================
 
 void MotorDriver::setDirection(bool forward) {
+    // Optimization: skip if logical direction unchanged
+    if (forward == m_direction) return;
+    
     // Apply sensors inversion: if inverted, flip the physical direction
     bool physicalForward = sensorsInverted ? !forward : forward;
-    
-    // Optimization: only change GPIO if physical direction is different
-    bool currentPhysical = sensorsInverted ? !m_direction : m_direction;
-    if (physicalForward == currentPhysical && forward == m_direction) return;
     
     // Update GPIO with physical direction
     digitalWrite(PIN_DIR, physicalForward ? HIGH : LOW);

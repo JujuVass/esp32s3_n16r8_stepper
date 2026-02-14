@@ -248,6 +248,34 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
         return true;
     }
     
+    // ========================================================================
+    // DEBUG & STATS
+    // ========================================================================
+    
+    if (strcmp(cmd, "toggleDebug") == 0) {
+        if (engine) {
+            LogLevel current = engine->getLogLevel();
+            LogLevel next = (current == LOG_DEBUG) ? LOG_INFO : LOG_DEBUG;
+            engine->setLogLevel(next);
+            engine->info(String("Log level set to: ") + (next == LOG_DEBUG ? "DEBUG" : "INFO"));
+        }
+        return true;
+    }
+    
+    if (strcmp(cmd, "requestStats") == 0) {
+        bool enable = doc["enable"] | false;
+        statsRequested = enable;
+        
+        engine->debug(String("📊 Stats tracking: ") + (enable ? "ENABLED" : "DISABLED"));
+        
+        if (enable) {
+            engine->saveCurrentSessionStats();
+            sendStatus();
+        }
+        
+        return true;
+    }
+    
     return false;
 }
 
@@ -947,16 +975,6 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         return true;
     }
     
-    if (strcmp(cmd, "toggleDebug") == 0) {
-        if (engine) {
-            LogLevel current = engine->getLogLevel();
-            LogLevel next = (current == LOG_DEBUG) ? LOG_INFO : LOG_DEBUG;
-            engine->setLogLevel(next);
-            engine->info(String("Log level set to: ") + (next == LOG_DEBUG ? "DEBUG" : "INFO"));
-        }
-        return true;
-    }
-    
     if (strcmp(cmd, "importSequence") == 0) {
         int dataStart = message.indexOf("\"jsonData\":\"");
         if (dataStart > 0) {
@@ -979,25 +997,6 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         } else {
             Status.sendError("❌ JSON parsing error: jsonData field not found");
         }
-        return true;
-    }
-    
-    // ========================================================================
-    // STATS ON-DEMAND
-    // ========================================================================
-    
-    if (strcmp(cmd, "requestStats") == 0) {
-        bool enable = doc["enable"] | false;
-        statsRequested = enable;
-
-        
-        engine->debug(String("📊 Stats tracking: ") + (enable ? "ENABLED" : "DISABLED"));
-        
-        if (enable) {
-            engine->saveCurrentSessionStats();
-            sendStatus();
-        }
-        
         return true;
     }
     
