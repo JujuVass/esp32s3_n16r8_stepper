@@ -52,7 +52,7 @@ const I18n = (() => {
     _updateFlagUI();
     
     _loaded = true;
-    _console.log(`✅ i18n initialized: lang=${_currentLang}`);
+    console.log(`✅ i18n initialized: lang=${_currentLang}`);
   }
 
   /**
@@ -65,14 +65,14 @@ const I18n = (() => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       _translations = await response.json();
     } catch (e) {
-      _console.error(`i18n: Failed to load /lang/${lang}.json:`, e);
+      console.error(`i18n: Failed to load /lang/${lang}.json:`, e);
       // Fallback: try to load French if English fails
       if (lang !== 'fr') {
         try {
           const fallback = await fetch('/lang/fr.json');
           if (fallback.ok) _translations = await fallback.json();
         } catch (e2) {
-          _console.error('i18n: Fallback to fr.json also failed');
+          console.error('i18n: Fallback to fr.json also failed');
         }
       }
     }
@@ -129,7 +129,7 @@ const I18n = (() => {
     applyTranslations();
     _updateFlagUI();
     
-    _console.log(`🌐 Language switched to: ${lang}`);
+    console.log(`🌐 Language switched to: ${lang}`);
   }
 
   /**
@@ -220,4 +220,4 @@ function t(key, params) {
   return I18n.t(key, params);
 }
 
-_console.log('✅ i18n.js loaded');
+console.log('✅ i18n.js loaded');
