@@ -1,4 +1,4 @@
-  const MILESTONES = [
+const MILESTONES = [
   { threshold: 0, emoji: "🐜", name: "", location: "Global" },
   { threshold: 0.008, emoji: "🦄💕", name: "Accouplement - Hippocampe (1 session)", location: "Mer" },
   { threshold: 0.65, emoji: "🐕", name: "Chien (berger allemand)", location: "Global" },

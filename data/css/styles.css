@@ -1107,7 +1107,7 @@ select.select-input:focus {
  * MODAL OPTIMIZATION CLASSES
  * ============================================================================ */
 
-/* Grid 2 colonnes */
+/* Grid 2 columns */
 .grid-2col-12 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1115,7 +1115,7 @@ select.select-input:focus {
   margin-bottom: 10px;
 }
 
-/* Grid 4 colonnes pour patterns chaos */
+/* Grid 4 columns for chaos patterns */
 .grid-4col-patterns {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1126,7 +1126,7 @@ select.select-input:focus {
   margin-top: 3px;
 }
 
-/* Input modal uniformisé */
+/* Unified modal input */
 .input-modal {
   width: auto !important;
   padding: 6px !important;
@@ -1136,7 +1136,7 @@ select.select-input:focus {
   margin-top: 3px;
 }
 
-/* Radio label inline pour type selection */
+/* Radio label inline for type selection */
 .radio-label-inline {
   display: inline-flex;
   align-items: center;
@@ -1147,7 +1147,7 @@ select.select-input:focus {
   border-radius: 4px;
 }
 
-/* Checkbox label petit pour chaos patterns */
+/* Small checkbox label for chaos patterns */
 .checkbox-label-sm {
   display: flex;
   align-items: center;
@@ -1155,22 +1155,6 @@ select.select-input:focus {
   cursor: pointer;
   font-size: 11px;
 }
-
-/* ============================================================================
- * UTILITY CLASSES
- * ============================================================================ */
-
-/* Flex utilities */
-.flex-gap-10 { display: flex; gap: 10px; }
-.flex-gap-12 { display: flex; gap: 12px; }
-.flex-gap-15 { display: flex; gap: 15px; }
-.flex-end { justify-content: flex-end; }
-
-/* Spacing utilities */
-.mb-8 { margin-bottom: 8px; }
-.mb-10 { margin-bottom: 10px; }
-.mb-12 { margin-bottom: 12px; }
-.mb-15 { margin-bottom: 15px; }
 
 /* ============================================================================
  * COLLAPSIBLE SECTIONS
@@ -1257,11 +1241,17 @@ select.select-input:focus {
   gap: 6px;
 }
 
+.flex-gap-10 { display: flex; gap: 10px; }
+.flex-gap-12 { display: flex; gap: 12px; }
+.flex-gap-15 { display: flex; gap: 15px; }
+.flex-end { justify-content: flex-end; }
+
 /* === Spacing === */
 .mb-4 { margin-bottom: 4px; }
 .mb-8 { margin-bottom: 8px; }
 .mb-10 { margin-bottom: 10px; }
 .mb-12 { margin-bottom: 12px; }
+.mb-15 { margin-bottom: 15px; }
 .mt-4 { margin-top: 4px; }
 .mt-8 { margin-top: 8px; }
 .mr-5 { margin-right: 5px; }

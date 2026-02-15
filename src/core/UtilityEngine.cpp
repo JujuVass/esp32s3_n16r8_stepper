@@ -649,22 +649,9 @@ void UtilityEngine::saveLoggingPreferences() {
   uint8_t checksum = calculateEEPROMChecksum();
   EEPROM.write(EEPROM_ADDR_CHECKSUM, checksum);
   
-  // 🛡️ COMMIT WITH RETRY
-  const int maxRetries = 3;
-  bool committed = false;
-  
-  for (int attempt = 0; attempt < maxRetries && !committed; attempt++) {
-    if (attempt > 0) {
-      Serial.println("[UtilityEngine] ⚠️ EEPROM commit retry #" + String(attempt));
-    }
-    committed = EEPROM.commit();
-    if (!committed) delay(50 * (attempt + 1));
-  }
-  
-  if (committed) {
+  // Commit with retry
+  if (commitEEPROMWithRetry("Logging")) {
     Serial.println("[UtilityEngine] 💾 Logging preferences saved to EEPROM with checksum");
-  } else {
-    Serial.println("[UtilityEngine] ❌ EEPROM commit failed after retries!");
   }
 }
 
@@ -719,13 +706,7 @@ void UtilityEngine::loadLoggingPreferences() {
     // First boot: enable stats by default
     statsRecordingEnabled = true;
     EEPROM.write(EEPROM_ADDR_STATS_ENABLED, 1);
-    
-    // 🛡️ COMMIT WITH RETRY
-    bool committed = false;
-    for (int i = 0; i < 3 && !committed; i++) {
-      committed = EEPROM.commit();
-      if (!committed) delay(50 * (i + 1));
-    }
+    commitEEPROMWithRetry("Stats init");
     
     Serial.println("[UtilityEngine] 🔧 First boot: stats recording enabled by default");
   } else {
@@ -753,21 +734,8 @@ void UtilityEngine::setStatsRecordingEnabled(bool enabled) {
   uint8_t checksum = calculateEEPROMChecksum();
   EEPROM.write(EEPROM_ADDR_CHECKSUM, checksum);
   
-  // 🛡️ COMMIT WITH RETRY
-  const int maxRetries = 3;
-  bool committed = false;
-  
-  for (int attempt = 0; attempt < maxRetries && !committed; attempt++) {
-    if (attempt > 0) {
-      Serial.println("[UtilityEngine] ⚠️ Stats EEPROM retry #" + String(attempt));
-    }
-    committed = EEPROM.commit();
-    if (!committed) delay(50 * (attempt + 1));
-  }
-  
-  if (!committed) {
-    Serial.println("[UtilityEngine] ❌ Stats EEPROM commit failed!");
-  }
+  // Commit with retry
+  commitEEPROMWithRetry("Stats");
   
   info(String("📊 Stats recording: ") + (enabled ? "ENABLED" : "DISABLED") + " (saved to EEPROM with checksum)");
 }
@@ -805,20 +773,7 @@ void UtilityEngine::saveSensorsInverted() {
   EEPROM.write(EEPROM_ADDR_CHECKSUM, checksum);
   
   // Commit with retry
-  const int maxRetries = 3;
-  bool committed = false;
-  
-  for (int attempt = 0; attempt < maxRetries && !committed; attempt++) {
-    if (attempt > 0) {
-      Serial.println("[UtilityEngine] ⚠️ Sensors EEPROM retry #" + String(attempt));
-    }
-    committed = EEPROM.commit();
-    if (!committed) delay(50 * (attempt + 1));
-  }
-  
-  if (!committed) {
-    Serial.println("[UtilityEngine] ❌ Sensors EEPROM commit failed!");
-  }
+  commitEEPROMWithRetry("Sensors");
   
   info(String("🔄 Sensors mode: ") + (sensorsInverted ? "INVERTED" : "NORMAL") + " (saved to EEPROM)");
 }

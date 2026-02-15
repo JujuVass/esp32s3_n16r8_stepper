@@ -27,8 +27,8 @@ extern const char* otaPassword;  // OTA password protection
 // ============================================================================
 // Motor driver pins (HSS86 stepper driver)
 // Cable colors: Yellow=PULSE, Orange=DIR, Red=ENABLE
-constexpr int PIN_START_CONTACT = 4;   // MIN - capteur opto (jaune)
-constexpr int PIN_END_CONTACT = 5;     // MAX - capteur opto (vert)
+constexpr int PIN_START_CONTACT = 4;   // MIN - opto sensor (yellow)
+constexpr int PIN_END_CONTACT = 5;     // MAX - opto sensor (green)
 constexpr int PIN_PULSE = 6;           // PU- via level shifter
 constexpr int PIN_DIR = 7;             // DR- via level shifter
 constexpr int PIN_ENABLE = 15;         // EN- via level shifter
@@ -160,7 +160,7 @@ constexpr float HARD_MAX_DISTANCE_MM = 365.0f;
 constexpr float HARD_MIN_DISTANCE_MM = 250.0f;
 
 // ============================================================================
-// CONFIGURATION - Speed Limits MAXGLOSPE
+// CONFIGURATION - Speed Limits
 // ============================================================================
 constexpr float MAX_SPEED_LEVEL = 35.0f;  // Maximum speed level for all modes (1-35)
 

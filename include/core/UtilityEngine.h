@@ -21,6 +21,7 @@
 #include <WebServer.h>
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
+#include <EEPROM.h>
 #include <LittleFS.h>
 #include <time.h>
 #include <string>
@@ -481,5 +482,29 @@ private:
 // GLOBAL ENGINE POINTER (defined in main.ino, accessible everywhere)
 // ============================================================================
 extern UtilityEngine* engine;
+
+// ============================================================================
+// EEPROM COMMIT HELPER (free function, usable by any module)
+// ============================================================================
+/**
+ * Commit EEPROM with retry and exponential backoff
+ * @param context Label for log messages (e.g., "Logging", "WiFi", "Stats")
+ * @param maxRetries Maximum retry attempts (default: 3)
+ * @return true if commit succeeded, false after all retries exhausted
+ */
+inline bool commitEEPROMWithRetry(const char* context, int maxRetries = 3) {
+  bool committed = false;
+  for (int attempt = 0; attempt < maxRetries && !committed; attempt++) {
+    if (attempt > 0) {
+      Serial.println(String("[EEPROM] ⚠️ ") + context + " commit retry #" + String(attempt));
+    }
+    committed = EEPROM.commit();
+    if (!committed) delay(50 * (attempt + 1));
+  }
+  if (!committed) {
+    Serial.println(String("[EEPROM] ❌ ") + context + " commit failed after " + String(maxRetries) + " retries!");
+  }
+  return committed;
+}
 
 #endif // UTILITY_ENGINE_H

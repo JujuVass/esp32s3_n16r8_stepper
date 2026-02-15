@@ -136,8 +136,8 @@ async function clearAllLogFiles() {
         loadLogFilesList();  // Refresh list
       })
       .catch(error => {
-        console.error('Erreur suppression logs:', error);
-        showAlert('Erreur: ' + error, { type: 'error' });
+        console.error('Error deleting logs:', error);
+        showAlert(t('common.error') + ': ' + error, { type: 'error' });
       });
   }
 }
