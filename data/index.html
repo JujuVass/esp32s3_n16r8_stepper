@@ -14,12 +14,12 @@
 </head>
 <body>
   <!-- Script Loading Overlay (shown during sequential JS load) -->
-  <div id="scriptLoadOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#1a1a2e;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:sans-serif;">
-    <div style="font-size:48px;margin-bottom:20px;">⚙️</div>
-    <div style="width:220px;height:6px;background:#333;border-radius:3px;overflow:hidden;margin-bottom:12px;">
+  <div id="scriptLoadOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(145deg,#0f172a,#1e293b,#1a1a2e);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:'Segoe UI',system-ui,sans-serif;">
+    <div style="font-size:52px;margin-bottom:24px;filter:drop-shadow(0 0 12px rgba(102,126,234,0.4));">⚙️</div>
+    <div style="width:240px;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;margin-bottom:14px;">
       <div id="scriptLoadBar" style="width:0%;height:100%;background:linear-gradient(90deg,#667eea,#764ba2);transition:width 0.3s;border-radius:3px;"></div>
     </div>
-    <div id="scriptLoadText" style="font-size:12px;color:#999;">Loading...</div>
+    <div id="scriptLoadText" style="font-size:12px;color:rgba(255,255,255,0.5);letter-spacing:0.5px;">Loading...</div>
   </div>
 
   <!-- Calibration Overlay -->
@@ -54,35 +54,35 @@
       <div class="modal-title">📋 <span data-i18n="playlist.title">Playlist -</span> <span id="playlistModalTitle">Mode</span></div>
       
       <!-- Sticky Current Config Preview -->
-      <div id="playlistCurrentConfig" style="background: #E3F2FD; padding: 12px; border-radius: 6px; margin-bottom: 12px; flex-shrink: 0;">
-        <div style="font-weight: 500; margin-bottom: 8px; font-size: 13px;">⚙️ <span data-i18n="playlist.currentConfig">Configuration actuelle:</span></div>
-        <div id="playlistCurrentConfigContent" style="font-size: 12px; color: #555;"></div>
+      <div id="playlistCurrentConfig" style="background: rgba(102,126,234,0.06); padding: 12px; border-radius: 10px; margin-bottom: 12px; flex-shrink: 0; border: 1px solid rgba(102,126,234,0.15);">
+        <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px; color: #4a5568;">⚙️ <span data-i18n="playlist.currentConfig">Configuration actuelle:</span></div>
+        <div id="playlistCurrentConfigContent" style="font-size: 12px; color: #4a5568;"></div>
         <button class="button btn-success" id="btnAddCurrentToPlaylist" style="margin-top: 8px; width: 100%; padding: 8px; font-size: 13px;">
           ➕ <span data-i18n="playlist.addToPlaylist">Ajouter à la playlist</span>
         </button>
       </div>
       
       <!-- Presets List with Scroll -->
-      <div style="flex: 1; overflow-y: auto; overflow-x: visible; border-top: 2px solid #ddd; padding-top: 12px; min-height: 0;">
-        <div style="font-weight: 500; margin-bottom: 10px; font-size: 13px; padding: 0 5px;">
+      <div style="flex: 1; overflow-y: auto; overflow-x: visible; border-top: 1.5px solid #e2e8f0; padding-top: 12px; min-height: 0;">
+        <div style="font-weight: 600; margin-bottom: 10px; font-size: 13px; padding: 0 5px; color: #4a5568;">
           📦 <span data-i18n="playlist.savedPresets">Presets sauvegardés</span> (<span id="playlistCount">0</span>/20):
         </div>
         
         <!-- Search Input -->
         <input type="text" id="playlistSearchInput" placeholder="🔍 Rechercher un preset..." data-i18n-placeholder="playlist.searchPlaceholder" 
                oninput="filterPlaylistPresets(this.value)"
-               style="width: 90%; margin: 0 0 10px 0; padding: 8px; border: 2px solid #ddd; border-radius: 6px; font-size: 12px;">
+               style="width: 90%; margin: 0 0 10px 0; padding: 8px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 12px;">
         
         <div id="playlistPresetsList" style="padding-right: 5px; overflow: visible;">
           <!-- Presets will be dynamically inserted here -->
-          <div style="color: #999; font-style: italic; padding: 20px; text-align: center; font-size: 12px;" data-i18n="playlist.noPresets">
+          <div style="color: #a0aec0; font-style: italic; padding: 20px; text-align: center; font-size: 12px;" data-i18n="playlist.noPresets">
             Aucun preset sauvegardé
           </div>
         </div>
       </div>
       
       <!-- Sticky Close Button -->
-      <div style="border-top: 2px solid #ddd; padding: 12px 0 0 0; margin-top: 12px; background: white; flex-shrink: 0;">
+      <div style="border-top: 1.5px solid #e2e8f0; padding: 12px 0 0 0; margin-top: 12px; background: white; flex-shrink: 0;">
         <button class="button btn-secondary" onclick="closePlaylistModal()" style="width: 100%; padding: 10px; font-size: 14px;">
           ✖️ <span data-i18n="common.close">Fermer</span>
         </button>
@@ -102,12 +102,12 @@
         <br><br>
         <strong>Voulez-vous continuer ?</strong>
       </div>
-      <div style="margin: 20px 0; padding: 15px; background: #FFF3E0; border-radius: 5px; border: 2px solid #FF9800;">
+      <div style="margin: 20px 0; padding: 15px; background: rgba(237,137,54,0.08); border-radius: 10px; border: 1.5px solid rgba(237,137,54,0.3);">
         <label style="display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: normal;">
-          <input type="checkbox" id="bypassCalibrationCheckbox" checked style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;">
-          <span style="color: #FF9800; font-weight: bold;" data-i18n="modal.bypassCalibration">/!\ Bypasser la calibration complète</span>
+          <input type="checkbox" id="bypassCalibrationCheckbox" checked style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer; accent-color: #ed8936;">
+          <span style="color: #ed8936; font-weight: 600;" data-i18n="modal.bypassCalibration">/!\ Bypasser la calibration complète</span>
         </label>
-        <div style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;" data-i18n="modal.bypassCalibrationInfo">
+        <div style="font-size: 12px; color: #718096; margin-top: 8px; text-align: center;" data-i18n="modal.bypassCalibrationInfo">
           (Retour rapide au contact début uniquement)
         </div>
       </div>
@@ -125,12 +125,12 @@
       <div class="modal-message" data-i18n="modal.stopMessage">
         Voulez-vous arrêter le mouvement en cours ?
       </div>
-      <div style="margin: 20px 0; padding: 15px; background: #E3F2FD; border-radius: 5px; border: 2px solid #2196F3;">
+      <div style="margin: 20px 0; padding: 15px; background: rgba(102,126,234,0.06); border-radius: 10px; border: 1.5px solid rgba(102,126,234,0.2);">
         <label style="display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: normal;">
-          <input type="checkbox" id="returnToStartCheckbox" checked style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;">
-          <span style="color: #2196F3; font-weight: bold;">🏠 <span data-i18n="modal.returnToStart">Retour à la position initiale (0mm)</span></span>
+          <input type="checkbox" id="returnToStartCheckbox" checked style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer; accent-color: #667eea;">
+          <span style="color: #5a67d8; font-weight: 600;">🏠 <span data-i18n="modal.returnToStart">Retour à la position initiale (0mm)</span></span>
         </label>
-        <div style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;" data-i18n="modal.returnToStartDisable">
+        <div style="font-size: 12px; color: #718096; margin-top: 8px; text-align: center;" data-i18n="modal.returnToStartDisable">
           (Désactiver pour rester à la position actuelle)
         </div>
       </div>
@@ -146,35 +146,35 @@
     <div class="modal-content">
       <div class="modal-title">⚠️ <span data-i18n="modal.seqLimitTitle">Passage en Mode Séquenceur</span></div>
       <div class="modal-message">
-        <div style="background: #E3F2FD; padding: 15px; border-radius: 8px; border-left: 4px solid #2196F3; margin-bottom: 15px;">
-          <div style="font-weight: bold; color: #1976D2; margin-bottom: 8px;">📋 <span data-i18n="modal.seqLimitExpertMode">Mode Expert Activé</span></div>
-          <div style="font-size: 14px; color: #555;" data-i18n-html="modal.seqLimitActiveWillDisable">
+        <div style="background: rgba(102,126,234,0.06); padding: 15px; border-radius: 10px; border-left: 4px solid #667eea; margin-bottom: 15px;">
+          <div style="font-weight: 700; color: #5a67d8; margin-bottom: 8px;">📋 <span data-i18n="modal.seqLimitExpertMode">Mode Expert Activé</span></div>
+          <div style="font-size: 14px; color: #4a5568;" data-i18n-html="modal.seqLimitActiveWillDisable">
             La limitation de course active sera <strong>DÉSACTIVÉE</strong> :
           </div>
         </div>
         
-        <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px; margin: 15px 0; padding: 15px; background: #FFF3E0; border-radius: 8px;">
-          <div style="font-weight: bold; color: #FF9800;">• <span data-i18n="modal.seqLimitCurrent">Actuel :</span></div>
-          <div id="seqModalCurrentLimit" style="color: #FF9800; font-weight: bold;">--</div>
-          <div style="font-weight: bold; color: #4CAF50;">• <span data-i18n="modal.seqLimitAfter">Après :</span></div>
-          <div id="seqModalAfterLimit" style="color: #4CAF50; font-weight: bold;">--</div>
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px; margin: 15px 0; padding: 15px; background: rgba(237,137,54,0.08); border-radius: 10px;">
+          <div style="font-weight: 700; color: #ed8936;">• <span data-i18n="modal.seqLimitCurrent">Actuel :</span></div>
+          <div id="seqModalCurrentLimit" style="color: #ed8936; font-weight: 700;">--</div>
+          <div style="font-weight: 700; color: #48bb78;">• <span data-i18n="modal.seqLimitAfter">Après :</span></div>
+          <div id="seqModalAfterLimit" style="color: #48bb78; font-weight: 700;">--</div>
         </div>
         
-        <div style="background: #F5F5F5; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
-          <div style="font-weight: bold; margin-bottom: 8px;">🔧 <span data-i18n="modal.seqLimitReason">Raison :</span></div>
-          <div style="font-size: 13px; color: #666; line-height: 1.5;" data-i18n="modal.seqLimitReasonText">
+        <div style="background: #f7fafc; padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+          <div style="font-weight: 700; margin-bottom: 8px; color: #2d3748;">🔧 <span data-i18n="modal.seqLimitReason">Raison :</span></div>
+          <div style="font-size: 13px; color: #718096; line-height: 1.5;" data-i18n="modal.seqLimitReasonText">
             Le séquenceur peut contenir des lignes de calibration qui réinitialisent cette limite.
           </div>
         </div>
         
-        <div style="background: #E8F5E9; padding: 12px; border-radius: 8px; border-left: 4px solid #4CAF50;">
-          <div style="font-weight: bold; color: #2E7D32; margin-bottom: 5px;">💡 <span data-i18n="modal.seqLimitInSeqMode">En mode séquenceur :</span></div>
-          <div style="font-size: 13px; color: #555;" data-i18n-html="modal.seqLimitFullControl">
+        <div style="background: rgba(72,187,120,0.08); padding: 12px; border-radius: 10px; border-left: 4px solid #48bb78;">
+          <div style="font-weight: 700; color: #38a169; margin-bottom: 5px;">💡 <span data-i18n="modal.seqLimitInSeqMode">En mode séquenceur :</span></div>
+          <div style="font-size: 13px; color: #4a5568;" data-i18n-html="modal.seqLimitFullControl">
             Vous avez le <strong>contrôle total</strong> des valeurs de chaque ligne.
           </div>
         </div>
         
-        <div style="margin-top: 20px; text-align: center; font-weight: bold; color: #333;" data-i18n="modal.seqLimitContinue">
+        <div style="margin-top: 20px; text-align: center; font-weight: 700; color: #2d3748;" data-i18n="modal.seqLimitContinue">
           Continuer ?
         </div>
       </div>
@@ -247,7 +247,7 @@
       
       <div style="padding: 15px 0;">
         <!-- Current EEPROM Config Display -->
-        <div id="wifiCurrentConfig" style="background: #E3F2FD; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #2196F3;">
+        <div id="wifiCurrentConfig" style="background: rgba(102,126,234,0.06); padding: 12px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #667eea;">
           <div style="font-weight: 500; margin-bottom: 6px; font-size: 13px;">📦 <span data-i18n="wifi.currentEepromConfig">Configuration actuelle en EEPROM:</span></div>
           <div id="wifiCurrentSsid" style="font-size: 12px; color: #555; font-family: monospace;" data-i18n="common.loading">Chargement...</div>
         </div>
@@ -286,95 +286,95 @@
     <div class="status-compact">
       
       <!-- Header Row: État + Actions -->
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 15px; background:#E3F2FD; border-bottom:1px solid #BBDEFB;">
-        <span style="font-weight:bold; font-size:15px; color:#1976D2;">
-          <span data-i18n="status.stateLabel">État:</span> <span id="state" style="color:#333;" data-i18n="status.init">Initialisation...</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px; background:linear-gradient(135deg, rgba(102,126,234,0.08), rgba(118,75,162,0.06)); border-bottom:1px solid rgba(102,126,234,0.1);">
+        <span style="font-weight:700; font-size:15px; color:#5a67d8;">
+          <span data-i18n="status.stateLabel">État:</span> <span id="state" style="color:#2d3748;" data-i18n="status.init">Initialisation...</span>
         </span>
         <div class="flex-gap-6">
-          <button class="btn-compact" id="btnLangToggle" onclick="I18n.toggleLanguage()" title="Switch to English" style="background: transparent; border: 1px solid #BBDEFB; font-size: 18px; padding: 4px 8px; cursor: pointer; border-radius: 4px;">🇫🇷</button>
+          <button class="btn-compact" id="btnLangToggle" onclick="I18n.toggleLanguage()" title="Switch to English" style="background: transparent; border: 1.5px solid rgba(102,126,234,0.2); font-size: 18px; padding: 4px 8px; cursor: pointer; border-radius: 6px;">🇫🇷</button>
           <button class="btn-compact btn-primary" id="btnCalibrateCommon" title="Calibrer les limites">🔍 <span data-i18n="status.calib">Calib</span></button>
           <button class="btn-compact btn-info" id="btnShowLogs" title="Afficher logs">📋 <span data-i18n="status.logs">Logs</span></button>
           
           <button class="btn-compact btn-success" id="btnShowStats" title="Afficher statistiques">📊 <span data-i18n="status.stats">Stats</span></button>
-          <button class="btn-compact" id="btnShowSystem" title="Afficher statistiques système" style="background: #2196F3; color: white;">⚙️ <span data-i18n="status.sys">Sys</span></button>
+          <button class="btn-compact" id="btnShowSystem" title="Afficher statistiques système" style="background: linear-gradient(135deg,#4299e1,#3182ce); color: white; border-radius:6px;">⚙️ <span data-i18n="status.sys">Sys</span></button>
         </div>
       </div>
       
       <!-- Row 2: Position + Course -->
-      <div style="padding:6px 15px; font-size:13px; border-bottom:1px solid #f0f0f0;">
+      <div style="padding:6px 15px; font-size:13px; border-bottom:1px solid #edf2f7;">
         📍 <strong data-i18n="status.position">Position:</strong> <span id="position">0.0 mm (0 steps)</span>
         &nbsp;&nbsp;•&nbsp;&nbsp;
         <strong data-i18n="status.course">Course:</strong> <span id="sensorsInvertedIcon" title="Capteurs inversés (START↔END)" data-i18n-title="status.sensorsInverted" style="display:none; cursor:help;">🔄</span> <span id="totalDist">-- mm</span>
-        <button id="btnConfigMaxDist" class="btn-icon" title="Limiter course" data-i18n-title="status.limitCourse" style="padding:2px 6px; font-size:13px; background:transparent; border:1px solid #ddd; border-radius:3px; cursor:pointer; margin-left:4px;">⚙️</button>
+        <button id="btnConfigMaxDist" class="btn-icon" title="Limiter course" data-i18n-title="status.limitCourse" style="margin-left:4px;">⚙️</button>
       </div>
       
       <!-- Max Distance Config Panel (collapsible) -->
-      <div id="maxDistConfigPanel" style="display:none; padding:10px 15px; background:#FFF3E0; border-bottom:1px solid #FFE0B2;">
-        <div style="font-weight:bold; color:#FF9800; margin-bottom:6px; font-size:12px;">⚙️ <span data-i18n="status.courseLimitation">Limitation de course</span></div>
-        <div style="font-size:11px; color:#666; margin-bottom:8px;">
+      <div id="maxDistConfigPanel" style="display:none; padding:10px 15px; background:rgba(237,137,54,0.06); border-bottom:1px solid rgba(237,137,54,0.15);">
+        <div style="font-weight:700; color:#ed8936; margin-bottom:6px; font-size:12px;">⚙️ <span data-i18n="status.courseLimitation">Limitation de course</span></div>
+        <div style="font-size:11px; color:#718096; margin-bottom:8px;">
           ℹ️ <span data-i18n="status.courseLimitInfo">Limite la zone utilisable sans recalibrer</span>
         </div>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-          <span style="font-size:11px; font-weight:bold; min-width:45px;" data-i18n="status.limit">Limite:</span>
-          <input type="range" id="maxDistLimitSlider" min="50" max="100" value="100" step="1" style="flex:1; height:6px;" disabled>
-          <span id="maxDistLimitValue" style="font-weight:bold; font-size:12px; min-width:40px;">100%</span>
-          <span id="maxDistLimitMM" style="color:#666; font-size:11px; min-width:70px;">(-- mm)</span>
+          <span style="font-size:11px; font-weight:600; min-width:45px; color:#4a5568;" data-i18n="status.limit">Limite:</span>
+          <input type="range" id="maxDistLimitSlider" min="50" max="100" value="100" step="1" style="flex:1; height:6px; accent-color:#667eea;" disabled>
+          <span id="maxDistLimitValue" style="font-weight:700; font-size:12px; min-width:40px; color:#2d3748;">100%</span>
+          <span id="maxDistLimitMM" style="color:#718096; font-size:11px; min-width:70px;">(-- mm)</span>
         </div>
         <div class="flex-gap-6">
           <button id="btnApplyMaxDistLimit" class="btn-compact btn-success" disabled>✅ OK</button>
           <button id="btnCancelMaxDistLimit" class="btn-compact btn-secondary">✕ <span data-i18n="common.cancel">Annuler</span></button>
         </div>
-        <div style="font-size:10px; color:#d32f2f; margin-top:6px; display:none;" id="maxDistLimitWarning" data-i18n="status.modifyReadyOnly">
+        <div style="font-size:10px; color:#f56565; margin-top:6px; display:none;" id="maxDistLimitWarning" data-i18n="status.modifyReadyOnly">
           ⚠️ Modification en état PRÊT uniquement
         </div>
         <!-- Sensors Inversion Option -->
-        <div style="display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:8px; border-top:1px dashed #FFE0B2;">
-          <label style="font-size:11px; display:flex; align-items:center; gap:6px; cursor:pointer;">
-            <input type="checkbox" id="chkSensorsInverted" style="width:16px; height:16px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:8px; border-top:1px dashed rgba(237,137,54,0.2);">
+          <label style="font-size:11px; display:flex; align-items:center; gap:6px; cursor:pointer; color:#4a5568;">
+            <input type="checkbox" id="chkSensorsInverted" style="width:16px; height:16px; accent-color:#667eea;">
             <span>🔄 <span data-i18n="status.invertStartEnd">Inverser START ↔ END</span></span>
           </label>
-          <span id="sensorsInvertedStatus" style="font-size:10px; color:#666;">(Normal)</span>
+          <span id="sensorsInvertedStatus" style="font-size:10px; color:#718096;">(Normal)</span>
         </div>
       </div>
       
       <!-- Row 3: Vitesses -->
-      <div style="padding:6px 15px; font-size:13px; border-bottom:1px solid #f0f0f0;">
+      <div style="padding:6px 15px; font-size:13px; border-bottom:1px solid #edf2f7;">
         ⚡ <strong data-i18n="status.speed">Vitesse:</strong> <span id="currentSpeed">↗️ --  •  ↙️ --</span>
-        <span style="color:#999; font-size:11px; margin-left:8px;">(-- c/min)</span>
+        <span style="color:#a0aec0; font-size:11px; margin-left:8px;">(-- c/min)</span>
         <span style="margin-left:12px; font-size:16px; cursor:help;" id="speedIcon" title="">⏸️</span>
-        <span id="realSpeed" style="font-size:12px; color:#555; margin-left:4px;">0 cm/s</span>
+        <span id="realSpeed" style="font-size:12px; color:#4a5568; margin-left:4px;">0 cm/s</span>
       </div>
       
       <!-- Row 4: Distance + Progress Bar (colonnes fixes) -->
-      <div style="padding:6px 15px; font-size:13px; display:grid; grid-template-columns: 280px 1fr 50px; gap:10px; align-items:center; border-bottom:1px solid #f0f0f0;">
+      <div style="padding:6px 15px; font-size:13px; display:grid; grid-template-columns: 280px 1fr 50px; gap:10px; align-items:center; border-bottom:1px solid #edf2f7;">
         <div style="white-space:nowrap;">
-          📊 <strong data-i18n="status.distanceLabel">Distance:</strong> <span id="statsRecordingWarning" style="display: none; color: #FF9800; cursor: help; margin-left: 4px;" title="⚠️ Enregistrement des stats désactivé" data-i18n-title="stats.recordingDisabledWarning">⚠️</span> <span id="milestoneIcon" style="font-size: 20px; margin-left: 8px; cursor: help; display: inline-block; transition: transform 0.3s;" title=""></span> <span id="totalTraveled">0.000 m</span> <button class="btn-icon" id="btnResetDistanceCommon" title="Réinitialiser distance" data-i18n-title="status.resetDistance" style="padding:2px 6px; font-size:13px; background:transparent; border:1px solid #ddd; border-radius:3px; cursor:pointer; margin-left:4px;">↻</button>
+          📊 <strong data-i18n="status.distanceLabel">Distance:</strong> <span id="statsRecordingWarning" style="display: none; color: #ed8936; cursor: help; margin-left: 4px;" title="⚠️ Enregistrement des stats désactivé" data-i18n-title="stats.recordingDisabledWarning">⚠️</span> <span id="milestoneIcon" style="font-size: 20px; margin-left: 8px; cursor: help; display: inline-block; transition: transform 0.3s;" title=""></span> <span id="totalTraveled">0.000 m</span> <button class="btn-icon" id="btnResetDistanceCommon" title="Réinitialiser distance" data-i18n-title="status.resetDistance" style="margin-left:4px;">↻</button>
           
         </div>
-        <div style="height:8px; background:#e0e0e0; border-radius:4px; overflow:hidden;">
-          <div id="progressMini" style="width:0%; height:100%; background:linear-gradient(90deg,#2196F3,#21CBF3); transition:width 0.3s;"></div>
+        <div style="height:8px; background:#edf2f7; border-radius:4px; overflow:hidden;">
+          <div id="progressMini" style="width:0%; height:100%; background:linear-gradient(90deg,#667eea,#764ba2); transition:width 0.3s; border-radius:4px;"></div>
         </div>
-        <span id="progressPct" style="font-weight:bold; font-size:12px; text-align:right;">0.0%</span>
+        <span id="progressPct" style="font-weight:700; font-size:12px; text-align:right; color:#2d3748;">0.0%</span>
       </div>
       
       <!-- Pending Changes Alert (conditional) -->
-      <div id="pendingChanges" style="display:none; padding:6px 15px; background:#FFF3E0; color:#FF9800; font-weight:bold; font-size:12px; border-bottom:1px solid #FFE0B2;">
+      <div id="pendingChanges" style="display:none; padding:6px 15px; background:rgba(237,137,54,0.08); color:#ed8936; font-weight:600; font-size:12px; border-bottom:1px solid rgba(237,137,54,0.15);">
         ⏳ <span data-i18n="status.pendingChanges">Changements en attente (fin de cycle)</span>
       </div>
       
     </div>
 
     <!-- Logs Panel (hidden by default) -->
-    <div id="logsPanel" style="display: none; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #2196F3; padding-bottom: 8px;">
-        <h3 style="margin: 0; color: #2196F3; font-size: 18px;">📋 Logs & Debug</h3>
-        <button id="btnCloseLogs" style="background: #f44336; color: white; border: none; padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 14px;">✕</button>
+    <div id="logsPanel" style="display: none; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 12px rgba(102,126,234,0.08), 0 1px 2px rgba(0,0,0,0.04); margin-bottom: 15px; border: 1px solid rgba(102,126,234,0.08);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
+        <h3 style="margin: 0; color: #5a67d8; font-size: 18px; font-weight: 700;">📋 Logs & Debug</h3>
+        <button id="btnCloseLogs" style="background: linear-gradient(135deg,#fc8181,#f56565); color: white; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 14px;">✕</button>
       </div>
 
       <!-- Log Console -->
       <div class="mb-12">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <label style="font-weight: bold; color: #333; font-size: 13px;" data-i18n="system.realTimeConsole">Console temps réel:</label>
+          <label style="font-weight: 600; color: #4a5568; font-size: 13px;" data-i18n="system.realTimeConsole">Console temps réel:</label>
           <div class="flex-gap-6">
             <button class="button btn-secondary" id="btnClearLogsPanel" style="padding: 4px 10px; font-size: 11px;">🗑️ <span data-i18n="system.clearAll">Effacer</span></button>
           </div>
@@ -407,55 +407,55 @@
     </div>
 
     <!-- Statistics Panel -->
-    <div id="statsPanel" style="display: none; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #4CAF50; padding-bottom: 8px;">
-        <h3 style="margin: 0; color: #4CAF50; font-size: 18px;">
+    <div id="statsPanel" style="display: none; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 12px rgba(102,126,234,0.08), 0 1px 2px rgba(0,0,0,0.04); margin-bottom: 15px; border: 1px solid rgba(102,126,234,0.08);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #48bb78; padding-bottom: 8px;">
+        <h3 style="margin: 0; color: #38a169; font-size: 18px; font-weight: 700;">
           📊 <span data-i18n="stats.title">Statistiques</span>
         </h3>
-        <button id="btnCloseStats" style="background: #f44336; color: white; border: none; padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 14px;">✕</button>
+        <button id="btnCloseStats" style="background: linear-gradient(135deg,#fc8181,#f56565); color: white; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 14px;">✕</button>
       </div>
 
       <!-- Stats Table -->
-      <div style="margin-bottom: 20px; overflow-x: auto; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px;">
+      <div style="margin-bottom: 20px; overflow-x: auto; max-height: 300px; overflow-y: auto; border: 1.5px solid #e2e8f0; border-radius: 8px;">
         <table id="statsTable" style="width: 100%; border-collapse: collapse; font-size: 13px;">
-          <thead style="position: sticky; top: 0; background: #f5f5f5; z-index: 1;">
-            <tr style="border-bottom: 2px solid #4CAF50;">
-              <th style="padding: 8px; text-align: left; font-weight: bold;" data-i18n="stats.dateCol">Date</th>
-              <th style="padding: 8px; text-align: center; font-weight: bold;" data-i18n="stats.dayCol">Jour</th>
-              <th style="padding: 8px; text-align: center; font-weight: bold;">🏆</th>
-              <th style="padding: 8px; text-align: right; font-weight: bold;" data-i18n="stats.distanceCol">Distance</th>
+          <thead style="position: sticky; top: 0; background: #f7fafc; z-index: 1;">
+            <tr style="border-bottom: 2px solid #48bb78;">
+              <th style="padding: 8px; text-align: left; font-weight: 600; color: #4a5568;" data-i18n="stats.dateCol">Date</th>
+              <th style="padding: 8px; text-align: center; font-weight: 600; color: #4a5568;" data-i18n="stats.dayCol">Jour</th>
+              <th style="padding: 8px; text-align: center; font-weight: 600; color: #4a5568;">🏆</th>
+              <th style="padding: 8px; text-align: right; font-weight: 600; color: #4a5568;" data-i18n="stats.distanceCol">Distance</th>
             </tr>
           </thead>
           <tbody id="statsTableBody">
             <tr>
-              <td colspan="4" style="padding: 20px; text-align: center; color: #999; font-style: italic;" data-i18n="stats.noStats">Aucune statistique disponible</td>
+              <td colspan="4" style="padding: 20px; text-align: center; color: #a0aec0; font-style: italic;" data-i18n="stats.noStats">Aucune statistique disponible</td>
             </tr>
           </tbody>
         </table>
       </div>
       
       <!-- Stats Footer (outside scroll container) -->
-      <div style="background: #e8f5e9; border: 2px solid #4CAF50; border-radius: 6px; padding: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; font-weight: bold;">
+      <div style="background: rgba(72,187,120,0.08); border: 1.5px solid rgba(72,187,120,0.2); border-radius: 10px; padding: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; font-weight: 700;">
         <span data-i18n="stats.total">TOTAL</span>
         <span>🏆</span>
         <span id="statsTotalMilestone" style="font-size: 18px;">🎯</span>
-        <span id="statsTotalDistance" style="color: #4CAF50; font-size: 15px;">0 km</span>
+        <span id="statsTotalDistance" style="color: #38a169; font-size: 15px;">0 km</span>
       </div>
 
       <!-- Stats Action Buttons -->
       <div style="margin-bottom: 20px; text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; align-items: center;">
-        <button id="btnExportStats" class="button" style="padding: 8px 20px; font-size: 13px; background: #4CAF50; color: white;">
+        <button id="btnExportStats" class="button" style="padding: 8px 20px; font-size: 13px; background: linear-gradient(135deg,#48bb78,#38a169); color: white;">
           📥 <span data-i18n="stats.exportBtn">Exporter</span>
         </button>
-        <button id="btnImportStats" class="button" style="padding: 8px 20px; font-size: 13px; background: #2196F3; color: white;">
+        <button id="btnImportStats" class="button" style="padding: 8px 20px; font-size: 13px; background: linear-gradient(135deg,#4299e1,#3182ce); color: white;">
           📤 <span data-i18n="stats.importBtn">Importer</span>
         </button>
         <button id="btnClearStats" class="button btn-danger" style="padding: 8px 20px; font-size: 13px;">
           🗑️ <span data-i18n="stats.clearBtn">Effacer tout</span>
         </button>
-        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 8px 12px; background: #f5f5f5; border-radius: 5px; border: 1px solid #ddd;" title="Désactiver pour ignorer les enregistrements des stats" data-i18n-title="stats.disableRecordingTooltip">
-          <input type="checkbox" id="statsRecordingEnabled" checked style="width: 16px; height: 16px; cursor: pointer;">
-          <span style="font-size: 12px; color: #666;" data-i18n="stats.enableRecording">Activer sauvegarde</span>
+        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 8px 12px; background: #f7fafc; border-radius: 8px; border: 1.5px solid #e2e8f0;" title="Désactiver pour ignorer les enregistrements des stats" data-i18n-title="stats.disableRecordingTooltip">
+          <input type="checkbox" id="statsRecordingEnabled" checked style="width: 16px; height: 16px; cursor: pointer; accent-color: #667eea;">
+          <span style="font-size: 12px; color: #718096;" data-i18n="stats.enableRecording">Activer sauvegarde</span>
         </label>
       </div>
       
@@ -463,91 +463,91 @@
       <input type="file" id="statsFileInput" accept=".json" class="hidden">
 
       <!-- Histogram -->
-      <div style="background: #f9f9f9; padding: 12px; border-radius: 6px; border: 1px solid #ddd;">
-        <h4 style="margin: 0 0 12px 0; color: #333; font-size: 14px;">📈 <span data-i18n="stats.historyTitle">Historique (3 mois glissants)</span></h4>
+      <div style="background: #f7fafc; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;">
+        <h4 style="margin: 0 0 12px 0; color: #2d3748; font-size: 14px; font-weight: 600;">📈 <span data-i18n="stats.historyTitle">Historique (3 mois glissants)</span></h4>
         <canvas id="statsChart" style="max-height: 250px;"></canvas>
       </div>
     </div>
 
     <!-- System Stats Panel (hidden by default like Stats panel) -->
-    <div id="systemPanel" style="display: none; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #2196F3; padding-bottom: 8px;">
-        <h3 style="margin: 0; color: #2196F3; font-size: 18px;">⚙️ <span data-i18n="system.title">Système</span></h3>
-        <button id="btnCloseSystem" style="background: #f44336; color: white; border: none; padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 14px;">✕</button>
+    <div id="systemPanel" style="display: none; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 12px rgba(102,126,234,0.08), 0 1px 2px rgba(0,0,0,0.04); margin-bottom: 15px; border: 1px solid rgba(102,126,234,0.08);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
+        <h3 style="margin: 0; color: #5a67d8; font-size: 18px; font-weight: 700;">⚙️ <span data-i18n="system.title">Système</span></h3>
+        <button id="btnCloseSystem" style="background: linear-gradient(135deg,#fc8181,#f56565); color: white; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 14px;">✕</button>
       </div>
 
       <!-- System Stats Grid -->
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 13px;">
         <div class="box-gray">
-          <div style="color: #666; font-size: 11px; margin-bottom: 4px;" data-i18n="system.cpu">CPU</div>
+          <div style="color: #718096; font-size: 11px; margin-bottom: 4px;" data-i18n="system.cpu">CPU</div>
           <div id="sysCpuFreq" class="value-display">-- MHz</div>
         </div>
         
         <div class="box-gray">
-          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">🌡️ <span data-i18n="system.temperature">Température</span></div>
+          <div style="color: #718096; font-size: 11px; margin-bottom: 4px;">🌡️ <span data-i18n="system.temperature">Température</span></div>
           <div id="sysTemp" class="value-display">-- °C</div>
         </div>
         
         <div class="box-gray">
-          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">💾 <span data-i18n="system.ram">RAM</span></div>
+          <div style="color: #718096; font-size: 11px; margin-bottom: 4px;">💾 <span data-i18n="system.ram">RAM</span></div>
           <div id="sysRam" class="value-display">-- KB libre</div>
-          <div id="sysRamPercent" style="font-size: 11px; color: #666; margin-top: 2px;">--% utilisé</div>
+          <div id="sysRamPercent" style="font-size: 11px; color: #718096; margin-top: 2px;">--% utilisé</div>
         </div>
         
         <div class="box-gray">
-          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">🧠 <span data-i18n="system.psram">PSRAM</span></div>
+          <div style="color: #718096; font-size: 11px; margin-bottom: 4px;">🧠 <span data-i18n="system.psram">PSRAM</span></div>
           <div id="sysPsram" class="value-display">-- MB libre</div>
-          <div id="sysPsramPercent" style="font-size: 11px; color: #666; margin-top: 2px;">--% utilisé</div>
+          <div id="sysPsramPercent" style="font-size: 11px; color: #718096; margin-top: 2px;">--% utilisé</div>
         </div>
         
         <div class="box-gray">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <div style="color: #666; font-size: 11px;">📶 <span data-i18n="system.wifiLabel">WiFi</span></div>
+            <div style="color: #718096; font-size: 11px;">📶 <span data-i18n="system.wifiLabel">WiFi</span></div>
             <div style="display: flex; gap: 4px;">
-              <button id="btnEditWifi" style="background: #FF9800; color: white; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Éditer la config WiFi" data-i18n-title="wifi.editWifi">
+              <button id="btnEditWifi" style="background: linear-gradient(135deg,#ed8936,#dd6b20); color: white; border: none; padding: 3px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;" title="Éditer la config WiFi" data-i18n-title="wifi.editWifi">
                 ✏️
               </button>
-              <button id="btnRefreshWifi" style="background: #2196F3; color: white; border: none; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 10px;" title="Reconnecter le WiFi" data-i18n-title="wifi.reconnectWifi">
+              <button id="btnRefreshWifi" style="background: linear-gradient(135deg,#4299e1,#3182ce); color: white; border: none; padding: 3px 8px; border-radius: 6px; cursor: pointer; font-size: 10px;" title="Reconnecter le WiFi" data-i18n-title="wifi.reconnectWifi">
                 🔄
               </button>
             </div>
           </div>
           <div id="sysWifi" class="value-display">-- dBm</div>
-          <div id="sysWifiQuality" style="font-size: 11px; color: #666; margin-top: 2px;">--</div>
+          <div id="sysWifiQuality" style="font-size: 11px; color: #718096; margin-top: 2px;">--</div>
         </div>
         
         <div class="box-gray">
-          <div style="color: #666; font-size: 11px; margin-bottom: 4px;">⚡ <span data-i18n="system.uptime">Uptime</span></div>
+          <div style="color: #718096; font-size: 11px; margin-bottom: 4px;">⚡ <span data-i18n="system.uptime">Uptime</span></div>
           <div id="sysUptime" class="value-display">--</div>
         </div>
       </div>
 
       <!-- Network Info Section -->
-      <div id="networkInfoSection" style="margin-top: 15px; background: #e3f2fd; padding: 12px; border-radius: 6px; border-left: 4px solid #2196F3;">
+      <div id="networkInfoSection" style="margin-top: 15px; background: rgba(102,126,234,0.06); padding: 12px; border-radius: 10px; border-left: 4px solid #667eea;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-          <div style="font-weight: bold; color: #1976D2; font-size: 13px;">🌐 <span data-i18n="wifi.network">Réseau</span></div>
-          <div id="sysDegradedBadge" style="display: none; background: #FF9800; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold;">⚠️ <span data-i18n="wifi.degradedMode">MODE DÉGRADÉ</span></div>
+          <div style="font-weight: 700; color: #5a67d8; font-size: 13px;">🌐 <span data-i18n="wifi.network">Réseau</span></div>
+          <div id="sysDegradedBadge" style="display: none; background: linear-gradient(135deg,#ed8936,#dd6b20); color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700;">⚠️ <span data-i18n="wifi.degradedMode">MODE DÉGRADÉ</span></div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
           <div>
-            <div style="color: #666; font-size: 10px;" data-i18n="wifi.ipSta">IP STA (WiFi)</div>
-            <div id="sysIpSta" style="font-weight: bold; color: #333; font-family: monospace;">--</div>
+            <div style="color: #718096; font-size: 10px;" data-i18n="wifi.ipSta">IP STA (WiFi)</div>
+            <div id="sysIpSta" style="font-weight: 600; color: #2d3748; font-family: monospace;">--</div>
           </div>
           <div>
-            <div style="color: #666; font-size: 10px;" data-i18n="wifi.ipAp">IP AP (Point d'accès)</div>
-            <div id="sysIpAp" style="font-weight: bold; color: #333; font-family: monospace;">--</div>
+            <div style="color: #718096; font-size: 10px;" data-i18n="wifi.ipAp">IP AP (Point d'accès)</div>
+            <div id="sysIpAp" style="font-weight: 600; color: #2d3748; font-family: monospace;">--</div>
           </div>
           <div>
-            <div style="color: #666; font-size: 10px;" data-i18n="wifi.hostname">Hostname (mDNS)</div>
-            <div id="sysHostname" style="font-weight: bold; color: #2196F3; font-family: monospace;">--</div>
+            <div style="color: #718096; font-size: 10px;" data-i18n="wifi.hostname">Hostname (mDNS)</div>
+            <div id="sysHostname" style="font-weight: 600; color: #667eea; font-family: monospace;">--</div>
           </div>
           <div>
-            <div style="color: #666; font-size: 10px;" data-i18n="wifi.connectedSsid">SSID connecté</div>
-            <div id="sysSsid" style="font-weight: bold; color: #333;">--</div>
+            <div style="color: #718096; font-size: 10px;" data-i18n="wifi.connectedSsid">SSID connecté</div>
+            <div id="sysSsid" style="font-weight: 600; color: #2d3748;">--</div>
           </div>
           <div style="grid-column: span 2;">
-            <div style="color: #666; font-size: 10px;">📡 <span data-i18n="wifi.apClients">Clients AP connectés</span></div>
-            <div id="sysApClients" style="font-weight: bold; color: #4CAF50;">0</div>
+            <div style="color: #718096; font-size: 10px;">📡 <span data-i18n="wifi.apClients">Clients AP connectés</span></div>
+            <div id="sysApClients" style="font-weight: 700; color: #48bb78;">0</div>
           </div>
         </div>
       </div>
@@ -975,7 +975,7 @@
             <div style="padding: 10px 15px; background: #E3F2FD; border-radius: 6px; margin-bottom: 15px;">
               <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                 <input type="checkbox" id="pursuitActiveCheckbox" autocomplete="off">
-                <span style="font-weight: 500; color: #1976D2;">🎯 <span data-i18n="pursuit.enablePursuit">Activer poursuite</span></span>
+                <span style="font-weight: 600; color: #5a67d8;">🎯 <span data-i18n="pursuit.enablePursuit">Activer poursuite</span></span>
               </label>
               <small style="color: #666; display: block; margin-top: 4px; font-size: 11px; padding-left: 28px;">
                 ⚠️ <span data-i18n="pursuit.enablePursuitWarn">Le moteur suivra automatiquement le curseur</span>
@@ -1080,7 +1080,7 @@
         </div>
         
         <!-- Warning limite (compact) -->
-        <div id="oscLimitWarning" style="display:none; color: #f44336; font-size: 12px; padding: 5px 10px; background: #ffe5e5; border-radius: 4px; margin-bottom: 10px;">
+        <div id="oscLimitWarning" style="display:none; color: #f56565; font-size: 12px; padding: 5px 10px; background: rgba(245,101,101,0.08); border-radius: 8px; margin-bottom: 10px;">
           ⚠️ <span data-i18n="oscillation.limitWarning">Limites dépassées! Ajuster centre ou amplitude.</span>
         </div>
         
@@ -1370,7 +1370,7 @@
           <div class="section-collapsible-content">
           
           <!-- Patterns actifs -->
-          <div style="padding: 10px; background: #e8f5e9; border-radius: 4px; border-left: 3px solid #4caf50;">
+          <div style="padding: 10px; background: rgba(72,187,120,0.08); border-radius: 8px; border-left: 3px solid #48bb78;">
             <label style="font-weight: bold; font-size: 12px; display: block; margin-bottom: 8px;">✅ <span data-i18n="chaos.activePatterns">Patterns actifs:</span></label>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 8px;">
               <label class="chaos-pattern-label">
@@ -1441,9 +1441,9 @@
         <div id="chaosStats" style="display: none; background: #e3f2fd; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
             <div><strong data-i18n="chaos.pattern">Pattern:</strong> <span id="statPattern" style="color: #C850C0;">--</span></div>
-            <div><strong data-i18n="common.position">Position:</strong> <span id="statPosition" style="color: #2196F3;">--</span> mm</div>
-            <div><strong data-i18n="chaos.range">Plage:</strong> <span id="statRange" style="color: #2196F3;">--</span> mm</div>
-            <div><strong data-i18n="chaos.patterns">Patterns:</strong> <span id="statCount" style="color: #2196F3;">0</span></div>
+            <div><strong data-i18n="common.position">Position:</strong> <span id="statPosition" style="color: #667eea;">--</span> mm</div>
+            <div><strong data-i18n="chaos.range">Plage:</strong> <span id="statRange" style="color: #667eea;">--</span> mm</div>
+            <div><strong data-i18n="chaos.patterns">Patterns:</strong> <span id="statCount" style="color: #667eea;">0</span></div>
           </div>
           <div id="statTimer" style="margin-top: 8px; text-align: center; font-size: 12px;">
             ⏱️ <span data-i18n="chaos.time">Temps:</span> <span id="statElapsed">0</span>s
@@ -1539,7 +1539,7 @@
             <button class="button btn-success" id="btnStartSequence" style="flex: 1; min-width: 130px; font-size: 14px; padding: 10px;">
               ▶️ <span data-i18n="sequencer.singleRun">Unique</span>
             </button>
-            <button class="button btn-primary" id="btnLoopSequence" style="flex: 1; min-width: 130px; font-size: 14px; padding: 10px; background: #FF9800;">
+            <button class="button btn-primary" id="btnLoopSequence" style="flex: 1; min-width: 130px; font-size: 14px; padding: 10px; background: linear-gradient(135deg,#ed8936,#dd6b20);">
               🔁 <span data-i18n="sequencer.loopRun">Boucle</span>
             </button>
             <button class="button btn-warning" id="btnPauseSequence" style="flex: 1; min-width: 90px; font-size: 14px; padding: 10px;" disabled>
@@ -1556,9 +1556,9 @@
           <!-- Sequence Status - COMPACT -->
           <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 12px; padding: 10px 15px; background: white; border-radius: 6px; border: 1px solid #ddd;">
             <div><span class="text-muted" data-i18n="sequencer.modeLabel">Mode:</span> <strong id="seqMode" style="color: #333;" data-i18n="sequencer.stopped">Arrêté</strong></div>
-            <div><span class="text-muted" data-i18n="sequencer.lineLabel">Ligne:</span> <strong id="seqCurrentLine" style="color: #2196F3;">-- / --</strong></div>
-            <div><span class="text-muted" data-i18n="sequencer.cycleLabel">Cycle:</span> <strong id="seqLineCycle" style="color: #4CAF50;">--</strong></div>
-            <div><span class="text-muted" data-i18n="sequencer.loopsLabel">Boucles:</span> <strong id="seqLoopCount" style="color: #FF9800;">0</strong></div>
+            <div><span class="text-muted" data-i18n="sequencer.lineLabel">Ligne:</span> <strong id="seqCurrentLine" style="color: #667eea;">-- / --</strong></div>
+            <div><span class="text-muted" data-i18n="sequencer.cycleLabel">Cycle:</span> <strong id="seqLineCycle" style="color: #48bb78;">--</strong></div>
+            <div><span class="text-muted" data-i18n="sequencer.loopsLabel">Boucles:</span> <strong id="seqLoopCount" style="color: #ed8936;">0</strong></div>
             <div><span class="text-muted">⏱️ <span data-i18n="sequencer.pauseLabel">Pause:</span></span> <strong id="seqPauseRemaining" style="color: #9C27B0;">-- ms</strong></div>
           </div>
         </div>
@@ -1605,32 +1605,32 @@
             </div>
 
             <!-- PLAYLIST PRESETS LOADING (for all modes) -->
-            <div id="playlistLoaderSimple" style="background: #E3F2FD; padding: 12px; margin: 15px 0; border-radius: 6px; border: 2px solid #2196F3;">
-              <label style="font-weight: 500; color: #1976D2; display: block; margin-bottom: 8px;">📋 <span data-i18n="sequencer.loadPresetSimple">Charger un preset Simple:</span></label>
+            <div id="playlistLoaderSimple" style="background: rgba(102,126,234,0.06); padding: 12px; margin: 15px 0; border-radius: 10px; border: 1.5px solid rgba(102,126,234,0.2);">
+              <label style="font-weight: 600; color: #5a67d8; display: block; margin-bottom: 8px;">📋 <span data-i18n="sequencer.loadPresetSimple">Charger un preset Simple:</span></label>
               <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                <select id="editSimplePresetSelect" onchange="previewSequencerPreset('simple', this.value)" style="flex: 1; padding: 8px; border: 1px solid #2196F3; border-radius: 4px;">
+                <select id="editSimplePresetSelect" onchange="previewSequencerPreset('simple', this.value)" style="flex: 1; padding: 8px; border: 1.5px solid #e2e8f0; border-radius: 8px;">
                   <option value="" data-i18n="sequencer.selectPreset">-- Sélectionner un preset --</option>
                 </select>
                 <button type="button" onclick="previewSequencerPreset('simple', document.getElementById('editSimplePresetSelect').value)" style="padding: 8px 12px; background: #64B5F6; color: white; border: none; border-radius: 4px; cursor: pointer;" title="Voir les détails">
                   👁️
                 </button>
               </div>
-              <button type="button" onclick="loadPresetIntoSequencerModal('simple')" style="width: 100%; padding: 8px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+              <button type="button" onclick="loadPresetIntoSequencerModal('simple')" style="width: 100%; padding: 8px; background: linear-gradient(135deg,#667eea,#5a67d8); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
                 ⬇️ <span data-i18n="sequencer.loadValues">Charger les valeurs</span>
               </button>
             </div>
 
-            <div id="playlistLoaderOscillation" style="background: #FFF3E0; padding: 12px; margin: 15px 0; border-radius: 6px; border: 2px solid #FF9800; display: none;">
+            <div id="playlistLoaderOscillation" style="background: rgba(237,137,54,0.06); padding: 12px; margin: 15px 0; border-radius: 10px; border: 1.5px solid rgba(237,137,54,0.2); display: none;">
               <label style="font-weight: 500; color: #F57C00; display: block; margin-bottom: 8px;">📋 <span data-i18n="sequencer.loadPresetOsc">Charger un preset Oscillation:</span></label>
               <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                <select id="editOscillationPresetSelect" onchange="previewSequencerPreset('oscillation', this.value)" style="flex: 1; padding: 8px; border: 1px solid #FF9800; border-radius: 4px;">
+                <select id="editOscillationPresetSelect" onchange="previewSequencerPreset('oscillation', this.value)" style="flex: 1; padding: 8px; border: 1.5px solid #e2e8f0; border-radius: 8px;">
                   <option value="" data-i18n="sequencer.selectPreset">-- Sélectionner un preset --</option>
                 </select>
                 <button type="button" onclick="previewSequencerPreset('oscillation', document.getElementById('editOscillationPresetSelect').value)" style="padding: 8px 12px; background: #FFB74D; color: white; border: none; border-radius: 4px; cursor: pointer;" title="Voir les détails">
                   👁️
                 </button>
               </div>
-              <button type="button" onclick="loadPresetIntoSequencerModal('oscillation')" style="width: 100%; padding: 8px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+              <button type="button" onclick="loadPresetIntoSequencerModal('oscillation')" style="width: 100%; padding: 8px; background: linear-gradient(135deg,#ed8936,#dd6b20); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
                 ⬇️ <span data-i18n="sequencer.loadValues">Charger les valeurs</span>
               </button>
             </div>
@@ -2006,7 +2006,7 @@
             </div>
 
             <!-- Validation Error Display -->
-            <div id="editValidationErrors" style="display: none; margin-bottom: 10px; padding: 10px; background: #ffebee; border-left: 4px solid #f44336; border-radius: 5px; font-size: 12px;">
+            <div id="editValidationErrors" style="display: none; margin-bottom: 10px; padding: 10px; background: rgba(245,101,101,0.08); border-left: 4px solid #f56565; border-radius: 8px; font-size: 12px;">
               <div style="font-weight: bold; color: #d32f2f; margin-bottom: 5px;">❌ <span data-i18n="sequencer.validationErrors">Erreurs de validation :</span></div>
               <ul id="editValidationErrorsList" style="margin: 0; padding-left: 20px; color: #c62828; font-size: 13px;">
               </ul>
