@@ -290,7 +290,7 @@ function initDOMCache() {
   // COUNT & LOG
   // ========================================================================
   const elementCount = Object.keys(DOM).length;
-  console.log('✅ DOM cache initialized (' + elementCount + ' elements)');
+  console.debug('✅ DOM cache initialized (' + elementCount + ' elements)');
   
   return elementCount;
 }

@@ -296,7 +296,7 @@
         };
         const targetTab = tabFromMovement[data.movementType];
         if (targetTab && AppState.system.currentMode !== targetTab) {
-          console.log('🔄 Auto-switching to ' + targetTab + ' tab (movement in progress)');
+          console.debug('🔄 Auto-switching to ' + targetTab + ' tab (movement in progress)');
           // Use direct tab switch without stopping movement (since it's already running)
           switchTabWithoutStop(targetTab);
         }

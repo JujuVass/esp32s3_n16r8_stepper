@@ -40,7 +40,7 @@ const dayIcons = ['🚴', '🏃', '🏁', '🏀', '🔴', '🏓', '⚪'];
  * Load stats from backend API
  */
 function loadStatsData() {
-  console.log('Stats requested from backend');
+  console.debug('Stats requested from backend');
   
   getWithRetry('/api/stats', { silent: true })
     .then(data => {
@@ -394,7 +394,7 @@ function toggleStatsPanel() {
     
     // Send WebSocket command to backend (enable stats sending)
     sendCommand(WS_CMD.REQUEST_STATS, { enable: true });
-    console.log('📊 Stats requested from backend');
+    console.debug('📊 Stats requested from backend');
     
     // Load stats data
     loadStatsData();
@@ -421,7 +421,7 @@ function closeStatsPanel() {
   
   // Send WebSocket command to backend (disable stats sending)
   sendCommand(WS_CMD.REQUEST_STATS, { enable: false });
-  console.log('📊 Stats panel closed');
+  console.debug('📊 Stats panel closed');
 }
 
 /**
@@ -476,7 +476,7 @@ function exportStats() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      console.log('📊 Stats exported to:', filename);
+      console.debug('📊 Stats exported to:', filename);
     })
     .catch(error => {
       console.error('❌ Export error:', error);
@@ -661,7 +661,7 @@ function toggleStatsRecording() {
   if (!checkbox) return;
   
   const enabled = checkbox.checked;
-  console.log(`📊 Stats recording toggle: ${enabled ? 'ENABLED' : 'DISABLED'}`);
+  console.debug(`📊 Stats recording toggle: ${enabled ? 'ENABLED' : 'DISABLED'}`);
   
   // Set flag to prevent status updates from reverting the checkbox
   AppState.stats.isEditingRecording = true;
@@ -704,7 +704,7 @@ function updateStatsRecordingUI(enabled) {
  * Called once on page load
  */
 function initStatsListeners() {
-  console.log('📊 Initializing Stats listeners...');
+  console.debug('📊 Initializing Stats listeners...');
   
   document.getElementById('btnShowStats').addEventListener('click', toggleStatsPanel);
   document.getElementById('btnCloseStats').addEventListener('click', closeStatsPanel);
@@ -719,8 +719,8 @@ function initStatsListeners() {
     statsRecordingCheckbox.addEventListener('change', toggleStatsRecording);
   }
   
-  console.log('✅ Stats listeners initialized');
+  console.debug('✅ Stats listeners initialized');
 }
 
 // Log initialization
-console.log('✅ StatsController.js loaded - Statistics control ready');
+console.debug('✅ StatsController.js loaded - Statistics control ready');

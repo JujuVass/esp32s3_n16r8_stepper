@@ -684,7 +684,7 @@ async function fetchWithRetry(url, options = {}, retryConfig = {}) {
       
       // Success - return response
       if (attempt > 0 && !silent) {
-        console.log(`✅ Request succeeded after ${attempt} retry(ies): ${url}`);
+        console.debug(`✅ Request succeeded after ${attempt} retry(ies): ${url}`);
       }
       return response;
       

@@ -175,7 +175,7 @@ function updateChaosUI(data) {
   // CRITICAL FIX: Reset patterns flag when chaos stops
   // This allows patterns to be re-synced from backend after each run
   if (wasRunning && !isRunning) {
-    console.log('🔄 Chaos stopped - resetting patterns flag for next sync');
+    console.debug('🔄 Chaos stopped - resetting patterns flag for next sync');
     AppState.flags.patternsInitialized = false;
   }
   
@@ -513,7 +513,7 @@ function initChaosListeners() {
     });
   }
   
-  console.log('🎲 ChaosController initialized');
+  console.debug('🎲 ChaosController initialized');
 }
 
 // ============================================================================

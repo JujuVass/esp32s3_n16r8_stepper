@@ -314,4 +314,4 @@ function getCyclePauseOscSection() {
   return header ? header.closest('.section-collapsible') : null;
 }
 
-console.log('✅ SimpleUtils.js loaded - Zone effects utilities and helpers');
+console.debug('✅ SimpleUtils.js loaded - Zone effects utilities and helpers');

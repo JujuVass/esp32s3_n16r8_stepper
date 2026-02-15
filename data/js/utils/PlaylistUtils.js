@@ -274,4 +274,4 @@ function getPlaylistModalTitlePure(mode) {
   return `${icon} ${t('utils.playlist')} ${modeNames[mode] || mode}`;
 }
 
-console.log('✅ PlaylistUtils.js loaded - Pure utility functions for Playlist');
+console.debug('✅ PlaylistUtils.js loaded - Pure utility functions for Playlist');

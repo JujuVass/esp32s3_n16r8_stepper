@@ -52,7 +52,7 @@ const I18n = (() => {
     _updateFlagUI();
     
     _loaded = true;
-    console.log(`✅ i18n initialized: lang=${_currentLang}`);
+    console.debug(`✅ i18n initialized: lang=${_currentLang}`);
   }
 
   /**
@@ -129,7 +129,7 @@ const I18n = (() => {
     applyTranslations();
     _updateFlagUI();
     
-    console.log(`🌐 Language switched to: ${lang}`);
+    console.debug(`🌐 Language switched to: ${lang}`);
   }
 
   /**
@@ -220,4 +220,4 @@ function t(key, params) {
   return I18n.t(key, params);
 }
 
-console.log('✅ i18n.js loaded');
+console.debug('✅ i18n.js loaded');

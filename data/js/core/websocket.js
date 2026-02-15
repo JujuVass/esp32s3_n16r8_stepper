@@ -30,14 +30,14 @@ function connectWebSocket(useFallback) {
     // Fallback mode: use hostname (mDNS), clear cached IP as it may be stale
     host = window.location.hostname;
     AppState.espIpAddress = null;
-    console.log('🔄 Fallback: Using hostname (mDNS):', host);
+    console.debug('🔄 Fallback: Using hostname (mDNS):', host);
   } else {
     // Normal mode: prefer cached IP over hostname
     host = AppState.espIpAddress || window.location.hostname;
   }
   
   const wsUrl = 'ws://' + host + ':81';
-  console.log('🔌 Connecting to WebSocket:', wsUrl);
+  console.debug('🔌 Connecting to WebSocket:', wsUrl);
   
   // Track connection attempt for fallback logic
   AppState._wsConnectStartTime = Date.now();
@@ -49,7 +49,7 @@ function connectWebSocket(useFallback) {
   // ON OPEN - Connection established
   // ========================================================================
   AppState.ws.onopen = function() {
-    console.log('✅ WebSocket connected');
+    console.debug('✅ WebSocket connected');
     AppState._wsRetryCount = 0;  // Reset retry counter on success
     
     // Update status display
@@ -93,7 +93,7 @@ function connectWebSocket(useFallback) {
   AppState.ws.onclose = function() {
     // Don't auto-reconnect during WiFi refresh
     if (AppState.wifiReconnectInProgress) {
-      console.log('📶 WebSocket closed (WiFi reconnect in progress - no auto-reconnect)');
+      console.debug('📶 WebSocket closed (WiFi reconnect in progress - no auto-reconnect)');
       return;
     }
     
@@ -101,12 +101,12 @@ function connectWebSocket(useFallback) {
     
     // If connection failed quickly (<2s) and we were using cached IP, try fallback
     if (connectionDuration < 2000 && AppState._wsUsingCachedIp && !useFallback) {
-      console.log('⚠️ Quick disconnect with cached IP - trying hostname fallback...');
+      console.debug('⚠️ Quick disconnect with cached IP - trying hostname fallback...');
       setTimeout(function() { connectWebSocket(true); }, 500);
       return;
     }
     
-    console.log('❌ WebSocket disconnected. Reconnecting in 2s...');
+    console.debug('❌ WebSocket disconnected. Reconnecting in 2s...');
     
     const stateEl = document.getElementById('state');
     if (stateEl) {
@@ -125,7 +125,7 @@ function connectWebSocket(useFallback) {
     
     // If error with cached IP, try fallback
     if (AppState._wsUsingCachedIp && !useFallback) {
-      console.log('⚠️ WS error with cached IP - will try hostname fallback...');
+      console.debug('⚠️ WS error with cached IP - will try hostname fallback...');
       // Let onclose handle the fallback
       return;
     }
@@ -191,7 +191,7 @@ function handleWebSocketMessage(data) {
   // Cache ESP32 IP address for faster WS reconnection (avoids mDNS delay)
   if (data.ip && data.ip !== '0.0.0.0' && !AppState.espIpAddress) {
     AppState.espIpAddress = data.ip;
-    console.log('📡 Cached ESP32 IP:', data.ip);
+    console.debug('📡 Cached ESP32 IP:', data.ip);
   }
   
   // Default: Status update for main UI
@@ -219,7 +219,7 @@ function handleExportData(exportData) {
   a.click();
   
   URL.revokeObjectURL(url);
-  console.log('📥 Export downloaded');
+  console.debug('📥 Export downloaded');
 }
 
 /**
@@ -278,4 +278,4 @@ function handleLogMessage(logData) {
 }
 
 // Log initialization
-console.log('✅ websocket.js loaded - WebSocket handlers ready');
+console.debug('✅ websocket.js loaded - WebSocket handlers ready');

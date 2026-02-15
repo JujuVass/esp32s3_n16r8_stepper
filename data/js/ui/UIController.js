@@ -35,7 +35,7 @@ function switchTab(tabName) {
                               AppState.system.currentState === SystemState.PAUSED);
   
   if (isRunningOrPaused) {
-    console.log('Stopping movement before tab switch');
+    console.debug('Stopping movement before tab switch');
     sendCommand(WS_CMD.STOP);
     // Note: UI will update via WebSocket status message
   }
@@ -85,7 +85,7 @@ function switchTab(tabName) {
   document.querySelector('[data-tab="' + tabName + '"]').classList.add('active');
   
   AppState.system.currentMode = tabName;
-  console.log('Switched to mode: ' + tabName);
+  console.debug('Switched to mode: ' + tabName);
   
   // Handle mode-specific initialization
   if (tabName === 'pursuit') {
@@ -169,7 +169,7 @@ function switchTabWithoutStop(tabName) {
   }
   
   AppState.system.currentMode = tabName;
-  console.log('🔄 Auto-switched to mode: ' + tabName + ' (movement in progress)');
+  console.debug('🔄 Auto-switched to mode: ' + tabName + ' (movement in progress)');
 }
 
 /**
@@ -214,7 +214,7 @@ function confirmModeChange() {
   
   // If pursuit is active, disable it first
   if (isPursuitActive()) {
-    console.log('Mode change: Disabling pursuit mode first');
+    console.debug('Mode change: Disabling pursuit mode first');
     disablePursuitMode();
   }
   
@@ -225,11 +225,11 @@ function confirmModeChange() {
   setTimeout(function() {
     if (bypassCalibration) {
       // Quick return to start only
-      console.log('Mode change: Quick return to start (bypass full calibration)');
+      console.debug('Mode change: Quick return to start (bypass full calibration)');
       sendCommand(WS_CMD.RETURN_TO_START, {});
     } else {
       // Full calibration
-      console.log('Mode change: Full calibration');
+      console.debug('Mode change: Full calibration');
       sendCommand(WS_CMD.CALIBRATE, {});
     }
     
@@ -281,16 +281,16 @@ function confirmStopModal() {
   const currentMode = AppState.system.currentMode;
   const stopCmd = STOP_COMMANDS[currentMode] || WS_CMD.STOP;
   
-  console.log('Stop confirmed (' + currentMode + '): Sending ' + stopCmd);
+  console.debug('Stop confirmed (' + currentMode + '): Sending ' + stopCmd);
   sendCommand(stopCmd, {});
   
   if (shouldReturnToStart) {
     setTimeout(function() {
-      console.log('Stop confirmed: Returning to start position');
+      console.debug('Stop confirmed: Returning to start position');
       sendCommand(WS_CMD.RETURN_TO_START, {});
     }, 500);
   } else {
-    console.log('Stop confirmed: Staying at current position');
+    console.debug('Stop confirmed: Staying at current position');
   }
   
   // Reset checkbox for next time (keep checked by default)
@@ -353,7 +353,7 @@ function confirmSequencerLimitChange() {
  * Called once on page load
  */
 function initUIListeners() {
-  console.log('🖥️ Initializing UI listeners...');
+  console.debug('🖥️ Initializing UI listeners...');
   
   // Tab click handlers
   document.querySelectorAll('.tab').forEach(tab => {
@@ -408,7 +408,7 @@ function initUIListeners() {
     wifiShowPassword.addEventListener('change', toggleWifiPasswordVisibility);
   }
   
-  console.log('✅ UI listeners initialized');
+  console.debug('✅ UI listeners initialized');
 }
 
 // ============================================================================
@@ -689,4 +689,4 @@ function toggleWifiPasswordVisibility() {
 }
 
 // Log initialization
-console.log('✅ UIController.js loaded - UI control ready');
+console.debug('✅ UIController.js loaded - UI control ready');

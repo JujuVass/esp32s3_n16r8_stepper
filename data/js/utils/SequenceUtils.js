@@ -600,4 +600,4 @@ function getAllInvalidFieldsPure(line, movementType, effectiveMax, emptyFieldErr
   return Array.from(fields);
 }
 
-console.log('✅ SequenceUtils.js loaded - Sequence display, validation & defaults ready');
+console.debug('✅ SequenceUtils.js loaded - Sequence display, validation & defaults ready');

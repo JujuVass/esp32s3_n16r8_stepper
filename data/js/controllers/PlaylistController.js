@@ -35,7 +35,7 @@ function loadPlaylists(callback) {
       // Update button counters
       updatePlaylistButtonCounters();
       
-      console.log('📋 Playlists loaded:', 
+      console.debug('📋 Playlists loaded:', 
         'Simple=' + PlaylistState.simple.length,
         'Oscillation=' + PlaylistState.oscillation.length,
         'Chaos=' + PlaylistState.chaos.length);
@@ -257,12 +257,12 @@ function refreshPlaylistPresets(mode) {
   const countEl = document.getElementById('playlistCount');
   const presets = PlaylistState[mode] || [];
   
-  console.log('🔄 refreshPlaylistPresets called for mode:', mode, 'presets count:', presets.length);
+  console.debug('🔄 refreshPlaylistPresets called for mode:', mode, 'presets count:', presets.length);
   
   countEl.textContent = presets.length;
   
   if (presets.length === 0) {
-    console.log('⚠️ No presets found, displaying empty message');
+    console.debug('⚠️ No presets found, displaying empty message');
     listEl.innerHTML = '<div class="empty-state">' + t('playlist.noPresets') + '</div>';
     return;
   }
@@ -270,7 +270,7 @@ function refreshPlaylistPresets(mode) {
   // Sort by timestamp desc (most recent first)
   const sortedPresets = [...presets].sort((a, b) => b.timestamp - a.timestamp);
   
-  console.log('✅ Building HTML for', sortedPresets.length, 'presets');
+  console.debug('✅ Building HTML for', sortedPresets.length, 'presets');
   
   let html = '';
   sortedPresets.forEach(preset => {
@@ -305,7 +305,7 @@ function refreshPlaylistPresets(mode) {
     `;
   });
   
-  console.log('✅ Setting HTML, length:', html.length);
+  console.debug('✅ Setting HTML, length:', html.length);
   listEl.innerHTML = html;
   
   // Attach eye icon tooltip handlers after DOM insertion
@@ -358,7 +358,7 @@ function filterPlaylistPresets(searchTerm) {
     countEl.textContent = visibleCount;
   }
   
-  console.log('🔍 Search:', term, '→', visibleCount, 'results');
+  console.debug('🔍 Search:', term, '→', visibleCount, 'results');
 }
 
 // ============================================================================
@@ -401,10 +401,10 @@ function addToPlaylist(mode) {
   .then(data => {
     if (data.success) {
       showNotification('✅ ' + t('playlist.addedToPlaylist'), 'success', 3000);
-      console.log('✅ Preset added, reloading playlists...');
+      console.debug('✅ Preset added, reloading playlists...');
       // Reload playlists, then refresh modal display
       loadPlaylists(() => {
-        console.log('✅ Playlists reloaded, refreshing modal for mode:', mode);
+        console.debug('✅ Playlists reloaded, refreshing modal for mode:', mode);
         refreshPlaylistPresets(mode);
       });
     } else {
@@ -489,7 +489,7 @@ function loadPresetInMode(mode, id) {
     return;
   }
   
-  console.log('📥 Loading preset:', preset.name, '| Config:', preset.config);
+  console.debug('📥 Loading preset:', preset.name, '| Config:', preset.config);
   
   const config = preset.config;
   
@@ -682,7 +682,7 @@ function loadSimplePreset(config) {
   
   // Send Zone Effects config to backend (use new format)
   const zoneEffectCmd = ze;  // ze is already built above
-  console.log('🔧 Sending setZoneEffect:', zoneEffectCmd);
+  console.debug('🔧 Sending setZoneEffect:', zoneEffectCmd);
   if (WS_CMD.SET_ZONE_EFFECT) {
     sendCommand(WS_CMD.SET_ZONE_EFFECT, zoneEffectCmd);
   } else {
@@ -705,10 +705,10 @@ function loadSimplePreset(config) {
     minPauseSec: config.cyclePauseMinSec || 0.5,
     maxPauseSec: config.cyclePauseMaxSec || 3.0
   };
-  console.log('🔧 Sending updateCyclePause:', pauseCmd);
+  console.debug('🔧 Sending updateCyclePause:', pauseCmd);
   sendCommand(WS_CMD.UPDATE_CYCLE_PAUSE, pauseCmd);
   
-  console.log('✅ Simple preset loaded | Zone Effects:', ze.enabled);
+  console.debug('✅ Simple preset loaded | Zone Effects:', ze.enabled);
 }
 
 /**
@@ -799,7 +799,7 @@ function loadOscillationPreset(config) {
     cyclePauseMaxSec: config.cyclePauseMaxSec || 3.0
   });
   
-  console.log('✅ OSC preset loaded | Pause enabled:', pauseEnabled, '| Random:', pauseIsRandom);
+  console.debug('✅ OSC preset loaded | Pause enabled:', pauseEnabled, '| Random:', pauseIsRandom);
 }
 
 /**
@@ -829,7 +829,7 @@ function loadChaosPreset(config) {
     patternsEnabled: config.patternsEnabled || []
   });
   
-  console.log('✅ Chaos preset loaded');
+  console.debug('✅ Chaos preset loaded');
 }
 
 // ============================================================================
@@ -934,7 +934,7 @@ function quickAddToSequencer(mode, presetId) {
   sendCommand(WS_CMD.ADD_SEQUENCE_LINE, newLine);
   showNotification('✅ ' + t('playlist.lineAddedToSeq') + ' ' + preset.name, 'success', 3000);
   
-  console.log('✅ Quick Add to sequencer:', preset.name, newLine);
+  console.debug('✅ Quick Add to sequencer:', preset.name, newLine);
 }
 
 /**
@@ -1046,7 +1046,7 @@ function loadPresetIntoSequencerModal(mode) {
  * Called once on page load
  */
 function initPlaylistListeners() {
-  console.log('📋 Initializing Playlist listeners...');
+  console.debug('📋 Initializing Playlist listeners...');
   
   // Playlist modal buttons
   document.getElementById('btnManagePlaylistSimple').addEventListener('click', function() {
@@ -1086,8 +1086,8 @@ function initPlaylistListeners() {
   // Load playlists from backend on startup
   loadPlaylists();
   
-  console.log('✅ Playlist listeners initialized');
+  console.debug('✅ Playlist listeners initialized');
 }
 
 // Log initialization
-console.log('✅ PlaylistController.js loaded');
+console.debug('✅ PlaylistController.js loaded');

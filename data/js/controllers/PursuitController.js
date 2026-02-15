@@ -241,7 +241,7 @@ function stopPursuitAndReturn() {
   
   // Return to start position to verify contact
   setTimeout(function() {
-    console.log('Stopping pursuit - returning to start for contact verification');
+    console.debug('Stopping pursuit - returning to start for contact verification');
     sendCommand(WS_CMD.RETURN_TO_START, {});
   }, 200);  // Small delay to let pursuit mode disable first
 }
@@ -425,7 +425,7 @@ function initPursuitListeners() {
   // Initialize max distance limit listeners
   initMaxDistLimitListeners();
   
-  console.log('✅ Pursuit mode listeners initialized');
+  console.debug('✅ Pursuit mode listeners initialized');
 }
 
 /**

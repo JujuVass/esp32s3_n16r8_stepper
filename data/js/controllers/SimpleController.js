@@ -175,7 +175,7 @@ function handleSpeedModeChange() {
       }
     });
     
-    console.log('Switched to SEPARATE mode: both speeds set to ' + unifiedSpeed);
+    console.debug('Switched to SEPARATE mode: both speeds set to ' + unifiedSpeed);
     
   } else {
     // SEPARATE → UNIFIED: Use forward speed value for both
@@ -203,7 +203,7 @@ function handleSpeedModeChange() {
       }
     });
     
-    console.log('Switched to UNIFIED mode: using forward speed ' + forwardSpeed + ' for both directions');
+    console.debug('Switched to UNIFIED mode: using forward speed ' + forwardSpeed + ' for both directions');
   }
 }
 
@@ -216,7 +216,7 @@ function handleSpeedModeChange() {
  * Called once on page load
  */
 function initSimpleListeners() {
-  console.log('🔧 Initializing Simple mode listeners...');
+  console.debug('🔧 Initializing Simple mode listeners...');
   
   // ===== START/PAUSE/STOP BUTTONS =====
   document.getElementById('btnStart').addEventListener('click', startSimpleMode);
@@ -376,7 +376,7 @@ function initSimpleListeners() {
   // ===== ZONE EFFECTS EVENT LISTENERS =====
   initZoneEffectListeners();
   
-  console.log('✅ Simple mode listeners initialized');
+  console.debug('✅ Simple mode listeners initialized');
 }
 
 // ============================================================================

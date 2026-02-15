@@ -198,12 +198,12 @@ function importSequence() {
         jsonText = jsonText.replace(/\/\/.*/g, '');
         const parsed = JSON.parse(jsonText);
         
-        console.log('📤 Sending import via HTTP:', parsed.lineCount, 'lines,', jsonText.length, 'bytes');
+        console.debug('📤 Sending import via HTTP:', parsed.lineCount, 'lines,', jsonText.length, 'bytes');
         
         postWithRetry('/api/sequence/import', parsed)
         .then(data => {
           if (data.success) {
-            console.log('✅ Import successful:', data.message);
+            console.debug('✅ Import successful:', data.message);
             showAlert(t('sequencer.importSuccess'), { type: 'success' });
             sendCommand(WS_CMD.GET_SEQUENCE_TABLE, {});
           } else {
@@ -267,7 +267,7 @@ function testSequenceLine(lineId) {
   seqState.testedLineId = lineId;
   seqState.isTestingLine = true;
   
-  console.log('🧪 Testing line #' + lineId + ' - Temporarily disabling other lines');
+  console.debug('🧪 Testing line #' + lineId + ' - Temporarily disabling other lines');
   
   sequenceLines.forEach(l => {
     if (l.lineId === lineId) {
@@ -298,14 +298,14 @@ function testSequenceLine(lineId) {
   });
   
   setTimeout(() => {
-    console.log('🔍 About to disable buttons before startSequence, isTestingLine=', seqState.isTestingLine);
+    console.debug('🔍 About to disable buttons before startSequence, isTestingLine=', seqState.isTestingLine);
     if (DOM.btnStartSequence) {
       setButtonState(DOM.btnStartSequence, false);
-      console.log('✅ btnStartSequence disabled via setButtonState');
+      console.debug('✅ btnStartSequence disabled via setButtonState');
     }
     if (DOM.btnLoopSequence) {
       setButtonState(DOM.btnLoopSequence, false);
-      console.log('✅ btnLoopSequence disabled via setButtonState');
+      console.debug('✅ btnLoopSequence disabled via setButtonState');
     }
     
     sendCommand(WS_CMD.START_SEQUENCE, {});
@@ -316,21 +316,21 @@ function testSequenceLine(lineId) {
 }
 
 function restoreSequenceAfterTest() {
-  console.log('🔄 restoreSequenceAfterTest called, isTestingLine=', seqState.isTestingLine, 'hasBackup=', !!seqState.sequenceBackup);
+  console.debug('🔄 restoreSequenceAfterTest called, isTestingLine=', seqState.isTestingLine, 'hasBackup=', !!seqState.sequenceBackup);
   
   // Always reset the flag, even if restore fails
   const wasTestingLine = seqState.isTestingLine;
   seqState.isTestingLine = false;
   
   if (!wasTestingLine || !seqState.sequenceBackup) {
-    console.log('⚠️ No restore needed or no backup available');
+    console.debug('⚠️ No restore needed or no backup available');
     // Still enable buttons since test mode is now off
     if (DOM.btnStartSequence) setButtonState(DOM.btnStartSequence, canStartOperation());
     if (DOM.btnLoopSequence) setButtonState(DOM.btnLoopSequence, canStartOperation());
     return;
   }
   
-  console.log('🔄 Restoring sequence original state');
+  console.debug('🔄 Restoring sequence original state');
   
   seqState.sequenceBackup.forEach(backup => {
     const line = sequenceLines.find(l => l.lineId === backup.lineId);
@@ -344,11 +344,11 @@ function restoreSequenceAfterTest() {
   
   if (DOM.btnStartSequence) {
     setButtonState(DOM.btnStartSequence, true);
-    console.log('✅ btnStartSequence re-enabled after test');
+    console.debug('✅ btnStartSequence re-enabled after test');
   }
   if (DOM.btnLoopSequence) {
     setButtonState(DOM.btnLoopSequence, true);
-    console.log('✅ btnLoopSequence re-enabled after test');
+    console.debug('✅ btnLoopSequence re-enabled after test');
   }
   
   document.querySelectorAll('[id^="btnTestLine_"]').forEach(btn => {
@@ -367,14 +367,14 @@ function restoreSequenceAfterTest() {
 // ========================================================================
 
 function editSequenceLine(lineId) {
-  console.log('🔍 editSequenceLine called with lineId:', lineId);
+  console.debug('🔍 editSequenceLine called with lineId:', lineId);
   const line = sequenceLines.find(l => l.lineId === lineId);
   if (!line) {
     console.error('❌ Line not found! lineId:', lineId);
     return;
   }
   
-  console.log('✅ Found line:', line);
+  console.debug('✅ Found line:', line);
   editingLineId = lineId;
   isLoadingEditForm = true;
   
@@ -790,7 +790,7 @@ function clearSelection() {
 function batchEnableLines(enabled) {
   if (selectedLineIds.size === 0) return;
   
-  console.log(`📦 Batch ${enabled ? 'enable' : 'disable'} ${selectedLineIds.size} lines`);
+  console.debug(`📦 Batch ${enabled ? 'enable' : 'disable'} ${selectedLineIds.size} lines`);
   
   selectedLineIds.forEach(lineId => {
     sendCommand(WS_CMD.TOGGLE_SEQUENCE_LINE, { lineId: lineId, enabled: enabled });
@@ -815,7 +815,7 @@ async function batchDeleteLines() {
   
   if (!confirmed) return;
   
-  console.log(`📦 Batch delete ${count} lines`);
+  console.debug(`📦 Batch delete ${count} lines`);
   
   const lineIdsArray = Array.from(selectedLineIds).sort((a, b) => b - a);
   lineIdsArray.forEach(lineId => {
@@ -866,7 +866,7 @@ function handleTrashDrop(e) {
   }).then(confirmed => {
     if (!confirmed) return;
     
-    console.log(`🗑️ Trash zone drop: deleting ${count} line(s)`);
+    console.debug(`🗑️ Trash zone drop: deleting ${count} line(s)`);
     const sortedIds = linesToDelete.sort((a, b) => b - a);
     sortedIds.forEach(lineId => sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: lineId }));
     
@@ -1274,7 +1274,7 @@ function initSequenceSortable() {
         }).then(confirmed => {
           if (!confirmed) return;
           
-          console.log(`🗑️ SortableJS trash drop: deleting ${count} line(s)`);
+          console.debug(`🗑️ SortableJS trash drop: deleting ${count} line(s)`);
           const sortedIds = linesToDelete.sort((a, b) => b - a);
           sortedIds.forEach(id => sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: id }));
           
@@ -1284,7 +1284,7 @@ function initSequenceSortable() {
       } else if (evt.oldIndex !== evt.newIndex) {
         // Normal reorder within table
         const lineId = parseInt(evt.item.dataset.lineId);
-        console.log(`🔄 SortableJS: line ${lineId} moved from ${evt.oldIndex} to ${evt.newIndex}`);
+        console.debug(`🔄 SortableJS: line ${lineId} moved from ${evt.oldIndex} to ${evt.newIndex}`);
         reorderSequenceLine(lineId, evt.newIndex);
       }
       
@@ -1293,7 +1293,7 @@ function initSequenceSortable() {
     }
   });
   
-  console.log('✅ SortableJS initialized for sequence table');
+  console.debug('✅ SortableJS initialized for sequence table');
 }
 
 // ============================================================================
@@ -1305,7 +1305,7 @@ function initSequenceSortable() {
  * Called from main.js on window.load
  */
 function initSequenceListeners() {
-  console.log('📋 Initializing Sequence listeners...');
+  console.debug('📋 Initializing Sequence listeners...');
   
   // ===== TABLE ACTION BUTTONS =====
   document.getElementById('btnAddLine').addEventListener('click', addSequenceLine);
@@ -1460,5 +1460,5 @@ function initSequenceListeners() {
     if (input) enforceNumericConstraints(input);
   });
   
-  console.log('✅ Sequence listeners initialized');
+  console.debug('✅ Sequence listeners initialized');
 }

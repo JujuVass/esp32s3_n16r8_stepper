@@ -105,7 +105,7 @@ function handleDebugLevelChange(isChecked) {
   
   postWithRetry('/api/system/logging/preferences', preferences, { silent: true })
     .then(data => {
-      console.log('💾 Log level saved:', isChecked ? 'DEBUG' : 'INFO');
+      console.debug('💾 Log level saved:', isChecked ? 'DEBUG' : 'INFO');
       
       // Also update the checkbox in Sys panel
       const chkDebug = DOM.chkDebugLevel;
@@ -215,7 +215,7 @@ function toggleSystemPanel() {
     
     // Enable system stats in backend (same as Stats panel)
     sendCommand(WS_CMD.REQUEST_STATS, { enable: true });
-    console.log('📊 System stats requested from backend');
+    console.debug('📊 System stats requested from backend');
     
     // Request system status to populate fields
     sendCommand(WS_CMD.GET_STATUS, {});
@@ -280,11 +280,11 @@ async function refreshWifi() {
     
     const statusSpan = document.getElementById('wifiReconnectStatus');
     
-    console.log('📶 Sending WiFi reconnect command...');
+    console.debug('📶 Sending WiFi reconnect command...');
     
     // Close existing WebSocket BEFORE sending command (prevent auto-reconnect spam)
     if (AppState.ws) {
-      console.log('📶 Closing existing WebSocket for clean reconnect...');
+      console.debug('📶 Closing existing WebSocket for clean reconnect...');
       AppState.ws.close();
       AppState.ws = null;
     }
@@ -293,12 +293,12 @@ async function refreshWifi() {
     fetch('/api/system/wifi/reconnect', { method: 'POST' })
       .then(response => response.json())
       .then(data => {
-        console.log('📶 WiFi reconnect command acknowledged:', data);
+        console.debug('📶 WiFi reconnect command acknowledged:', data);
         statusSpan.textContent = t('tools.wifiDisconnecting');
       })
       .catch(error => {
         // Expected error: network will be interrupted during WiFi reconnect
-        console.log('📶 WiFi reconnect in progress (network interruption expected)');
+        console.debug('📶 WiFi reconnect in progress (network interruption expected)');
         statusSpan.textContent = t('tools.wifiDisconnecting');
       });
     
@@ -309,13 +309,13 @@ async function refreshWifi() {
     
     const checkConnection = function() {
       attempts++;
-      console.log(`📶 Checking connection (attempt ${attempts}/${maxAttempts})...`);
+      console.debug(`📶 Checking connection (attempt ${attempts}/${maxAttempts})...`);
       statusSpan.textContent = t('tools.checkingConnection', {attempts: attempts, max: maxAttempts});
       
       fetch('/api/ping', { method: 'GET' })
         .then(response => {
           if (response.ok) {
-            console.log('✅ WiFi reconnected successfully!');
+            console.debug('✅ WiFi reconnected successfully!');
             
             // Re-enable WebSocket auto-reconnect
             AppState.wifiReconnectInProgress = false;
@@ -334,7 +334,7 @@ async function refreshWifi() {
             
             // Reconnect WebSocket NOW
             if (typeof connectWebSocket === 'function') {
-              console.log('📶 Reconnecting WebSocket...');
+              console.debug('📶 Reconnecting WebSocket...');
               connectWebSocket();
             }
             
@@ -412,10 +412,10 @@ async function rebootESP32() {
     fetch('/api/system/reboot', { method: 'POST' })
       .then(response => response.json())
       .then(data => {
-        console.log('🔄 Reboot command sent:', data);
+        console.debug('🔄 Reboot command sent:', data);
       })
       .catch(error => {
-        console.log('🔄 Reboot initiated (connection lost as expected)');
+        console.debug('🔄 Reboot initiated (connection lost as expected)');
       });
     
     // Close WebSocket properly
@@ -448,7 +448,7 @@ function reconnectAfterReboot() {
   
   const tryReconnect = function() {
     attempts++;
-    console.log('🔄 Reconnection attempt ' + attempts + '/' + maxAttempts);
+    console.debug('🔄 Reconnection attempt ' + attempts + '/' + maxAttempts);
     updateRebootStatus(t('tools.reconnectAttempt'), t('tools.reconnectAttemptSub', {attempts: attempts, max: maxAttempts}));
     
     // Test HTTP connection first using ping endpoint
@@ -461,13 +461,13 @@ function reconnectAfterReboot() {
         return response.json();
       })
       .then(data => {
-        console.log('✅ HTTP connection restored! Uptime:', data.uptime, 'ms');
+        console.debug('✅ HTTP connection restored! Uptime:', data.uptime, 'ms');
         httpConnected = true;
         updateRebootStatus(t('tools.httpOkWsConnecting'), '🌐 ...');
         
         // Now try WebSocket connection
         if (!wsConnected) {
-          console.log('🔌 Attempting WebSocket reconnection...');
+          console.debug('🔌 Attempting WebSocket reconnection...');
           
           // Try to reconnect WebSocket
           try {
@@ -477,19 +477,19 @@ function reconnectAfterReboot() {
             setTimeout(function() {
               if (AppState.ws && AppState.ws.readyState === WebSocket.OPEN) {
                 wsConnected = true;
-                console.log('✅ WebSocket reconnected!');
+                console.debug('✅ WebSocket reconnected!');
                 updateRebootStatus(t('tools.connectionRestored'), '✅ ' + t('tools.reloadingPage'));
                 
                 // Both HTTP and WS are connected - wait 2 more seconds for stability
-                console.log('⏳ Waiting for system stability...');
+                console.debug('⏳ Waiting for system stability...');
                 setTimeout(function() {
-                  console.log('✅ System stable - reloading page...');
+                  console.debug('✅ System stable - reloading page...');
                   DOM.rebootOverlay.style.display = 'none';
                   location.reload(true); // Force reload from server
                 }, 2000);
               } else {
                 // WebSocket not ready yet, keep trying
-                console.log('⚠️ WebSocket not ready, retrying...');
+                console.debug('⚠️ WebSocket not ready, retrying...');
                 if (attempts < maxAttempts) {
                   setTimeout(tryReconnect, 1000);
                 } else {
@@ -511,7 +511,7 @@ function reconnectAfterReboot() {
         }
       })
       .catch(error => {
-        console.log('⚠️ ESP32 not ready yet:', error.message);
+        console.debug('⚠️ ESP32 not ready yet:', error.message);
         if (attempts < maxAttempts) {
           setTimeout(tryReconnect, 1000);
         } else {
@@ -555,7 +555,7 @@ function loadLoggingPreferences() {
       
       // Debug log (only if enabled)
       if (data.loggingEnabled) {
-        console.log('📂 Loaded logging preferences:', data);
+        console.debug('📂 Loaded logging preferences:', data);
       }
     })
     .catch(error => {
@@ -581,7 +581,7 @@ function saveLoggingPreferences() {
   
   postWithRetry('/api/system/logging/preferences', preferences)
     .then(data => {
-      console.log('💾 Logging preferences saved:', data);
+      console.debug('💾 Logging preferences saved:', data);
       
       // Update Logs button visibility
       const btnShowLogs = DOM.btnShowLogs;
@@ -703,7 +703,7 @@ function updateSystemStats(system) {
     // Cache IP for faster WebSocket reconnection (avoids mDNS resolution delay)
     if (system.ipSta !== '0.0.0.0' && !AppState.espIpAddress) {
       AppState.espIpAddress = system.ipSta;
-      console.log('📍 Cached ESP32 IP for WS reconnection:', system.ipSta);
+      console.debug('📍 Cached ESP32 IP for WS reconnection:', system.ipSta);
     }
   }
   if (system.ipAp !== undefined) {
@@ -796,7 +796,7 @@ function initSpeedLimits() {
  * Called once on page load
  */
 function initToolsListeners() {
-  console.log('🔧 Initializing Tools listeners...');
+  console.debug('🔧 Initializing Tools listeners...');
   
   // ===== CALIBRATION & RESET =====
   DOM.btnCalibrateCommon.addEventListener('click', calibrateMotor);
@@ -825,9 +825,9 @@ function initToolsListeners() {
     DOM.chkDebugLevel.disabled = !this.checked;
     
     if (!this.checked) {
-      console.log('🔇 Logging disabled - all logs (console + files) stopped');
+      console.debug('🔇 Logging disabled - all logs (console + files) stopped');
     } else {
-      console.log('🔊 Logging enabled');
+      console.debug('🔊 Logging enabled');
     }
   });
   
@@ -835,14 +835,14 @@ function initToolsListeners() {
     saveLoggingPreferences();
     
     if (this.checked) {
-      console.log('📊 Log level: DEBUG (verbose mode)');
+      console.debug('📊 Log level: DEBUG (verbose mode)');
     } else {
-      console.log('📊 Log level: INFO (normal mode)');
+      console.debug('📊 Log level: INFO (normal mode)');
     }
   });
   
   // Load logging preferences on startup
   loadLoggingPreferences();
   
-  console.log('✅ Tools listeners initialized');
+  console.debug('✅ Tools listeners initialized');
 }

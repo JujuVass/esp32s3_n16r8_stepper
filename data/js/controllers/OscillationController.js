@@ -440,9 +440,9 @@ function initOscillationListeners() {
     btn.addEventListener('click', function() {
       if (!this.disabled) {
         const newAmplitude = this.getAttribute('data-osc-amplitude');
-        console.log('🎯 Preset amplitude clicked: ' + newAmplitude + 'mm');
+        console.debug('🎯 Preset amplitude clicked: ' + newAmplitude + 'mm');
         document.getElementById('oscAmplitude').value = newAmplitude;
-        console.log('📤 Sending oscillation config with amplitude=' + newAmplitude);
+        console.debug('📤 Sending oscillation config with amplitude=' + newAmplitude);
         sendOscillationConfig();
         validateOscillationLimits();
         updateOscillationPresets();
@@ -521,7 +521,7 @@ function initOscillationListeners() {
     });
   }
   
-  console.log('🌊 OscillationController initialized');
+  console.debug('🌊 OscillationController initialized');
 }
 
 // ============================================================================
