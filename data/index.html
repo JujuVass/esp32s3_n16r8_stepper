@@ -2030,9 +2030,9 @@
 
   </div>
 
-  <!-- Sequential Script Loader: loads scripts one at a time with retry.
-       ESP32 web server has limited concurrent connections (~4-6),
-       so parallel defer/async downloads cause random NS_ERROR failures. -->
+  <!-- Script Loader: downloads 2 at a time, executes in order, retries on failure.
+       ESP32 web server handles ~4-6 concurrent connections;
+       2 parallel downloads balances speed vs. reliability. -->
   <script>
   (function() {
     var scripts = [
@@ -2059,53 +2059,94 @@
       '/js/controllers/SequenceController.js',
       '/js/main.js'
     ];
+    var CONCURRENT = 2;
     var MAX_RETRIES = 3;
-    var RETRY_DELAY = 800; // ms
+    var RETRY_DELAY = 800;
     var overlay = document.getElementById('scriptLoadOverlay');
     var bar = document.getElementById('scriptLoadBar');
     var text = document.getElementById('scriptLoadText');
     var total = scripts.length;
+    var loaded = 0;        // count of fully loaded+executed scripts
+    var fetched = {};      // idx -> blob URL (downloaded but waiting for execution turn)
+    var fetchNext = 0;     // next index to start fetching
 
-    function updateProgress(i, name, retry) {
-      var pct = Math.round(((i + 1) / total) * 100);
+    function updateUI(idx, name, retry) {
+      var pct = Math.round((loaded / total) * 100);
       if (bar) bar.style.width = pct + '%';
-      var label = name.split('/').pop();
-      if (text) text.textContent = label + (retry > 0 ? ' (retry ' + retry + ')' : '') + ' (' + (i + 1) + '/' + total + ')';
+      var label = name ? name.split('/').pop() : '';
+      if (text) text.textContent = label + (retry > 0 ? ' (retry ' + retry + ')' : '') + ' (' + loaded + '/' + total + ')';
     }
 
-    function loadScript(idx) {
-      if (idx >= total) {
-        // All loaded — hide overlay & fire load event for main.js init
-        if (overlay) overlay.style.display = 'none';
-        window.dispatchEvent(new Event('load'));
-        return;
-      }
-      loadOne(idx, 0);
+    function done() {
+      if (overlay) overlay.style.display = 'none';
+      window.dispatchEvent(new Event('load'));
     }
 
-    function loadOne(idx, attempt) {
-      var src = scripts[idx];
-      updateProgress(idx, src, attempt);
+    // Execute scripts in strict order: loaded index must match next expected
+    function tryExecuteNext() {
+      if (loaded >= total) { done(); return; }
+      if (!(loaded in fetched)) return; // not downloaded yet
+      var blobUrl = fetched[loaded];
+      delete fetched[loaded];
       var s = document.createElement('script');
-      s.src = src + (attempt > 0 ? '?r=' + attempt : '');
-      s.onload = function() { loadScript(idx + 1); };
+      s.src = blobUrl;
+      s.onload = function() {
+        URL.revokeObjectURL(blobUrl);
+        loaded++;
+        updateUI(loaded, scripts[loaded - 1], 0);
+        tryExecuteNext();  // execute next if already fetched
+        pump();            // start fetching more
+      };
       s.onerror = function() {
-        if (attempt < MAX_RETRIES) {
-          setTimeout(function() { loadOne(idx, attempt + 1); }, RETRY_DELAY);
-        } else {
-          console.error('[Loader] Failed after ' + MAX_RETRIES + ' retries: ' + src);
-          if (text) text.textContent = 'Error loading ' + src.split('/').pop() + ' — tap to reload';
-          if (overlay) overlay.onclick = function() { location.reload(); };
-        }
+        // blob exec error — should not happen, fallback reload
+        URL.revokeObjectURL(blobUrl);
+        console.error('[Loader] Exec error: ' + scripts[loaded]);
+        if (text) text.textContent = 'Error — tap to reload';
+        if (overlay) overlay.onclick = function() { location.reload(); };
       };
       document.body.appendChild(s);
     }
 
-    // Start loading after DOM is ready
+    function fetchScript(idx, attempt) {
+      var src = scripts[idx];
+      updateUI(idx, src, attempt);
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', src + (attempt > 0 ? '?r=' + attempt : ''), true);
+      xhr.responseType = 'blob';
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          fetched[idx] = URL.createObjectURL(xhr.response);
+          tryExecuteNext();
+        } else {
+          retryOrFail(idx, attempt, src);
+        }
+      };
+      xhr.onerror = function() { retryOrFail(idx, attempt, src); };
+      xhr.send();
+    }
+
+    function retryOrFail(idx, attempt, src) {
+      if (attempt < MAX_RETRIES) {
+        setTimeout(function() { fetchScript(idx, attempt + 1); }, RETRY_DELAY);
+      } else {
+        console.error('[Loader] Failed after ' + MAX_RETRIES + ' retries: ' + src);
+        if (text) text.textContent = 'Error loading ' + src.split('/').pop() + ' — tap to reload';
+        if (overlay) overlay.onclick = function() { location.reload(); };
+      }
+    }
+
+    // Start up to CONCURRENT fetches
+    function pump() {
+      while (fetchNext < total && fetchNext - loaded < CONCURRENT) {
+        fetchScript(fetchNext, 0);
+        fetchNext++;
+      }
+    }
+
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() { loadScript(0); });
+      document.addEventListener('DOMContentLoaded', function() { pump(); });
     } else {
-      loadScript(0);
+      pump();
     }
   })();
   </script>
