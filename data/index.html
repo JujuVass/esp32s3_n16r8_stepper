@@ -10,9 +10,18 @@
   <!-- Scripts are loaded sequentially at end of body for reliability -->
 
   <link rel="stylesheet" href="/css/styles.css">
-  <script defer src="/js/lib/chart.umd.min.js"></script>
+  <!-- chart.umd.min.js loaded by sequential loader below -->
 </head>
 <body>
+  <!-- Script Loading Overlay (shown during sequential JS load) -->
+  <div id="scriptLoadOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#1a1a2e;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:sans-serif;">
+    <div style="font-size:48px;margin-bottom:20px;">⚙️</div>
+    <div style="width:220px;height:6px;background:#333;border-radius:3px;overflow:hidden;margin-bottom:12px;">
+      <div id="scriptLoadBar" style="width:0%;height:100%;background:linear-gradient(90deg,#667eea,#764ba2);transition:width 0.3s;border-radius:3px;"></div>
+    </div>
+    <div id="scriptLoadText" style="font-size:12px;color:#999;">Loading...</div>
+  </div>
+
   <!-- Calibration Overlay -->
   <div class="overlay" id="calibrationOverlay">
     <div class="overlay-content">
@@ -2021,34 +2030,85 @@
 
   </div>
 
-  <!-- External JavaScript Modules (defer: parallel download, ordered execution after DOM) -->
-  <!-- Libraries -->
-  <script defer src="/js/lib/Sortable.min.js"></script>  <!-- Drag & drop library -->
-  <!-- Core (load first) -->
-  <script defer src="/js/ui/milestones.js"></script>  <!-- Must load BEFORE app.js -->
-  <script defer src="/js/ui/speedMilestones.js"></script>  <!-- Speed icons, must load BEFORE app.js -->
-  <script defer src="/js/core/app.js"></script>
-  <script defer src="/js/core/i18n.js"></script>    <!-- i18n translations (after app.js) -->
-  <script defer src="/js/utils/utils.js"></script>
-  <script defer src="/js/core/DOMManager.js"></script>  <!-- Must load BEFORE main.js -->
-  <script defer src="/js/core/websocket.js"></script>   <!-- WebSocket connection & handlers -->
-  <!-- UI -->
-  <script defer src="/js/ui/StatsController.js"></script>  <!-- Stats panel, display & charts -->
-  <script defer src="/js/ui/ToolsController.js"></script>  <!-- Common tools (calib, logs, sys) -->
-  <script defer src="/js/ui/UIController.js"></script>  <!-- Tab navigation & modals -->
-  <!-- Utils (load before controllers) -->
-  <script defer src="/js/utils/PlaylistUtils.js"></script>  <!-- Playlist utility functions (names, tooltips) -->
-  <script defer src="/js/utils/SimpleUtils.js"></script>  <!-- Simple mode utilities (decel preview) -->
-  <script defer src="/js/utils/SequenceUtils.js"></script>  <!-- Sequence display utilities -->
-  <!-- Controllers -->
-  <script defer src="/js/controllers/PlaylistController.js"></script>  <!-- Playlist management for all modes -->
-  <script defer src="/js/controllers/SimpleController.js"></script>  <!-- Simple mode control -->
-  <script defer src="/js/controllers/PursuitController.js"></script>  <!-- Pursuit mode gauge control -->
-  <script defer src="/js/controllers/OscillationController.js"></script>  <!-- Oscillation mode control -->
-  <script defer src="/js/controllers/ChaosController.js"></script>    <!-- Chaos mode control -->
-  <script defer src="/js/controllers/SequenceController.js"></script>  <!-- Sequence table management -->
-  <!-- Main (load last) -->
-  <script defer src="/js/main.js"></script>
+  <!-- Sequential Script Loader: loads scripts one at a time with retry.
+       ESP32 web server has limited concurrent connections (~4-6),
+       so parallel defer/async downloads cause random NS_ERROR failures. -->
+  <script>
+  (function() {
+    var scripts = [
+      '/js/lib/chart.umd.min.js',
+      '/js/lib/Sortable.min.js',
+      '/js/ui/milestones.js',
+      '/js/ui/speedMilestones.js',
+      '/js/core/app.js',
+      '/js/core/i18n.js',
+      '/js/utils/utils.js',
+      '/js/core/DOMManager.js',
+      '/js/core/websocket.js',
+      '/js/ui/StatsController.js',
+      '/js/ui/ToolsController.js',
+      '/js/ui/UIController.js',
+      '/js/utils/PlaylistUtils.js',
+      '/js/utils/SimpleUtils.js',
+      '/js/utils/SequenceUtils.js',
+      '/js/controllers/PlaylistController.js',
+      '/js/controllers/SimpleController.js',
+      '/js/controllers/PursuitController.js',
+      '/js/controllers/OscillationController.js',
+      '/js/controllers/ChaosController.js',
+      '/js/controllers/SequenceController.js',
+      '/js/main.js'
+    ];
+    var MAX_RETRIES = 3;
+    var RETRY_DELAY = 800; // ms
+    var overlay = document.getElementById('scriptLoadOverlay');
+    var bar = document.getElementById('scriptLoadBar');
+    var text = document.getElementById('scriptLoadText');
+    var total = scripts.length;
+
+    function updateProgress(i, name, retry) {
+      var pct = Math.round(((i + 1) / total) * 100);
+      if (bar) bar.style.width = pct + '%';
+      var label = name.split('/').pop();
+      if (text) text.textContent = label + (retry > 0 ? ' (retry ' + retry + ')' : '') + ' (' + (i + 1) + '/' + total + ')';
+    }
+
+    function loadScript(idx) {
+      if (idx >= total) {
+        // All loaded — hide overlay & fire load event for main.js init
+        if (overlay) overlay.style.display = 'none';
+        window.dispatchEvent(new Event('load'));
+        return;
+      }
+      loadOne(idx, 0);
+    }
+
+    function loadOne(idx, attempt) {
+      var src = scripts[idx];
+      updateProgress(idx, src, attempt);
+      var s = document.createElement('script');
+      s.src = src + (attempt > 0 ? '?r=' + attempt : '');
+      s.onload = function() { loadScript(idx + 1); };
+      s.onerror = function() {
+        if (attempt < MAX_RETRIES) {
+          setTimeout(function() { loadOne(idx, attempt + 1); }, RETRY_DELAY);
+        } else {
+          console.error('[Loader] Failed after ' + MAX_RETRIES + ' retries: ' + src);
+          if (text) text.textContent = 'Error loading ' + src.split('/').pop() + ' — tap to reload';
+          if (overlay) overlay.onclick = function() { location.reload(); };
+        }
+      };
+      document.body.appendChild(s);
+    }
+
+    // Start loading after DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() { loadScript(0); });
+    } else {
+      loadScript(0);
+    }
+  })();
+  </script>
 
 </body>
 </html>
