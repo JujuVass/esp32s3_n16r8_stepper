@@ -1,6 +1,5 @@
 // ============================================================================
 // OSCILLATION CONTROLLER MODULE
-// Extracted from main.js - Oscillation mode control and UI management
 // ============================================================================
 
 // ============================================================================
@@ -48,17 +47,11 @@ function validateOscillationLimits() {
     return false;
   }
   
-  // Use pure function if available (from oscillation.js)
+  // Validate limits
   let isValid = true;
-  if (typeof validateOscillationLimitsPure === 'function') {
-    const result = validateOscillationLimitsPure(center, amplitude, totalDistMM);
-    isValid = result.valid;
-  } else {
-    // Fallback to inline logic
-    const minPos = center - amplitude;
-    const maxPos = center + amplitude;
-    isValid = minPos >= 0 && maxPos <= totalDistMM;
-  }
+  const minPos = center - amplitude;
+  const maxPos = center + amplitude;
+  isValid = minPos >= 0 && maxPos <= totalDistMM;
   
   if (!isValid) {
     warning.style.display = 'block';
@@ -89,19 +82,15 @@ function sendOscillationConfig() {
   
   // 🚀 SAFETY: Check if frequency would exceed speed limit
   const MAX_SPEED_MM_S = maxSpeedLevel * 20.0; // 300 mm/s by default
+  const theoreticalSpeed = 2.0 * Math.PI * frequency * amplitude;
   
-  // Use pure function if available (from oscillation.js)
-  if (typeof calculateOscillationPeakSpeedPure === 'function') {
-    const theoreticalSpeed = calculateOscillationPeakSpeedPure(frequency, amplitude);
-    
-    if (amplitude > 0 && theoreticalSpeed > MAX_SPEED_MM_S) {
-      const maxAllowedFreq = MAX_SPEED_MM_S / (2.0 * Math.PI * amplitude);
-      showNotification(
-        '⚠️ ' + t('oscillation.freqLimited', {freq: frequency.toFixed(2), max: maxAllowedFreq.toFixed(2), speed: MAX_SPEED_MM_S.toFixed(0)}),
-        'error',
-        4000
-      );
-    }
+  if (amplitude > 0 && theoreticalSpeed > MAX_SPEED_MM_S) {
+    const maxAllowedFreq = MAX_SPEED_MM_S / (2.0 * Math.PI * amplitude);
+    showNotification(
+      '⚠️ ' + t('oscillation.freqLimited', {freq: frequency.toFixed(2), max: maxAllowedFreq.toFixed(2), speed: MAX_SPEED_MM_S.toFixed(0)}),
+      'error',
+      4000
+    );
   }
   
   // Collect form values and delegate to pure function
@@ -118,27 +107,21 @@ function sendOscillationConfig() {
     returnToCenter: document.getElementById('oscReturnCenter').checked
   };
   
-  // Delegate to pure function if available
-  let config;
-  if (typeof buildOscillationConfigPure === 'function') {
-    config = buildOscillationConfigPure(formValues);
-  } else {
-    // Fallback - use isNaN check for values where 0 is valid
-    const rampIn = parseFloat(formValues.rampInDuration);
-    const rampOut = parseFloat(formValues.rampOutDuration);
-    config = {
-      centerPositionMM: parseFloat(formValues.centerPos) || 0,
-      amplitudeMM: parseFloat(formValues.amplitude) || 0,
-      waveform: parseInt(formValues.waveform) || 0,
-      frequencyHz: parseFloat(formValues.frequency) || 0.5,
-      cycleCount: parseInt(formValues.cycleCount) || 0,
-      enableRampIn: formValues.enableRampIn,
-      rampInDurationMs: isNaN(rampIn) ? 2000 : rampIn,
-      enableRampOut: formValues.enableRampOut,
-      rampOutDurationMs: isNaN(rampOut) ? 2000 : rampOut,
-      returnToCenter: formValues.returnToCenter
-    };
-  }
+  // Build config from form values
+  const rampIn = parseFloat(formValues.rampInDuration);
+  const rampOut = parseFloat(formValues.rampOutDuration);
+  const config = {
+    centerPositionMM: parseFloat(formValues.centerPos) || 0,
+    amplitudeMM: parseFloat(formValues.amplitude) || 0,
+    waveform: parseInt(formValues.waveform) || 0,
+    frequencyHz: parseFloat(formValues.frequency) || 0.5,
+    cycleCount: parseInt(formValues.cycleCount) || 0,
+    enableRampIn: formValues.enableRampIn,
+    rampInDurationMs: isNaN(rampIn) ? 2000 : rampIn,
+    enableRampOut: formValues.enableRampOut,
+    rampOutDurationMs: isNaN(rampOut) ? 2000 : rampOut,
+    returnToCenter: formValues.returnToCenter
+  };
   
   sendCommand(WS_CMD.SET_OSCILLATION, config);
 }
@@ -225,7 +208,6 @@ function pauseOscillation() {
 
 /**
  * Update oscillation mode UI from WebSocket status data
- * Extracted from main.js updateUI() for better modularity
  * @param {Object} data - Status data from WebSocket
  */
 function updateOscillationUI(data) {
@@ -523,15 +505,3 @@ function initOscillationListeners() {
   
   console.debug('🌊 OscillationController initialized');
 }
-
-// ============================================================================
-// EXPOSED API
-// ============================================================================
-// Functions available globally:
-// - toggleOscHelp()
-// - validateOscillationLimits()
-// - sendOscillationConfig()
-// - updateOscillationPresets()
-// - startOscillation(), stopOscillation(), pauseOscillation()
-// - updateOscillationUI(data) - Called from main.js updateUI()
-// - initOscillationListeners()

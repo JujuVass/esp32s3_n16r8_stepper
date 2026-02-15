@@ -1,7 +1,7 @@
 /**
  * SimpleUtils.js - Pure Utility Functions for Simple Mode
  * 
- * Contains pure/helper functions extracted from SimpleController.js:
+ * Contains pure/helper functions for Simple mode:
  * - Deceleration factor calculation
  * - Deceleration curve preview drawing
  * - Constants for deceleration modes
@@ -131,7 +131,7 @@ function drawZoneEffectPreviewPure(canvas, config) {
     ctx.font = '14px Arial';
     ctx.fillStyle = '#999';
     ctx.textAlign = 'center';
-    ctx.fillText('Aucun effet actif', width / 2, height / 2);
+    ctx.fillText(t('utils.noActiveEffect'), width / 2, height / 2);
     return;
   }
   

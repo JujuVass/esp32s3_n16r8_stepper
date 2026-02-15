@@ -603,7 +603,6 @@ function saveLoggingPreferences() {
 
 /**
  * Update system hardware statistics display (CPU, RAM, WiFi, etc.)
- * Extracted from main.js - displays ESP32 system info, not app statistics
  * @param {Object} system - System stats object from backend status message
  */
 function updateSystemStats(system) {
@@ -655,20 +654,12 @@ function updateSystemStats(system) {
     const rssi = system.wifiRssi;
     DOM.sysWifi.textContent = rssi + ' dBm';
     
-    // Use pure function if available (from formatting.js)
     let quality, qualityColor;
-    if (typeof getWifiQualityPure === 'function') {
-      const wifiInfo = getWifiQualityPure(rssi);
-      quality = wifiInfo.quality;
-      qualityColor = wifiInfo.color;
-    } else {
-      // Fallback
-      if (rssi >= -50) { quality = t('wifi.qualityExcellent'); qualityColor = '#4CAF50'; }
-      else if (rssi >= -60) { quality = t('wifi.qualityVeryGood'); qualityColor = '#8BC34A'; }
-      else if (rssi >= -70) { quality = t('wifi.qualityGood'); qualityColor = '#FFC107'; }
-      else if (rssi >= -80) { quality = t('wifi.qualityWeak'); qualityColor = '#FF9800'; }
-      else { quality = t('wifi.qualityVeryWeak'); qualityColor = '#f44336'; }
-    }
+    if (rssi >= -50) { quality = t('wifi.qualityExcellent'); qualityColor = '#4CAF50'; }
+    else if (rssi >= -60) { quality = t('wifi.qualityVeryGood'); qualityColor = '#8BC34A'; }
+    else if (rssi >= -70) { quality = t('wifi.qualityGood'); qualityColor = '#FFC107'; }
+    else if (rssi >= -80) { quality = t('wifi.qualityWeak'); qualityColor = '#FF9800'; }
+    else { quality = t('wifi.qualityVeryWeak'); qualityColor = '#f44336'; }
     
     DOM.sysWifiQuality.textContent = quality;
     DOM.sysWifiQuality.style.color = qualityColor;
@@ -676,21 +667,15 @@ function updateSystemStats(system) {
   
   // Uptime - delegate to pure function
   if (system.uptimeSeconds !== undefined) {
-    let uptimeStr;
-    if (typeof formatUptimePure === 'function') {
-      uptimeStr = formatUptimePure(system.uptimeSeconds);
-    } else {
-      // Fallback
-      const uptimeSec = system.uptimeSeconds;
-      const hours = Math.floor(uptimeSec / 3600);
-      const minutes = Math.floor((uptimeSec % 3600) / 60);
-      const seconds = uptimeSec % 60;
-      uptimeStr = hours > 0 
-        ? `${hours}h ${minutes}m ${seconds}s`
-        : minutes > 0
-          ? `${minutes}m ${seconds}s`
-          : `${seconds}s`;
-    }
+    const uptimeSec = system.uptimeSeconds;
+    const hours = Math.floor(uptimeSec / 3600);
+    const minutes = Math.floor((uptimeSec % 3600) / 60);
+    const seconds = uptimeSec % 60;
+    const uptimeStr = hours > 0 
+      ? `${hours}h ${minutes}m ${seconds}s`
+      : minutes > 0
+        ? `${minutes}m ${seconds}s`
+        : `${seconds}s`;
     DOM.sysUptime.textContent = uptimeStr;
   }
   

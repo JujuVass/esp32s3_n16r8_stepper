@@ -357,6 +357,7 @@
     "importSuccess": "Sequence imported successfully!",
     "networkError": "Network error: {{msg}}",
     "templateDownloaded": "Template downloaded with full documentation!",
+    "testingLine": "Test line #{{id}} ({{cycles}})",
     "stopSequenceFirst": "Stop the running sequence before testing",
     "sequenceRestored": "Sequence restored",
     "startPosIncorrect": "Start position is incorrect",
@@ -375,6 +376,7 @@
     "chaosAmplitudeIncorrect": "Chaos amplitude is incorrect",
     "chaosSpeedIncorrect": "Chaos max speed is incorrect",
     "cyclesIncorrect": "Cycle count is incorrect",
+    "seedIncorrect": "Seed is incorrect",
     "pauseIncorrect": "Pause duration is incorrect",
     "linesEnabled": "{{count}} line(s) {{state}}",
     "deleteSelection": "Delete {{count}} selected line(s)?\n\nThis action is irreversible.",
@@ -642,7 +644,8 @@
     "endLabel": "End",
     "fast": "Fast",
     "slow": "Slow",
-    "normal": "Normal"
+    "normal": "Normal",
+    "noActiveEffect": "No active effect"
   },
   "seqUtils": {
     "decel": "Decel",

@@ -16,8 +16,6 @@
  *   - app.js (AppState, SystemState, WS_CMD)
  *   - DOMManager.js (DOM cache)
  *   - utils.js (sendCommand, showNotification)
- * 
- * Created: December 2024 (extracted from main.js)
  * ============================================================================
  */
 

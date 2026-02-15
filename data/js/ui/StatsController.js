@@ -13,9 +13,6 @@
  * - milestones.js (MILESTONES, getMilestoneInfo)
  * - utils.js (getISOWeek)
  * - Chart.js (external library loaded in HTML)
- * 
- * Created: December 2024 (extracted from index.html)
- * Refactored: December 2025 (merged stats.js + stats from ToolsController.js)
  * ============================================================================
  */
 
@@ -571,7 +568,6 @@ function handleStatsFileImport(e) {
 
 /**
  * Update milestone display from total traveled distance
- * Extracted from main.js for better organization
  * @param {number} totalTraveledMM - Total traveled distance in mm
  */
 function updateMilestones(totalTraveledMM) {

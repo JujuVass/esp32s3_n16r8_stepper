@@ -211,12 +211,6 @@ function getCyclesPause(line, movementType) {
  * @returns {Object} Template document with TEMPLATE and DOCUMENTATION sections
  */
 function getSequenceTemplateDoc() {
-  // Check if pure function exists (from app.js)
-  if (typeof getSequenceTemplateDocPure === 'function') {
-    return getSequenceTemplateDocPure();
-  }
-  
-  // Fallback minimal template
   return {
     TEMPLATE: {
       version: "2.0",

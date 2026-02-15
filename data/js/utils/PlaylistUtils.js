@@ -1,7 +1,7 @@
 /**
  * PlaylistUtils.js - Pure Utility Functions for Playlist
  * 
- * Contains pure/helper functions extracted from PlaylistController.js:
+ * Contains pure/helper functions for Playlist:
  * - Name generation (preset names)
  * - Tooltip generation and display
  * - Preset button state updates

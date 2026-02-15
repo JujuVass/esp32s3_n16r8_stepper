@@ -208,23 +208,12 @@ function openPlaylistModal(mode) {
   
   modal.dataset.mode = mode;
   
-  // Set title - delegate to pure function if available
-  if (typeof getPlaylistModalTitlePure === 'function') {
-    titleEl.textContent = getPlaylistModalTitlePure(mode);
-  } else {
-    // Fallback
-    const titles = { 'simple': 'Mode Simple', 'oscillation': 'Mode Oscillation', 'chaos': 'Mode Chaos' };
-    titleEl.textContent = titles[mode] || mode;
-  }
+  // Set title
+  titleEl.textContent = getPlaylistModalTitlePure(mode);
   
-  // Display current config - delegate to pure function if available
+  // Display current config
   const config = getCurrentModeConfig(mode);
-  if (typeof generateConfigPreviewHTMLPure === 'function') {
-    configEl.innerHTML = generateConfigPreviewHTMLPure(mode, config);
-  } else {
-    // Fallback - simplified
-    configEl.innerHTML = `Mode: ${mode}`;
-  }
+  configEl.innerHTML = `Mode: ${mode}`;
   
   // Refresh presets list
   refreshPlaylistPresets(mode);
@@ -281,7 +270,7 @@ function refreshPlaylistPresets(mode) {
         <div class="flex-between" style="gap: 6px;">
           <div style="flex: 1; min-width: 0;">
             <div class="text-500 text-md mb-4" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${preset.name}</div>
-            <div class="text-xs" style="color: #888;">${new Date(preset.timestamp * 1000).toLocaleString('fr-FR', {dateStyle: 'short', timeStyle: 'short'})}</div>
+            <div class="text-xs" style="color: #888;">${new Date(preset.timestamp * 1000).toLocaleString(I18n.language === 'fr' ? 'fr-FR' : 'en-US', {dateStyle: 'short', timeStyle: 'short'})}</div>
           </div>
           <div class="flex-gap-6" style="flex-shrink: 0;">
             <button onclick="loadPresetInMode('${mode}', ${preset.id})" class="btn-mini" title="${t('playlist.loadInMode')}">
@@ -683,19 +672,7 @@ function loadSimplePreset(config) {
   // Send Zone Effects config to backend (use new format)
   const zoneEffectCmd = ze;  // ze is already built above
   console.debug('🔧 Sending setZoneEffect:', zoneEffectCmd);
-  if (WS_CMD.SET_ZONE_EFFECT) {
-    sendCommand(WS_CMD.SET_ZONE_EFFECT, zoneEffectCmd);
-  } else {
-    // Fallback to old command if new one not available
-    sendCommand(WS_CMD.SET_DECEL_ZONE, {
-      enabled: ze.enabled,
-      enableStart: ze.enableStart,
-      enableEnd: ze.enableEnd,
-      zoneMM: ze.zoneMM,
-      effectPercent: ze.speedIntensity,
-      mode: ze.speedCurve
-    });
-  }
+  sendCommand(WS_CMD.SET_ZONE_EFFECT, zoneEffectCmd);
   
   // Send cycle pause config to backend (unified API)
   const pauseCmd = {
@@ -849,77 +826,70 @@ function quickAddToSequencer(mode, presetId) {
   const config = preset.config;
   const effectiveMax = AppState.pursuit.effectiveMaxDistMM || AppState.pursuit.totalDistanceMM || 200;
   
-  // Build sequencer line - delegate to pure function if available
-  let newLine;
-  if (typeof buildSequenceLineFromPresetPure === 'function') {
-    newLine = buildSequenceLineFromPresetPure(mode, config, effectiveMax);
+  // Build sequencer line from preset config
+  const center = effectiveMax / 2;
+  
+  // Build vaetZoneEffect from config (new format) or convert from legacy format
+  let vaetZoneEffect;
+  if (config.vaetZoneEffect) {
+    // New format
+    vaetZoneEffect = config.vaetZoneEffect;
   } else {
-    // Fallback - minimal construction (should not happen if sequencer.js loaded)
-    console.warn('buildSequenceLineFromPresetPure not available');
-    const center = effectiveMax / 2;
-    
-    // Build vaetZoneEffect from config (new format) or convert from legacy format
-    let vaetZoneEffect;
-    if (config.vaetZoneEffect) {
-      // New format
-      vaetZoneEffect = config.vaetZoneEffect;
-    } else {
-      // Legacy format - convert decel* fields
-      vaetZoneEffect = {
-        enabled: config.decelStartEnabled || config.decelEndEnabled,
-        enableStart: config.decelStartEnabled ?? true,
-        enableEnd: config.decelEndEnabled ?? true,
-        zoneMM: config.decelZoneMM || 50,
-        speedEffect: 1,  // DECEL
-        speedCurve: config.decelMode || 1,
-        speedIntensity: config.decelEffectPercent || 75,
-        randomTurnbackEnabled: false,
-        turnbackChance: 30,
-        endPauseEnabled: false,
-        endPauseIsRandom: false,
-        endPauseDurationSec: 1.0,
-        endPauseMinSec: 0.5,
-        endPauseMaxSec: 2.0
-      };
-    }
-    
-    newLine = {
-      enabled: true,
-      movementType: mode === 'simple' ? 0 : mode === 'oscillation' ? 1 : 2,
-      cycleCount: 1,
-      pauseAfterMs: 0,
-      startPositionMM: config.startPositionMM || 0,
-      distanceMM: config.distanceMM || 50,
-      speedForward: config.speedLevelForward || 5,
-      speedBackward: config.speedLevelBackward || 5,
-      vaetZoneEffect: vaetZoneEffect,
-      oscCenterPositionMM: config.centerPositionMM || center,
-      oscAmplitudeMM: config.amplitudeMM || 50,
-      oscWaveform: 0,
-      oscFrequencyHz: 0.5,
-      oscEnableRampIn: false,
-      oscEnableRampOut: false,
-      oscRampInDurationMs: 1000,
-      oscRampOutDurationMs: 1000,
-      chaosCenterPositionMM: config.centerPositionMM || center,
-      chaosAmplitudeMM: config.amplitudeMM || 50,
-      chaosMaxSpeedLevel: 10,
-      chaosCrazinessPercent: 50,
-      chaosDurationSeconds: 30,
-      chaosSeed: 0,
-      chaosPatternsEnabled: [true, true, true, true, true, true, true, true, true, true, true],
-      vaetCyclePauseEnabled: config.cyclePauseEnabled || false,
-      vaetCyclePauseIsRandom: config.cyclePauseIsRandom || false,
-      vaetCyclePauseDurationSec: config.cyclePauseDurationSec || 0.0,
-      vaetCyclePauseMinSec: config.cyclePauseMinSec || 0.5,
-      vaetCyclePauseMaxSec: config.cyclePauseMaxSec || 3.0,
-      oscCyclePauseEnabled: false,
-      oscCyclePauseIsRandom: false,
-      oscCyclePauseDurationSec: 0.0,
-      oscCyclePauseMinSec: 0.5,
-      oscCyclePauseMaxSec: 3.0
+    // Legacy format - convert decel* fields
+    vaetZoneEffect = {
+      enabled: config.decelStartEnabled || config.decelEndEnabled,
+      enableStart: config.decelStartEnabled ?? true,
+      enableEnd: config.decelEndEnabled ?? true,
+      zoneMM: config.decelZoneMM || 50,
+      speedEffect: 1,  // DECEL
+      speedCurve: config.decelMode || 1,
+      speedIntensity: config.decelEffectPercent || 75,
+      randomTurnbackEnabled: false,
+      turnbackChance: 30,
+      endPauseEnabled: false,
+      endPauseIsRandom: false,
+      endPauseDurationSec: 1.0,
+      endPauseMinSec: 0.5,
+      endPauseMaxSec: 2.0
     };
   }
+  
+  const newLine = {
+    enabled: true,
+    movementType: mode === 'simple' ? 0 : mode === 'oscillation' ? 1 : 2,
+    cycleCount: 1,
+    pauseAfterMs: 0,
+    startPositionMM: config.startPositionMM || 0,
+    distanceMM: config.distanceMM || 50,
+    speedForward: config.speedLevelForward || 5,
+    speedBackward: config.speedLevelBackward || 5,
+    vaetZoneEffect: vaetZoneEffect,
+    oscCenterPositionMM: config.centerPositionMM || center,
+    oscAmplitudeMM: config.amplitudeMM || 50,
+    oscWaveform: 0,
+    oscFrequencyHz: 0.5,
+    oscEnableRampIn: false,
+    oscEnableRampOut: false,
+    oscRampInDurationMs: 1000,
+    oscRampOutDurationMs: 1000,
+    chaosCenterPositionMM: config.centerPositionMM || center,
+    chaosAmplitudeMM: config.amplitudeMM || 50,
+    chaosMaxSpeedLevel: 10,
+    chaosCrazinessPercent: 50,
+    chaosDurationSeconds: 30,
+    chaosSeed: 0,
+    chaosPatternsEnabled: [true, true, true, true, true, true, true, true, true, true, true],
+    vaetCyclePauseEnabled: config.cyclePauseEnabled || false,
+    vaetCyclePauseIsRandom: config.cyclePauseIsRandom || false,
+    vaetCyclePauseDurationSec: config.cyclePauseDurationSec || 0.0,
+    vaetCyclePauseMinSec: config.cyclePauseMinSec || 0.5,
+    vaetCyclePauseMaxSec: config.cyclePauseMaxSec || 3.0,
+    oscCyclePauseEnabled: false,
+    oscCyclePauseIsRandom: false,
+    oscCyclePauseDurationSec: 0.0,
+    oscCyclePauseMinSec: 0.5,
+    oscCyclePauseMaxSec: 3.0
+  };
   
   // Validate before sending (validateSequencerLine from main.js)
   if (typeof validateSequencerLine === 'function') {
@@ -1031,11 +1001,6 @@ function loadPresetIntoSequencerModal(mode) {
   
   showNotification('✅ ' + t('playlist.valuesLoaded') + ' ' + preset.name, 'success', 2000);
 }
-
-// ============================================================================
-// PRESET BUTTON STATE UPDATES (delegated to PlaylistUtils.js)
-// updateStartPresets(), updateDistancePresets() are now in PlaylistUtils.js
-// ============================================================================
 
 // ============================================================================
 // INITIALIZATION

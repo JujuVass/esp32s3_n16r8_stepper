@@ -48,13 +48,7 @@ function setSequenceLines(lines) { seqState.lines = lines; sequenceLines = lines
 
 function validateSequencerLine(line, movementType) {
   const effectiveMax = AppState.pursuit.effectiveMaxDistMM || AppState.pursuit.totalDistanceMM || 0;
-  
-  if (typeof validateSequencerLinePure === 'function') {
-    return validateSequencerLinePure(line, movementType, effectiveMax);
-  }
-  
-  console.warn('validateSequencerLinePure not available, skipping validation');
-  return [];
+  return validateSequencerLinePure(line, movementType, effectiveMax);
 }
 
 // ========================================================================
@@ -63,66 +57,7 @@ function validateSequencerLine(line, movementType) {
 
 function addSequenceLine() {
   const effectiveMax = AppState.pursuit.effectiveMaxDistMM || AppState.pursuit.totalDistanceMM || 0;
-  
-  let newLine;
-  if (typeof buildSequenceLineDefaultsPure === 'function') {
-    newLine = buildSequenceLineDefaultsPure(effectiveMax);
-  } else {
-    console.warn('buildSequenceLineDefaultsPure not available, using inline defaults');
-    const center = effectiveMax / 2;
-    newLine = {
-      enabled: true,
-      movementType: 0,
-      startPositionMM: 0,
-      distanceMM: Math.min(100, effectiveMax),
-      speedForward: 5.0,
-      speedBackward: 5.0,
-      vaetZoneEffect: {
-        enabled: false,
-        enableStart: true,
-        enableEnd: true,
-        mirrorOnReturn: false,
-        zoneMM: 50,
-        speedEffect: 1,
-        speedCurve: 1,
-        speedIntensity: 75,
-        randomTurnbackEnabled: false,
-        turnbackChance: 30,
-        endPauseEnabled: false,
-        endPauseIsRandom: false,
-        endPauseDurationSec: 1.0,
-        endPauseMinSec: 0.5,
-        endPauseMaxSec: 2.0
-      },
-      vaetCyclePauseEnabled: false,
-      vaetCyclePauseIsRandom: false,
-      vaetCyclePauseDurationSec: 0.0,
-      vaetCyclePauseMinSec: 0.5,
-      vaetCyclePauseMaxSec: 3.0,
-      oscCenterPositionMM: center,
-      oscAmplitudeMM: Math.min(50.0, center),
-      oscWaveform: 0,
-      oscFrequencyHz: 0.5,
-      oscEnableRampIn: false,
-      oscEnableRampOut: false,
-      oscRampInDurationMs: 1000.0,
-      oscRampOutDurationMs: 1000.0,
-      oscCyclePauseEnabled: false,
-      oscCyclePauseIsRandom: false,
-      oscCyclePauseDurationSec: 0.0,
-      oscCyclePauseMinSec: 0.5,
-      oscCyclePauseMaxSec: 3.0,
-      chaosCenterPositionMM: center,
-      chaosAmplitudeMM: Math.min(50.0, center),
-      chaosMaxSpeedLevel: 10.0,
-      chaosCrazinessPercent: 50.0,
-      chaosDurationSeconds: 30,
-      chaosSeed: 0,
-      chaosPatternsEnabled: [true, true, true, true, true, true, true, true, true, true, true],
-      cycleCount: 1,
-      pauseAfterMs: 0
-    };
-  }
+  const newLine = buildSequenceLineDefaultsPure(effectiveMax);
   
   const errors = validateSequencerLine(newLine, newLine.movementType);
   if (errors.length > 0) {
@@ -236,7 +171,7 @@ function downloadTemplate() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'sequence_template_avec_aide.json';
+  a.download = 'sequence_template.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -311,7 +246,7 @@ function testSequenceLine(lineId) {
     sendCommand(WS_CMD.START_SEQUENCE, {});
     const testedLine = sequenceLines.find(l => l.lineId === lineId);
     const cycleText = testedLine ? testedLine.cycleCount + ' cycle(s)' : '';
-    showNotification('🧪 Test ligne #' + lineId + ' (' + cycleText + ')', 'info', 3000);
+    showNotification('🧪 ' + t('sequencer.testingLine', {id: lineId, cycles: cycleText}), 'info', 3000);
   }, 500);
 }
 
@@ -605,7 +540,7 @@ function validateEditForm() {
     if (form.chaosMaxSpeedLevel.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.chaosSpeedIncorrect'));
     if (form.chaosCrazinessPercent.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.crazinessIncorrect'));
     if (form.chaosDurationSeconds.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.durationIncorrect'));
-    if (form.chaosSeed.value.trim() === '') emptyFieldErrors.push('⚠️ Seed incorrect');
+    if (form.chaosSeed.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.seedIncorrect'));
   }
   
   if (movementType !== 4) {
@@ -663,12 +598,7 @@ function highlightErrorFields(movementType, line, emptyFieldErrors) {
   clearErrorFields();
   const effectiveMax = AppState.pursuit.effectiveMaxDistMM || AppState.pursuit.totalDistanceMM || 0;
   
-  let invalidFieldIds = [];
-  if (typeof getAllInvalidFieldsPure === 'function') {
-    invalidFieldIds = getAllInvalidFieldsPure(line, movementType, effectiveMax, emptyFieldErrors);
-  } else if (typeof getErrorFieldIdsPure === 'function') {
-    invalidFieldIds = getErrorFieldIdsPure(emptyFieldErrors);
-  }
+  const invalidFieldIds = getAllInvalidFieldsPure(line, movementType, effectiveMax, emptyFieldErrors);
   
   const errorStyle = '2px solid #f44336';
   invalidFieldIds.forEach(fieldId => {
@@ -1123,15 +1053,8 @@ function createSequenceRow(line, index) {
 }
 
 // ============================================================================
-// DISPLAY HELPERS - Loaded from SequenceUtils.js
+// DISPLAY HELPERS
 // ============================================================================
-// Note: The following functions are now in SequenceUtils.js:
-// - getTypeDisplay(movementType, line)
-// - getDecelSummary(line, movementType)
-// - getSpeedsDisplay(line, movementType)
-// - getCyclesPause(line, movementType)
-// - getSequenceTemplateDoc()
-// - MOVEMENT_TYPE constants
 
 function attachRowEventHandlers(row, line, index) {
   // Hover effect

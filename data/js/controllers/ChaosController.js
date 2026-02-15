@@ -1,6 +1,5 @@
 // ============================================================================
 // CHAOS CONTROLLER MODULE
-// Extracted from main.js - Chaos mode control and UI management
 // ============================================================================
 
 // ============================================================================
@@ -78,23 +77,17 @@ function sendChaosConfig() {
     patternsEnabled: getPatternStates()
   };
   
-  // Delegate to pure function if available (from chaos.js)
-  let config;
-  if (typeof buildChaosConfigPure === 'function') {
-    config = buildChaosConfigPure(formValues);
-  } else {
-    // Fallback
-    const duration = parseInt(formValues.duration);
-    config = {
-      centerPositionMM: parseFloat(formValues.centerPos) || 0,
-      amplitudeMM: parseFloat(formValues.amplitude) || 0,
-      maxSpeedLevel: parseFloat(formValues.maxSpeed) || 10,
-      crazinessPercent: parseInt(formValues.craziness) || 50,
-      durationSeconds: isNaN(duration) ? 30 : duration,  // 0 = infinite, don't default to 30
-      seed: parseInt(formValues.seed) || 0,
-      patternsEnabled: formValues.patternsEnabled
-    };
-  }
+  // Build config from form values
+  const duration = parseInt(formValues.duration);
+  const config = {
+    centerPositionMM: parseFloat(formValues.centerPos) || 0,
+    amplitudeMM: parseFloat(formValues.amplitude) || 0,
+    maxSpeedLevel: parseFloat(formValues.maxSpeed) || 10,
+    crazinessPercent: parseInt(formValues.craziness) || 50,
+    durationSeconds: isNaN(duration) ? 30 : duration,  // 0 = infinite, don't default to 30
+    seed: parseInt(formValues.seed) || 0,
+    patternsEnabled: formValues.patternsEnabled
+  };
   
   sendCommand(WS_CMD.SET_CHAOS_CONFIG, config);
 }
@@ -108,13 +101,7 @@ function validateChaosLimits() {
   const amplitude = parseFloat(document.getElementById('chaosAmplitude').value);
   const totalDistMM = AppState.pursuit.totalDistanceMM || 0;
   
-  // Use pure function if available (from context.js)
-  if (typeof validateChaosLimitsPure === 'function') {
-    const result = validateChaosLimitsPure(centerPos, amplitude, totalDistMM);
-    return result.valid;
-  }
-  
-  // Fallback to inline logic
+  // Validate limits
   if (centerPos - amplitude < 0 || centerPos + amplitude > totalDistMM) {
     return false;
   }
@@ -515,18 +502,3 @@ function initChaosListeners() {
   
   console.debug('🎲 ChaosController initialized');
 }
-
-// ============================================================================
-// EXPOSED API
-// ============================================================================
-// Functions available globally:
-// - toggleChaosHelp(), toggleChaosAdvancedSection()
-// - sendChaosConfig()
-// - validateChaosLimits()
-// - updateChaosPresets()
-// - updatePatternToggleButton()
-// - updateChaosUI(data)
-// - startChaos(), stopChaos(), pauseChaos()
-// - enableAllPatterns(), toggleAllPatterns()
-// - enableSoftPatterns(), enableDynamicPatterns()
-// - initChaosListeners()

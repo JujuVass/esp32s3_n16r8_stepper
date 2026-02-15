@@ -8,8 +8,6 @@
  * - app.js (AppState, WS_CMD)
  * - utils.js (showNotification)
  * - ui.js (updateUI) - loaded after this file
- * 
- * Created: December 2024 (extracted from index.html)
  * ============================================================================
  */
 

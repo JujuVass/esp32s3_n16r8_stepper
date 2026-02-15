@@ -15,7 +15,6 @@
  *   - Single point of maintenance for element references
  * 
  * Dependencies: None (must load before main.js)
- * Created: December 2024 (extracted from main.js)
  * ============================================================================
  */
 

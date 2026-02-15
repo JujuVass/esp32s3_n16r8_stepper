@@ -19,8 +19,6 @@
  * - sendCommand: WebSocket command sender
  * 
  * Dependencies: app.js (AppState, SystemState)
- * Created: December 2024 (extracted from index.html)
- * Updated: December 2024 (enhanced notification system)
  * ============================================================================
  */
 

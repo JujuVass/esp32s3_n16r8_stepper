@@ -10,8 +10,6 @@
  * - WS_CMD: WebSocket command constants
  * - SystemState: State machine enum
  * - MILESTONES: Distance achievement data
- * 
- * Created: December 2024 (extracted from index.html)
  * ============================================================================
  */
 

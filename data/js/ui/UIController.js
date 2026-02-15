@@ -12,8 +12,6 @@
  * - PursuitController.js (isPursuitActive, disablePursuitMode, setGaugeTarget)
  * - OscillationController.js (sendOscillationConfig, validateOscillationLimits, updateOscillationPresets)
  * - ChaosController.js (validateChaosLimits, updateChaosPresets)
- * 
- * Created: December 2025 (extracted from main.js)
  * ============================================================================
  */
 

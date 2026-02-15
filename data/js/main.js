@@ -302,7 +302,7 @@
         }
       }
       
-      const stateText = t('states') || ['Initialisation', 'Calibration...', 'Prêt', 'En marche', 'En pause', 'Erreur'];
+      const stateText = t('states') || ['Init', 'Calibrating', 'Ready', 'Running', 'Paused', 'Error'];
       const stateClass = ['state-init', 'state-calibrating', 'state-ready', 'state-running', 'state-paused', 'state-error'];
       
       let displayText = stateText[data.state] || t('common.error');
@@ -506,69 +506,8 @@
     }
     
     // ============================================================================
-    // PLAYLIST MANAGEMENT FUNCTIONS - Loaded from PlaylistController.js
-    // ============================================================================
-    // Note: Playlist functions loaded from external module:
-    // - loadPlaylists(), updatePlaylistButtonCounters()
-    // - generatePresetName(), generatePresetTooltip(), generateSequenceLineTooltip()
-    // - getCurrentModeConfig(mode), openPlaylistModal(mode), closePlaylistModal()
-    // - refreshPlaylistPresets(mode), filterPlaylistPresets(searchTerm)
-    // - addToPlaylist(mode), deleteFromPlaylist(mode, id), renamePlaylistPreset(mode, id)
-    // - loadPresetInMode(mode, id), quickAddToSequencer(mode, presetId)
-    // - loadPresetIntoSequencerModal(mode)
-    // - updateStartPresets(maxDist), updateDistancePresets(maxAvailable)
-    // Event listeners initialized via initPlaylistListeners() in window.load
-    
-    // Note: canStartOperation, setButtonState, setupEditableInput, setupPresetButtons, sendCommand loaded from utils.js
-    
-    // ============================================================================
-    // COMMON TOOLS - Loaded from ToolsController.js
-    // ============================================================================
-    // Note: Tools functions loaded from external module:
-    // - calibrateMotor(), resetTotalDistance()
-    // - toggleLogsPanel(), closeLogsPanel(), clearLogsPanel(), loadLogFilesList()
-    // - toggleStatsPanel(), closeStatsPanel(), clearAllStats(), exportStats()
-    // - toggleSystemPanel(), closeSystemPanel(), refreshWifi(), rebootESP32()
-    // - loadLoggingPreferences(), saveLoggingPreferences()
-    // Event listeners initialized via initToolsListeners() in window.load
-    
-    // ============================================================================
-    // MAX DISTANCE LIMIT CONFIGURATION - Loaded from PursuitController.js
-    // ============================================================================
-    // Note: updateMaxDistLimitUI(), initMaxDistLimitListeners() in PursuitController.js
-    
-    // ============================================================================
-    // SIMPLE MODE - Loaded from SimpleController.js
-    // ============================================================================
-    // Note: Simple mode functions loaded from external module:
-    // - startSimpleMode(), pauseSimpleMode(), stopSimpleMode()
-    // - handleSpeedModeChange(), initSimpleListeners()
-    // Event listeners initialized via initSimpleListeners() in window.load
-    
-    // ========================================================================
-    // PLAYLIST BUTTON EVENT LISTENERS - Loaded from PlaylistController.js
-    // ========================================================================
-    // Note: Event listeners initialized via initPlaylistListeners() in window.load
-
-    // ============================================================================
-    // PURSUIT MODE - Loaded from PursuitController.js
-    // ============================================================================
-    // Note: Pursuit mode functions loaded from external module:
-    // - updateGaugePosition(), setGaugeTarget(), sendPursuitCommand()
-    // - enablePursuitMode(), disablePursuitMode(), togglePursuitMode()
-    // - initPursuitListeners(), initPursuitModeOnLoad()
-    // - updateMaxDistLimitUI(), initMaxDistLimitListeners()
-    // - isPursuitActive(), getPursuitMaxSpeed(), isEditingMaxDistanceLimit()
-
-    // ============================================================================
     // TAB MANAGEMENT & MODE SWITCHING - Loaded from UIController.js
     // ============================================================================
-    // Note: UI/Tab/Modal functions loaded from external module:
-    // - switchTab(), isSystemRunning()
-    // - cancelModeChange(), confirmModeChange()
-    // - showStopModal(), cancelStopModal(), confirmStopModal()
-    // - cancelSequencerLimitChange(), confirmSequencerLimitChange()
-    // - initUIListeners() (tab click handlers)
     
     // Force initial state on page load (prevent browser cache issues)
     window.addEventListener('load', async function() {

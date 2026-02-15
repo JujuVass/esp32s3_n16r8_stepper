@@ -101,7 +101,6 @@ function updateSimpleRelativePresets() {
 
 /**
  * Update Simple mode UI from WebSocket status data
- * Extracted from main.js updateUI() for better modularity
  * @param {Object} data - Status data from WebSocket
  */
 function updateSimpleUI(data) {
@@ -474,13 +473,8 @@ function sendZoneEffectConfig(isInitialOpen = false) {
     AppState.lastZoneEffectRequest = zoneMM;
   }
   
-  // Use new command if available, fallback to legacy
-  if (WS_CMD.SET_ZONE_EFFECT) {
-    sendCommand(WS_CMD.SET_ZONE_EFFECT, config);
-  } else {
-    // Legacy fallback for backward compatibility
-    sendCommand(WS_CMD.SET_DECEL_ZONE, config);
-  }
+  // Send zone effect config to backend
+  sendCommand(WS_CMD.SET_ZONE_EFFECT, config);
   
   // Update header text
   updateZoneEffectHeaderText();
