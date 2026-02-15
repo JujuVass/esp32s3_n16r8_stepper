@@ -548,11 +548,6 @@ select.select-input:focus {
   to { opacity: 1; transform: scaleY(1); }
 }
 
-@keyframes pulse-drop-zone {
-  0%, 100% { opacity: 0.6; transform: scaleY(1); }
-  50% { opacity: 1; transform: scaleY(1.5); }
-}
-
 /* Drop zone placeholder (dashed box preview) */
 .sequence-drop-placeholder {
   height: 40px;
@@ -800,10 +795,6 @@ select.select-input:focus {
   white-space: pre-line;
   transform: translateX(0);
   opacity: 1;
-}
-
-/* Slide-in animation */
-.notification {
   animation: notifSlideIn 0.3s ease-out;
 }
 

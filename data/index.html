@@ -274,14 +274,14 @@
 
   <div class="container">
     <!-- Common Status (COMPACT VERSION) -->
-    <div class="status-compact" style="background:white; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); margin-bottom:15px; overflow:hidden;">
+    <div class="status-compact">
       
       <!-- Header Row: État + Actions -->
       <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 15px; background:#E3F2FD; border-bottom:1px solid #BBDEFB;">
         <span style="font-weight:bold; font-size:15px; color:#1976D2;">
           <span data-i18n="status.stateLabel">État:</span> <span id="state" style="color:#333;" data-i18n="status.init">Initialisation...</span>
         </span>
-        <div style="display:flex; gap:6px;">
+        <div class="flex-gap-6">
           <button class="btn-compact" id="btnLangToggle" onclick="I18n.toggleLanguage()" title="Switch to English" style="background: transparent; border: 1px solid #BBDEFB; font-size: 18px; padding: 4px 8px; cursor: pointer; border-radius: 4px;">🇫🇷</button>
           <button class="btn-compact btn-primary" id="btnCalibrateCommon" title="Calibrer les limites">🔍 <span data-i18n="status.calib">Calib</span></button>
           <button class="btn-compact btn-info" id="btnShowLogs" title="Afficher logs">📋 <span data-i18n="status.logs">Logs</span></button>
@@ -311,7 +311,7 @@
           <span id="maxDistLimitValue" style="font-weight:bold; font-size:12px; min-width:40px;">100%</span>
           <span id="maxDistLimitMM" style="color:#666; font-size:11px; min-width:70px;">(-- mm)</span>
         </div>
-        <div style="display:flex; gap:6px;">
+        <div class="flex-gap-6">
           <button id="btnApplyMaxDistLimit" class="btn-compact btn-success" disabled>✅ OK</button>
           <button id="btnCancelMaxDistLimit" class="btn-compact btn-secondary">✕ <span data-i18n="common.cancel">Annuler</span></button>
         </div>
@@ -366,7 +366,7 @@
       <div class="mb-12">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
           <label style="font-weight: bold; color: #333; font-size: 13px;" data-i18n="system.realTimeConsole">Console temps réel:</label>
-          <div style="display: flex; gap: 6px;">
+          <div class="flex-gap-6">
             <button class="button btn-secondary" id="btnClearLogsPanel" style="padding: 4px 10px; font-size: 11px;">🗑️ <span data-i18n="system.clearAll">Effacer</span></button>
           </div>
         </div>
@@ -374,7 +374,7 @@
       </div>
 
       <!-- Debug Controls -->
-      <div style="background: #f5f5f5; padding: 10px; border-radius: 6px; margin-bottom: 12px;">
+      <div class="box-gray mb-12">
         <label style="font-weight: bold; color: #333; display: block; margin-bottom: 8px; font-size: 13px;">⚙️ <span data-i18n="system.debugLevel">Niveau de debug:</span></label>
         <div style="display: flex; gap: 8px; align-items: center;">
           <label style="display: flex; align-items: center; cursor: pointer;">
@@ -469,29 +469,29 @@
 
       <!-- System Stats Grid -->
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 13px;">
-        <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
+        <div class="box-gray">
           <div style="color: #666; font-size: 11px; margin-bottom: 4px;" data-i18n="system.cpu">CPU</div>
           <div id="sysCpuFreq" class="value-display">-- MHz</div>
         </div>
         
-        <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
+        <div class="box-gray">
           <div style="color: #666; font-size: 11px; margin-bottom: 4px;">🌡️ <span data-i18n="system.temperature">Température</span></div>
           <div id="sysTemp" class="value-display">-- °C</div>
         </div>
         
-        <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
+        <div class="box-gray">
           <div style="color: #666; font-size: 11px; margin-bottom: 4px;">💾 <span data-i18n="system.ram">RAM</span></div>
           <div id="sysRam" class="value-display">-- KB libre</div>
           <div id="sysRamPercent" style="font-size: 11px; color: #666; margin-top: 2px;">--% utilisé</div>
         </div>
         
-        <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
+        <div class="box-gray">
           <div style="color: #666; font-size: 11px; margin-bottom: 4px;">🧠 <span data-i18n="system.psram">PSRAM</span></div>
           <div id="sysPsram" class="value-display">-- MB libre</div>
           <div id="sysPsramPercent" style="font-size: 11px; color: #666; margin-top: 2px;">--% utilisé</div>
         </div>
         
-        <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
+        <div class="box-gray">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
             <div style="color: #666; font-size: 11px;">📶 <span data-i18n="system.wifiLabel">WiFi</span></div>
             <div style="display: flex; gap: 4px;">
@@ -507,7 +507,7 @@
           <div id="sysWifiQuality" style="font-size: 11px; color: #666; margin-top: 2px;">--</div>
         </div>
         
-        <div style="background: #f5f5f5; padding: 10px; border-radius: 6px;">
+        <div class="box-gray">
           <div style="color: #666; font-size: 11px; margin-bottom: 4px;">⚡ <span data-i18n="system.uptime">Uptime</span></div>
           <div id="sysUptime" class="value-display">--</div>
         </div>
