@@ -94,11 +94,8 @@ function getEditDOM() {
   return _editDOM;
 }
 
-// Local aliases for sequence state properties (avoids implicit globals)
-let editingLineId = seqState.editingLineId;
-let isLoadingEditForm = seqState.isLoadingEditForm;
-let selectedLineIds = seqState.selectedIds;   // Set — initialized in app.js
-let lastSelectedIndex = seqState.lastSelectedIndex;
+// Local aliases for sequence state (object refs stay in sync, primitives use seqState.*)
+let selectedLineIds = seqState.selectedIds;   // Set — object ref, stays in sync
 let draggedLineId = null;
 
 // Helper getters/setters for commonly accessed properties
@@ -373,8 +370,8 @@ function editSequenceLine(lineId) {
   }
   
   console.debug('✅ Found line:', line);
-  editingLineId = lineId;
-  isLoadingEditForm = true;
+  seqState.editingLineId = lineId;
+  seqState.isLoadingEditForm = true;
   
   const ed = getEditDOM();
   clearErrorFields();
@@ -473,7 +470,7 @@ function editSequenceLine(lineId) {
   }
   
   ed.modal.style.display = 'block';
-  isLoadingEditForm = false;
+  seqState.isLoadingEditForm = false;
 }
 
 function saveLineEdit(event) {
@@ -502,7 +499,7 @@ function saveLineEdit(event) {
   };
   
   const updatedLine = {
-    lineId: editingLineId,
+    lineId: seqState.editingLineId,
     enabled: true,
     movementType: movementType,
     startPositionMM: parseFloat(form.startPositionMM.value),
@@ -556,7 +553,7 @@ function saveLineEdit(event) {
 }
 
 function validateEditForm() {
-  if (isLoadingEditForm) return;
+  if (seqState.isLoadingEditForm) return;
   
   const form = getEditDOM().form;
   const movementType = parseInt(form.movementType.value);
@@ -689,7 +686,7 @@ function updateMovementTypeFields() {
 function closeEditModal() {
   const ed = getEditDOM();
   ed.modal.style.display = 'none';
-  editingLineId = null;
+  seqState.editingLineId = null;
   clearErrorFields();
   if (ed.validationErrors) ed.validationErrors.style.display = 'none';
   
@@ -757,7 +754,7 @@ function previewSequencerPreset(mode, presetId) {
 
 function clearSelection() {
   selectedLineIds.clear();
-  lastSelectedIndex = null;
+  seqState.lastSelectedIndex = null;
   updateBatchToolbar();
   renderSequenceTable({ lines: sequenceLines });
 }
@@ -967,11 +964,11 @@ function renderSequenceTable(data) {
   
   // Migration: convert old microsecond values to speedLevel
   sequenceLines.forEach(line => {
-    if (line.speedForward > 20) {
-      line.speedForward = Math.max(1, Math.min(20, 21 - line.speedForward / 25));
+    if (line.speedForward > SEQ_LIMITS.MAX_SPEED_LEVEL) {
+      line.speedForward = Math.max(1, Math.min(SEQ_LIMITS.MAX_SPEED_LEVEL, 21 - line.speedForward / 25));
     }
-    if (line.speedBackward > 20) {
-      line.speedBackward = Math.max(1, Math.min(20, 21 - line.speedBackward / 25));
+    if (line.speedBackward > SEQ_LIMITS.MAX_SPEED_LEVEL) {
+      line.speedBackward = Math.max(1, Math.min(SEQ_LIMITS.MAX_SPEED_LEVEL, 21 - line.speedBackward / 25));
     }
   });
   
@@ -1118,9 +1115,9 @@ function attachRowEventHandlers(row, line, index) {
   row.onclick = function(e) {
     if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
     
-    if (e.shiftKey && lastSelectedIndex !== null) {
-      const startIdx = Math.min(lastSelectedIndex, index);
-      const endIdx = Math.max(lastSelectedIndex, index);
+    if (e.shiftKey && seqState.lastSelectedIndex !== null) {
+      const startIdx = Math.min(seqState.lastSelectedIndex, index);
+      const endIdx = Math.max(seqState.lastSelectedIndex, index);
       for (let i = startIdx; i <= endIdx; i++) {
         if (i < sequenceLines.length) {
           selectedLineIds.add(sequenceLines[i].lineId);
@@ -1137,7 +1134,7 @@ function attachRowEventHandlers(row, line, index) {
       selectedLineIds.add(line.lineId);
     }
     
-    lastSelectedIndex = index;
+    seqState.lastSelectedIndex = index;
     updateBatchToolbar();
     renderSequenceTable({ lines: sequenceLines });
   };
@@ -1334,7 +1331,7 @@ function initSequenceListeners() {
     if ((e.ctrlKey || e.metaKey) && e.key === 'a' && sequenceLines.length > 0) {
       selectedLineIds.clear();
       sequenceLines.forEach(line => selectedLineIds.add(line.lineId));
-      lastSelectedIndex = 0;
+      seqState.lastSelectedIndex = 0;
       updateBatchToolbar();
       renderSequenceTable({ lines: sequenceLines });
       e.preventDefault();

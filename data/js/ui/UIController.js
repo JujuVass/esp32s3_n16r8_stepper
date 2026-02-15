@@ -315,10 +315,11 @@ function cancelSequencerLimitChange() {
     document.querySelector('[data-tab="' + prevTab + '"]').classList.add('active');
     
     // Restore previous tab content
-    document.querySelectorAll('.mode-content').forEach(content => {
+    const tabMap = { 'simple': 'tabSimple', 'pursuit': 'tabPursuit', 'oscillation': 'tabOscillation', 'chaos': 'tabChaos', 'tableau': 'tabTableau' };
+    document.querySelectorAll('.tab-content').forEach(content => {
       content.classList.remove('active');
     });
-    document.getElementById(prevTab + '-content').classList.add('active');
+    document.getElementById(tabMap[prevTab] || 'tabSimple').classList.add('active');
   }, 10);
 }
 

@@ -634,10 +634,10 @@ function updateSystemStats(system) {
   
   // RAM
   if (system.heapFree !== undefined && system.heapTotal !== undefined && system.heapUsedPercent !== undefined) {
-    const ramFreeMB = (system.heapFree / 1024).toFixed(1);
-    const ramTotalMB = (system.heapTotal / 1024).toFixed(1);
+    const ramFreeKB = (system.heapFree / 1024).toFixed(1);
+    const ramTotalKB = (system.heapTotal / 1024).toFixed(1);
     const ramUsedPercent = parseFloat(system.heapUsedPercent);
-    DOM.sysRam.textContent = ramFreeMB + ' KB ' + t('tools.free') + ' / ' + ramTotalMB + ' KB';
+    DOM.sysRam.textContent = ramFreeKB + ' KB ' + t('tools.free') + ' / ' + ramTotalKB + ' KB';
     DOM.sysRamPercent.textContent = ramUsedPercent.toFixed(1) + '% ' + t('tools.used');
   }
   
