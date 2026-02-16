@@ -2058,7 +2058,8 @@
 
   </div>
 
-  <!-- Script Loader: downloads 2 at a time, executes in order, retries on failure.
+  <!-- Script Loader: resolves ESP32 IP first (avoids mDNS for every fetch),
+       then downloads 2 at a time, executes in order, retries on failure.
        ESP32 web server handles ~4-6 concurrent connections;
        2 parallel downloads balances speed vs. reliability. -->
   <script>
@@ -2098,6 +2099,7 @@
     var loaded = 0;        // count of fully loaded+executed scripts
     var fetched = {};      // idx -> blob URL (downloaded but waiting for execution turn)
     var fetchNext = 0;     // next index to start fetching
+    var baseUrl = '';      // IP-based origin (resolved below), empty = use relative paths
 
     function updateUI(idx, name, retry) {
       var pct = Math.round((loaded / total) * 100);
@@ -2140,7 +2142,7 @@
       var src = scripts[idx];
       updateUI(idx, src, attempt);
       var xhr = new XMLHttpRequest();
-      xhr.open('GET', src + '?' + CACHE_BUST + (attempt > 0 ? '&r=' + attempt : ''), true);
+      xhr.open('GET', baseUrl + src + '?' + CACHE_BUST + (attempt > 0 ? '&r=' + attempt : ''), true);
       xhr.responseType = 'blob';
       xhr.onload = function() {
         if (xhr.status === 200) {
@@ -2172,10 +2174,37 @@
       }
     }
 
+    // Resolve ESP32 IP before loading scripts to avoid mDNS for every fetch.
+    // The page was served via HTTP (mDNS already resolved by browser for that),
+    // but each XHR can trigger a new DNS lookup. By fetching /api/ip once,
+    // we get the real IP and use it as base URL for all script downloads.
+    // Also exposes window.__espIp for WebSocket connection later.
+    function resolveIpThenStart() {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '/api/ip', true);
+      xhr.timeout = 2000; // Don't block boot if endpoint is unavailable
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          try {
+            var data = JSON.parse(xhr.responseText);
+            if (data.ip && data.ip !== '0.0.0.0') {
+              baseUrl = 'http://' + data.ip;
+              window.__espIp = data.ip;
+              console.debug('[Loader] Resolved ESP32 IP:', data.ip, '— fetching scripts via IP');
+            }
+          } catch(e) { /* ignore parse error, use relative paths */ }
+        }
+        pump();
+      };
+      xhr.onerror = function() { pump(); };    // Fallback: use relative paths (mDNS)
+      xhr.ontimeout = function() { pump(); };  // Fallback: don't block boot
+      xhr.send();
+    }
+
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() { pump(); });
+      document.addEventListener('DOMContentLoaded', function() { resolveIpThenStart(); });
     } else {
-      pump();
+      resolveIpThenStart();
     }
   })();
   </script>

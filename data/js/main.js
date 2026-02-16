@@ -565,19 +565,10 @@
         // This ensures updateUI() can access DOM.state, DOM.position, etc.
         // when the first status response arrives from the ESP32
         
-        // Resolve ESP32 IP before WebSocket connection to avoid mDNS on port 81
-        // mDNS is slow/unreliable — fetching IP once via HTTP (already resolved) is faster
-        try {
-          const ipResp = await fetch('/api/ip');
-          if (ipResp.ok) {
-            const ipData = await ipResp.json();
-            if (ipData.ip && ipData.ip !== '0.0.0.0') {
-              AppState.espIpAddress = ipData.ip;
-              console.debug('📡 Resolved ESP32 IP at boot:', ipData.ip);
-            }
-          }
-        } catch(e) {
-          console.debug('⚠️ Could not pre-resolve IP, will use hostname:', e.message);
+        // Use IP resolved by the script loader (avoids mDNS for WebSocket port 81)
+        if (window.__espIp) {
+          AppState.espIpAddress = window.__espIp;
+          console.debug('📡 Using pre-resolved ESP32 IP:', window.__espIp);
         }
         
         connectWebSocket();
