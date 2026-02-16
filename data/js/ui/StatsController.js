@@ -111,9 +111,9 @@ function displayStatsTable(stats) {
     }
     
     const row = document.createElement('tr');
-    row.className = 'stats-row';
+    row.style.borderBottom = '1px solid #f0f0f0';
     row.innerHTML = `
-      <td class="stats-cell" style="text-align: left;">${entry.date}</td>
+      <td class="stats-cell">${entry.date}</td>
       <td class="stats-cell text-md">${getDayNames()[dayIndex]}</td>
       <td class="stats-cell" style="font-size: 18px; cursor: help;" title="${milestoneTooltip}">${milestoneIcon}</td>
       <td class="stats-cell text-right font-mono">${displayDistance}</td>
@@ -304,11 +304,9 @@ function renderStatsChart(labels, distances, sortedWeeks, weeklyData) {
       datasets: [{
         label: t('stats.weeklyDistance'),
         data: distances,
-        backgroundColor: 'rgba(72, 187, 120, 0.5)',
-        borderColor: 'rgba(56, 161, 105, 1)',
-        borderWidth: 1.5,
-        borderRadius: 4,
-        borderSkipped: false
+        backgroundColor: 'rgba(76, 175, 80, 0.6)',
+        borderColor: 'rgba(76, 175, 80, 1)',
+        borderWidth: 1
       }]
     },
     options: {
