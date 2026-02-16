@@ -2058,10 +2058,12 @@
 
   </div>
 
-  <!-- Script Loader: resolves ESP32 IP first (avoids mDNS for every fetch),
-       then downloads 2 at a time, executes in order, retries on failure.
+  <!-- Script Loader: resolves ESP32 IP first (for WebSocket on port 81),
+       then downloads 2 scripts at a time, executes in order, retries on failure.
        ESP32 web server handles ~4-6 concurrent connections;
-       2 parallel downloads balances speed vs. reliability. -->
+       2 parallel downloads balances speed vs. reliability.
+       Note: scripts are fetched via relative paths (same origin) to avoid CORS.
+       Only WebSocket uses the resolved IP (different port = new DNS lookup). -->
   <script>
   (function() {
     var scripts = [
@@ -2099,7 +2101,6 @@
     var loaded = 0;        // count of fully loaded+executed scripts
     var fetched = {};      // idx -> blob URL (downloaded but waiting for execution turn)
     var fetchNext = 0;     // next index to start fetching
-    var baseUrl = '';      // IP-based origin (resolved below), empty = use relative paths
 
     function updateUI(idx, name, retry) {
       var pct = Math.round((loaded / total) * 100);
@@ -2142,7 +2143,7 @@
       var src = scripts[idx];
       updateUI(idx, src, attempt);
       var xhr = new XMLHttpRequest();
-      xhr.open('GET', baseUrl + src + '?' + CACHE_BUST + (attempt > 0 ? '&r=' + attempt : ''), true);
+      xhr.open('GET', src + '?' + CACHE_BUST + (attempt > 0 ? '&r=' + attempt : ''), true);
       xhr.responseType = 'blob';
       xhr.onload = function() {
         if (xhr.status === 200) {
@@ -2174,11 +2175,10 @@
       }
     }
 
-    // Resolve ESP32 IP before loading scripts to avoid mDNS for every fetch.
-    // The page was served via HTTP (mDNS already resolved by browser for that),
-    // but each XHR can trigger a new DNS lookup. By fetching /api/ip once,
-    // we get the real IP and use it as base URL for all script downloads.
-    // Also exposes window.__espIp for WebSocket connection later.
+    // Resolve ESP32 IP before loading scripts so it's ready for WebSocket (port 81).
+    // HTTP script fetches stay same-origin (relative paths) to avoid CORS issues.
+    // Only WebSocket needs the IP: different port triggers a new DNS lookup,
+    // and mDNS is slow/unreliable. window.__espIp is picked up by main.js.
     function resolveIpThenStart() {
       var xhr = new XMLHttpRequest();
       xhr.open('GET', '/api/ip', true);
@@ -2188,15 +2188,14 @@
           try {
             var data = JSON.parse(xhr.responseText);
             if (data.ip && data.ip !== '0.0.0.0') {
-              baseUrl = 'http://' + data.ip;
               window.__espIp = data.ip;
-              console.debug('[Loader] Resolved ESP32 IP:', data.ip, '— fetching scripts via IP');
+              console.debug('[Loader] Resolved ESP32 IP:', data.ip, '(for WebSocket)');
             }
-          } catch(e) { /* ignore parse error, use relative paths */ }
+          } catch(e) { /* ignore parse error */ }
         }
         pump();
       };
-      xhr.onerror = function() { pump(); };    // Fallback: use relative paths (mDNS)
+      xhr.onerror = function() { pump(); };    // Fallback: WebSocket will use hostname
       xhr.ontimeout = function() { pump(); };  // Fallback: don't block boot
       xhr.send();
     }
