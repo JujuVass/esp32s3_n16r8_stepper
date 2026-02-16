@@ -301,6 +301,18 @@ void setupAPIRoutes() {
     });
 
   // ========================================================================
+  // IP RESOLUTION ENDPOINT (avoids mDNS for WebSocket)
+  // ========================================================================
+
+  // GET /api/ip - Returns ESP32 IP address for direct WebSocket connection
+  // This allows the browser to resolve the IP once at boot, avoiding
+  // repeated mDNS lookups (which are slow/unreliable) for WS on port 81
+  server.on("/api/ip", HTTP_GET, []() {
+    sendCORSHeaders();
+    server.send(200, "application/json", "{\"ip\":\"" + Network.getIPAddress() + "\"}");
+  });
+
+  // ========================================================================
   // STATISTICS API ROUTES
   // ========================================================================
   
