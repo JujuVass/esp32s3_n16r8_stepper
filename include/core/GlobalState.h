@@ -105,7 +105,6 @@ private:
 
 // Atomic flags (no mutex needed - set from Core 0, read from Core 1)
 // Safe: bool and long are 32-bit on ESP32 Xtensa → single-instruction read/write
-extern volatile bool emergencyStop;
 extern volatile bool requestCalibration;    // Trigger calibration from motorTask
 extern volatile bool calibrationInProgress; // When true, networkTask skips webSocket/server
                                             // (CalibrationManager handles them internally)

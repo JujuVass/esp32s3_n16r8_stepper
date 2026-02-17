@@ -105,7 +105,6 @@ TaskHandle_t networkTaskHandle = NULL;
 SemaphoreHandle_t motionMutex = NULL;
 SemaphoreHandle_t stateMutex = NULL;
 SemaphoreHandle_t statsMutex = NULL;
-volatile bool emergencyStop = false;
 volatile bool requestCalibration = false;  // Flag to trigger calibration from Core 1
 volatile bool calibrationInProgress = false;  // Cooperative flag: networkTask skips webSocket/server
 volatile bool blockingMoveInProgress = false;  // Cooperative flag: networkTask skips webSocket/server during blocking moves
@@ -285,15 +284,6 @@ void motorTask(void* param) {
   static unsigned long calibrationDelayStart = 0;
   
   while (true) {
-    // ═══════════════════════════════════════════════════════════════════════
-    // EMERGENCY STOP CHECK (highest priority, atomic flag)
-    // ═══════════════════════════════════════════════════════════════════════
-    if (emergencyStop) {
-      config.currentState = STATE_READY;
-      emergencyStop = false;
-      engine->info("🛑 Emergency stop executed");
-    }
-    
     // ═══════════════════════════════════════════════════════════════════════
     // MANUAL CALIBRATION REQUEST (triggered from Core 0 via flag)
     // ═══════════════════════════════════════════════════════════════════════
