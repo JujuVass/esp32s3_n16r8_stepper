@@ -192,8 +192,9 @@ bool WiFiConfigManager::clearConfig() {
     _eepromWriteInProgress = false;
     delay(50);
     
-    if (!committed && engine) {
-        engine->error("❌ EEPROM clear commit failed after retries");
+    if (!committed) {
+        if (engine) engine->error("❌ EEPROM clear commit failed after retries");
+        return false;
     }
     
     if (engine) {

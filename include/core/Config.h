@@ -145,6 +145,10 @@ constexpr unsigned long OSC_TRANSITION_LOG_INTERVAL_MS = 200;  // Transition log
 // Why 50000us? Chaos mode: max step delay = 50ms = 20 steps/sec (minimum sane speed)
 constexpr unsigned long CHAOS_MAX_STEP_DELAY_MICROS = 50000;
 
+// Positioning speed for blocking moves (sequence repositioning, chaos center move)
+// Why 990µs? Corresponds to speed level 5.0 (~126 mm/s) — safe for all belt loads
+constexpr unsigned long POSITIONING_STEP_DELAY_MICROS = 990;
+
 // Why 500ms? Sequence status: update frequency during wait (balance responsiveness vs traffic)
 constexpr unsigned long SEQUENCE_STATUS_UPDATE_MS = 500;
 

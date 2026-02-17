@@ -985,8 +985,8 @@ void ChaosController::start() {
         bool moveForward = (targetStep > currentStep);
         Motor.setDirection(moveForward);
         
-        // Use calibrated speed (speed 5.0 ≈ 990µs) instead of fixed 500µs
-        const unsigned long stepDelay = 990;
+        // Use calibrated speed (speed 5.0) for safe positioning
+        const unsigned long stepDelay = POSITIONING_STEP_DELAY_MICROS;
         unsigned long positioningStart = millis();
         unsigned long lastWsService = millis();
         unsigned long lastStatusUpdate = millis();

@@ -110,11 +110,12 @@ public:
     void onMovementComplete();
     
 private:
-    SequenceExecutor() : _webSocket(nullptr) {}
+    SequenceExecutor() : _webSocket(nullptr), _lastPauseStatusSend(0) {}
     SequenceExecutor(const SequenceExecutor&) = delete;
     SequenceExecutor& operator=(const SequenceExecutor&) = delete;
     
     WebSocketsServer* _webSocket;
+    unsigned long _lastPauseStatusSend;  // Rate-limit status during line pauses
     
     // ========================================================================
     // INTERNAL HELPERS

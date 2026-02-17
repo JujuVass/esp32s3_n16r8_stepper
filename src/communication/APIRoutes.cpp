@@ -28,6 +28,7 @@ extern void setRgbLed(uint8_t r, uint8_t g, uint8_t b);
 // ============================================================================
 // MIME TYPE DETECTION
 // ============================================================================
+// NOTE: Keep in sync with FilesystemManager::getContentType()
 
 String getMimeType(const String& path) {
   if (path.endsWith(".html")) return "text/html; charset=UTF-8";
@@ -163,25 +164,30 @@ void sendEmptyPlaylistStructure() {
 }
 
 // Helper: Create empty file with initial content if it doesn't exist
-void ensureFileExists(const char* path, const char* defaultContent) {
-  if (!LittleFS.exists(path)) {
-    File file = LittleFS.open(path, "w");
-    if (file) {
-      size_t written = file.print(defaultContent);
-      
-      // 🛡️ PROTECTION: Flush before closing
-      file.flush();
-      
-      // 🛡️ VALIDATION: Verify write succeeded
-      if (file && written > 0) {
-        engine->info("📁 Created missing file: " + String(path));
-      } else {
-        engine->error("❌ Failed to initialize file: " + String(path));
-      }
-      
-      file.close();
-    }
+bool ensureFileExists(const char* path, const char* defaultContent) {
+  if (LittleFS.exists(path)) return true;  // Already exists
+  
+  File file = LittleFS.open(path, "w");
+  if (!file) {
+    engine->error("❌ Failed to create file: " + String(path));
+    return false;
   }
+  
+  size_t written = file.print(defaultContent);
+  
+  // 🛡️ PROTECTION: Flush before closing
+  file.flush();
+  
+  bool success = (file && written > 0);
+  file.close();
+  
+  if (success) {
+    engine->info("📁 Created missing file: " + String(path));
+  } else {
+    engine->error("❌ Failed to initialize file: " + String(path));
+  }
+  
+  return success;
 }
 
 // ============================================================================

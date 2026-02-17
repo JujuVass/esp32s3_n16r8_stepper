@@ -705,6 +705,18 @@ bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument&
             oscillation.cyclePause.maxPauseSec = doc["cyclePauseMaxSec"] | 3.0f;
         }
         
+        // Validate BEFORE applying transitions (rollback on failure)
+        String errorMsg;
+        if (!validateAndReport(Validators::oscillationParams(oscillation.centerPositionMM, 
+            oscillation.amplitudeMM, oscillation.frequencyHz, errorMsg), errorMsg)) {
+            // Rollback to previous values
+            oscillation.centerPositionMM = oldCenter;
+            oscillation.amplitudeMM = oldAmplitude;
+            oscillation.frequencyHz = oldFrequency;
+            oscillation.waveform = oldWaveform;
+            return true;
+        }
+        
         bool paramsChanged = (oldCenter != oscillation.centerPositionMM || 
                               oldAmplitude != oscillation.amplitudeMM ||
                               oldFrequency != oscillation.frequencyHz ||
@@ -739,12 +751,6 @@ bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument&
                 oscillationState.isRampingIn = false;
                 oscillationState.isRampingOut = false;
             }
-        }
-        
-        String errorMsg;
-        if (!validateAndReport(Validators::oscillationParams(oscillation.centerPositionMM, 
-            oscillation.amplitudeMM, oscillation.frequencyHz, errorMsg), errorMsg)) {
-            return true;
         }
         
         sendStatus();

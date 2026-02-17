@@ -305,7 +305,7 @@ bool SequenceExecutor::blockingMoveToStep(long targetStepPos, unsigned long time
     unsigned long lastStepTime = micros();
     unsigned long lastWsService = millis();
     unsigned long lastStatusUpdate = millis();
-    const unsigned long stepDelay = 990;  // Speed 5.0
+    const unsigned long stepDelay = POSITIONING_STEP_DELAY_MICROS;
     
     // Cooperative flag: networkTask will skip webSocket/server during blocking move
     blockingMoveInProgress = true;
@@ -647,10 +647,9 @@ void SequenceExecutor::process() {
             // Continue to start the next line's first cycle
         } else {
             // Still waiting, send status update every 500ms
-            static unsigned long lastStatusSend = 0;
-            if (millis() - lastStatusSend > SEQUENCE_STATUS_UPDATE_MS) {
+            if (millis() - _lastPauseStatusSend > SEQUENCE_STATUS_UPDATE_MS) {
                 sendStatus();
-                lastStatusSend = millis();
+                _lastPauseStatusSend = millis();
             }
             return;
         }

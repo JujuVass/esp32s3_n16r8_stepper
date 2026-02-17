@@ -34,10 +34,11 @@ bool FilesystemManager::isBinaryFile(const String& path) {
 }
 
 String FilesystemManager::getContentType(const String& path) {
+  // NOTE: Keep in sync with getMimeType() in APIRoutes.cpp
   if (path.endsWith(".html")) return "text/html; charset=UTF-8";
-  if (path.endsWith(".css")) return "text/css";
-  if (path.endsWith(".js")) return "application/javascript";
-  if (path.endsWith(".json")) return "application/json";
+  if (path.endsWith(".css")) return "text/css; charset=UTF-8";
+  if (path.endsWith(".js")) return "application/javascript; charset=UTF-8";
+  if (path.endsWith(".json")) return "application/json; charset=UTF-8";
   if (path.endsWith(".txt")) return "text/plain; charset=UTF-8";
   if (path.endsWith(".xml")) return "application/xml";
   if (path.endsWith(".pdf")) return "application/pdf";
@@ -45,8 +46,10 @@ String FilesystemManager::getContentType(const String& path) {
   if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
   if (path.endsWith(".gif")) return "image/gif";
   if (path.endsWith(".svg")) return "image/svg+xml";
+  if (path.endsWith(".ico")) return "image/x-icon";
   if (path.endsWith(".woff")) return "font/woff";
   if (path.endsWith(".woff2")) return "font/woff2";
+  if (path.endsWith(".log")) return "text/plain; charset=UTF-8";
   return "application/octet-stream";
 }
 
