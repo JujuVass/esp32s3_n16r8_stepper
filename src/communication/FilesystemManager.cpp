@@ -5,6 +5,9 @@
 // ============================================================================
 
 #include "communication/FilesystemManager.h"
+#include "core/UtilityEngine.h"
+
+extern UtilityEngine* engine;
 
 using namespace std;
 
@@ -34,7 +37,6 @@ bool FilesystemManager::isBinaryFile(const String& path) {
 }
 
 String FilesystemManager::getContentType(const String& path) {
-  // NOTE: Keep in sync with getMimeType() in APIRoutes.cpp
   if (path.endsWith(".html")) return "text/html; charset=UTF-8";
   if (path.endsWith(".css")) return "text/css; charset=UTF-8";
   if (path.endsWith(".js")) return "application/javascript; charset=UTF-8";
@@ -62,14 +64,6 @@ String FilesystemManager::normalizePath(String path) {
 }
 
 void FilesystemManager::sendJsonError(int code, const char* message) {
-  JsonDocument doc;
-  doc["error"] = message;
-  String response;
-  serializeJson(doc, response);
-  server.send(code, "application/json", response);
-}
-
-void FilesystemManager::sendJsonApiError(int code, const char* message) {
   JsonDocument doc;
   doc["success"] = false;
   doc["error"] = message;
@@ -268,7 +262,7 @@ void FilesystemManager::handleReadFile() {
 
 void FilesystemManager::handleWriteFile() {
   if (!server.hasArg("plain")) {
-    sendJsonApiError(400, "Missing JSON body");
+    sendJsonError(400, "Missing JSON body");
     return;
   }
 
@@ -276,7 +270,7 @@ void FilesystemManager::handleWriteFile() {
   DeserializationError error = deserializeJson(doc, server.arg("plain"));
 
   if (error) {
-    sendJsonApiError(400, "Invalid JSON");
+    sendJsonError(400, "Invalid JSON");
     return;
   }
 
@@ -284,18 +278,18 @@ void FilesystemManager::handleWriteFile() {
   String content = doc["content"].as<String>();
 
   if (path.isEmpty()) {
-    sendJsonApiError(400, "Missing path");
+    sendJsonError(400, "Missing path");
     return;
   }
 
   if (isBinaryFile(path)) {
-    sendJsonApiError(400, "Binary files cannot be edited");
+    sendJsonError(400, "Binary files cannot be edited");
     return;
   }
 
   File file = LittleFS.open(path, "w");
   if (!file) {
-    sendJsonApiError(500, "Failed to open file for writing");
+    sendJsonError(500, "Failed to open file for writing");
     return;
   }
 
@@ -306,7 +300,7 @@ void FilesystemManager::handleWriteFile() {
   
   // 🛡️ VALIDATION: Verify write completed
   if (!file) {
-    sendJsonApiError(500, "File corrupted during write (flush failed)");
+    sendJsonError(500, "File corrupted during write (flush failed)");
     return;
   }
   
@@ -315,7 +309,7 @@ void FilesystemManager::handleWriteFile() {
   // 🛡️ CHECK: Verify expected bytes written
   if (written != content.length()) {
     String errorMsg = "Incomplete write: " + String(written) + "/" + String(content.length()) + " bytes";
-    sendJsonApiError(500, errorMsg.c_str());
+    sendJsonError(500, errorMsg.c_str());
     return;
   }
 
@@ -338,7 +332,8 @@ void FilesystemManager::handleUploadFile() {
       size_t available = totalBytes - usedBytes;
       
       if (contentLength > available) {
-        Serial.printf("❌ Upload rejected: file too large (%d bytes needed, only %d bytes available)\n", 
+        if (engine) engine->error("Upload rejected: file too large (" + String(contentLength) + " bytes needed, only " + String(available) + " bytes available)");
+        else Serial.printf("Upload rejected: file too large (%d bytes needed, only %d bytes available)\n", 
                      contentLength, available);
         server.send(413, "application/json", 
           "{\"error\":\"File too large\",\"needed\":" + String(contentLength) + 
@@ -377,7 +372,7 @@ void FilesystemManager::handleUploadFile() {
 
 void FilesystemManager::handleDeleteFile() {
   if (!server.hasArg("plain")) {
-    sendJsonApiError(400, "Missing JSON body");
+    sendJsonError(400, "Missing JSON body");
     return;
   }
 
@@ -385,26 +380,26 @@ void FilesystemManager::handleDeleteFile() {
   DeserializationError error = deserializeJson(doc, server.arg("plain"));
 
   if (error) {
-    sendJsonApiError(400, "Invalid JSON");
+    sendJsonError(400, "Invalid JSON");
     return;
   }
 
   String path = normalizePath(doc["path"].as<String>());
 
   if (path.isEmpty()) {
-    sendJsonApiError(400, "Missing path");
+    sendJsonError(400, "Missing path");
     return;
   }
 
   if (!LittleFS.exists(path)) {
-    sendJsonApiError(404, "File not found");
+    sendJsonError(404, "File not found");
     return;
   }
 
   if (LittleFS.remove(path)) {
     sendJsonSuccess("File deleted");
   } else {
-    sendJsonApiError(500, "Failed to delete file");
+    sendJsonError(500, "Failed to delete file");
   }
 }
 

@@ -714,9 +714,12 @@ function updateSystemStats(system) {
     DOM.sysIpSta.style.color = (system.ipSta === '0.0.0.0') ? '#999' : '#333';
     
     // Cache IP for faster WebSocket reconnection (avoids mDNS resolution delay)
+    // Only cache if on same subnet as current page (prevents STA IP on AP network)
     if (system.ipSta !== '0.0.0.0' && !AppState.espIpAddress) {
-      AppState.espIpAddress = system.ipSta;
-      console.debug('📍 Cached ESP32 IP for WS reconnection:', system.ipSta);
+      if (typeof isSameSubnet === 'function' && isSameSubnet(system.ipSta, window.location.hostname)) {
+        AppState.espIpAddress = system.ipSta;
+        console.debug('📍 Cached ESP32 IP for WS reconnection:', system.ipSta);
+      }
     }
   }
   if (system.ipAp !== undefined) {
@@ -764,6 +767,14 @@ function updateSystemStats(system) {
  * Global max speed level (must match .ino MAX_SPEED_LEVEL constant)
  */
 const maxSpeedLevel = 35;
+
+/**
+ * Speed conversion factors (must match .ino Config.h constants)
+ * SPEED_LEVEL_TO_MM_S: speedLevel × factor = mm/s (simple, chaos, pursuit)
+ * OSC_SPEED_MULTIPLIER: maxSpeedLevel × factor = oscillation max speed mm/s
+ */
+const SPEED_LEVEL_TO_MM_S = 10.0;  // Config.h: SPEED_LEVEL_TO_MM_S
+const OSC_SPEED_MULTIPLIER = 20.0; // Config.h: OSC_MAX_SPEED_MM_S = MAX_SPEED_LEVEL * 20.0
 
 /**
  * Initialize speed input max attributes based on maxSpeedLevel

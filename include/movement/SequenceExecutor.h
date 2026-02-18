@@ -109,6 +109,16 @@ public:
      */
     void onMovementComplete();
     
+    /**
+     * Blocking move to a specific step position with WS servicing.
+     * Sets/clears blockingMoveInProgress flag. Services WebSocket + HTTP
+     * every 10 ms and broadcasts status every 250 ms.
+     * @param targetStepPos Target step position to reach
+     * @param timeoutMs Maximum time allowed for the move (default 30s)
+     * @return true if position reached, false if timeout
+     */
+    [[nodiscard]] bool blockingMoveToStep(long targetStepPos, unsigned long timeoutMs = 30000);
+    
 private:
     SequenceExecutor() : _webSocket(nullptr), _lastPauseStatusSend(0) {}
     SequenceExecutor(const SequenceExecutor&) = delete;
@@ -125,14 +135,6 @@ private:
      * Position motor for next sequence line
      */
     void positionForNextLine();
-    
-    /**
-     * Blocking move to a specific step position with WS servicing
-     * @param targetStepPos Target step position to reach
-     * @param timeoutMs Maximum time allowed for the move (default 30s)
-     * @return true if position reached, false if timeout
-     */
-    bool blockingMoveToStep(long targetStepPos, unsigned long timeoutMs = 30000);
     
     /**
      * Complete sequence execution (cleanup, optional return to start)

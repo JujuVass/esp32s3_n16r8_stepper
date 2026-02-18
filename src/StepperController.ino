@@ -49,7 +49,7 @@ UtilityEngine* engine = nullptr;
 // ONBOARD RGB LED (WS2812 on GPIO 48 - Freenove ESP32-S3)
 // ============================================================================
 void setRgbLed(uint8_t r, uint8_t g, uint8_t b) {
-  neopixelWrite(PIN_RGB_LED, r, g, b);
+  rgbLedWrite(PIN_RGB_LED, r, g, b);
 }
 
 // ============================================================================
@@ -67,16 +67,16 @@ volatile bool movingForward = true;
 bool hasReachedStartStep = false;
 
 // Motion configuration
-MotionConfig motion;
-PendingMotionConfig pendingMotion;
-CyclePauseState motionPauseState;
+constinit MotionConfig motion;
+constinit PendingMotionConfig pendingMotion;
+constinit CyclePauseState motionPauseState;
 
 // Distance limits
 volatile float maxDistanceLimitPercent = 100.0;
 volatile float effectiveMaxDistanceMM = 0.0;
 
 // Sensor configuration
-volatile bool sensorsInverted = false;  // Loaded from EEPROM
+volatile bool sensorsInverted = false;  // Loaded from NVS
 
 // Timing
 unsigned long lastStepMicros = 0;
@@ -147,7 +147,7 @@ void setup() {
   // ============================================================================
   // 2. NETWORK (WiFi - determines AP or STA mode)
   // ============================================================================
-  Network.begin();
+  StepperNetwork.begin();
   
   // ============================================================================
   // 3. WEB SERVERS (HTTP + WebSocket)
@@ -168,7 +168,7 @@ void setup() {
   // ============================================================================
   // AP_SETUP MODE: Minimal setup complete - WiFi configuration only
   // ============================================================================
-  if (Network.isAPSetupMode()) {
+  if (StepperNetwork.isAPSetupMode()) {
     setRgbLed(0, 0, 50);  // Start with BLUE (dimmed) - waiting for config
     engine->info("\n╔════════════════════════════════════════════════════════╗");
     engine->info("║  MODE AP_SETUP - WiFi CONFIGURATION                    ║");
@@ -185,7 +185,7 @@ void setup() {
   // ============================================================================
   
   // LED color based on mode
-  if (Network.isSTAMode()) {
+  if (StepperNetwork.isSTAMode()) {
     setRgbLed(0, 50, 0);  // GREEN = WiFi connected + AP
   } else {
     setRgbLed(0, 25, 50);  // CYAN = AP Direct mode
@@ -219,9 +219,9 @@ void setup() {
   // ============================================================================
   engine->printStatus();
   
-  config.currentState = STATE_READY;
+  config.currentState = SystemState::STATE_READY;
   engine->info("\n╔════════════════════════════════════════════════════════╗");
-  if (Network.isSTAMode()) {
+  if (StepperNetwork.isSTAMode()) {
     engine->info("║  WEB INTERFACE READY! (STA+AP)                         ║");
     engine->info("║  STA: http://" + WiFi.localIP().toString() + "                          ║");
     engine->info("║  AP:  http://" + WiFi.softAPIP().toString() + "                       ║");
@@ -229,7 +229,7 @@ void setup() {
   } else {
     engine->info("║  WEB INTERFACE READY! (AP Direct)                      ║");
     engine->info("║  Access: http://" + WiFi.softAPIP().toString() + "                    ║");
-    engine->info("║  Network: " + String(otaHostname) + "-AP                         ║");
+    engine->info("║  StepperNetwork: " + String(otaHostname) + "-AP                         ║");
   }
   engine->info("║  Auto-calibration starts in 1 second...               ║");
   engine->info("╚════════════════════════════════════════════════════════╝\n");
@@ -270,7 +270,7 @@ void setup() {
     0                    // Core 0 (APP_CPU)
   );
   
-  engine->info("✅ DUAL-CORE initialized: Motor=Core1(P10), Network=Core0(P1)");
+  engine->info("✅ DUAL-CORE initialized: Motor=Core1(P10), StepperNetwork=Core0(P1)");
 }
 
 // ============================================================================
@@ -330,11 +330,11 @@ void motorTask(void* param) {
     // MOVEMENT EXECUTION (timing-critical, runs on dedicated core)
     // ═══════════════════════════════════════════════════════════════════════
     switch (currentMovement) {
-      case MOVEMENT_VAET:
+      case MovementType::MOVEMENT_VAET:
         BaseMovement.process();
         break;
         
-      case MOVEMENT_PURSUIT:
+      case MovementType::MOVEMENT_PURSUIT:
         if (pursuit.isMoving) {
           unsigned long currentMicros = micros();
           if (currentMicros - lastStepMicros >= pursuit.stepDelay) {
@@ -344,14 +344,14 @@ void motorTask(void* param) {
         }
         break;
         
-      case MOVEMENT_OSC:
-        if (config.currentState == STATE_RUNNING) {
+      case MovementType::MOVEMENT_OSC:
+        if (config.currentState == SystemState::STATE_RUNNING) {
           Osc.process();
         }
         break;
         
-      case MOVEMENT_CHAOS:
-        if (config.currentState == STATE_RUNNING) {
+      case MovementType::MOVEMENT_CHAOS:
+        if (config.currentState == SystemState::STATE_RUNNING) {
           Chaos.process();
         }
         break;
@@ -360,7 +360,7 @@ void motorTask(void* param) {
     // ═══════════════════════════════════════════════════════════════════════
     // SEQUENCER (logic only, no network blocking)
     // ═══════════════════════════════════════════════════════════════════════
-    if (config.executionContext == CONTEXT_SEQUENCER) {
+    if (config.executionContext == ExecutionContext::CONTEXT_SEQUENCER) {
       SeqExecutor.process();
     }
 
@@ -378,7 +378,7 @@ void motorTask(void* param) {
     // ═══════════════════════════════════════════════════════════════════════
     // PEND + CYCLE COUNTER (periodic stats) - Debug only
     // ═══════════════════════════════════════════════════════════════════════
-    if (engine->getLogLevel() == LOG_DEBUG && config.currentState == STATE_RUNNING) {
+    if (engine->getLogLevel() == LOG_DEBUG && config.currentState == SystemState::STATE_RUNNING) {
       Motor.updatePendTracking();
       
       static unsigned long lastPendLogMs = 0;
@@ -419,7 +419,7 @@ void motorTask(void* param) {
     // ═══════════════════════════════════════════════════════════════════════
     // TASK YIELD - Adaptive based on motor state
     // ═══════════════════════════════════════════════════════════════════════
-    if (config.currentState == STATE_RUNNING) {
+    if (config.currentState == SystemState::STATE_RUNNING) {
       // Motor running: minimal yield to maintain step timing
       taskYIELD();
     } else {
@@ -430,7 +430,7 @@ void motorTask(void* param) {
 }
 
 // ============================================================================
-// NETWORK TASK - Core 0 (APP_CPU) - Network operations (can block)
+// NETWORK TASK - Core 0 (APP_CPU) - StepperNetwork operations (can block)
 // ============================================================================
 void networkTask(void* param) {
   engine->info("🌐 NetworkTask started on Core " + String(xPortGetCoreID()));
@@ -439,8 +439,9 @@ void networkTask(void* param) {
     // ═══════════════════════════════════════════════════════════════════════
     // NETWORK SERVICES (can block without affecting motor)
     // ═══════════════════════════════════════════════════════════════════════
-    Network.handleOTA();
-    Network.checkConnectionHealth();
+    StepperNetwork.handleOTA();
+    StepperNetwork.handleCaptivePortal();  // DNS server for AP clients (all AP modes)
+    StepperNetwork.checkConnectionHealth();
     
     // HTTP server and WebSocket - skip during calibration or blocking moves
     // (CalibrationManager/blocking loops handle them internally via serviceWebSocket())
@@ -477,14 +478,14 @@ void loop() {
   // ═══════════════════════════════════════════════════════════════════════════
   // AP_SETUP MODE: WiFi configuration only (no dual-core tasks running)
   // ═══════════════════════════════════════════════════════════════════════════
-  if (Network.isAPSetupMode()) {
-    Network.handleCaptivePortal();
+  if (StepperNetwork.isAPSetupMode()) {
+    StepperNetwork.handleCaptivePortal();
     
     // Blink LED Blue/Red every 500ms
     static unsigned long lastLedToggle = 0;
     static bool ledIsBlue = true;
     
-    if (Network.apLedBlinkEnabled && millis() - lastLedToggle > 500) {
+    if (StepperNetwork.apLedBlinkEnabled && millis() - lastLedToggle > 500) {
       lastLedToggle = millis();
       setRgbLed(ledIsBlue ? 50 : 0, 0, ledIsBlue ? 0 : 50);
       ledIsBlue = !ledIsBlue;
@@ -499,7 +500,7 @@ void loop() {
   // STA MODE: loop() is empty - FreeRTOS tasks handle everything
   // ═══════════════════════════════════════════════════════════════════════════
   // Motor control runs on Core 1 (motorTask)
-  // Network operations run on Core 0 (networkTask)
+  // StepperNetwork operations run on Core 0 (networkTask)
   // This loop just needs to not block the scheduler
   vTaskDelay(portMAX_DELAY);  // Suspend loop() indefinitely
 }

@@ -29,6 +29,15 @@ extern SystemConfig config;
 namespace Validators {
 
 // ============================================================================
+// SHARED HELPERS
+// ============================================================================
+
+/** DRY: Get the effective maximum allowed distance in mm (respects limitation %) */
+[[nodiscard]] inline float getMaxAllowedMM() {
+  return (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+}
+
+// ============================================================================
 // BASIC VALIDATORS
 // ============================================================================
 
@@ -38,14 +47,14 @@ namespace Validators {
  * @param errorMsg Output error message if validation fails
  * @return true if valid, false otherwise
  */
-inline bool distance(float distMM, String& errorMsg) {
+[[nodiscard]] inline bool distance(float distMM, String& errorMsg) {
   if (distMM < 0) {
     errorMsg = "Invalid negative distance: " + String(distMM, 1) + " mm";
     return false;
   }
   
   // Use effective max distance (with limitation factor applied)
-  float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+  float maxAllowed = getMaxAllowedMM();
   
   if (maxAllowed > 0 && distMM > maxAllowed) {
     errorMsg = "Distance exceeds limit: " + String(distMM, 1) + " > " + String(maxAllowed, 1) + " mm";
@@ -64,7 +73,7 @@ inline bool distance(float distMM, String& errorMsg) {
  * @param errorMsg Output error message if validation fails
  * @return true if valid, false otherwise
  */
-inline bool speed(float speedLevel, String& errorMsg) {
+[[nodiscard]] inline bool speed(float speedLevel, String& errorMsg) {
   if (speedLevel < 0.1) {
     errorMsg = "Speed too low: " + String(speedLevel, 1) + " (min: 0.1)";
     return false;
@@ -84,14 +93,14 @@ inline bool speed(float speedLevel, String& errorMsg) {
  * @param errorMsg Output error message if validation fails
  * @return true if valid, false otherwise
  */
-inline bool position(float positionMM, String& errorMsg) {
+[[nodiscard]] inline bool position(float positionMM, String& errorMsg) {
   if (positionMM < 0) {
     errorMsg = "Invalid negative position: " + String(positionMM, 1) + " mm";
     return false;
   }
   
   // Use effective max distance (with limitation factor applied)
-  float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+  float maxAllowed = getMaxAllowedMM();
   
   if (maxAllowed > 0 && positionMM > maxAllowed) {
     errorMsg = "Position exceeds limit: " + String(positionMM, 1) + " > " + String(maxAllowed, 1) + " mm";
@@ -115,7 +124,7 @@ inline bool position(float positionMM, String& errorMsg) {
  * @param errorMsg Output error message if validation fails
  * @return true if valid, false otherwise
  */
-inline bool motionRange(float startMM, float distMM, String& errorMsg) {
+[[nodiscard]] inline bool motionRange(float startMM, float distMM, String& errorMsg) {
   // Validate start position alone
   if (!position(startMM, errorMsg)) {
     return false;
@@ -128,7 +137,7 @@ inline bool motionRange(float startMM, float distMM, String& errorMsg) {
   
   // Validate combined range
   float endPositionMM = startMM + distMM;
-  float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+  float maxAllowed = getMaxAllowedMM();
   
   if (maxAllowed > 0 && endPositionMM > maxAllowed) {
     errorMsg = "End position exceeds limit: " + String(endPositionMM, 1) + " mm (start " + 
@@ -156,7 +165,7 @@ inline bool motionRange(float startMM, float distMM, String& errorMsg) {
  * @param errorMsg Output error message if validation fails
  * @return true if valid, false otherwise
  */
-inline bool chaosParams(float centerMM, float amplitudeMM, float maxSpeed, float craziness, String& errorMsg) {
+[[nodiscard]] inline bool chaosParams(float centerMM, float amplitudeMM, float maxSpeed, float craziness, String& errorMsg) {
   // Validate center position
   if (!position(centerMM, errorMsg)) {
     return false;
@@ -168,7 +177,7 @@ inline bool chaosParams(float centerMM, float amplitudeMM, float maxSpeed, float
     return false;
   }
   
-  float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+  float maxAllowed = getMaxAllowedMM();
   
   if (amplitudeMM > maxAllowed / 2.0) {
     errorMsg = "Amplitude too large: " + String(amplitudeMM, 1) + " > " + String(maxAllowed / 2.0, 1) + " mm (max)";
@@ -211,7 +220,7 @@ inline bool chaosParams(float centerMM, float amplitudeMM, float maxSpeed, float
  * @param errorMsg Output error message if validation fails
  * @return true if valid, false otherwise
  */
-inline bool oscillationParams(float centerMM, float amplitudeMM, float frequency, String& errorMsg) {
+[[nodiscard]] inline bool oscillationParams(float centerMM, float amplitudeMM, float frequency, String& errorMsg) {
   // Validate center position
   if (!position(centerMM, errorMsg)) {
     return false;
@@ -224,7 +233,7 @@ inline bool oscillationParams(float centerMM, float amplitudeMM, float frequency
   }
   
   // Use effective max distance (respects limitation percentage)
-  float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+  float maxAllowed = getMaxAllowedMM();
   
   // Validate bounds (center ± amplitude must stay within limits)
   if (centerMM - amplitudeMM < 0) {
@@ -261,8 +270,8 @@ inline bool oscillationParams(float centerMM, float amplitudeMM, float frequency
  * @param errorMsg Output error message if validation fails
  * @return true if valid, false otherwise
  */
-inline bool oscillationAmplitude(float centerMM, float amplitudeMM, String& errorMsg) {
-  float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+[[nodiscard]] inline bool oscillationAmplitude(float centerMM, float amplitudeMM, String& errorMsg) {
+  float maxAllowed = getMaxAllowedMM();
   
   // Calculate maximum safe amplitude
   float maxAmplitude = min(centerMM, maxAllowed - centerMM);
@@ -283,7 +292,7 @@ inline bool oscillationAmplitude(float centerMM, float amplitudeMM, String& erro
  * @param errorMsg Output error message if validation fails
  * @return true if valid, false otherwise
  */
-inline bool percentage(float percent, const char* name, String& errorMsg) {
+[[nodiscard]] inline bool percentage(float percent, const char* name, String& errorMsg) {
   if (percent < 0 || percent > 100) {
     errorMsg = String(name) + " must be 0-100% (got: " + String(percent, 1) + ")";
     return false;
@@ -298,7 +307,7 @@ inline bool percentage(float percent, const char* name, String& errorMsg) {
  * @param errorMsg Output error message if validation fails
  * @return true if valid, false otherwise
  */
-inline bool positive(float value, const char* name, String& errorMsg) {
+[[nodiscard]] inline bool positive(float value, const char* name, String& errorMsg) {
   if (value <= 0) {
     errorMsg = String(name) + " must be > 0 (got: " + String(value, 1) + ")";
     return false;
@@ -315,7 +324,7 @@ inline bool positive(float value, const char* name, String& errorMsg) {
  * @param errorMsg Output error message if validation fails
  * @return true if valid, false otherwise
  */
-inline bool range(float value, float minVal, float maxVal, const char* name, String& errorMsg) {
+[[nodiscard]] inline bool range(float value, float minVal, float maxVal, const char* name, String& errorMsg) {
   if (value < minVal || value > maxVal) {
     errorMsg = String(name) + " must be " + String(minVal, 1) + "-" + String(maxVal, 1) + 
                " (got: " + String(value, 1) + ")";

@@ -68,7 +68,7 @@ public:
     
     /**
      * Process one pursuit step
-     * Called from main loop when MOVEMENT_PURSUIT is active and pursuit.isMoving
+     * Called from main loop when MovementType::MOVEMENT_PURSUIT is active and pursuit.isMoving
      * Handles step execution, safety checks, distance tracking
      */
     void process();

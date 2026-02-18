@@ -9,13 +9,14 @@
 
 #include "movement/PursuitController.h"
 #include "communication/StatusBroadcaster.h"  // For Status.sendError()
+#include "core/Validators.h"
 #include "hardware/MotorDriver.h"
 #include "hardware/ContactSensors.h"
 
 // ============================================================================
 // PURSUIT STATE - Owned by this module
 // ============================================================================
-PursuitState pursuit;
+constinit PursuitState pursuit;
 
 // ============================================================================
 // SINGLETON INSTANCE
@@ -46,7 +47,7 @@ void PursuitControllerClass::move(float targetPositionMM, float maxSpeedLevel) {
     pursuit.maxSpeedLevel = maxSpeedLevel;
     
     // Clamp target to valid range (respect effective max distance limit)
-    float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+    float maxAllowed = Validators::getMaxAllowedMM();
     if (targetPositionMM < 0) targetPositionMM = 0;
     if (targetPositionMM > maxAllowed) targetPositionMM = maxAllowed;
     
@@ -131,9 +132,9 @@ void PursuitControllerClass::process() {
     Motor.step();
     
     if (moveForward) {
-        currentStep++;
+        currentStep = currentStep + 1;
     } else {
-        currentStep--;
+        currentStep = currentStep - 1;
     }
     // Track distance using StatsTracking
     stats.trackDelta(currentStep);
@@ -189,7 +190,7 @@ bool PursuitControllerClass::checkSafetyContacts(bool moveForward) {
                 pursuit.isMoving = false;
                 pursuit.targetStep = currentStep;
                 Status.sendError("❌ PURSUIT: END contact reached - safety stop");
-                config.currentState = STATE_ERROR;
+                config.currentState = SystemState::STATE_ERROR;
                 return false;
             }
         }
@@ -202,7 +203,7 @@ bool PursuitControllerClass::checkSafetyContacts(bool moveForward) {
                 pursuit.isMoving = false;
                 pursuit.targetStep = currentStep;
                 Status.sendError("❌ PURSUIT: START contact reached - safety stop");
-                config.currentState = STATE_ERROR;
+                config.currentState = SystemState::STATE_ERROR;
                 return false;
             }
         }

@@ -15,7 +15,7 @@
  *   - sequenceTable[]            → SequenceTableManager.h
  * 
  * DUAL-CORE ARCHITECTURE (ESP32-S3):
- *   - Core 0 (APP_CPU): Network tasks (WiFi, WebSocket, HTTP, OTA)
+ *   - Core 0 (APP_CPU): StepperNetwork tasks (WiFi, WebSocket, HTTP, OTA)
  *   - Core 1 (PRO_CPU): Motor tasks (stepping, timing-critical operations)
  *   - Mutexes protect shared motion configurations
  * ============================================================================
@@ -96,8 +96,8 @@ public:
             xSemaphoreGive(_mutex);
         }
     }
-    bool isLocked() const { return _locked; }
-    operator bool() const { return _locked; }
+    [[nodiscard]] bool isLocked() const { return _locked; }
+    [[nodiscard]] operator bool() const { return _locked; }
 private:
     SemaphoreHandle_t _mutex;
     bool _locked;
@@ -119,7 +119,10 @@ extern SystemConfig config;
 
 // ============================================================================
 // MOTION VARIABLES (Core 1 writes, Core 0 reads for display)
-// volatile ensures cross-core visibility (32-bit types = atomic on Xtensa)
+// volatile ensures cross-core visibility (32-bit types = atomic on Xtensa LX7)
+// NOTE: std::atomic<> considered but unnecessary here — ESP32-S3 Xtensa guarantees
+// atomic 32-bit aligned reads/writes. These are single-writer (Core 1) with
+// multi-reader (Core 0), so no read-modify-write atomicity is needed.
 // ============================================================================
 
 extern volatile long currentStep;           // Safe: 32-bit on ESP32 Xtensa (atomic read/write)

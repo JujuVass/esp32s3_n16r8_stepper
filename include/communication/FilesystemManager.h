@@ -49,12 +49,10 @@ private:
 
   // Private helper methods
   bool isBinaryFile(const String& path);
-  String getContentType(const String& path);
   String normalizePath(String path);
   
   // JSON response helpers
   void sendJsonError(int code, const char* message);
-  void sendJsonApiError(int code, const char* message);
   void sendJsonSuccess(const char* message = nullptr);
 
   // Route handlers (called by registerRoutes lambdas)
@@ -82,6 +80,14 @@ public:
   // ==========================================================================
   // PUBLIC HELPER METHODS (can be used externally for custom operations)
   // ==========================================================================
+
+  /**
+   * Get MIME content type for a file path based on extension.
+   * Static so it can be called without an instance (e.g., from APIRoutes).
+   * @param path File path (only extension is checked)
+   * @return MIME type string
+   */
+  static String getContentType(const String& path);
 
   /**
    * Check if file exists

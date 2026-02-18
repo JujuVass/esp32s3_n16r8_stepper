@@ -11,16 +11,22 @@
 #include "communication/StatusBroadcaster.h"  // For Status.sendError()
 #include "core/GlobalState.h"
 #include "core/UtilityEngine.h"
+#include "core/Validators.h"
 #include "hardware/MotorDriver.h"
 #include "movement/CalibrationManager.h"
 #include "movement/ChaosController.h"
 #include "movement/OscillationController.h"
 #include "movement/BaseMovementController.h"
 
+using enum MovementType;
+using enum SystemState;
+using enum ExecutionContext;
+using enum OscillationWaveform;
+
 // ============================================================================
 // SEQUENCER STATE - Owned by this module
 // ============================================================================
-SequenceExecutionState seqState;
+constinit SequenceExecutionState seqState;
 volatile MovementType currentMovement = MOVEMENT_VAET;  // Default: Va-et-vient
 
 // ============================================================================
@@ -254,7 +260,7 @@ void SequenceExecutor::positionForNextLine() {
     if (!needsPositioning) return;
     
     // Validate target position against effective limits
-    float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+    float maxAllowed = Validators::getMaxAllowedMM();
     if (targetPositionMM < 0) {
         engine->warn("⚠️ Target position negative (" + String(targetPositionMM, 1) + "mm) - adjusted to 0mm");
         targetPositionMM = 0;
@@ -315,9 +321,9 @@ bool SequenceExecutor::blockingMoveToStep(long targetStepPos, unsigned long time
         if (now - lastStepTime >= stepDelay) {
             Motor.step();
             if (moveForward) {
-                currentStep++;
+                currentStep = currentStep + 1;
             } else {
-                currentStep--;
+                currentStep = currentStep - 1;
             }
             lastStepTime = now;
         }
@@ -721,7 +727,7 @@ void SequenceExecutor::process() {
                     break;
                     
                 default:
-                    engine->warn("⚠️ Unknown movement type: " + String(currentLine->movementType));
+                    engine->warn("⚠️ Unknown movement type: " + String(static_cast<int>(currentLine->movementType)));
                     seqState.currentCycleInLine++;  // Skip this line
                     break;
             }

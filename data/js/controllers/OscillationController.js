@@ -81,7 +81,7 @@ function sendOscillationConfig() {
   const frequency = parseFloat(document.getElementById('oscFrequency').value) || 0.5;
   
   // 🚀 SAFETY: Check if frequency would exceed speed limit
-  const MAX_SPEED_MM_S = maxSpeedLevel * 20.0; // 300 mm/s by default
+  const MAX_SPEED_MM_S = maxSpeedLevel * OSC_SPEED_MULTIPLIER;
   const theoreticalSpeed = 2.0 * Math.PI * frequency * amplitude;
   
   if (amplitude > 0 && theoreticalSpeed > MAX_SPEED_MM_S) {
@@ -144,7 +144,7 @@ function updateOscillationPresets() {
   if (effectiveMax === 0) return;
   
   const currentAmplitude = parseFloat(document.getElementById('oscAmplitude').value) || 0;
-  const MAX_SPEED_MM_S = maxSpeedLevel * 20.0; // 300 mm/s by default
+  const MAX_SPEED_MM_S = maxSpeedLevel * OSC_SPEED_MULTIPLIER;
   
   document.querySelectorAll('[data-osc-frequency]').forEach(btn => {
     const frequencyValue = parseFloat(btn.getAttribute('data-osc-frequency'));

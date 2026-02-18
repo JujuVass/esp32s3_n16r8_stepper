@@ -100,7 +100,7 @@ bool ContactSensors::checkAndCorrectDriftEnd() {
         Motor.setDirection(false);  // Backward (includes 50µs delay)
         for (int i = 0; i < correctionSteps; i++) {
             Motor.step();
-            currentStep--;  // Update position as we move
+            currentStep = currentStep - 1;  // Update position as we move
         }
         
         // Now physically synchronized at config.maxStep
@@ -129,7 +129,7 @@ bool ContactSensors::checkAndCorrectDriftStart() {
         Motor.setDirection(true);  // Forward (includes 50µs delay)
         for (int i = 0; i < correctionSteps; i++) {
             Motor.step();
-            currentStep++;  // Update position as we move
+            currentStep = currentStep + 1;  // Update position as we move
         }
         
         // Now physically synchronized at position 0
@@ -162,7 +162,7 @@ bool ContactSensors::checkHardDriftEnd() {
             Status.sendError("❌ CRITICAL ERROR: Opto END triggered - Position drifted beyond safety buffer");
             
             stopMovement();
-            config.currentState = STATE_ERROR;
+            config.currentState = SystemState::STATE_ERROR;
             Motor.disable();  // Safety: disable motor on critical error
             
             return false;  // Hard drift detected - critical error
@@ -190,7 +190,7 @@ bool ContactSensors::checkHardDriftStart() {
             Status.sendError("❌ CRITICAL ERROR: Opto START triggered - Position drifted beyond safety buffer");
             
             stopMovement();
-            config.currentState = STATE_ERROR;
+            config.currentState = SystemState::STATE_ERROR;
             Motor.disable();  // Safety: disable motor on critical error
             
             return false;  // Hard drift detected - critical error

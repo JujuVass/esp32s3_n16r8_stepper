@@ -141,13 +141,13 @@ private:
      * Parse JSON command string into document
      * @return true if parsing successful
      */
-    bool parseJsonCommand(const String& jsonStr, JsonDocument& doc);
+    [[nodiscard]] bool parseJsonCommand(const String& jsonStr, JsonDocument& doc);
     
     /**
      * Validate and report errors via WebSocket
      * @return true if validation passed
      */
-    bool validateAndReport(bool isValid, const String& errorMsg);
+    [[nodiscard]] bool validateAndReport(bool isValid, const String& errorMsg);
     
     /**
      * Apply cycle pause configuration from JSON to a CyclePauseConfig struct

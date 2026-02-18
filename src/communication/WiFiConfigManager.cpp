@@ -1,7 +1,7 @@
 /**
  * WiFiConfigManager.cpp - WiFi Configuration Management Implementation
  * 
- * Manages WiFi credentials in EEPROM with checksum validation.
+ * Manages WiFi credentials in NVS via Preferences API.
  */
 
 #include "communication/WiFiConfigManager.h"
@@ -12,17 +12,22 @@
 extern UtilityEngine* engine;
 
 // ============================================================================
-// CONSTRUCTOR - Ensure EEPROM is initialized
+// CONSTRUCTOR
 // ============================================================================
 
 WiFiConfigManager::WiFiConfigManager() {
-    // CRITICAL: Initialize EEPROM if not already done
-    // This ensures WiFiConfigManager works even if constructed before UtilityEngine
-    static bool eepromInitialized = false;
-    if (!eepromInitialized) {
-        EEPROM.begin(128);  // Same size as UtilityEngine uses
-        eepromInitialized = true;
-        Serial.println("[WiFiConfigManager] 🔧 EEPROM initialized in constructor");
+    // NVS initialization is deferred to ensureInitialized()
+    // because this constructor runs during global static init,
+    // before NVS flash is ready (ESP-IDF 5.x / pioarduino).
+}
+
+void WiFiConfigManager::ensureInitialized() {
+    if (_initialized) return;
+    _initialized = _prefs.begin(NVS_NAMESPACE, false);
+    if (_initialized) {
+        if (engine) engine->info("[WiFiConfigManager] 🔧 Preferences (NVS) initialized");
+    } else {
+        if (engine) engine->error("[WiFiConfigManager] ❌ Failed to initialize NVS!");
     }
 }
 
@@ -43,11 +48,8 @@ WiFiConfigManager& WiFiConfig = WiFiConfigManager::getInstance();
 // ============================================================================
 
 bool WiFiConfigManager::isConfigured() {
-    uint8_t flag = EEPROM.read(WIFI_EEPROM_FLAG);
-    if (flag != WIFI_CONFIG_MAGIC) {
-        return false;
-    }
-    return verifyChecksum();
+    ensureInitialized();
+    return _prefs.getBool("configured", false);
 }
 
 // ============================================================================
@@ -55,30 +57,20 @@ bool WiFiConfigManager::isConfigured() {
 // ============================================================================
 
 bool WiFiConfigManager::loadConfig(String& ssid, String& password) {
+    ensureInitialized();
     if (!isConfigured()) {
         return false;
     }
     
-    // Read SSID
-    char ssidBuf[WIFI_SSID_MAX_LEN + 1] = {0};
-    for (int i = 0; i < WIFI_SSID_MAX_LEN; i++) {
-        ssidBuf[i] = EEPROM.read(WIFI_EEPROM_SSID + i);
-        if (ssidBuf[i] == 0) break;
-    }
-    ssidBuf[WIFI_SSID_MAX_LEN] = 0;  // Ensure null termination
-    ssid = String(ssidBuf);
+    ssid = _prefs.getString("ssid", "");
+    password = _prefs.getString("password", "");
     
-    // Read password
-    char passBuf[WIFI_PASSWORD_MAX_LEN + 1] = {0};
-    for (int i = 0; i < WIFI_PASSWORD_MAX_LEN; i++) {
-        passBuf[i] = EEPROM.read(WIFI_EEPROM_PASSWORD + i);
-        if (passBuf[i] == 0) break;
+    if (ssid.length() == 0) {
+        return false;
     }
-    passBuf[WIFI_PASSWORD_MAX_LEN] = 0;  // Ensure null termination
-    password = String(passBuf);
     
     if (engine) {
-        engine->info("📶 WiFi config loaded from EEPROM: " + ssid);
+        engine->info("📶 WiFi config loaded from NVS: " + ssid);
     }
     
     return true;
@@ -98,64 +90,30 @@ bool WiFiConfigManager::saveConfig(const String& ssid, const String& password) {
         return false;
     }
     
-    // 🛡️ PROTECTION: Set EEPROM write in progress flag
-    _eepromWriteInProgress = true;
-    
     if (engine) engine->info("💾 Saving WiFi config: " + ssid + " (" + String(ssid.length()) + " chars)");
     
-    // Write magic flag
-    EEPROM.write(WIFI_EEPROM_FLAG, WIFI_CONFIG_MAGIC);
+    ensureInitialized();
     
-    // Write SSID (with null termination)
-    for (int i = 0; i < WIFI_SSID_MAX_LEN; i++) {
-        if (i < (int)ssid.length()) {
-            EEPROM.write(WIFI_EEPROM_SSID + i, ssid[i]);
-        } else {
-            EEPROM.write(WIFI_EEPROM_SSID + i, 0);
-        }
-    }
+    // Write all keys and check return values
+    size_t ssidWritten = _prefs.putString("ssid", ssid);
+    size_t passWritten = _prefs.putString("password", password);
+    _prefs.putBool("configured", true);
     
-    // Write password (with null termination)
-    for (int i = 0; i < WIFI_PASSWORD_MAX_LEN; i++) {
-        if (i < (int)password.length()) {
-            EEPROM.write(WIFI_EEPROM_PASSWORD + i, password[i]);
-        } else {
-            EEPROM.write(WIFI_EEPROM_PASSWORD + i, 0);
-        }
-    }
-    
-    // Calculate and write checksum
-    uint8_t checksum = calculateChecksum();
-    EEPROM.write(WIFI_EEPROM_CHECKSUM, checksum);
-    
-    // Commit with retry
-    bool committed = commitEEPROMWithRetry("WiFi save");
-    
-    // 🛡️ PROTECTION: Clear EEPROM write flag BEFORE any other operations
-    _eepromWriteInProgress = false;
-    
-    if (!committed) {
-        if (engine) engine->error("❌ EEPROM commit failed for WiFi config!");
+    if (ssidWritten == 0) {
+        if (engine) engine->error("❌ NVS putString('ssid') failed! NVS may be full or corrupted");
         return false;
     }
     
-    // 🛡️ SAFETY DELAY: Let EEPROM stabilize after commit
-    delay(50);
-    
-    // VERIFY: Read back and check
-    String verifySSID, verifyPassword;
-    if (!loadConfig(verifySSID, verifyPassword)) {
-        if (engine) engine->error("❌ EEPROM verify failed: couldn't read back config!");
-        return false;
-    }
+    // Verify: Read back and check
+    String verifySSID = _prefs.getString("ssid", "");
     
     if (verifySSID != ssid) {
-        if (engine) engine->error("❌ EEPROM verify failed: SSID mismatch! Saved='" + ssid + "' Read='" + verifySSID + "'");
+        if (engine) engine->error("❌ NVS verify failed: SSID mismatch! Saved='" + ssid + "' Read='" + verifySSID + "'");
         return false;
     }
     
     if (engine) {
-        engine->info("✅ WiFi config verified in EEPROM: " + verifySSID);
+        engine->info("✅ WiFi config verified in NVS: " + verifySSID);
     }
     
     return true;
@@ -166,39 +124,11 @@ bool WiFiConfigManager::saveConfig(const String& ssid, const String& password) {
 // ============================================================================
 
 bool WiFiConfigManager::clearConfig() {
-    // 🛡️ PROTECTION: Set EEPROM write in progress
-    _eepromWriteInProgress = true;
-    
-    // Clear magic flag
-    EEPROM.write(WIFI_EEPROM_FLAG, 0x00);
-    
-    // Clear SSID
-    for (int i = 0; i < WIFI_SSID_MAX_LEN; i++) {
-        EEPROM.write(WIFI_EEPROM_SSID + i, 0);
-    }
-    
-    // Clear password
-    for (int i = 0; i < WIFI_PASSWORD_MAX_LEN; i++) {
-        EEPROM.write(WIFI_EEPROM_PASSWORD + i, 0);
-    }
-    
-    // Clear checksum
-    EEPROM.write(WIFI_EEPROM_CHECKSUM, 0);
-    
-    // Commit with retry
-    bool committed = commitEEPROMWithRetry("WiFi clear");
-    
-    // 🛡️ PROTECTION: Clear flag and stabilize
-    _eepromWriteInProgress = false;
-    delay(50);
-    
-    if (!committed) {
-        if (engine) engine->error("❌ EEPROM clear commit failed after retries");
-        return false;
-    }
+    ensureInitialized();
+    _prefs.clear();  // Remove all keys in this namespace
     
     if (engine) {
-        engine->info("🗑️ WiFi config cleared from EEPROM");
+        engine->info("🗑️ WiFi config cleared from NVS");
     }
     
     return true;
@@ -347,23 +277,19 @@ bool WiFiConfigManager::testConnection(const String& ssid, const String& passwor
 // ============================================================================
 
 String WiFiConfigManager::getStoredSSID() {
+    ensureInitialized();
     if (!isConfigured()) {
         return "";
     }
     
-    char ssidBuf[WIFI_SSID_MAX_LEN + 1] = {0};
-    for (int i = 0; i < WIFI_SSID_MAX_LEN; i++) {
-        ssidBuf[i] = EEPROM.read(WIFI_EEPROM_SSID + i);
-        if (ssidBuf[i] == 0) break;
-    }
-    return String(ssidBuf);
+    return _prefs.getString("ssid", "");
 }
 
 // ============================================================================
 // ENCRYPTION TYPE STRING
 // ============================================================================
 
-String WiFiConfigManager::encryptionTypeToString(uint8_t encType) {
+String WiFiConfigManager::encryptionTypeToString(wifi_auth_mode_t encType) {
     switch (encType) {
         case WIFI_AUTH_OPEN:            return "Open";
         case WIFI_AUTH_WEP:             return "WEP";
@@ -372,24 +298,13 @@ String WiFiConfigManager::encryptionTypeToString(uint8_t encType) {
         case WIFI_AUTH_WPA_WPA2_PSK:    return "WPA/WPA2";
         case WIFI_AUTH_WPA2_ENTERPRISE: return "WPA2-Enterprise";
         case WIFI_AUTH_WPA3_PSK:        return "WPA3";
+        case WIFI_AUTH_WPA2_WPA3_PSK:   return "WPA2/WPA3";
+        case WIFI_AUTH_WAPI_PSK:        return "WAPI";
+        case WIFI_AUTH_OWE:             return "OWE";
+        case WIFI_AUTH_WPA3_ENT_192:    return "WPA3-Enterprise-192";
+        case WIFI_AUTH_DPP:             return "DPP";
         default:                        return "Unknown";
     }
 }
 
-// ============================================================================
-// CHECKSUM HELPERS
-// ============================================================================
 
-uint8_t WiFiConfigManager::calculateChecksum() {
-    uint8_t checksum = 0;
-    for (int i = WIFI_EEPROM_FLAG; i < WIFI_EEPROM_CHECKSUM; i++) {
-        checksum ^= EEPROM.read(i);
-    }
-    return checksum;
-}
-
-bool WiFiConfigManager::verifyChecksum() {
-    uint8_t calculated = calculateChecksum();
-    uint8_t stored = EEPROM.read(WIFI_EEPROM_CHECKSUM);
-    return (calculated == stored);
-}

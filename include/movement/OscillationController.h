@@ -67,7 +67,7 @@ public:
     
     /**
      * Process one oscillation step
-     * Called from main loop when MOVEMENT_OSC is active
+     * Called from main loop when MovementType::MOVEMENT_OSC is active
      * Handles initial positioning, waveform generation, cycle counting
      */
     void process();

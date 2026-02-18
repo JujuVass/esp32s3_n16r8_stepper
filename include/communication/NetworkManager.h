@@ -1,5 +1,5 @@
-﻿/**
- * NetworkManager.h - WiFi Network Management
+/**
+ * NetworkManager.h - WiFi StepperNetwork Management
  * 
  * Three network modes:
  * - AP_SETUP:  GPIO 19 floating (HIGH) or no credentials → Captive Portal + setup.html only
@@ -37,9 +37,9 @@ enum NetworkMode {
     NET_AP_DIRECT    // GPIO 19 GND + WiFi fail → AP-only with full stepper control
 };
 
-class NetworkManager {
+class StepperNetworkManager {
 public:
-    static NetworkManager& getInstance();
+    static StepperNetworkManager& getInstance();
     
     /**
      * Full network initialization
@@ -144,9 +144,9 @@ public:
     volatile bool apLedBlinkEnabled = true;
 
 private:
-    NetworkManager() = default;
-    NetworkManager(const NetworkManager&) = delete;
-    NetworkManager& operator=(const NetworkManager&) = delete;
+    StepperNetworkManager() = default;
+    StepperNetworkManager(const StepperNetworkManager&) = delete;
+    StepperNetworkManager& operator=(const StepperNetworkManager&) = delete;
     
     // Mode determination
     bool shouldStartAPSetup();
@@ -179,4 +179,4 @@ private:
 };
 
 // Global accessor (singleton reference)
-extern NetworkManager& Network;
+extern StepperNetworkManager& StepperNetwork;

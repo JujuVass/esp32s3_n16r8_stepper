@@ -15,6 +15,7 @@
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include "core/Config.h"
 
 // Forward declaration
 class FileSystem;
@@ -23,9 +24,9 @@ enum LogLevel : int;
 // ============================================================================
 // LOG BUFFER CONFIGURATION
 // ============================================================================
-#define LOG_BUFFER_SIZE 100
-#define LOG_FILE_PATTERN "/logs/log_"
-#define LOG_FILE_EXTENSION ".txt"
+// LOG_BUFFER_SIZE is defined in Config.h (constexpr int LOG_BUFFER_SIZE = 100)
+constexpr const char* LOG_FILE_PATTERN = "/logs/log_";
+constexpr const char* LOG_FILE_EXTENSION = ".txt";
 
 // ============================================================================
 // LOG ENTRY STRUCTURE
@@ -109,10 +110,10 @@ public:
   String getCurrentLogFile() const { return _currentLogFileName; }
 
   // ========================================================================
-  // STATE RESTORATION (called by UtilityEngine after EEPROM load)
+  // STATE RESTORATION (called by UtilityEngine after NVS load)
   // ========================================================================
 
-  /** Set initial state from EEPROM values (no save triggered) */
+  /** Set initial state from NVS values (no save triggered) */
   void restoreState(bool enabled, LogLevel level) {
     _loggingEnabled = enabled;
     _currentLogLevel = level;

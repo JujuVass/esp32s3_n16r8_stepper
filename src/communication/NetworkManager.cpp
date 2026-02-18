@@ -1,5 +1,5 @@
-﻿/**
- * NetworkManager.cpp - WiFi Network Management Implementation
+/**
+ * NetworkManager.cpp - WiFi StepperNetwork Management Implementation
  * 
  * Three modes (GPIO 19: GND = normal, floating = AP_SETUP):
  * - AP_SETUP:  GPIO 19 floating or no credentials → Config-only (setup.html + captive portal)
@@ -18,13 +18,13 @@
 // SINGLETON INSTANCE
 // ============================================================================
 
-NetworkManager& NetworkManager::getInstance() {
-    static NetworkManager instance;
+StepperNetworkManager& StepperNetworkManager::getInstance() {
+    static StepperNetworkManager instance;
     return instance;
 }
 
 // Global accessor
-NetworkManager& Network = NetworkManager::getInstance();
+StepperNetworkManager& StepperNetwork = StepperNetworkManager::getInstance();
 
 // ============================================================================
 // MODE DETERMINATION - Should we enter AP_SETUP (config-only)?
@@ -32,7 +32,7 @@ NetworkManager& Network = NetworkManager::getInstance();
 // Also enters AP_SETUP if no WiFi credentials are available
 // ============================================================================
 
-bool NetworkManager::shouldStartAPSetup() {
+bool StepperNetworkManager::shouldStartAPSetup() {
     // Setup GPIO for AP mode detection (active HIGH with internal pull-up)
     // Pin permanently wired to GND = normal mode
     // Pin disconnected/floating = HIGH via pull-up = force AP_SETUP
@@ -51,11 +51,11 @@ bool NetworkManager::shouldStartAPSetup() {
     // GPIO 19 is LOW (GND) = normal mode, check credentials
     String savedSSID, savedPassword;
     bool eepromConfigured = WiFiConfig.isConfigured();
-    engine->info("📦 EEPROM configured: " + String(eepromConfigured ? "YES" : "NO"));
+    engine->info("📦 NVS configured: " + String(eepromConfigured ? "YES" : "NO"));
     
     if (eepromConfigured && WiFiConfig.loadConfig(savedSSID, savedPassword)) {
         if (savedSSID.length() > 0) {
-            engine->info("📶 Found EEPROM WiFi config: '" + savedSSID + "' → Try STA+AP mode");
+            engine->info("📡 Found saved WiFi config: '" + savedSSID + "' → Try STA+AP mode");
             return false;  // Have credentials, try STA mode
         }
     }
@@ -76,7 +76,7 @@ bool NetworkManager::shouldStartAPSetup() {
 // AP_SETUP MODE (Configuration only - setup.html + captive portal)
 // ============================================================================
 
-void NetworkManager::startAPSetupMode() {
+void StepperNetworkManager::startAPSetupMode() {
     _mode = NET_AP_SETUP;
     
     // Use AP_STA mode so we can test WiFi connections without disrupting the AP
@@ -84,7 +84,7 @@ void NetworkManager::startAPSetupMode() {
     
     // Start Access Point
     String apName = String(otaHostname) + "-Setup";
-    WiFi.softAP(apName.c_str());  // Open network for easy config
+    WiFi.softAP(apName.c_str(), NULL, 1);  // Open network, explicit channel 1
     
     WiFi.setSleep(WIFI_PS_NONE);
     
@@ -96,7 +96,7 @@ void NetworkManager::startAPSetupMode() {
     engine->info("═══════════════════════════════════════════════════════");
     engine->info("🔧 AP_SETUP MODE - WiFi Configuration + Captive Portal");
     engine->info("═══════════════════════════════════════════════════════");
-    engine->info("   Network: " + apName);
+    engine->info("   StepperNetwork: " + apName);
     engine->info("   IP: " + _cachedIP);
     engine->info("   📱 Captive Portal active - auto-opens on connect!");
     engine->info("   ⚠️  Hardware NOT initialized (config mode only)");
@@ -107,7 +107,7 @@ void NetworkManager::startAPSetupMode() {
 // AP_DIRECT MODE (Full stepper control via AP, no router)
 // ============================================================================
 
-void NetworkManager::startAPDirectMode() {
+void StepperNetworkManager::startAPDirectMode() {
     _mode = NET_AP_DIRECT;
     
     WiFi.mode(WIFI_AP);
@@ -123,10 +123,15 @@ void NetworkManager::startAPDirectMode() {
     WiFi.setSleep(WIFI_PS_NONE);
     _cachedIP = WiFi.softAPIP().toString();
     
+    // Start DNS server so clients' connectivity checks resolve
+    // (prevents OS from marking this WiFi as "no internet" and blocking WebSocket)
+    _dnsServer.start(53, "*", WiFi.softAPIP());
+    _captivePortalActive = true;
+    
     engine->info("═══════════════════════════════════════════════════════");
     engine->info("📡 AP_DIRECT MODE - Full Stepper Control via WiFi AP");
     engine->info("═══════════════════════════════════════════════════════");
-    engine->info("   Network: " + apName);
+    engine->info("   StepperNetwork: " + apName);
     engine->info("   IP: " + _cachedIP);
     engine->info("   Password: " + String(strlen(AP_DIRECT_PASSWORD) > 0 ? "YES" : "OPEN"));
     engine->info("   Channel: " + String(AP_DIRECT_CHANNEL));
@@ -140,7 +145,7 @@ void NetworkManager::startAPDirectMode() {
 // START PARALLEL AP (called after STA connects successfully)
 // ============================================================================
 
-void NetworkManager::startParallelAP() {
+void StepperNetworkManager::startParallelAP() {
     String apName = String(otaHostname) + "-AP";
     if (strlen(AP_DIRECT_PASSWORD) > 0) {
         WiFi.softAP(apName.c_str(), AP_DIRECT_PASSWORD, AP_DIRECT_CHANNEL, 0, AP_DIRECT_MAX_CLIENTS);
@@ -148,14 +153,19 @@ void NetworkManager::startParallelAP() {
         WiFi.softAP(apName.c_str(), NULL, AP_DIRECT_CHANNEL, 0, AP_DIRECT_MAX_CLIENTS);
     }
     
-    engine->info("📡 Parallel AP started: " + apName + " (IP: " + WiFi.softAPIP().toString() + ")");
+    // Start DNS server so AP clients' connectivity checks resolve
+    // (prevents OS from marking this WiFi as "no internet" and blocking WebSocket)
+    _dnsServer.start(53, "*", WiFi.softAPIP());
+    _captivePortalActive = true;
+    
+    engine->info("📡 Parallel AP started: " + apName + " (IP: " + WiFi.softAPIP().toString() + ", DNS active)");
 }
 
 // ============================================================================
 // CAPTIVE PORTAL HANDLER
 // ============================================================================
 
-void NetworkManager::handleCaptivePortal() {
+void StepperNetworkManager::handleCaptivePortal() {
     if (_captivePortalActive) {
         _dnsServer.processNextRequest();
     }
@@ -165,19 +175,19 @@ void NetworkManager::handleCaptivePortal() {
 // STA MODE (Normal Operation + Parallel AP)
 // ============================================================================
 
-bool NetworkManager::startSTAMode() {
+bool StepperNetworkManager::startSTAMode() {
     _mode = NET_STA_AP;
     
-    // Set WiFi to AP+STA mode for parallel AP
-    WiFi.mode(WIFI_AP_STA);
+    // Set WiFi mode: STA-only for best performance, AP_STA if parallel AP enabled
+    WiFi.mode(ENABLE_PARALLEL_AP ? WIFI_AP_STA : WIFI_STA);
     
-    // Get credentials - check EEPROM first, then Config.h defaults
+    // Get credentials - check NVS first, then Config.h defaults
     String targetSSID, targetPassword;
     String credentialSource;
     
     if (WiFiConfig.isConfigured() && WiFiConfig.loadConfig(targetSSID, targetPassword)) {
-        credentialSource = "EEPROM";
-        engine->info("🔑 WiFi credentials from: EEPROM (saved config)");
+        credentialSource = "NVS";
+        engine->info("🔑 WiFi credentials from: NVS (saved config)");
     } else {
         // Use hardcoded defaults from Config.h
         targetSSID = ssid;
@@ -208,11 +218,7 @@ bool NetworkManager::startSTAMode() {
         engine->error("❌ WiFi connection failed after " + String(attempts * 500 / 1000) + "s");
         engine->warn("⚠️ Credentials from " + credentialSource + " - Switching to AP_DIRECT mode...");
         
-        // 🛡️ PROTECTION: Don't disconnect if EEPROM write in progress
-        if (WiFiConfig.isEEPROMBusy()) {
-            engine->warn("⚠️ EEPROM write in progress - delaying disconnect...");
-            delay(100);
-        }
+        // NVS writes are atomic, no busy-wait needed
         
         // Failed to connect - switch to AP_DIRECT (full app, not setup!)
         WiFi.disconnect();
@@ -223,17 +229,21 @@ bool NetworkManager::startSTAMode() {
     // Connected successfully - cache IP
     _cachedIP = WiFi.localIP().toString();
     
-    // Start parallel AP so device is also accessible via 192.168.4.1
-    startParallelAP();
+    // Start parallel AP if enabled (device also accessible via 192.168.4.1)
+    if (ENABLE_PARALLEL_AP) {
+        startParallelAP();
+    }
     
     engine->info("═══════════════════════════════════════════════════════");
-    engine->info("✅ STA+AP MODE - Stepper Controller Active");
+    engine->info(ENABLE_PARALLEL_AP ? "✅ STA+AP MODE - Stepper Controller Active" : "✅ STA MODE - Stepper Controller Active");
     engine->info("═══════════════════════════════════════════════════════");
     engine->info("   WiFi: " + targetSSID + " [" + credentialSource + "]");
     engine->info("   STA IP: " + _cachedIP);
-    engine->info("   AP IP:  " + WiFi.softAPIP().toString());
+    if (ENABLE_PARALLEL_AP) {
+        engine->info("   AP IP:  " + WiFi.softAPIP().toString());
+    }
     engine->info("   Hostname: http://" + String(otaHostname) + ".local");
-    engine->info("   🎮 App accessible on BOTH interfaces!");
+    engine->info(ENABLE_PARALLEL_AP ? "   🎮 App accessible on BOTH interfaces!" : "   🎮 STA-only (no parallel AP → lower latency)");
     engine->info("═══════════════════════════════════════════════════════");
     
     // Disable WiFi power saving
@@ -253,7 +263,7 @@ bool NetworkManager::startSTAMode() {
 // GET CONFIGURED SSID
 // ============================================================================
 
-String NetworkManager::getConfiguredSSID() const {
+String StepperNetworkManager::getConfiguredSSID() const {
     String savedSSID, savedPassword;
     if (WiFiConfig.isConfigured() && WiFiConfig.loadConfig(savedSSID, savedPassword)) {
         return savedSSID;
@@ -269,7 +279,7 @@ String NetworkManager::getConfiguredSSID() const {
 // MDNS SETUP (STA mode only)
 // ============================================================================
 
-bool NetworkManager::setupMDNS() {
+bool StepperNetworkManager::setupMDNS() {
     if (MDNS.begin(otaHostname)) {
         engine->info("✅ mDNS: http://" + String(otaHostname) + ".local");
         
@@ -292,7 +302,7 @@ bool NetworkManager::setupMDNS() {
 // NTP TIME SYNC (STA mode only)
 // ============================================================================
 
-void NetworkManager::setupNTP() {
+void StepperNetworkManager::setupNTP() {
     configTime(3600, 0, "pool.ntp.org", "time.nist.gov");  // GMT+1
     engine->info("⏰ NTP configured (GMT+1)");
     
@@ -310,7 +320,7 @@ void NetworkManager::setupNTP() {
 // OTA CONFIGURATION (STA mode only)
 // ============================================================================
 
-void NetworkManager::setupOTA() {
+void StepperNetworkManager::setupOTA() {
     ArduinoOTA.setHostname(otaHostname);
     
     if (strlen(otaPassword) > 0) {
@@ -321,10 +331,13 @@ void NetworkManager::setupOTA() {
         String type = (ArduinoOTA.getCommand() == U_FLASH) ? "firmware" : "filesystem";
         engine->info("🔄 OTA Update: " + type);
         
-        if (engine) engine->flushLogBuffer(true);
+        // Stop all movement and motor activity immediately
         stopMovement();
-        Motor.disable();
         if (seqState.isRunning) SeqExecutor.stop();
+        Motor.disable();
+        
+        // Flush logs before flash write begins (blocks until done)
+        if (engine) engine->flushLogBuffer(true);
     });
     
     ArduinoOTA.onEnd([]() {
@@ -353,8 +366,8 @@ void NetworkManager::setupOTA() {
 // FULL INITIALIZATION
 // ============================================================================
 
-bool NetworkManager::begin() {
-    engine->info("🌐 Network initialization...");
+bool StepperNetworkManager::begin() {
+    engine->info("🌐 StepperNetwork initialization...");
     
     // Check if we should enter AP_SETUP (no credentials available)
     if (shouldStartAPSetup()) {
@@ -374,7 +387,7 @@ bool NetworkManager::begin() {
 // - Re-announces mDNS after WiFi reconnection for stable .local resolution
 // ============================================================================
 
-void NetworkManager::checkConnectionHealth() {
+void StepperNetworkManager::checkConnectionHealth() {
     // Only in STA+AP mode (AP_DIRECT and AP_SETUP don't need health checks)
     if (_mode != NET_STA_AP) return;
     
@@ -389,7 +402,11 @@ void NetworkManager::checkConnectionHealth() {
     // CASE 1: Lost connection → Attempt auto-reconnect
     // ═══════════════════════════════════════════════════════════════════════
     if (!currentlyConnected && _wasConnected) {
-        engine->warn("⚠️ WiFi connection lost! (AP still active at " + WiFi.softAPIP().toString() + ")");
+        if (ENABLE_PARALLEL_AP) {
+            engine->warn("⚠️ WiFi connection lost! (AP still active at " + WiFi.softAPIP().toString() + ")");
+        } else {
+            engine->warn("⚠️ WiFi connection lost! Attempting reconnect...");
+        }
         _reconnectAttempts = 0;
     }
     
@@ -398,12 +415,6 @@ void NetworkManager::checkConnectionHealth() {
         if (now - _lastReconnectAttempt >= WIFI_RECONNECT_INTERVAL_MS) {
             _lastReconnectAttempt = now;
             _reconnectAttempts++;
-            
-            // 🛡️ PROTECTION: Don't reconnect if EEPROM write in progress
-            if (WiFiConfig.isEEPROMBusy()) {
-                engine->warn("⚠️ EEPROM write in progress - skipping WiFi reconnect");
-                return;
-            }
             
             if (_reconnectAttempts <= 10) {
                 engine->info("🔄 WiFi reconnect attempt " + String(_reconnectAttempts) + "/10...");
@@ -439,7 +450,7 @@ void NetworkManager::checkConnectionHealth() {
 // CLIENT TIME SYNC (for AP_DIRECT mode without NTP)
 // ============================================================================
 
-void NetworkManager::syncTimeFromClient(uint64_t epochMs) {
+void StepperNetworkManager::syncTimeFromClient(uint64_t epochMs) {
     if (_timeSynced && _mode == NET_STA_AP) {
         return;  // NTP already synced in STA mode, ignore client time
     }

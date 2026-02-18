@@ -35,7 +35,7 @@ void StatsManager::setStatsRecordingEnabled(bool enabled) {
   _statsRecordingEnabled = enabled;
   _eeprom.saveStatsRecording(enabled);
   if (engine) {
-    engine->info(String("📊 Stats recording: ") + (enabled ? "ENABLED" : "DISABLED") + " (saved to EEPROM)");
+    engine->info(String("📊 Stats recording: ") + (enabled ? "ENABLED" : "DISABLED") + " (saved to NVS)");
   }
 }
 

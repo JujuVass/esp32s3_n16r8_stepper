@@ -39,14 +39,14 @@
         }
       } else if (currentMode === 'chaos' && data.chaos && data.chaos.maxSpeedLevel !== undefined) {
         // CHAOS MODE: Show max speed level
-        const speedMMPerSec = data.chaos.maxSpeedLevel * 10.0;
+        const speedMMPerSec = data.chaos.maxSpeedLevel * SPEED_LEVEL_TO_MM_S;
         speedElement.innerHTML = '⚡ ' + data.chaos.maxSpeedLevel.toFixed(1);
         if (cpmSpan) {
           cpmSpan.textContent = '(max ' + speedMMPerSec.toFixed(0) + ' mm/s)';
         }
       } else if (currentMode === 'pursuit' && AppState.pursuit.maxSpeedLevel !== undefined) {
         // PURSUIT MODE: Show max speed level from UI variable
-        const speedMMPerSec = AppState.pursuit.maxSpeedLevel * 10.0;
+        const speedMMPerSec = AppState.pursuit.maxSpeedLevel * SPEED_LEVEL_TO_MM_S;
         speedElement.innerHTML = '⚡ ' + AppState.pursuit.maxSpeedLevel.toFixed(1);
         if (cpmSpan) {
           cpmSpan.textContent = '(max ' + speedMMPerSec.toFixed(0) + ' mm/s)';
@@ -566,9 +566,13 @@
         // when the first status response arrives from the ESP32
         
         // Use IP resolved by the script loader (avoids mDNS for WebSocket port 81)
-        if (window.__espIp) {
+        // Only use if on same subnet as current page (prevents STA IP when on AP)
+        if (window.__espIp && typeof isSameSubnet === 'function' 
+            && isSameSubnet(window.__espIp, window.location.hostname)) {
           AppState.espIpAddress = window.__espIp;
           console.debug('📡 Using pre-resolved ESP32 IP:', window.__espIp);
+        } else if (window.__espIp) {
+          console.debug('⚠️ Pre-resolved IP', window.__espIp, 'not on same subnet - using', window.location.hostname);
         }
         
         connectWebSocket();

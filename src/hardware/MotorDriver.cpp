@@ -12,7 +12,7 @@
 static volatile unsigned long pendInterruptCount = 0;
 
 void IRAM_ATTR pendISR() {
-    pendInterruptCount++;
+    pendInterruptCount = pendInterruptCount + 1;
 }
 
 // ============================================================================

@@ -14,6 +14,8 @@ extern UtilityEngine* engine;
 #include <WebSocketsServer.h>
 #include <WebServer.h>
 
+using enum SystemState;
+
 // ============================================================================
 // SINGLETON INSTANCE
 // ============================================================================
@@ -148,16 +150,16 @@ void CalibrationManager::releaseContact(uint8_t contactPin, bool moveForward) {
     // Move slowly until opto clears (HIGH->LOW transition)
     while (Contacts.isActive(contactPin)) {
         Motor.step();
-        if (!moveForward) currentStep--;
-        else currentStep++;
+        if (!moveForward) currentStep = currentStep - 1;
+        else currentStep = currentStep + 1;
         delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR * 2);
     }
     
     // Add safety margin
     for (int i = 0; i < SAFETY_OFFSET_STEPS; i++) {
         Motor.step();
-        if (!moveForward) currentStep--;
-        else currentStep++;
+        if (!moveForward) currentStep = currentStep - 1;
+        else currentStep = currentStep + 1;
         delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR);
     }
     
@@ -315,7 +317,7 @@ bool CalibrationManager::startCalibration() {
     Motor.setDirection(true);  // Forward
     while (currentStep < targetSteps) {
         Motor.step();
-        currentStep++;
+        currentStep = currentStep + 1;
         delayMicroseconds(CALIB_DELAY);
         
         // Service WebSocket periodically
@@ -359,7 +361,7 @@ bool CalibrationManager::returnToStart() {
         // Move until opto clears (goes LOW)
         while (Contacts.isEndActive() && emergencySteps < MAX_EMERGENCY) {
             Motor.step();
-            currentStep--;
+            currentStep = currentStep - 1;
             emergencySteps++;
             delayMicroseconds(CALIB_DELAY);
             
@@ -388,7 +390,7 @@ bool CalibrationManager::returnToStart() {
     
     while (Contacts.isStartClear()) {
         Motor.step();
-        currentStep--;
+        currentStep = currentStep - 1;
         delayMicroseconds(CALIB_DELAY);
         
         if (currentStep % WEBSOCKET_SERVICE_INTERVAL_STEPS == 0) {
@@ -413,14 +415,14 @@ bool CalibrationManager::returnToStart() {
     
     while (Contacts.isStartActive()) {
         Motor.step();
-        currentStep++;
+        currentStep = currentStep + 1;
         delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR * 2);
     }
     
     // Add safety margin
     for (int i = 0; i < SAFETY_OFFSET_STEPS; i++) {
         Motor.step();
-        currentStep++;
+        currentStep = currentStep + 1;
         delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR);
     }
     

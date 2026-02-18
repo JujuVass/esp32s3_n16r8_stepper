@@ -5,7 +5,7 @@
 //   - Logger         (core/logger/)      — multi-channel structured logging
 //   - FileSystem     (core/filesystem/)   — LittleFS wrapper + JSON helpers
 //   - StatsManager   (core/stats/)        — daily distance statistics
-//   - EepromManager  (core/eeprom/)       — EEPROM persistence
+//   - EepromManager  (core/eeprom/)       — NVS persistence (Preferences API)
 //
 // Public methods forward inline to sub-objects, providing a single
 // access point for all system services.
@@ -16,7 +16,6 @@
 
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
-#include <EEPROM.h>
 #include <time.h>
 #include "Types.h"  // For SystemState, ExecutionContext enums
 
@@ -78,8 +77,8 @@ struct SystemConfig {
   // CONSTRUCTOR - Initialize all fields to defaults
   // ========================================================================
   SystemConfig() :
-    currentState(STATE_INIT),
-    executionContext(CONTEXT_STANDALONE),
+    currentState(SystemState::STATE_INIT),
+    executionContext(ExecutionContext::CONTEXT_STANDALONE),
     minStep(0),
     maxStep(0),
     totalDistanceMM(0),
@@ -137,7 +136,7 @@ public:
   String getCurrentLogFile() const                  { return _logger.getCurrentLogFile(); }
   
   // ========================================================================
-  // EEPROM FACADE (logging preferences — bridges Logger + EepromManager)
+  // PREFERENCES FACADE (logging preferences — bridges Logger + EepromManager)
   // ========================================================================
   
   void saveLoggingPreferences() {
@@ -183,11 +182,11 @@ public:
   void updateEffectiveMaxDistance()             { _stats.updateEffectiveMaxDistance(); }
   
   // ========================================================================
-  // SENSORS EEPROM FACADE
+  // SENSORS NVS FACADE
   // ========================================================================
   
-  void loadSensorsInverted();  // Implemented in .cpp (bridges EEPROM → global)
-  void saveSensorsInverted();  // Implemented in .cpp (bridges global → EEPROM)
+  void loadSensorsInverted();  // Implemented in .cpp (bridges NVS → global)
+  void saveSensorsInverted();  // Implemented in .cpp (bridges global → NVS)
   
   // ========================================================================
   // TIME UTILITIES (kept here — tiny, no dedicated class needed)
@@ -234,28 +233,6 @@ private:
 // ============================================================================
 extern UtilityEngine* engine;
 
-// ============================================================================
-// EEPROM COMMIT HELPER (free function, usable by any module)
-// ============================================================================
-/**
- * Commit EEPROM with retry and exponential backoff
- * @param context Label for log messages (e.g., "Logging", "WiFi", "Stats")
- * @param maxRetries Maximum retry attempts (default: 3)
- * @return true if commit succeeded, false after all retries exhausted
- */
-inline bool commitEEPROMWithRetry(const char* context, int maxRetries = 3) {
-  bool committed = false;
-  for (int attempt = 0; attempt < maxRetries && !committed; attempt++) {
-    if (attempt > 0) {
-      Serial.println(String("[EEPROM] ⚠️ ") + context + " commit retry #" + String(attempt));
-    }
-    committed = EEPROM.commit();
-    if (!committed) delay(50 * (attempt + 1));
-  }
-  if (!committed) {
-    Serial.println(String("[EEPROM] ❌ ") + context + " commit failed after " + String(maxRetries) + " retries!");
-  }
-  return committed;
-}
+
 
 #endif // UTILITY_ENGINE_H

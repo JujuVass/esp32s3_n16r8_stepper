@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // CONFIG.H - System Configuration (WiFi, OTA, GPIO, Hardware)
 // ============================================================================
 // Central configuration file for all hardware and network settings
@@ -43,6 +43,10 @@ constexpr int PIN_PEND = 16;           // PED- via level shifter (input)
 constexpr int PIN_AP_MODE = 19;        // GND = normal, floating = AP_SETUP
 
 // Onboard RGB LED (WS2812 on Freenove ESP32-S3)
+// Arduino Core 3.x defines PIN_RGB_LED as a macro in pins_arduino.h — undefine it first
+#ifdef PIN_RGB_LED
+#undef PIN_RGB_LED
+#endif
 constexpr int PIN_RGB_LED = 48;
 
 // ============================================================================
@@ -52,6 +56,11 @@ constexpr int PIN_RGB_LED = 48;
 constexpr const char* AP_DIRECT_PASSWORD = "";      // Empty = open network, set for WPA2
 constexpr int AP_DIRECT_CHANNEL = 1;                // WiFi channel (1-13, 1 recommended)
 constexpr int AP_DIRECT_MAX_CLIENTS = 4;            // Max simultaneous AP clients (1-10)
+
+// Parallel AP in STA mode: set to true to also run an AP alongside the router connection
+// false = STA-only (better WiFi performance, no channel hopping)
+// true  = STA+AP (device also reachable via 192.168.4.1, but may cause latency)
+constexpr bool ENABLE_PARALLEL_AP = false;
 
 // ============================================================================
 // CONFIGURATION - Motor Parameters
@@ -126,7 +135,7 @@ constexpr unsigned long OSC_MIN_STEP_DELAY_MICROS = 50;  // Minimum delay for os
 constexpr int OSC_MAX_STEPS_PER_CATCH_UP = 2;  // Max steps per loop iteration (anti-jerk)
 
 // Sine wave lookup table (optional performance optimization)
-#define USE_SINE_LOOKUP_TABLE true  // Enable pre-calculated sine table (saves ~13us per call)
+#define USE_SINE_LOOKUP_TABLE  // Enable pre-calculated sine table (saves ~13us per call)
 constexpr int SINE_TABLE_SIZE = 1024;  // 1024 points = 0.1% precision, 4KB RAM
 
 // Smooth transitions
@@ -177,6 +186,7 @@ constexpr float OSC_MAX_SPEED_MM_S = MAX_SPEED_LEVEL * 20.0f;  // Maximum oscill
 // ============================================================================
 constexpr unsigned long WEBSERVICE_INTERVAL_US = 3000;    // Service WebSocket every 3ms
 constexpr unsigned long STATUS_UPDATE_INTERVAL_MS = 100;  // Default status interval (active movement)
+constexpr unsigned long STATUS_PURSUIT_INTERVAL_MS = 50;  // Fast rate during pursuit mode (20 Hz)
 constexpr unsigned long STATUS_IDLE_INTERVAL_MS = 1000;   // Reduced rate when idle (READY/INIT/ERROR)
 constexpr unsigned long STATUS_CALIB_INTERVAL_MS = 200;   // Moderate rate during calibration
 constexpr unsigned long SUMMARY_LOG_INTERVAL_MS = 30000;  // Print summary every 30s
@@ -202,7 +212,7 @@ constexpr unsigned long PEND_WARN_COOLDOWN_MS = 5000;  // Max 1 warning per 5 se
 // ============================================================================
 // CONFIGURATION - Logging & Performance Monitoring
 // ============================================================================
-#define LOG_BUFFER_SIZE 100  // Circular buffer size for async log writes
+constexpr int LOG_BUFFER_SIZE = 100;  // Circular buffer size for async log writes
 
 // Slow broadcast threshold for performance monitoring (microseconds)
 constexpr unsigned long BROADCAST_SLOW_THRESHOLD_US = 200000;  // 200ms
@@ -250,7 +260,7 @@ constexpr uint8_t MAX_PLAYLISTS_PER_MODE = 20;          // Max saved presets per
 // ============================================================================
 constexpr float DECEL_DEFAULT_ZONE_MM = 20.0f;          // Default decel zone size
 constexpr uint8_t DECEL_DEFAULT_EFFECT_PERCENT = 50;    // Default decel effect
-// Decel mode constants removed — use CURVE_LINEAR/CURVE_SINE/etc. from Types.h
+// Decel mode constants removed — use SpeedCurve::CURVE_LINEAR/SpeedCurve::CURVE_SINE/etc. from Types.h
 
 // ============================================================================
 // CONFIGURATION - Cycle Pause Defaults

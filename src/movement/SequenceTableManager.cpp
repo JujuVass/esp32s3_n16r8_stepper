@@ -7,12 +7,17 @@
 
 #include "movement/SequenceTableManager.h"
 #include "communication/StatusBroadcaster.h"  // For Status.sendError()
+#include "core/Validators.h"
 #include <WebSocketsServer.h>
+
+using enum MovementType;
+using enum SpeedCurve;
+using enum SpeedEffect;
 
 // ============================================================================
 // SEQUENCE DATA - Owned by this module
 // ============================================================================
-SequenceLine sequenceTable[MAX_SEQUENCE_LINES];
+constinit SequenceLine sequenceTable[MAX_SEQUENCE_LINES];
 int sequenceLineCount = 0;
 
 // ============================================================================
@@ -181,7 +186,7 @@ int SequenceTableManager::findLineIndex(int lineId) {
 // ============================================================================
 
 String SequenceTableManager::validatePhysics(const SequenceLine& line) {
-  float effectiveMax = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+  float effectiveMax = Validators::getMaxAllowedMM();
   
   switch (line.movementType) {
     case MOVEMENT_VAET: {
@@ -319,7 +324,7 @@ SequenceLine SequenceTableManager::parseFromJson(JsonVariantConst obj) {
   line.vaetCyclePause.maxPauseSec = obj["vaetCyclePauseMaxSec"] | 3.0;
   
   // OSCILLATION fields
-  float effectiveMax = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+  float effectiveMax = Validators::getMaxAllowedMM();
   line.oscCenterPositionMM = obj["oscCenterPositionMM"] | (effectiveMax / 2.0);
   line.oscAmplitudeMM = obj["oscAmplitudeMM"] | 50.0;
   line.oscWaveform = (OscillationWaveform)(obj["oscWaveform"] | 0);

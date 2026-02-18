@@ -1,26 +1,19 @@
 // ============================================================================
-// EEPROM MANAGER - Persistent Preferences Storage
+// EEPROM MANAGER - Persistent Preferences Storage (NVS via Preferences API)
 // ============================================================================
-// EEPROM read/write operations for persistent preferences:
+// Key-value persistent storage for system preferences:
 // - Logging preferences (enabled + level)
 // - Stats recording preference
 // - Sensor inversion preference
-// - Checksum integrity protection
 //
-// EEPROM Layout:
-//   Byte 0:   loggingEnabled (0=disabled, 1=enabled)
-//   Byte 1:   currentLogLevel (0-3: ERROR, WARN, INFO, DEBUG)
-//   Byte 2:   statsRecordingEnabled (0=disabled, 1=enabled)
-//   Byte 3:   sensorsInverted (0=normal, 1=inverted)
-//   Byte 4-126: (reserved / WiFi config)
-//   Byte 127: XOR checksum of bytes 0-3
+// Uses ESP32 Preferences (NVS) — no manual checksums needed.
 // ============================================================================
 
 #ifndef EEPROM_MANAGER_H
 #define EEPROM_MANAGER_H
 
 #include <Arduino.h>
-#include <EEPROM.h>
+#include <Preferences.h>
 
 // Forward declaration to avoid circular include
 enum LogLevel : int;
@@ -34,8 +27,8 @@ public:
   EepromManager();
 
   /**
-   * Initialize EEPROM (call once in setup)
-   * @param size EEPROM allocation size in bytes
+   * Initialize Preferences (call once in setup)
+   * @param size Ignored — kept for API compatibility
    */
   void begin(uint16_t size = 128);
 
@@ -44,14 +37,14 @@ public:
   // ========================================================================
 
   /**
-   * Save logging preferences to EEPROM (with checksum)
+   * Save logging preferences
    * @param enabled  Master logging switch
    * @param level    Current log level (0-3)
    */
   void saveLoggingPreferences(bool enabled, uint8_t level);
 
   /**
-   * Load logging preferences from EEPROM
+   * Load logging preferences
    * @param[out] enabled  Will be set to saved value (or default true)
    * @param[out] level    Will be set to saved value (or default LOG_INFO=2)
    */
@@ -62,7 +55,7 @@ public:
   // ========================================================================
 
   /**
-   * Save stats recording preference (with checksum)
+   * Save stats recording preference
    * @param enabled true = stats are recorded
    */
   void saveStatsRecording(bool enabled);
@@ -87,14 +80,8 @@ public:
   void loadSensorsInverted(bool& inverted);
 
 private:
-  /** Calculate XOR checksum of critical data bytes */
-  uint8_t calculateChecksum() const;
-
-  /** Verify stored checksum matches calculated */
-  bool verifyChecksum() const;
-
-  /** Update checksum after any write */
-  void updateChecksum();
+  Preferences _prefs;
+  static constexpr const char* NVS_NAMESPACE = "stepper_cfg";
 };
 
 #endif // EEPROM_MANAGER_H

@@ -14,11 +14,17 @@
 #include "movement/SequenceExecutor.h"
 #include "movement/CalibrationManager.h"
 
+using enum SystemState;
+using enum MovementType;
+using enum SpeedEffect;
+using enum SpeedCurve;
+using enum ExecutionContext;
+
 // ============================================================================
 // ZONE EFFECT STATE - Owned by BaseMovementController (integrated)
 // ============================================================================
-ZoneEffectConfig zoneEffect;
-ZoneEffectState zoneEffectState;
+constinit ZoneEffectConfig zoneEffect;
+constinit ZoneEffectState zoneEffectState;
 
 // ============================================================================
 // SINGLETON INSTANCE
@@ -202,7 +208,7 @@ void BaseMovementControllerClass::calculateStepDelay() {
     
     long stepsPerDirection = (long)(motion.targetDistanceMM * STEPS_PER_MM);
     
-    // 🛡️ CRITICAL SAFETY: Prevent division by zero (can happen with corrupted EEPROM data)
+    // 🛡️ CRITICAL SAFETY: Prevent division by zero (can happen with corrupted config data)
     if (stepsPerDirection <= 0) {
         engine->error("⚠️ DIVISION BY ZERO PREVENTED! stepsPerDirection=" + String(stepsPerDirection) + 
               " (distance=" + String(motion.targetDistanceMM, 3) + "mm)");
@@ -758,9 +764,11 @@ void BaseMovementControllerClass::start(float distMM, float speedLevel) {
     // If we're already at or past startStep, mark it as reached
     hasReachedStartStep = (currentStep >= startStep);
     
-    engine->debug("🚀 Starting movement: currentStep=" + String(currentStep) + 
-          " startStep=" + String(startStep) + " targetStep=" + String(targetStep) + 
-          " movingForward=" + String(movingForward ? "YES" : "NO"));
+    if (engine->isDebugEnabled()) {
+        engine->debug("🚀 Starting movement: currentStep=" + String(currentStep) + 
+              " startStep=" + String(startStep) + " targetStep=" + String(targetStep) + 
+              " movingForward=" + String(movingForward ? "YES" : "NO"));
+    }
 }
 
 void BaseMovementControllerClass::returnToStart() {
@@ -810,12 +818,12 @@ void BaseMovementControllerClass::returnToStart() {
 
 void BaseMovementControllerClass::process() {
     // Guard: Only process if running (STATE_PAUSED is handled via config.currentState)
-    if (config.currentState != STATE_RUNNING) {
+    if (config.currentState != STATE_RUNNING) [[unlikely]] {
         return;
     }
     
     // Check if in cycle pause (between cycles)
-    if (motionPauseState.isPausing) {
+    if (motionPauseState.isPausing) [[unlikely]] {
         unsigned long elapsedMs = millis() - motionPauseState.pauseStartMs;
         if (elapsedMs >= motionPauseState.currentPauseDuration) {
             // End of pause, resume movement
@@ -828,7 +836,7 @@ void BaseMovementControllerClass::process() {
     }
     
     // Check if in end pause (zone effect)
-    if (checkAndHandleEndPause()) {
+    if (checkAndHandleEndPause()) [[unlikely]] {
         return;  // Still pausing, don't step
     }
     
@@ -892,7 +900,7 @@ void BaseMovementControllerClass::process() {
     }
     
     // Check if enough time has passed for next step
-    if (currentMicros - lastStepMicros >= currentDelay) {
+    if (currentMicros - lastStepMicros >= currentDelay) [[unlikely]] {
         lastStepMicros = currentMicros;
         doStep();
     }
@@ -920,21 +928,23 @@ void BaseMovementControllerClass::doStep() {
         // ═══════════════════════════════════════════════════════════════════
         
         // Drift detection & correction (delegated to ContactSensors)
-        if (Contacts.checkAndCorrectDriftEnd()) {
+        if (Contacts.checkAndCorrectDriftEnd()) [[unlikely]] {
             movingForward = false;  // Reverse direction after correction
             resetRandomTurnback();  // Reset turnback state on direction change
             return;
         }
         
         // Hard drift check (critical error)
-        if (!Contacts.checkHardDriftEnd()) {
+        if (!Contacts.checkHardDriftEnd()) [[unlikely]] {
             return;  // Error state, stop processing
         }
         
         // Check if reached target position
-        if (currentStep + 1 > targetStep) {
-            engine->debug("🎯 Reached targetStep=" + String(targetStep) + " (currentStep=" + 
-                  String(currentStep) + ", pos=" + String(currentStep / STEPS_PER_MM, 1) + "mm)");
+        if (currentStep + 1 > targetStep) [[unlikely]] {
+            if (engine->isDebugEnabled()) {
+                engine->debug("🎯 Reached targetStep=" + String(targetStep) + " (currentStep=" + 
+                      String(currentStep) + ", pos=" + String(currentStep / STEPS_PER_MM, 1) + "mm)");
+            }
             // Trigger end pause if enabled (at END extremity)
             // Note: end pause uses PHYSICAL zone flags (no mirror swap)
             if (zoneEffect.enabled && zoneEffect.endPauseEnabled && zoneEffect.enableEnd) {
@@ -946,14 +956,14 @@ void BaseMovementControllerClass::doStep() {
         }
         
         // Check if we've reached startStep for the first time (initial approach phase)
-        if (!hasReachedStartStep && currentStep >= startStep) {
+        if (!hasReachedStartStep && currentStep >= startStep) [[unlikely]] {
             hasReachedStartStep = true;
         }
         
         // Execute step
         Motor.setDirection(true);  // Forward
         Motor.step();
-        currentStep++;
+        currentStep = currentStep + 1;
         
         // Track distance
         trackDistance();
@@ -964,12 +974,12 @@ void BaseMovementControllerClass::doStep() {
         // ═══════════════════════════════════════════════════════════════════
         
         // Drift detection & correction (delegated to ContactSensors)
-        if (Contacts.checkAndCorrectDriftStart()) {
+        if (Contacts.checkAndCorrectDriftStart()) [[unlikely]] {
             return;  // Correction done, wait for next step
         }
         
         // Hard drift check (critical error)
-        if (!Contacts.checkHardDriftStart()) {
+        if (!Contacts.checkHardDriftStart()) [[unlikely]] {
             return;  // Error state, stop processing
         }
         
@@ -981,16 +991,18 @@ void BaseMovementControllerClass::doStep() {
         // Execute step
         Motor.setDirection(false);  // Backward
         Motor.step();
-        currentStep--;
+        currentStep = currentStep - 1;
         
         // Track distance
         trackDistance();
         
         // Check if reached startStep (end of backward movement)
         // ONLY reverse if we've already been to startStep once (va-et-vient mode active)
-        if (currentStep <= startStep && hasReachedStartStep) {
-            engine->debug("🏠 Reached startStep=" + String(startStep) + " (currentStep=" + 
-                  String(currentStep) + ", pos=" + String(currentStep / STEPS_PER_MM, 1) + "mm)");
+        if (currentStep <= startStep && hasReachedStartStep) [[unlikely]] {
+            if (engine->isDebugEnabled()) {
+                engine->debug("🏠 Reached startStep=" + String(startStep) + " (currentStep=" + 
+                      String(currentStep) + ", pos=" + String(currentStep / STEPS_PER_MM, 1) + "mm)");
+            }
             // Trigger end pause if enabled (at START extremity)
             // Note: end pause uses PHYSICAL zone flags (no mirror swap)
             // Mirror only affects speed effect curve, not pause triggers
@@ -1039,7 +1051,9 @@ bool BaseMovementControllerClass::handleCyclePause() {
     motionPauseState.isPausing = true;
     motionPauseState.pauseStartMs = millis();
     
-    engine->debug("⏸️ Cycle pause VAET: " + String(motionPauseState.currentPauseDuration) + "ms");
+    if (engine->isDebugEnabled()) {
+        engine->debug("⏸️ Cycle pause VAET: " + String(motionPauseState.currentPauseDuration) + "ms");
+    }
     
     return true;  // Pausing, don't reverse direction yet
 }

@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // API ROUTES MANAGER - Implementation
 // ============================================================================
 // HTTP server routes for ESP32 Stepper Controller.
@@ -16,6 +16,7 @@
 #include "movement/SequenceTableManager.h"
 #include "communication/WiFiConfigManager.h"
 #include "communication/NetworkManager.h"
+#include "communication/FilesystemManager.h"
 
 // External globals
 extern WebServer server;
@@ -24,26 +25,6 @@ extern UtilityEngine* engine;
 
 // External LED control (defined in main .ino)
 extern void setRgbLed(uint8_t r, uint8_t g, uint8_t b);
-
-// ============================================================================
-// MIME TYPE DETECTION
-// ============================================================================
-// NOTE: Keep in sync with FilesystemManager::getContentType()
-
-String getMimeType(const String& path) {
-  if (path.endsWith(".html")) return "text/html; charset=UTF-8";
-  if (path.endsWith(".css"))  return "text/css; charset=UTF-8";
-  if (path.endsWith(".js"))   return "application/javascript; charset=UTF-8";
-  if (path.endsWith(".json")) return "application/json; charset=UTF-8";
-  if (path.endsWith(".png"))  return "image/png";
-  if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
-  if (path.endsWith(".gif"))  return "image/gif";
-  if (path.endsWith(".svg"))  return "image/svg+xml";
-  if (path.endsWith(".ico"))  return "image/x-icon";
-  if (path.endsWith(".txt"))  return "text/plain; charset=UTF-8";
-  if (path.endsWith(".log"))  return "text/plain; charset=UTF-8";
-  return "application/octet-stream";
-}
 
 // ============================================================================
 // STATIC FILE SERVER - Auto-serves any file from LittleFS
@@ -66,7 +47,7 @@ bool serveStaticFile(const String& path) {
     return false;
   }
   
-  String mimeType = getMimeType(filePath);
+  String mimeType = FilesystemManager::getContentType(filePath);
   
   // Set cache headers based on file type
   if (filePath.endsWith(".html") || filePath.endsWith(".json")) {
@@ -123,6 +104,7 @@ String getFormattedTime() {
 
 void sendJsonError(int code, const String& message) {
   JsonDocument doc;
+  doc["success"] = false;
   doc["error"] = message;
   String json;
   serializeJson(doc, json);
@@ -296,7 +278,7 @@ void setupAPIRoutes() {
   
   // Root route explicitly for faster response
     server.on("/", HTTP_GET, []() {
-      if (Network.isAPSetupMode()) {
+      if (StepperNetwork.isAPSetupMode()) {
         server.sendHeader("Location", "/setup.html", true);
         server.send(302, "text/plain", "Redirecting to setup.html");
         return;
@@ -311,11 +293,22 @@ void setupAPIRoutes() {
   // ========================================================================
 
   // GET /api/ip - Returns ESP32 IP address for direct WebSocket connection
-  // This allows the browser to resolve the IP once at boot, avoiding
-  // repeated mDNS lookups (which are slow/unreliable) for WS on port 81
+  // Returns the IP matching the interface the client connected through:
+  // - Client on AP (192.168.4.x) → returns AP IP (192.168.4.1)
+  // - Client on STA (router network) → returns STA IP
   server.on("/api/ip", HTTP_GET, []() {
     sendCORSHeaders();
-    server.send(200, "application/json", "{\"ip\":\"" + Network.getIPAddress() + "\"}");
+    // Determine which interface the client is connected to
+    String clientIP = server.client().remoteIP().toString();
+    String responseIP;
+    if (clientIP.startsWith("192.168.4.")) {
+      // Client is on the AP network → return AP IP
+      responseIP = WiFi.softAPIP().toString();
+    } else {
+      // Client is on the STA/router network → return STA IP
+      responseIP = StepperNetwork.getIPAddress();
+    }
+    server.send(200, "application/json", "{\"ip\":\"" + responseIP + "\"}");
   });
 
   // ========================================================================
@@ -377,65 +370,9 @@ void setupAPIRoutes() {
       return;
     }
     
-    // Get current date (YYYY-MM-DD format)
-    time_t now = time(nullptr);
-    struct tm* timeinfo = localtime(&now);
-    char dateStr[11];
-    strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", timeinfo);
-    
-    // Load existing stats
-    JsonDocument statsDoc;
-    engine->loadJsonFile("/stats.json", statsDoc);
-    
-    // Handle both old format (direct array) and new format (object with "stats" key)
-    JsonArray statsArray;
-    if (statsDoc.is<JsonArray>()) {
-      // OLD FORMAT: Direct array
-      statsArray = statsDoc.as<JsonArray>();
-    } else if (statsDoc["stats"].is<JsonArray>()) {
-      // NEW FORMAT: Object with "stats" key - extract the array
-      statsArray = statsDoc["stats"].as<JsonArray>();
-    } else {
-      // Neither format - create new array (old format for backward compatibility)
-      statsArray = statsDoc.to<JsonArray>();
-    }
-    
-    bool found = false;
-    for (JsonObject entry : statsArray) {
-      if (strcmp(entry["date"], dateStr) == 0) {
-        float current = entry["distanceMM"] | 0.0;
-        entry["distanceMM"] = current + distanceMM;
-        found = true;
-        break;
-      }
-    }
-    
-    if (!found) {
-      JsonObject newEntry = statsArray.add<JsonObject>();
-      newEntry["date"] = dateStr;
-      newEntry["distanceMM"] = distanceMM;
-    }
-    
-    // ============================================================================
-    // IMPORTANT: Always save as OLD FORMAT (direct array) to /stats.json
-    // The NEW FORMAT (object with metadata) is only used for exports
-    // This ensures compatibility and avoids format confusion during increments
-    // ============================================================================
-    JsonDocument saveDoc;
-    JsonArray saveArray = saveDoc.to<JsonArray>();
-    
-    // Copy all entries to the save document (ensures clean array format)
-    for (JsonVariant entry : statsArray) {
-      saveArray.add(entry);
-    }
-    
-    // Save back to file
-    if (!engine->saveJsonFile("/stats.json", saveDoc)) {
-      sendJsonError(500, "Failed to write stats");
-      return;
-    }
-    
-    engine->info(String("📊 Stats updated: +") + String(distanceMM, 1) + "mm on " + String(dateStr));
+    // DRY: Delegate to StatsManager which handles date, file I/O, and format
+    engine->incrementDailyStats(distanceMM);
+    engine->info(String("📊 Stats updated via API: +") + String(distanceMM, 1) + "mm");
     sendJsonSuccess();
   });
   
@@ -940,13 +877,6 @@ void setupAPIRoutes() {
   server.on("/api/system/wifi/reconnect", HTTP_POST, []() {
     engine->info("📶 WiFi reconnect requested via API");
     
-    // 🛡️ PROTECTION: Don't reconnect if EEPROM write in progress
-    if (WiFiConfig.isEEPROMBusy()) {
-      engine->warn("⚠️ EEPROM write in progress - cannot reconnect WiFi now");
-      server.send(503, "application/json", "{\"success\":false,\"error\":\"EEPROM write in progress, try again in a moment\"}");
-      return;
-    }
-    
     // Send success response before disconnecting
     server.send(200, "application/json", "{\"success\":true,\"message\":\"Reconnecting WiFi...\"}");
     
@@ -1005,7 +935,7 @@ void setupAPIRoutes() {
       }
     }
     
-    // Save to EEPROM
+    // Save to NVS
     engine->saveLoggingPreferences();
     
     server.send(200, "application/json", "{\"success\":true,\"message\":\"Logging preferences saved\"}");
@@ -1020,7 +950,7 @@ void setupAPIRoutes() {
     engine->info("📡 WiFi scan requested via API");
     
     // In AP-only mode, we need to be careful with scanning
-    bool wasAPOnly = Network.isAPSetupMode() || Network.isAPDirectMode();
+    bool wasAPOnly = StepperNetwork.isAPSetupMode() || StepperNetwork.isAPDirectMode();
     
     if (wasAPOnly) {
       engine->info("📡 AP mode: preparing for scan...");
@@ -1056,8 +986,8 @@ void setupAPIRoutes() {
     JsonDocument doc;
     doc["configured"] = WiFiConfig.isConfigured();
     doc["ssid"] = WiFiConfig.getStoredSSID();
-    doc["apMode"] = Network.isAPMode();
-    doc["staMode"] = Network.isSTAMode();
+    doc["apMode"] = StepperNetwork.isAPMode();
+    doc["staMode"] = StepperNetwork.isSTAMode();
     doc["ip"] = WiFi.localIP().toString();
     doc["apIp"] = WiFi.softAPIP().toString();
     
@@ -1066,7 +996,7 @@ void setupAPIRoutes() {
     server.send(200, "application/json", response);
   });
   
-  // POST /api/wifi/save - Save WiFi credentials to EEPROM without testing
+  // POST /api/wifi/save - Save WiFi credentials to NVS without testing
   server.on("/api/wifi/save", HTTP_POST, []() {
     if (!server.hasArg("plain")) {
       server.send(400, "application/json", "{\"success\":false,\"error\":\"Missing body\"}");
@@ -1090,14 +1020,14 @@ void setupAPIRoutes() {
       return;
     }
     
-    engine->info("💾 Saving WiFi config to EEPROM: " + ssid);
+    engine->info("💾 Saving WiFi config to NVS: " + ssid);
     
     bool saved = WiFiConfig.saveConfig(ssid, password);
     
     if (saved) {
       JsonDocument respDoc;
       respDoc["success"] = true;
-      respDoc["message"] = "WiFi configuration saved to EEPROM";
+      respDoc["message"] = "WiFi configuration saved";
       respDoc["ssid"] = ssid;
       respDoc["rebootRequired"] = true;
       
@@ -1107,7 +1037,7 @@ void setupAPIRoutes() {
       
       engine->info("✅ WiFi config saved successfully");
     } else {
-      server.send(500, "application/json", "{\"success\":false,\"error\":\"Failed to save WiFi config to EEPROM\"}");
+      server.send(500, "application/json", "{\"success\":false,\"error\":\"Failed to save WiFi config\"}");
     }
   });
   
@@ -1115,7 +1045,7 @@ void setupAPIRoutes() {
   // We start in AP_STA mode, so testing won't disrupt the AP connection
   server.on("/api/wifi/connect", HTTP_POST, []() {
     // Block if in STA+AP mode - must use AP_SETUP mode to configure
-    if (Network.isSTAMode()) {
+    if (StepperNetwork.isSTAMode()) {
       server.send(403, "application/json", 
         "{\"success\":false,\"error\":\"WiFi config disabled when connected. Use AP_SETUP mode (GPIO 19 to GND) to change settings.\",\"hint\":\"Set GPIO19 to GND and reboot.\"}");
       return;
@@ -1150,12 +1080,12 @@ void setupAPIRoutes() {
     bool saveFirst = true;  // AP mode behavior: always save first
     
     if (saveFirst) {
-      // Save to EEPROM before testing
-      engine->info("💾 Saving WiFi credentials to EEPROM...");
+      // Save to NVS before testing
+      engine->info("💾 Saving WiFi credentials...");
       bool saved = WiFiConfig.saveConfig(ssid, password);
       
       if (!saved) {
-        server.send(500, "application/json", "{\"success\":false,\"error\":\"Failed to save WiFi config to EEPROM\"}");
+        server.send(500, "application/json", "{\"success\":false,\"error\":\"Failed to save WiFi config\"}");
         return;
       }
       
@@ -1167,7 +1097,7 @@ void setupAPIRoutes() {
     
     if (connected) {
       // LED GREEN = Success! Stop blinking
-      Network.apLedBlinkEnabled = false;
+      StepperNetwork.apLedBlinkEnabled = false;
       setRgbLed(0, 50, 0);
       
       // Already saved above (if saveFirst=true)
@@ -1189,7 +1119,7 @@ void setupAPIRoutes() {
       engine->info("✅ WiFi config saved AND tested successfully - waiting for reboot");
     } else {
       // LED ORANGE = Saved but connection test failed
-      Network.apLedBlinkEnabled = false;
+      StepperNetwork.apLedBlinkEnabled = false;
       setRgbLed(25, 10, 0);  // Orange = Warning
       
       // Credentials already saved, reboot will try to connect
@@ -1205,7 +1135,7 @@ void setupAPIRoutes() {
       serializeJson(respDoc, response);
       server.send(200, "application/json", response);
       
-      engine->warn("⚠️ WiFi saved to EEPROM but test failed: " + ssid + " (will retry on reboot)");
+      engine->warn("⚠️ WiFi saved but test failed: " + ssid + " (will retry on reboot)");
     }
   });
   
@@ -1254,7 +1184,7 @@ void setupAPIRoutes() {
   // Helper: Send captive portal redirect page (only in AP_SETUP mode)
   auto sendCaptivePortalRedirect = []() {
     // In AP_DIRECT or STA+AP mode, don't redirect - let OS think we have internet
-    if (!Network.isAPSetupMode()) {
+    if (!StepperNetwork.isAPSetupMode()) {
       server.send(204);  // 204 No Content = "we have internet" for most OS
       return;
     }
@@ -1277,7 +1207,7 @@ void setupAPIRoutes() {
     sendCaptivePortalRedirect();
   });
   
-  // Windows (NCSI - Network Connectivity Status Indicator)
+  // Windows (NCSI - StepperNetwork Connectivity Status Indicator)
   // Windows expects specific text, returning anything else triggers captive portal
   server.on("/connecttest.txt", HTTP_GET, [sendCaptivePortalRedirect]() {
     sendCaptivePortalRedirect();
@@ -1319,7 +1249,7 @@ void setupAPIRoutes() {
     engine->debug("📥 Request: " + method + " " + uri);
     
     // In AP_SETUP mode, redirect everything except /setup.html and /api/wifi/* to /setup.html
-    if (Network.isAPSetupMode()) {
+    if (StepperNetwork.isAPSetupMode()) {
       if (uri != "/setup.html" && !uri.startsWith("/api/wifi")) {
         server.sendHeader("Location", "http://192.168.4.1/setup.html", true);
         server.send(302, "text/plain", "Redirecting to setup.html");

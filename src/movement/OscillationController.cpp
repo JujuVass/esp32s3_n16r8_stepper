@@ -10,16 +10,22 @@
 
 #include "movement/OscillationController.h"
 #include "communication/StatusBroadcaster.h"  // For Status.sendError()
+#include "core/Validators.h"
 #include "hardware/MotorDriver.h"
 #include "hardware/ContactSensors.h"
 #include "movement/SequenceExecutor.h"
 
+using enum SystemState;
+using enum OscillationWaveform;
+using enum MovementType;
+using enum ExecutionContext;
+
 // ============================================================================
 // OSCILLATION STATE - Owned by this module
 // ============================================================================
-OscillationConfig oscillation;
-OscillationState oscillationState;
-CyclePauseState oscPauseState;
+constinit OscillationConfig oscillation;
+constinit OscillationState oscillationState;
+constinit CyclePauseState oscPauseState;
 float actualOscillationSpeedMMS = 0.0;
 
 // ============================================================================
@@ -147,12 +153,12 @@ void OscillationControllerClass::start() {
 
 void OscillationControllerClass::process() {
     // 🆕 Handle inter-cycle pause
-    if (handleCyclePause()) {
+    if (handleCyclePause()) [[unlikely]] {
         return;  // Still in pause
     }
     
     // Handle initial positioning phase
-    if (oscillationState.isInitialPositioning) {
+    if (oscillationState.isInitialPositioning) [[unlikely]] {
         if (handleInitialPositioning()) {
             return;  // Still positioning
         }
@@ -162,10 +168,12 @@ void OscillationControllerClass::process() {
     float targetPositionMM = calculatePosition();
     
     // THEN check if cycle count reached (after counter update)
-    if (oscillation.cycleCount > 0 && oscillationState.completedCycles >= oscillation.cycleCount) {
+    if (oscillation.cycleCount > 0 && oscillationState.completedCycles >= oscillation.cycleCount) [[unlikely]] {
         // Log only once when cycles complete
         if (!cyclesCompleteLogged_) {
-            engine->debug("✅ OSC: Cycles complete! " + String(oscillationState.completedCycles) + "/" + String(oscillation.cycleCount));
+            if (engine->isDebugEnabled()) {
+                engine->debug("✅ OSC: Cycles complete! " + String(oscillationState.completedCycles) + "/" + String(oscillation.cycleCount));
+            }
             cyclesCompleteLogged_ = true;
         }
         
@@ -193,14 +201,14 @@ void OscillationControllerClass::process() {
     long targetStep = (long)(targetPositionMM * STEPS_PER_MM);
     
     // Safety check contacts near limits
-    if (!checkSafetyContacts(targetStep)) {
+    if (!checkSafetyContacts(targetStep)) [[unlikely]] {
         return;  // Contact hit - stop
     }
     
     // Move towards target position
     long errorSteps = targetStep - currentStep;
     
-    if (errorSteps == 0) {
+    if (errorSteps == 0) [[unlikely]] {
         return;  // Already at target
     }
     
@@ -220,7 +228,7 @@ void OscillationControllerClass::process() {
     unsigned long currentMicros = micros();
     unsigned long elapsedMicros = currentMicros - lastStepMicros_;
     
-    if (elapsedMicros < OSC_MIN_STEP_DELAY_MICROS) {
+    if (elapsedMicros < OSC_MIN_STEP_DELAY_MICROS) [[likely]] {
         return;  // Too early for next step
     }
     
@@ -284,9 +292,9 @@ float OscillationControllerClass::calculatePosition() {
     
     oscillationState.lastPhaseUpdateMs = currentMs;
     
-    if (oscillationState.isTransitioning) {
+    if (oscillationState.isTransitioning) [[unlikely]] {
         unsigned long transitionElapsed = currentMs - oscillationState.transitionStartMs;
-        
+
         if (transitionElapsed < OSC_FREQ_TRANSITION_DURATION_MS) {
             // Linear interpolation of frequency
             float progress = (float)transitionElapsed / (float)OSC_FREQ_TRANSITION_DURATION_MS;
@@ -346,9 +354,11 @@ float OscillationControllerClass::calculatePosition() {
     
     // Track completed cycles
     // ⚠️ Don't increment during ramp out - we've already reached target cycle count
-    if (!oscillationState.isRampingOut && phase < oscillationState.lastPhase) {  // Cycle wrap-around detected
+    if (!oscillationState.isRampingOut && phase < oscillationState.lastPhase) [[unlikely]] {  // Cycle wrap-around detected
         oscillationState.completedCycles++;
-        engine->debug("🔄 Cycle " + String(oscillationState.completedCycles) + "/" + String(oscillation.cycleCount));
+        if (engine->isDebugEnabled()) {
+            engine->debug("🔄 Cycle " + String(oscillationState.completedCycles) + "/" + String(oscillation.cycleCount));
+        }
         
         // Check if inter-cycle pause is enabled
         if (oscillation.cyclePause.enabled) {
@@ -357,7 +367,9 @@ float OscillationControllerClass::calculatePosition() {
             oscPauseState.isPausing = true;
             oscPauseState.pauseStartMs = millis();
             
-            engine->debug("⏸️ Pause cycle OSC: " + String(oscPauseState.currentPauseDuration) + "ms");
+            if (engine->isDebugEnabled()) {
+                engine->debug("⏸️ Pause cycle OSC: " + String(oscPauseState.currentPauseDuration) + "ms");
+            }
         }
         
         // Send status update to frontend when cycle completes
@@ -372,9 +384,9 @@ float OscillationControllerClass::calculatePosition() {
     float effectiveAmplitude = oscillation.amplitudeMM;
     
     // 🎯 SMOOTH AMPLITUDE TRANSITION: Interpolate amplitude when changed during oscillation
-    if (oscillationState.isAmplitudeTransitioning) {
+    if (oscillationState.isAmplitudeTransitioning) [[unlikely]] {
         unsigned long ampElapsed = currentMs - oscillationState.amplitudeTransitionStartMs;
-        
+
         if (ampElapsed < OSC_AMPLITUDE_TRANSITION_DURATION_MS) {
             // Linear interpolation of amplitude
             float progress = (float)ampElapsed / (float)OSC_AMPLITUDE_TRANSITION_DURATION_MS;
@@ -405,9 +417,9 @@ float OscillationControllerClass::calculatePosition() {
         lastDebugMs = currentMs;
     }
     
-    if (oscillationState.isRampingIn) {
+    if (oscillationState.isRampingIn) [[unlikely]] {
         unsigned long rampElapsed = currentMs - oscillationState.rampStartMs;
-        
+
         if (rampElapsed < OSC_RAMP_START_DELAY_MS) {
             // Stabilization phase: amplitude = 0
             effectiveAmplitude = 0;
@@ -421,7 +433,7 @@ float OscillationControllerClass::calculatePosition() {
             oscillationState.isRampingIn = false;
             effectiveAmplitude = oscillation.amplitudeMM;
         }
-    } else if (oscillationState.isRampingOut) {
+    } else if (oscillationState.isRampingOut) [[unlikely]] {
         unsigned long rampElapsed = currentMs - oscillationState.rampStartMs;
         if (rampElapsed < oscillation.rampOutDurationMs) {
             float rampProgress = 1.0 - ((float)rampElapsed / (float)oscillation.rampOutDurationMs);
@@ -446,9 +458,9 @@ float OscillationControllerClass::calculatePosition() {
     // 🎯 SMOOTH CENTER TRANSITION: Interpolate center position when changed
     float effectiveCenterMM = oscillation.centerPositionMM;
     
-    if (oscillationState.isCenterTransitioning) {
+    if (oscillationState.isCenterTransitioning) [[unlikely]] {
         unsigned long centerElapsed = currentMs - oscillationState.centerTransitionStartMs;
-        
+
         if (centerElapsed < OSC_CENTER_TRANSITION_DURATION_MS) {
             // Linear interpolation of center position
             float progress = (float)centerElapsed / (float)OSC_CENTER_TRANSITION_DURATION_MS;
@@ -495,7 +507,7 @@ float OscillationControllerClass::calculatePosition() {
 
 bool OscillationControllerClass::validateAmplitude(float centerMM, float amplitudeMM, String& errorMsg) {
     // Use effective max distance (respects limitation percentage)
-    float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+    float maxAllowed = Validators::getMaxAllowedMM();
     
     float minRequired = centerMM - amplitudeMM;
     float maxRequired = centerMM + amplitudeMM;
@@ -572,9 +584,9 @@ bool OscillationControllerClass::handleInitialPositioning() {
     Motor.step();
     
     if (moveForward) {
-        currentStep++;
+        currentStep = currentStep + 1;
     } else {
-        currentStep--;
+        currentStep = currentStep - 1;
     }
     
     // Track distance using StatsTracking (AFTER currentStep update)
@@ -642,9 +654,9 @@ void OscillationControllerClass::executeSteps(long targetStep, bool isCatchUp) {
     for (int i = 0; i < stepsToExecute; i++) {
         Motor.step();
         if (moveForward) {
-            currentStep++;
+            currentStep = currentStep + 1;
         } else {
-            currentStep--;
+            currentStep = currentStep - 1;
         }
         // Track distance traveled using StatsTracking
         stats.trackDelta(currentStep);

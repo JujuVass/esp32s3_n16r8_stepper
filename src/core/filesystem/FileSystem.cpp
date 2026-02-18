@@ -3,6 +3,10 @@
 // ============================================================================
 
 #include "core/filesystem/FileSystem.h"
+#include "core/UtilityEngine.h"
+
+// Forward declaration — engine is set after UtilityEngine constructor
+extern UtilityEngine* engine;
 
 // ============================================================================
 // CONSTRUCTOR
@@ -16,42 +20,58 @@ FileSystem::FileSystem()
 // ============================================================================
 
 bool FileSystem::mount() {
-  Serial.println("[FileSystem] Attempting LittleFS mount with safety checks...");
+  if (engine) engine->info("Attempting LittleFS mount with safety checks...");
+  else Serial.println("[FileSystem] Attempting LittleFS mount with safety checks...");
 
   // STEP 1: Try mounting WITHOUT auto-format (safer)
   _mounted = LittleFS.begin(false);
 
   if (!_mounted) {
-    Serial.println("[FileSystem] ⚠️ LittleFS mount failed - filesystem may be corrupted");
+    if (engine) engine->warn("LittleFS mount failed - filesystem may be corrupted");
+    else Serial.println("[FileSystem] LittleFS mount failed - filesystem may be corrupted");
 
     // STEP 2: Try manual format in controlled way
-    Serial.println("[FileSystem] 🔧 Attempting manual LittleFS format...");
+    if (engine) engine->info("Attempting manual LittleFS format...");
+    else Serial.println("[FileSystem] Attempting manual LittleFS format...");
+
     if (LittleFS.format()) {
-      Serial.println("[FileSystem] ✅ Format successful, remounting...");
+      if (engine) engine->info("Format successful, remounting...");
+      else Serial.println("[FileSystem] Format successful, remounting...");
 
       // STEP 3: Try mounting again after format
       _mounted = LittleFS.begin(false);
 
       if (_mounted) {
-        Serial.println("[FileSystem] ✅ LittleFS mounted after format");
+        if (engine) engine->info("LittleFS mounted after format");
+        else Serial.println("[FileSystem] LittleFS mounted after format");
       } else {
-        Serial.println("[FileSystem] ❌ CRITICAL: LittleFS still won't mount after format!");
-        Serial.println("[FileSystem] 🚨 Running in DEGRADED mode (no filesystem)");
+        if (engine) engine->error("CRITICAL: LittleFS still won't mount after format! Running in DEGRADED mode");
+        else {
+          Serial.println("[FileSystem] CRITICAL: LittleFS still won't mount after format!");
+          Serial.println("[FileSystem] Running in DEGRADED mode (no filesystem)");
+        }
       }
     } else {
-      Serial.println("[FileSystem] ❌ Format failed - hardware issue or severe corruption");
-      Serial.println("[FileSystem] 🚨 Running in DEGRADED mode (no filesystem)");
+      if (engine) engine->error("Format failed - hardware issue or severe corruption. Running in DEGRADED mode");
+      else {
+        Serial.println("[FileSystem] Format failed - hardware issue or severe corruption");
+        Serial.println("[FileSystem] Running in DEGRADED mode (no filesystem)");
+      }
     }
   } else {
-    Serial.println("[FileSystem] ✅ LittleFS mounted successfully");
+    if (engine) engine->info("LittleFS mounted successfully");
+    else Serial.println("[FileSystem] LittleFS mounted successfully");
   }
 
   // STEP 4: If mounted, verify filesystem health
   if (_mounted) {
     size_t totalBytes = LittleFS.totalBytes();
     size_t usedBytes = LittleFS.usedBytes();
-    Serial.printf("[FileSystem] 💾 LittleFS: %u KB total, %u KB used (%.1f%%)\n",
-      totalBytes / 1024, usedBytes / 1024, (usedBytes * 100.0) / totalBytes);
+    String msg = "LittleFS: " + String(totalBytes / 1024) + " KB total, " +
+                 String(usedBytes / 1024) + " KB used (" +
+                 String((usedBytes * 100.0) / totalBytes, 1) + "%)";
+    if (engine) engine->info(msg);
+    else Serial.println("[FileSystem] " + msg);
   }
 
   return _mounted;
@@ -119,19 +139,21 @@ bool FileSystem::writeFileAsString(const String& path, const String& data) {
 
   File file = LittleFS.open(path, "w");
   if (!file) {
-    Serial.println("[FileSystem] ❌ Failed to open file for writing: " + path);
+    if (engine) engine->error("Failed to open file for writing: " + path);
+    else Serial.println("[FileSystem] Failed to open file for writing: " + path);
     return false;
   }
 
   size_t written = file.print(data);
 
-  // 🛡️ PROTECTION: Flush to ensure data is written before closing
+  // Flush to ensure data is written before closing
   file.flush();
   file.close();
 
-  // 🛡️ VALIDATION: Verify write completed successfully
+  // Verify write completed successfully
   if (written != data.length()) {
-    Serial.println("[FileSystem] ⚠️ Write incomplete: " + String(written) + "/" + String(data.length()) + " bytes to " + path);
+    if (engine) engine->warn("Write incomplete: " + String(written) + "/" + String(data.length()) + " bytes to " + path);
+    else Serial.println("[FileSystem] Write incomplete: " + String(written) + "/" + String(data.length()) + " bytes to " + path);
     return false;
   }
 
@@ -176,13 +198,15 @@ float FileSystem::getDiskUsagePercent() const {
 
 bool FileSystem::loadJsonFile(const String& path, JsonDocument& doc) {
   if (!fileExists(path)) {
-    Serial.println("[FileSystem] ❌ JSON file not found: " + path);
+    if (engine) engine->error("JSON file not found: " + path);
+    else Serial.println("[FileSystem] JSON file not found: " + path);
     return false;
   }
 
   File file = LittleFS.open(path, "r");
   if (!file) {
-    Serial.println("[FileSystem] ❌ Failed to open file for reading: " + path);
+    if (engine) engine->error("Failed to open file for reading: " + path);
+    else Serial.println("[FileSystem] Failed to open file for reading: " + path);
     return false;
   }
 
@@ -190,7 +214,8 @@ bool FileSystem::loadJsonFile(const String& path, JsonDocument& doc) {
   file.close();
 
   if (err) {
-    Serial.println("[FileSystem] ❌ JSON parse error in " + path + ": " + String(err.c_str()));
+    if (engine) engine->error("JSON parse error in " + path + ": " + String(err.c_str()));
+    else Serial.println("[FileSystem] JSON parse error in " + path + ": " + String(err.c_str()));
     return false;
   }
 
@@ -207,32 +232,36 @@ bool FileSystem::saveJsonFile(const String& path, const JsonDocument& doc) {
 
   File file = LittleFS.open(path, "w");
   if (!file) {
-    Serial.println("[FileSystem] ❌ Failed to open file for writing: " + path);
+    if (engine) engine->error("Failed to open file for writing: " + path);
+    else Serial.println("[FileSystem] Failed to open file for writing: " + path);
     return false;
   }
 
   size_t bytesWritten = serializeJson(doc, file);
 
-  // 🛡️ PROTECTION: Flush before close
+  // Flush before close
   file.flush();
 
-  // 🛡️ VERIFICATION: Check file handle is still valid after flush
+  // Check file handle is still valid after flush
   if (!file) {
-    Serial.println("[FileSystem] ❌ CRITICAL: File corrupted during JSON write: " + path);
+    if (engine) engine->error("CRITICAL: File corrupted during JSON write: " + path);
+    else Serial.println("[FileSystem] CRITICAL: File corrupted during JSON write: " + path);
     return false;
   }
 
   file.close();
 
-  // 🛡️ VALIDATION: Verify bytes were actually written
+  // Verify bytes were actually written
   if (bytesWritten == 0) {
-    Serial.println("[FileSystem] ❌ Failed to write JSON to: " + path);
+    if (engine) engine->error("Failed to write JSON to: " + path);
+    else Serial.println("[FileSystem] Failed to write JSON to: " + path);
     return false;
   }
 
-  // 🛡️ PARANOID CHECK: Read back and verify file exists
+  // Paranoid check: verify file exists after write
   if (!fileExists(path)) {
-    Serial.println("[FileSystem] ❌ CRITICAL: JSON file vanished after write: " + path);
+    if (engine) engine->error("CRITICAL: JSON file vanished after write: " + path);
+    else Serial.println("[FileSystem] CRITICAL: JSON file vanished after write: " + path);
     return false;
   }
 

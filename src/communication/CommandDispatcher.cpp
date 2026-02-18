@@ -16,6 +16,10 @@
 #include "movement/PursuitController.h"
 #include "movement/ChaosController.h"
 
+using enum SystemState;
+using enum MovementType;
+using enum ExecutionContext;
+
 // ============================================================================
 // SINGLETON INSTANCE
 // ============================================================================
@@ -172,7 +176,7 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
     if (strcmp(cmd, "syncTime") == 0) {
         uint64_t epochMs = doc["time"] | (uint64_t)0;
         if (epochMs > 0) {
-            Network.syncTimeFromClient(epochMs);
+            StepperNetwork.syncTimeFromClient(epochMs);
         }
         return true;
     }
@@ -418,8 +422,8 @@ bool CommandDispatcher::handleDecelZoneCommands(const char* cmd, JsonDocument& d
         
         engine->debug("✅ Zone Effect: " + String(zoneEffect.enabled ? "ON" : "OFF") + 
               (zoneEffect.enabled ? " | zones=" + zones + 
-               " | speed=" + speedEffectNames[zoneEffect.speedEffect] + 
-               " " + curveNames[zoneEffect.speedCurve] + " " + String(zoneEffect.speedIntensity, 0) + "%" +
+               " | speed=" + speedEffectNames[static_cast<int>(zoneEffect.speedEffect)] + 
+               " " + curveNames[static_cast<int>(zoneEffect.speedCurve)] + " " + String(zoneEffect.speedIntensity, 0) + "%" +
                " | zone=" + String(zoneEffect.zoneMM, 1) + "mm" +
                (zoneEffect.randomTurnbackEnabled ? " | turnback=" + String(zoneEffect.turnbackChance) + "%" : "") +
                (zoneEffect.endPauseEnabled ? " | pause=" + String(zoneEffect.endPauseDurationSec, 1) + "s" : "")
@@ -570,7 +574,7 @@ bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, 
             return true;
         }
         
-        float effectiveMax = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+        float effectiveMax = Validators::getMaxAllowedMM();
         chaos.centerPositionMM = doc["centerPositionMM"] | (effectiveMax / 2.0);
         chaos.amplitudeMM = doc["amplitudeMM"] | 50.0;
         chaos.maxSpeedLevel = doc["maxSpeedLevel"] | 10.0;

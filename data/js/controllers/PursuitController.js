@@ -130,13 +130,13 @@ function startPursuitLoop() {
 // ============================================================================
 
 /**
- * Convert mouse position to gauge target position
- * @param {MouseEvent} e - Mouse event
+ * Convert pointer position (mouse or touch) to gauge target position
+ * @param {number} clientY - The clientY coordinate from mouse or touch event
  */
-function updateGaugeFromMouse(e) {
+function updateGaugeFromPointer(clientY) {
   const container = DOM.gaugeContainer;
   const rect = container.getBoundingClientRect();
-  const y = e.clientY - rect.top;
+  const y = clientY - rect.top;
   const containerHeight = rect.height;
   
   // Convert y position to percentage (top = 100%, bottom = 0%)
@@ -363,20 +363,93 @@ function initMaxDistLimitListeners() {
  * Call this after initDOMCache() on page load
  */
 function initPursuitListeners() {
-  // Gauge mouse interaction
-  DOM.gaugeContainer.addEventListener('mousedown', function(e) {
+  // ========================================================================
+  // Gauge interaction - Triple strategy for maximum compatibility:
+  // 1. Pointer Events (modern browsers) with document-level move/up
+  // 2. Touch Events fallback (older mobile browsers)  
+  // 3. Mouse Events fallback (desktop)
+  // ========================================================================
+  
+  function startDrag(clientY) {
+    if (!AppState.pursuit.active) return;
     AppState.pursuit.isDragging = true;
-    updateGaugeFromMouse(e);
+    document.body.style.userSelect = 'none';
+    updateGaugeFromPointer(clientY);
+  }
+  
+  function moveDrag(clientY) {
+    if (!AppState.pursuit.isDragging) return;
+    updateGaugeFromPointer(clientY);
+  }
+  
+  function endDrag() {
+    if (!AppState.pursuit.isDragging) return;
+    AppState.pursuit.isDragging = false;
+    document.body.style.userSelect = '';
+  }
+  
+  // --- Pointer Events (primary) ---
+  if (window.PointerEvent) {
+    DOM.gaugeContainer.addEventListener('pointerdown', function(e) {
+      e.preventDefault();
+      startDrag(e.clientY);
+    });
+    
+    document.addEventListener('pointermove', function(e) {
+      if (!AppState.pursuit.isDragging) return;
+      e.preventDefault();
+      moveDrag(e.clientY);
+    });
+    
+    document.addEventListener('pointerup', function() {
+      endDrag();
+    });
+    
+    document.addEventListener('pointercancel', function() {
+      endDrag();
+    });
+  }
+  
+  // --- Touch Events fallback ---
+  DOM.gaugeContainer.addEventListener('touchstart', function(e) {
+    if (window.PointerEvent) return;
+    e.preventDefault();
+    startDrag(e.touches[0].clientY);
+  }, { passive: false });
+  
+  document.addEventListener('touchmove', function(e) {
+    if (window.PointerEvent) return;
+    if (!AppState.pursuit.isDragging) return;
+    e.preventDefault();
+    moveDrag(e.touches[0].clientY);
+  }, { passive: false });
+  
+  document.addEventListener('touchend', function() {
+    if (window.PointerEvent) return;
+    endDrag();
+  });
+  
+  document.addEventListener('touchcancel', function() {
+    if (window.PointerEvent) return;
+    endDrag();
+  });
+  
+  // --- Mouse Events fallback (desktop without pointer events) ---
+  DOM.gaugeContainer.addEventListener('mousedown', function(e) {
+    if (window.PointerEvent) return;
+    e.preventDefault();
+    startDrag(e.clientY);
   });
   
   document.addEventListener('mousemove', function(e) {
-    if (AppState.pursuit.isDragging) {
-      updateGaugeFromMouse(e);
-    }
+    if (window.PointerEvent) return;
+    if (!AppState.pursuit.isDragging) return;
+    moveDrag(e.clientY);
   });
   
   document.addEventListener('mouseup', function() {
-    AppState.pursuit.isDragging = false;
+    if (window.PointerEvent) return;
+    endDrag();
   });
   
   // Pursuit mode checkbox

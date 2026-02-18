@@ -9,14 +9,20 @@
 #include "movement/ChaosController.h"
 #include "communication/StatusBroadcaster.h"  // For Status.sendError()
 #include "core/UtilityEngine.h"
+#include "core/Validators.h"
 #include "hardware/MotorDriver.h"
 #include "movement/SequenceExecutor.h"
+
+using enum ChaosPattern;
+using enum SystemState;
+using enum MovementType;
+using enum ExecutionContext;
 
 // ============================================================================
 // CHAOS STATE - Owned by this module
 // ============================================================================
-ChaosRuntimeConfig chaos;
-ChaosExecutionState chaosState;
+constinit ChaosRuntimeConfig chaos;
+constinit ChaosExecutionState chaosState;
 
 // ============================================================================
 // SINGLETON INSTANCE
@@ -74,7 +80,7 @@ static void safeDurationCalc(const ChaosBaseConfig& cfg, float craziness, float 
 // ============================================================================
 
 inline void ChaosController::calculateLimits(float& minLimit, float& maxLimit) {
-    float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+    float maxAllowed = Validators::getMaxAllowedMM();
     minLimit = max(chaos.centerPositionMM - chaos.amplitudeMM, 0.0f);
     maxLimit = min(chaos.centerPositionMM + chaos.amplitudeMM, maxAllowed);
 }
@@ -122,7 +128,7 @@ bool ChaosController::checkLimits() {
     float maxChaosPositionMM = chaos.centerPositionMM + chaos.amplitudeMM;
     
     if (movingForward) {
-        float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+        float maxAllowed = Validators::getMaxAllowedMM();
         float effectiveMaxLimit = min(chaos.centerPositionMM + chaos.amplitudeMM, maxAllowed);
         
         if (nextPosMM > effectiveMaxLimit) {
@@ -201,7 +207,7 @@ void ChaosController::doStep() {
         // Execute step
         Motor.setDirection(true);
         Motor.step();
-        currentStep++;
+        currentStep = currentStep + 1;
         
         // Track distance using StatsTracking
         stats.trackDelta(currentStep);
@@ -232,7 +238,7 @@ void ChaosController::doStep() {
         // Execute step
         Motor.setDirection(false);
         Motor.step();
-        currentStep--;
+        currentStep = currentStep - 1;
         
         // Track distance using StatsTracking
         stats.trackDelta(currentStep);
@@ -586,7 +592,7 @@ void ChaosController::generatePattern() {
     if (engine->isDebugEnabled()) {
         float currentPos = currentStep / (float)STEPS_PER_MM;
         engine->debug(String("🎲 Chaos #") + String(chaosState.patternsExecuted) + ": " + 
-              CHAOS_PATTERN_NAMES[chaosState.currentPattern] + 
+              CHAOS_PATTERN_NAMES[static_cast<int>(chaosState.currentPattern)] + 
               " | Config: center=" + String(chaos.centerPositionMM, 1) + 
               "mm amplitude=" + String(chaos.amplitudeMM, 1) + "mm" +
               " | Current: " + String(currentPos, 1) + "mm" +
@@ -796,7 +802,7 @@ void ChaosController::handleDiscreteAtTarget() {
     if (elapsed >= MIN_PATTERN_DURATION) {
         chaosState.nextPatternChangeTime = millis();
         if (engine->isDebugEnabled()) {
-            engine->debug("🎯 Discrete pattern " + String(CHAOS_PATTERN_NAMES[chaosState.currentPattern]) + 
+            engine->debug("🎯 Discrete pattern " + String(CHAOS_PATTERN_NAMES[static_cast<int>(chaosState.currentPattern)]) + 
                   " reached target after " + String(elapsed) + "ms → force new pattern");
         }
     }
@@ -807,12 +813,12 @@ void ChaosController::handleDiscreteAtTarget() {
 // ============================================================================
 
 void ChaosController::process() {
-    if (!chaosState.isRunning) return;
+    if (!chaosState.isRunning) [[unlikely]] return;
     
     // Handle pause for multi-phase patterns (internal pattern pause, not user pause)
     if (chaosState.isInPatternPause && 
         (chaosState.currentPattern == CHAOS_BRUTE_FORCE || 
-         chaosState.currentPattern == CHAOS_LIBERATOR)) {
+         chaosState.currentPattern == CHAOS_LIBERATOR)) [[unlikely]] {
         unsigned long pauseElapsed = millis() - chaosState.pauseStartTime;
         if (pauseElapsed >= chaosState.pauseDuration) {
             chaosState.isInPatternPause = false;
@@ -829,7 +835,7 @@ void ChaosController::process() {
     // Check duration limit
     if (chaos.durationSeconds > 0) {
         unsigned long elapsed = (millis() - chaosState.startTime) / 1000;
-        if (elapsed >= chaos.durationSeconds) {
+        if (elapsed >= chaos.durationSeconds) [[unlikely]] {
             engine->info("⏱️ Chaos duration complete: " + String(elapsed) + "s");
             if (engine->isDebugEnabled()) {
                 engine->debug(String("processChaosExecution(): config.executionContext=") + 
@@ -847,20 +853,20 @@ void ChaosController::process() {
     }
     
     // Check for new pattern
-    if (millis() >= chaosState.nextPatternChangeTime) {
+    if (millis() >= chaosState.nextPatternChangeTime) [[unlikely]] {
         generatePattern();
         calculateStepDelay();
         targetStep = (long)(chaosState.targetPositionMM * STEPS_PER_MM);
         
         if (engine->isDebugEnabled()) {
-            engine->debug(String("🎲 Pattern: ") + CHAOS_PATTERN_NAMES[chaosState.currentPattern] + 
+            engine->debug(String("🎲 Pattern: ") + CHAOS_PATTERN_NAMES[static_cast<int>(chaosState.currentPattern)] + 
                   " | Speed: " + String(chaosState.currentSpeedLevel, 1) + 
                   "/" + String(MAX_SPEED_LEVEL, 0) + " | Delay: " + String(chaosState.stepDelay) + " µs/step");
         }
     }
     
     // Calculate limits
-    float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+    float maxAllowed = Validators::getMaxAllowedMM();
     float effectiveMinLimit = max(chaos.centerPositionMM - chaos.amplitudeMM, 0.0f);
     float effectiveMaxLimit = min(chaos.centerPositionMM + chaos.amplitudeMM, maxAllowed);
     float maxPossibleAmplitude = calculateMaxAmplitude(effectiveMinLimit, effectiveMaxLimit);
@@ -908,9 +914,9 @@ void ChaosController::process() {
     }
     
     // Execute movement
-    if (currentStep != targetStep) {
+    if (currentStep != targetStep) [[likely]] {
         unsigned long currentMicros = micros();
-        if (currentMicros - chaosState.lastStepMicros >= chaosState.stepDelay) {
+        if (currentMicros - chaosState.lastStepMicros >= chaosState.stepDelay) [[unlikely]] {
             chaosState.lastStepMicros = currentMicros;
             doStep();
             
@@ -946,7 +952,7 @@ void ChaosController::start() {
         SeqExecutor.stop();
     }
     
-    float maxAllowed = (effectiveMaxDistanceMM > 0) ? effectiveMaxDistanceMM : config.totalDistanceMM;
+    float maxAllowed = Validators::getMaxAllowedMM();
     
     if (chaos.amplitudeMM <= 0 || chaos.amplitudeMM > maxAllowed) {
         engine->error("❌ Invalid amplitude: " + String(chaos.amplitudeMM) + " mm (max: " + String(maxAllowed, 1) + " mm)");
@@ -982,51 +988,11 @@ void ChaosController::start() {
         targetStep = (long)(chaos.centerPositionMM * STEPS_PER_MM);
         
         Motor.enable();
-        bool moveForward = (targetStep > currentStep);
-        Motor.setDirection(moveForward);
         
-        // Use calibrated speed (speed 5.0) for safe positioning
-        const unsigned long stepDelay = POSITIONING_STEP_DELAY_MICROS;
-        unsigned long positioningStart = millis();
-        unsigned long lastWsService = millis();
-        unsigned long lastStatusUpdate = millis();
-        unsigned long lastStepTime = micros();
-        
-        // Cooperative flag: networkTask will skip webSocket/server during blocking move
-        blockingMoveInProgress = true;
-        
-        while (currentStep != targetStep && (millis() - positioningStart < 30000)) {
-            unsigned long nowMicros = micros();
-            if (nowMicros - lastStepTime >= stepDelay) {
-                if (moveForward) {
-                    Motor.step();
-                    currentStep++;
-                } else {
-                    Motor.step();
-                    currentStep--;
-                }
-                lastStepTime = nowMicros;
-            }
-            
-            // Service network + send status feedback every 250ms
-            unsigned long nowMs = millis();
-            if (nowMs - lastWsService >= 10) {
-                webSocket.loop();
-                server.handleClient();
-                lastWsService = nowMs;
-            }
-            if (nowMs - lastStatusUpdate >= 250) {
-                Status.send();
-                lastStatusUpdate = nowMs;
-            }
-            yield();
-        }
-        
-        if (currentStep != targetStep) {
+        if (!SeqExecutor.blockingMoveToStep(targetStep)) {
             engine->warn("⚠️ Timeout during center positioning");
             engine->error("❌ Chaos mode aborted - failed to reach center position");
             
-            blockingMoveInProgress = false;  // Resume normal networkTask operation
             chaosState.isRunning = false;
             config.currentState = STATE_READY;
             currentMovement = MOVEMENT_VAET;
@@ -1036,8 +1002,6 @@ void ChaosController::start() {
             Status.send();
             return;
         }
-        
-        blockingMoveInProgress = false;  // Resume normal networkTask operation
     }
     
     // Generate first pattern
@@ -1046,7 +1010,7 @@ void ChaosController::start() {
     targetStep = (long)(chaosState.targetPositionMM * STEPS_PER_MM);
     
     if (engine->isDebugEnabled()) {
-        engine->debug(String("🎲 Pattern: ") + CHAOS_PATTERN_NAMES[chaosState.currentPattern] + 
+        engine->debug(String("🎲 Pattern: ") + CHAOS_PATTERN_NAMES[static_cast<int>(chaosState.currentPattern)] + 
               " | Speed: " + String(chaosState.currentSpeedLevel, 1) + 
               "/" + String(MAX_SPEED_LEVEL, 0) + " | Delay: " + String(chaosState.stepDelay) + " µs/step");
     }

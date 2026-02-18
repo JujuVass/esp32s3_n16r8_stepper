@@ -114,9 +114,13 @@ void Logger::log(LogLevel level, const String& message) {
 
   // 2. WebSocket broadcast (if clients connected)
   if (_ws.connectedClients() > 0) {
+    // Pre-sized buffer avoids heap allocation for typical log messages
+    static const char* levelNames[] = {"ERROR", "WARN", "INFO", "DEBUG"};
+    const char* levelName = (level >= 0 && level <= 3) ? levelNames[level] : "INFO";
+    
     JsonDocument doc;
     doc["type"] = "log";
-    doc["level"] = String(prefix).substring(1, String(prefix).length() - 2);
+    doc["level"] = levelName;
     doc["message"] = message;
 
     String payload;

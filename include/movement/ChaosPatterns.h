@@ -70,107 +70,107 @@ struct ChaosDirectionExt {
 // ============================================================================
 
 // ZIGZAG: Rapid random jumps
-const ChaosBaseConfig ZIGZAG_CONFIG = {
-  0.40, 0.70, 0.30,  // Speed: 40-70% + 30%
-  2000, 4000, 600,   // Duration: 2000-4000ms - 600ms
-  0.60, 1.00         // Jump: 60-100%
+constexpr ChaosBaseConfig ZIGZAG_CONFIG = {
+  .speedMin = 0.40, .speedMax = 0.70, .speedCrazinessBoost = 0.30,
+  .durationMin = 2000, .durationMax = 4000, .durationCrazinessReduction = 600,
+  .amplitudeJumpMin = 0.60, .amplitudeJumpMax = 1.00
 };
 
 // SWEEP: Large edge-to-edge sweeps
-const ChaosBaseConfig SWEEP_CONFIG = {
-  0.30, 0.60, 0.40,  // Speed: 30-60% + 40%
-  3000, 5000, 1400,  // Duration: 3000-5000ms - 1400ms
-  0.75, 1.00         // Amplitude: 75-100%
+constexpr ChaosBaseConfig SWEEP_CONFIG = {
+  .speedMin = 0.30, .speedMax = 0.60, .speedCrazinessBoost = 0.40,
+  .durationMin = 3000, .durationMax = 5000, .durationCrazinessReduction = 1400,
+  .amplitudeJumpMin = 0.75, .amplitudeJumpMax = 1.00
 };
 
 // PULSE: Quick out-and-back pulses
-const ChaosBaseConfig PULSE_CONFIG = {
-  0.50, 0.80, 0.20,  // Speed: 50-80% + 20%
-  800, 1500, 400,    // Duration: 800-1500ms - 400ms
-  0.40, 1.00         // Jump: 40-100%
+constexpr ChaosBaseConfig PULSE_CONFIG = {
+  .speedMin = 0.50, .speedMax = 0.80, .speedCrazinessBoost = 0.20,
+  .durationMin = 800, .durationMax = 1500, .durationCrazinessReduction = 400,
+  .amplitudeJumpMin = 0.40, .amplitudeJumpMax = 1.00
 };
 
 // DRIFT: Slow wandering
-const ChaosBaseConfig DRIFT_CONFIG = {
-  0.20, 0.40, 0.30,  // Speed: 20-40% + 30%
-  4000, 9000, 1500,  // Duration: 4000-9000ms - 1500ms
-  0.25, 0.75         // Drift: 25-75%
+constexpr ChaosBaseConfig DRIFT_CONFIG = {
+  .speedMin = 0.20, .speedMax = 0.40, .speedCrazinessBoost = 0.30,
+  .durationMin = 4000, .durationMax = 9000, .durationCrazinessReduction = 1500,
+  .amplitudeJumpMin = 0.25, .amplitudeJumpMax = 0.75
 };
 
 // BURST: Fast explosive jumps
-const ChaosBaseConfig BURST_CONFIG = {
-  0.60, 0.90, 0.10,  // Speed: 60-90% + 10%
-  600, 1200, 300,    // Duration: 600-1200ms - 300ms
-  0.70, 1.00         // Jump: 70-100%
+constexpr ChaosBaseConfig BURST_CONFIG = {
+  .speedMin = 0.60, .speedMax = 0.90, .speedCrazinessBoost = 0.10,
+  .durationMin = 600, .durationMax = 1200, .durationCrazinessReduction = 300,
+  .amplitudeJumpMin = 0.70, .amplitudeJumpMax = 1.00
 };
 
 // WAVE: Sinusoidal continuous motion
-const ChaosBaseConfig WAVE_CONFIG = {
-  0.25, 0.50, 0.25,  // Speed: 25-50% + 25%
-  6000, 12000, 2000, // Duration: 6000-12000ms - 2000ms
-  0.50, 1.00         // Amplitude: 50-100%
+constexpr ChaosBaseConfig WAVE_CONFIG = {
+  .speedMin = 0.25, .speedMax = 0.50, .speedCrazinessBoost = 0.25,
+  .durationMin = 6000, .durationMax = 12000, .durationCrazinessReduction = 2000,
+  .amplitudeJumpMin = 0.50, .amplitudeJumpMax = 1.00
 };
-const ChaosSinusoidalExt WAVE_SIN = {
-  0.0, 0.0,          // Frequency calculated from duration
-  3                  // 3 cycles over pattern duration
+constexpr ChaosSinusoidalExt WAVE_SIN = {
+  .frequencyMin = 0.0, .frequencyMax = 0.0,  // Calculated from duration
+  .cyclesOverDuration = 3
 };
 
 // PENDULUM: Regular back-and-forth
-const ChaosBaseConfig PENDULUM_CONFIG = {
-  0.30, 0.60, 0.30,  // Speed: 30-60% + 30%
-  5000, 8000, 1200,  // Duration: 5000-8000ms - 1200ms
-  0.60, 1.00         // Amplitude: 60-100%
+constexpr ChaosBaseConfig PENDULUM_CONFIG = {
+  .speedMin = 0.30, .speedMax = 0.60, .speedCrazinessBoost = 0.30,
+  .durationMin = 5000, .durationMax = 8000, .durationCrazinessReduction = 1200,
+  .amplitudeJumpMin = 0.60, .amplitudeJumpMax = 1.00
 };
 
 // SPIRAL: Progressive in/out
-const ChaosBaseConfig SPIRAL_CONFIG = {
-  0.20, 0.45, 0.30,  // Speed: 20-45% + 30%
-  5000, 10000, 2500, // Duration: 5000-10000ms - 2500ms
-  0.10, 1.00         // Radius: 10% start → 100% progressive
+constexpr ChaosBaseConfig SPIRAL_CONFIG = {
+  .speedMin = 0.20, .speedMax = 0.45, .speedCrazinessBoost = 0.30,
+  .durationMin = 5000, .durationMax = 10000, .durationCrazinessReduction = 2500,
+  .amplitudeJumpMin = 0.10, .amplitudeJumpMax = 1.00
 };
 
 // CALM (BREATHING): Slow sinusoidal with pauses
-const ChaosBaseConfig CALM_CONFIG = {
-  0.05, 0.10, 0.10,  // Speed: 5-10% + 10%
-  5000, 8000, 800,   // Duration: 5000-8000ms - 800ms
-  0.10, 0.30         // Amplitude: 10-30%
+constexpr ChaosBaseConfig CALM_CONFIG = {
+  .speedMin = 0.05, .speedMax = 0.10, .speedCrazinessBoost = 0.10,
+  .durationMin = 5000, .durationMax = 8000, .durationCrazinessReduction = 800,
+  .amplitudeJumpMin = 0.10, .amplitudeJumpMax = 0.30
 };
-const ChaosSinusoidalExt CALM_SIN = {
-  0.2, 1.0,          // Frequency: 0.2-1.0 Hz
-  0                  // Random frequency (not cycles-based)
+constexpr ChaosSinusoidalExt CALM_SIN = {
+  .frequencyMin = 0.2, .frequencyMax = 1.0,
+  .cyclesOverDuration = 0  // Random frequency (not cycles-based)
 };
-const ChaosPauseExt CALM_PAUSE = {
-  500, 2000,         // Pause: 500-2000ms
-  20.0,               // 20% chance
-  0.95               // At sine extremes (±0.95)
+constexpr ChaosPauseExt CALM_PAUSE = {
+  .pauseMin = 500, .pauseMax = 2000,
+  .pauseChancePercent = 20.0,
+  .pauseTriggerThreshold = 0.95
 };
 
 // BRUTE_FORCE: Fast in, slow out, pause
-const ChaosBaseConfig BRUTE_FORCE_CONFIG = {
-  0.70, 1.00, 0.30,  // Speed fast: 70-100% + 30%
-  3000, 5000, 750,   // Duration: 3000-5000ms - 750ms
-  0.60, 0.90         // Amplitude: 60-90%
+constexpr ChaosBaseConfig BRUTE_FORCE_CONFIG = {
+  .speedMin = 0.70, .speedMax = 1.00, .speedCrazinessBoost = 0.30,
+  .durationMin = 3000, .durationMax = 5000, .durationCrazinessReduction = 750,
+  .amplitudeJumpMin = 0.60, .amplitudeJumpMax = 0.90
 };
-const ChaosMultiPhaseExt BRUTE_FORCE_MULTI = {
-  0.01, 0.10, 0.09,  // Speed slow: 1-10% + 9%
-  500, 2000          // Pause: 500-2000ms
+constexpr ChaosMultiPhaseExt BRUTE_FORCE_MULTI = {
+  .phase2SpeedMin = 0.01, .phase2SpeedMax = 0.10, .phase2SpeedCrazinessBoost = 0.09,
+  .pauseMin = 500, .pauseMax = 2000
 };
-const ChaosDirectionExt BRUTE_FORCE_DIR = {
-  90, 60             // Direction: 90% → 60% forward
+constexpr ChaosDirectionExt BRUTE_FORCE_DIR = {
+  .forwardChanceMin = 90, .forwardChanceMax = 60
 };
 
 // LIBERATOR: Slow in, fast out, pause
-const ChaosBaseConfig LIBERATOR_CONFIG = {
-  0.05, 0.15, 0.10,  // Speed slow: 5-15% + 10%
-  3000, 5000, 750,   // Duration: 3000-5000ms - 750ms
-  0.60, 0.90         // Amplitude: 60-90%
+constexpr ChaosBaseConfig LIBERATOR_CONFIG = {
+  .speedMin = 0.05, .speedMax = 0.15, .speedCrazinessBoost = 0.10,
+  .durationMin = 3000, .durationMax = 5000, .durationCrazinessReduction = 750,
+  .amplitudeJumpMin = 0.60, .amplitudeJumpMax = 0.90
 };
-const ChaosMultiPhaseExt LIBERATOR_MULTI = {
-  0.70, 1.00, 0.30,  // Speed fast: 70-100% + 30%
-  500, 2000          // Pause: 500-2000ms
+constexpr ChaosMultiPhaseExt LIBERATOR_MULTI = {
+  .phase2SpeedMin = 0.70, .phase2SpeedMax = 1.00, .phase2SpeedCrazinessBoost = 0.30,
+  .pauseMin = 500, .pauseMax = 2000
 };
-const ChaosDirectionExt LIBERATOR_DIR = {
-  90, 60             // Direction: 90% → 60% forward
+constexpr ChaosDirectionExt LIBERATOR_DIR = {
+  .forwardChanceMin = 90, .forwardChanceMax = 60
 };
 
 #endif // CHAOS_PATTERNS_H

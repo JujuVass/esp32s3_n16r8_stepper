@@ -1100,7 +1100,7 @@ select.select-input:focus {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 /* Labels */
@@ -1119,6 +1119,8 @@ select.select-input:focus {
 }
 
 /* Inputs */
+input[type="number"].input-compact,
+select.input-compact,
 .input-compact {
   width: 140px;
   padding: 6px 10px;
@@ -1129,6 +1131,8 @@ select.select-input:focus {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+input[type="number"].input-compact:focus,
+select.input-compact:focus,
 .input-compact:focus {
   outline: none;
   border-color: #667eea;
@@ -1772,6 +1776,10 @@ select.select-input:focus {
   .notification {
     max-width: 320px;
     min-width: 240px;
+  }
+
+  .speed-control-inline {
+    flex-wrap: wrap;
   }
 }
 

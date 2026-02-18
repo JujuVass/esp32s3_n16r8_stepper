@@ -46,7 +46,7 @@ constexpr uint8_t CHAOS_PATTERN_COUNT = 11;
 // SYSTEM STATE ENUMS
 // ============================================================================
 
-enum SystemState {
+enum class SystemState {
   STATE_INIT,
   STATE_CALIBRATING,
   STATE_READY,
@@ -55,12 +55,12 @@ enum SystemState {
   STATE_ERROR
 };
 
-enum ExecutionContext {
+enum class ExecutionContext {
   CONTEXT_STANDALONE,  // Manual execution from UI tab
   CONTEXT_SEQUENCER    // Automatic execution from sequencer
 };
 
-enum MovementType {
+enum class MovementType {
   MOVEMENT_VAET = 0,        // Va-et-vient (back-and-forth)
   MOVEMENT_OSC = 1,         // Oscillation
   MOVEMENT_CHAOS = 2,       // Chaos mode
@@ -79,7 +79,7 @@ struct CyclePauseConfig {
   float minPauseSec;         // Minimum bound if random
   float maxPauseSec;         // Maximum bound if random
   
-  CyclePauseConfig() :
+  constexpr CyclePauseConfig() :
     enabled(false),
     pauseDurationSec(1.5),
     isRandom(false),
@@ -103,7 +103,7 @@ struct CyclePauseState {
   unsigned long pauseStartMs; // Pause start timestamp
   unsigned long currentPauseDuration; // Current pause duration (ms)
   
-  CyclePauseState() :
+  constexpr CyclePauseState() :
     isPausing(false),
     pauseStartMs(0),
     currentPauseDuration(0) {}
@@ -171,7 +171,7 @@ struct MotionConfig {
   float speedLevelBackward;
   CyclePauseConfig cyclePause;  // Inter-cycle pause
   
-  MotionConfig() : 
+  constexpr MotionConfig() : 
     startPositionMM(0.0),
     targetDistanceMM(50.0),
     speedLevelForward(5.0),
@@ -185,7 +185,7 @@ struct PendingMotionConfig {
   float speedLevelBackward;
   bool hasChanges;
   
-  PendingMotionConfig() : 
+  constexpr PendingMotionConfig() : 
     startPositionMM(0),
     distanceMM(0),
     speedLevelForward(0),
@@ -198,14 +198,14 @@ struct PendingMotionConfig {
 // ============================================================================
 
 // Speed effect type (mutually exclusive)
-enum SpeedEffect {
+enum class SpeedEffect {
   SPEED_NONE = 0,             // No speed change in zone
   SPEED_DECEL = 1,            // Deceleration (slow down)
   SPEED_ACCEL = 2             // Acceleration (punch effect)
 };
 
 // Speed curve type (how the effect is applied)
-enum SpeedCurve {
+enum class SpeedCurve {
   CURVE_LINEAR = 0,           // Linear: constant rate
   CURVE_SINE = 1,             // Sinusoidal: smooth S-curve
   CURVE_TRIANGLE_INV = 2,     // Triangle inverted: weak at start, strong at end
@@ -236,14 +236,14 @@ struct ZoneEffectConfig {
   float endPauseMinSec;       // Random mode: minimum duration
   float endPauseMaxSec;       // Random mode: maximum duration
   
-  ZoneEffectConfig() :
+  constexpr ZoneEffectConfig() :
     enabled(false),
     enableStart(true),
     enableEnd(true),
     mirrorOnReturn(false),
     zoneMM(50.0),
-    speedEffect(SPEED_DECEL),
-    speedCurve(CURVE_SINE),
+    speedEffect(SpeedEffect::SPEED_DECEL),
+    speedCurve(SpeedCurve::CURVE_SINE),
     speedIntensity(75.0),
     randomTurnbackEnabled(false),
     turnbackChance(30),
@@ -264,7 +264,7 @@ struct ZoneEffectState {
   unsigned long pauseStartMs;    // When pause started
   unsigned long pauseDurationMs; // Current pause duration
   
-  ZoneEffectState() :
+  constexpr ZoneEffectState() :
     hasPendingTurnback(false),
     hasRolledForTurnback(false),
     turnbackPointMM(0.0),
@@ -286,7 +286,7 @@ struct PursuitState {
   bool isMoving;
   bool direction;
   
-  PursuitState() :
+  constexpr PursuitState() :
     targetStep(0),
     lastTargetStep(0),
     maxSpeedLevel(10.0),
@@ -300,13 +300,13 @@ struct PursuitState {
 // OSCILLATION MODE
 // ============================================================================
 
-enum OscillationWaveform {
+enum class OscillationWaveform {
   OSC_SINE = 0,      // Smooth sinusoidal wave
   OSC_TRIANGLE = 1,  // Linear triangle wave
   OSC_SQUARE = 2     // Square wave (instant direction change)
 };
 
-enum RampType {
+enum class RampType {
   RAMP_LINEAR = 0
 };
 
@@ -330,17 +330,17 @@ struct OscillationConfig {
   
   CyclePauseConfig cyclePause; // Inter-cycle pause
   
-  OscillationConfig() :
+  constexpr OscillationConfig() :
     centerPositionMM(0),
     amplitudeMM(20.0),
-    waveform(OSC_SINE),
+    waveform(OscillationWaveform::OSC_SINE),
     frequencyHz(0.5),
     enableRampIn(true),
     rampInDurationMs(2000.0),
-    rampInType(RAMP_LINEAR),
+    rampInType(RampType::RAMP_LINEAR),
     enableRampOut(true),
     rampOutDurationMs(2000.0),
-    rampOutType(RAMP_LINEAR),
+    rampOutType(RampType::RAMP_LINEAR),
     cycleCount(0),
     returnToCenter(true) {}
 };
@@ -376,7 +376,7 @@ struct OscillationState {
   float oldAmplitudeMM;         // Previous amplitude
   float targetAmplitudeMM;      // Target amplitude
   
-  OscillationState() :
+  constexpr OscillationState() :
     startTimeMs(0),
     rampStartMs(0),
     currentAmplitude(0),
@@ -406,7 +406,7 @@ struct OscillationState {
 // CHAOS MODE
 // ============================================================================
 
-enum ChaosPattern {
+enum class ChaosPattern {
   CHAOS_ZIGZAG = 0,       // Rapid back-and-forth with random targets (12%)
   CHAOS_SWEEP = 1,        // Smooth sweeps across range (12%)
   CHAOS_PULSE = 2,        // Quick pulses from center (8%)
@@ -429,7 +429,7 @@ struct ChaosRuntimeConfig {
   float crazinessPercent;      // Degree of madness 0-100% (affects speed, duration, jump size)
   bool patternsEnabled[CHAOS_PATTERN_COUNT];    // Enable/disable each pattern (ZIGZAG, SWEEP, PULSE, DRIFT, BURST, WAVE, PENDULUM, SPIRAL, CALM, BRUTE_FORCE, LIBERATOR)
   
-  ChaosRuntimeConfig() : 
+  constexpr ChaosRuntimeConfig() : 
     centerPositionMM(110.0), 
     amplitudeMM(50.0), 
     maxSpeedLevel(5.0),
@@ -485,9 +485,9 @@ struct ChaosExecutionState {
   unsigned long stepDelay;           // Microseconds between steps
   unsigned long lastStepMicros;      // Last step timestamp
   
-  ChaosExecutionState() : 
+  constexpr ChaosExecutionState() : 
     isRunning(false),
-    currentPattern(CHAOS_ZIGZAG),
+    currentPattern(ChaosPattern::CHAOS_ZIGZAG),
     startTime(0),
     nextPatternChangeTime(0),
     targetPositionMM(0),
@@ -560,9 +560,9 @@ struct SequenceLine {
   int pauseAfterMs;
   int lineId;
   
-  SequenceLine() :
+  constexpr SequenceLine() :
     enabled(true),
-    movementType(MOVEMENT_VAET),
+    movementType(MovementType::MOVEMENT_VAET),
     startPositionMM(0),
     distanceMM(100),
     speedForward(5.0),
@@ -571,7 +571,7 @@ struct SequenceLine {
     vaetCyclePause(),  // Uses CyclePauseConfig default constructor
     oscCenterPositionMM(100.0),
     oscAmplitudeMM(50.0),
-    oscWaveform(OSC_SINE),
+    oscWaveform(OscillationWaveform::OSC_SINE),
     oscFrequencyHz(0.5),
     oscEnableRampIn(false),
     oscEnableRampOut(false),
@@ -606,7 +606,7 @@ struct SequenceExecutionState {
   unsigned long sequenceStartTime;
   unsigned long lineStartTime;
   
-  SequenceExecutionState() :
+  constexpr SequenceExecutionState() :
     isRunning(false),
     isLoopMode(false),
     currentLineIndex(0),
@@ -623,10 +623,10 @@ struct SequenceExecutionState {
 // PLAYLIST STRUCTURES
 // ============================================================================
 
-#define MAX_PRESETS_PER_MODE 20
-#define PLAYLIST_FILE_PATH "/playlists.json"
+constexpr int MAX_PRESETS_PER_MODE = 20;
+constexpr const char* PLAYLIST_FILE_PATH = "/playlists.json";
 
-enum PlaylistMode {
+enum class PlaylistMode {
   PLAYLIST_SIMPLE = 0,
   PLAYLIST_OSCILLATION = 1,
   PLAYLIST_CHAOS = 2
@@ -643,7 +643,7 @@ struct PlaylistPreset {
     id(0),
     name(""),
     timestamp(0),
-    mode(PLAYLIST_SIMPLE),
+    mode(PlaylistMode::PLAYLIST_SIMPLE),
     configJson("{}") {}
 };
 

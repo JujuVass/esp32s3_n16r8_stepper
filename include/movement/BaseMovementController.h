@@ -139,7 +139,7 @@ public:
      * Check and handle end pause (returns true if currently pausing)
      * @return true if pausing and should not step
      */
-    bool checkAndHandleEndPause();
+    [[nodiscard]] bool checkAndHandleEndPause();
     
     /**
      * Trigger end pause at extremity
@@ -221,7 +221,7 @@ public:
      * - Step timing with deceleration zone adjustment
      * - Step execution via doStep()
      * 
-     * Encapsulates all logic previously in main loop() for MOVEMENT_VAET
+     * Encapsulates all logic previously in main loop() for MovementType::MOVEMENT_VAET
      */
     void process();
     
@@ -231,7 +231,7 @@ public:
     
     /**
      * Execute one step of va-et-vient movement
-     * Called from main loop() when currentMovement == MOVEMENT_VAET
+     * Called from main loop() when currentMovement == MovementType::MOVEMENT_VAET
      * 
      * Handles:
      * - Forward/backward stepping
@@ -254,7 +254,7 @@ public:
      * Handle cycle pause if enabled
      * @return true if pausing (caller should return), false to continue
      */
-    bool handleCyclePause();
+    [[nodiscard]] bool handleCyclePause();
     
     /**
      * Measure and log cycle timing

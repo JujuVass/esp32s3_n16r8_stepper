@@ -507,7 +507,7 @@
     "degradedMode": "MODE DÉGRADÉ",
     "apModeBadge": "⚠️ Mode AP",
     "configTitle": "Configuration WiFi",
-    "currentEepromConfig": "Configuration actuelle en EEPROM:",
+    "currentEepromConfig": "Configuration actuelle :",
     "ssidLabel": "SSID:",
     "ssidPlaceholder": "Nom du réseau WiFi",
     "passwordLabel": "Mot de passe:",

@@ -16,6 +16,9 @@
 #include "core/UtilityEngine.h"
 #include <WiFi.h>
 
+using enum SystemState;
+using enum MovementType;
+
 // ============================================================================
 // SINGLETON INSTANCE
 // ============================================================================
@@ -42,6 +45,11 @@ void StatusBroadcaster::begin(WebSocketsServer* ws) {
 // ============================================================================
 
 unsigned long StatusBroadcaster::getAdaptiveBroadcastInterval() const {
+    // Pursuit mode gets highest priority for fast feedback
+    if (currentMovement == MOVEMENT_PURSUIT) {
+        return STATUS_PURSUIT_INTERVAL_MS;       // 50ms (20 Hz) - real-time gauge tracking
+    }
+    
     switch (config.currentState) {
         case STATE_RUNNING:
         case STATE_PAUSED:
@@ -110,11 +118,11 @@ void StatusBroadcaster::send() {
     doc["pursuitActive"] = pursuit.isMoving;
     doc["statsRecordingEnabled"] = engine->isStatsRecordingEnabled();  // Stats recording preference
     doc["sensorsInverted"] = sensorsInverted;  // Sensors inversion mode
-    doc["ip"] = Network.getIPAddress();  // Cached IP for WebSocket reconnection
+    doc["ip"] = StepperNetwork.getIPAddress();  // Cached IP for WebSocket reconnection
     
-    // Network mode info
-    doc["networkMode"] = (int)Network.getMode();  // 0=AP_SETUP, 1=STA_AP, 2=AP_DIRECT
-    doc["apClients"] = Network.getAPClientCount();  // Number of AP clients
+    // StepperNetwork mode info
+    doc["networkMode"] = (int)StepperNetwork.getMode();  // 0=AP_SETUP, 1=STA_AP, 2=AP_DIRECT
+    doc["apClients"] = StepperNetwork.getAPClientCount();  // Number of AP clients
     
     // ============================================================================
     // MODE-SPECIFIC FIELDS
@@ -351,7 +359,7 @@ void StatusBroadcaster::addChaosFields(JsonDocument& doc) {
     chaosStateObj["isRunning"] = chaosState.isRunning;
     chaosStateObj["currentPattern"] = (int)chaosState.currentPattern;
     
-    chaosStateObj["patternName"] = CHAOS_PATTERN_NAMES[chaosState.currentPattern];
+    chaosStateObj["patternName"] = CHAOS_PATTERN_NAMES[static_cast<int>(chaosState.currentPattern)];
     
     chaosStateObj["targetPositionMM"] = serialized(String(chaosState.targetPositionMM, 2));
     chaosStateObj["currentSpeedLevel"] = serialized(String(chaosState.currentSpeedLevel, 1));
@@ -382,12 +390,12 @@ void StatusBroadcaster::addSystemStats(JsonDocument& doc) {
     systemObj["temperatureC"] = serialized(String(temperatureRead(), 1));
     systemObj["uptimeSeconds"] = millis() / 1000;
     
-    // Network info (IP addresses, hostname)
+    // StepperNetwork info (IP addresses, hostname)
     systemObj["ipSta"] = WiFi.localIP().toString();
     systemObj["ipAp"] = WiFi.softAPIP().toString();
     systemObj["hostname"] = String(otaHostname);
     systemObj["ssid"] = WiFi.SSID();
     systemObj["apClients"] = WiFi.softAPgetStationNum();
-    systemObj["apMode"] = Network.isAPMode();
-    systemObj["staMode"] = Network.isSTAMode();
+    systemObj["apMode"] = StepperNetwork.isAPMode();
+    systemObj["staMode"] = StepperNetwork.isSTAMode();
 }

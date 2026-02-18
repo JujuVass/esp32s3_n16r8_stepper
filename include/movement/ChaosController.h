@@ -84,7 +84,7 @@ public:
      * Check chaos amplitude limits before stepping
      * @return true if safe to step, false if limit hit
      */
-    bool checkLimits();
+    [[nodiscard]] bool checkLimits();
     
     /**
      * Execute one step in chaos mode

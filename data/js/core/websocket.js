@@ -16,6 +16,20 @@
 // ============================================================================
 
 /**
+ * Check if two IPs are on the same /24 subnet
+ * @param {string} ip1 - First IP address
+ * @param {string} ip2 - Second IP address
+ * @returns {boolean} True if same /24 subnet
+ */
+function isSameSubnet(ip1, ip2) {
+  if (!ip1 || !ip2) return false;
+  const parts1 = ip1.split('.');
+  const parts2 = ip2.split('.');
+  if (parts1.length !== 4 || parts2.length !== 4) return false;
+  return parts1[0] === parts2[0] && parts1[1] === parts2[1] && parts1[2] === parts2[2];
+}
+
+/**
  * Establish WebSocket connection to ESP32
  * Auto-reconnects on disconnect with 2 second delay
  * Uses IP address when available for faster/more reliable connection
@@ -30,8 +44,18 @@ function connectWebSocket(useFallback) {
     AppState.espIpAddress = null;
     console.debug('🔄 Fallback: Using hostname (mDNS):', host);
   } else {
-    // Normal mode: prefer cached IP over hostname
-    host = AppState.espIpAddress || window.location.hostname;
+    // Only use cached IP if it's on the same subnet as our current connection
+    // This prevents using STA IP (192.168.1.x) when connected via AP (192.168.4.x)
+    const currentHost = window.location.hostname;
+    if (AppState.espIpAddress && isSameSubnet(AppState.espIpAddress, currentHost)) {
+      host = AppState.espIpAddress;
+    } else {
+      host = currentHost;
+      if (AppState.espIpAddress && !isSameSubnet(AppState.espIpAddress, currentHost)) {
+        console.debug('⚠️ Cached IP', AppState.espIpAddress, 'not on same subnet as', currentHost, '- using current host');
+        AppState.espIpAddress = null;  // Clear stale cross-subnet IP
+      }
+    }
   }
   
   const wsUrl = 'ws://' + host + ':81';
@@ -178,9 +202,12 @@ function handleWebSocketMessage(data) {
   }
   
   // Cache ESP32 IP address for faster WS reconnection (avoids mDNS delay)
+  // Only cache if on the same subnet as current connection (prevents STA IP cache when on AP)
   if (data.ip && data.ip !== '0.0.0.0' && !AppState.espIpAddress) {
-    AppState.espIpAddress = data.ip;
-    console.debug('📡 Cached ESP32 IP:', data.ip);
+    if (isSameSubnet(data.ip, window.location.hostname)) {
+      AppState.espIpAddress = data.ip;
+      console.debug('📡 Cached ESP32 IP:', data.ip);
+    }
   }
   
   // Default: Status update for main UI
