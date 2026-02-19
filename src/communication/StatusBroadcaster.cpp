@@ -123,6 +123,7 @@ void StatusBroadcaster::send() {
     // StepperNetwork mode info
     doc["networkMode"] = (int)StepperNetwork.getMode();  // 0=AP_SETUP, 1=STA_AP, 2=AP_DIRECT
     doc["apClients"] = StepperNetwork.getAPClientCount();  // Number of AP clients
+    doc["wdState"] = (int)StepperNetwork.getWatchdogState();  // Watchdog: 0=healthy, 1=soft, 2=hard, 3=reboot
     
     // ============================================================================
     // MODE-SPECIFIC FIELDS

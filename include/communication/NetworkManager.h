@@ -37,6 +37,16 @@ enum NetworkMode {
     NET_AP_DIRECT    // GPIO 19 GND + WiFi fail → AP-only with full stepper control
 };
 
+// ============================================================================
+// WATCHDOG STATE ENUM
+// ============================================================================
+enum WatchdogState : uint8_t {
+    WD_HEALTHY          = 0,   // WiFi + DNS + mDNS all OK
+    WD_RECOVERING_SOFT  = 1,   // Tier 1: WiFi.reconnect() attempts
+    WD_RECOVERING_HARD  = 2,   // Tier 2: Full WiFi disconnect + re-associate
+    WD_REBOOTING        = 3    // Tier 3: About to ESP.restart()
+};
+
 class StepperNetworkManager {
 public:
     static StepperNetworkManager& getInstance();
@@ -122,10 +132,22 @@ public:
     void handleCaptivePortal();
     
     /**
-     * Check WiFi connection health and re-announce mDNS if needed
-     * Call this periodically in loop() to maintain stable mDNS
+     * Connection watchdog: WiFi + DNS + mDNS health check with 3-tier escalation
+     * Tier 1: WiFi.reconnect() | Tier 2: Full re-association | Tier 3: ESP.restart()
+     * Call this periodically in loop() (runs on Core 0 networkTask)
      */
     void checkConnectionHealth();
+    
+    /**
+     * Get current watchdog state (for status broadcast)
+     */
+    WatchdogState getWatchdogState() const { return _wdState; }
+    
+    /**
+     * Safe shutdown: stop movement, disable motor, flush logs
+     * Called before ESP.restart() (watchdog, OTA, API reboot)
+     */
+    void safeShutdown();
     
     /**
      * Sync system time from client timestamp (used when NTP unavailable)
@@ -166,12 +188,15 @@ private:
     NetworkMode _mode = NET_AP_DIRECT;
     bool _otaConfigured = false;
     bool _timeSynced = false;
-    bool _wasConnected = false;              // Track connection state for mDNS re-announce
+    bool _wasConnected = false;              // Track connection state for recovery detection
     unsigned long _lastHealthCheck = 0;      // Last health check timestamp
-    unsigned long _lastReconnectAttempt = 0; // Last WiFi reconnect attempt timestamp
     unsigned long _lastMdnsRefresh = 0;      // Last mDNS refresh timestamp
-    uint8_t _reconnectAttempts = 0;          // Count of consecutive reconnect attempts
     String _cachedIP;                        // Cached IP address string (avoids WiFi.localIP() calls)
+    
+    // Connection Watchdog state
+    WatchdogState _wdState = WD_HEALTHY;
+    uint8_t _wdSoftRetries = 0;              // Tier 1 attempt counter
+    uint8_t _wdHardRetries = 0;              // Tier 2 attempt counter
     
     // Captive Portal DNS server (AP_SETUP mode only)
     DNSServer _dnsServer;

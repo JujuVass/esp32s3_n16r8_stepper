@@ -849,8 +849,8 @@ void setupAPIRoutes() {
     // Send success response before rebooting
     server.send(200, "application/json", "{\"success\":true,\"message\":\"Rebooting ESP32...\"}");
     
-    // Flush logs before reboot
-    engine->flushLogBuffer(true);
+    // Safe shutdown: stop movement, disable motor, flush logs
+    StepperNetwork.safeShutdown();
     
     // Small delay to ensure response is sent
     delay(500);

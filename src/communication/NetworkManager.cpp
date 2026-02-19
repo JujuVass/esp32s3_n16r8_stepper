@@ -281,7 +281,7 @@ String StepperNetworkManager::getConfiguredSSID() const {
 
 bool StepperNetworkManager::setupMDNS() {
     if (MDNS.begin(otaHostname)) {
-        engine->info("✅ mDNS: http://" + String(otaHostname) + ".local");
+        engine->debug("✅ mDNS: http://" + String(otaHostname) + ".local");
         
         // Add services for discovery
         MDNS.addService("http", "tcp", 80);        // Web server
@@ -331,13 +331,8 @@ void StepperNetworkManager::setupOTA() {
         String type = (ArduinoOTA.getCommand() == U_FLASH) ? "firmware" : "filesystem";
         engine->info("🔄 OTA Update: " + type);
         
-        // Stop all movement and motor activity immediately
-        stopMovement();
-        if (seqState.isRunning) SeqExecutor.stop();
-        Motor.disable();
-        
-        // Flush logs before flash write begins (blocks until done)
-        if (engine) engine->flushLogBuffer(true);
+        // Reuse shared safe shutdown (stop movement, disable motor, flush logs)
+        StepperNetwork.safeShutdown();
     });
     
     ArduinoOTA.onEnd([]() {
@@ -382,68 +377,191 @@ bool StepperNetworkManager::begin() {
 }
 
 // ============================================================================
-// CONNECTION HEALTH CHECK (STA+AP mode only)
-// - Auto-reconnect WiFi if connection lost
-// - Re-announces mDNS after WiFi reconnection for stable .local resolution
+// SAFE SHUTDOWN - Stop movement, disable motor, flush logs
+// Called before ESP.restart() (watchdog, OTA, API reboot)
+// ============================================================================
+
+void StepperNetworkManager::safeShutdown() {
+    engine->warn("🛑 Safe shutdown initiated...");
+    
+    // Stop all movement and motor activity
+    stopMovement();
+    if (seqState.isRunning) SeqExecutor.stop();
+    Motor.disable();
+    
+    // Flush logs to filesystem (blocks until done)
+    if (engine) engine->flushLogBuffer(true);
+    
+    engine->info("✅ Safe shutdown complete");
+}
+
+// ============================================================================
+// CONNECTION WATCHDOG (STA+AP mode only)
+// Three-tier escalation with gateway ping + DNS + self-mDNS checks:
+//   Tier 1: WiFi.reconnect() (soft)
+//   Tier 2: Full WiFi.disconnect() + WiFi.begin() (hard re-association)
+//   Tier 3: ESP.restart() (emergency reboot)
 // ============================================================================
 
 void StepperNetworkManager::checkConnectionHealth() {
     // Only in STA+AP mode (AP_DIRECT and AP_SETUP don't need health checks)
     if (_mode != NET_STA_AP) return;
     
-    // Rate limit health checks to once per 5 seconds
     unsigned long now = millis();
-    if (now - _lastHealthCheck < 5000) return;
+    
+    // Rate limit: faster during recovery, slower when healthy
+    uint32_t checkInterval = (_wdState == WD_HEALTHY) ? WATCHDOG_CHECK_INTERVAL_MS : WATCHDOG_RECOVERY_INTERVAL_MS;
+    if (now - _lastHealthCheck < checkInterval) return;
     _lastHealthCheck = now;
     
-    bool currentlyConnected = (WiFi.status() == WL_CONNECTED);
+    // ═══════════════════════════════════════════════════════════════════════
+    // STEP 1: WiFi L2 link check
+    // ═══════════════════════════════════════════════════════════════════════
+    bool wifiConnected = (WiFi.status() == WL_CONNECTED);
     
-    // ═══════════════════════════════════════════════════════════════════════
-    // CASE 1: Lost connection → Attempt auto-reconnect
-    // ═══════════════════════════════════════════════════════════════════════
-    if (!currentlyConnected && _wasConnected) {
-        if (ENABLE_PARALLEL_AP) {
-            engine->warn("⚠️ WiFi connection lost! (AP still active at " + WiFi.softAPIP().toString() + ")");
-        } else {
-            engine->warn("⚠️ WiFi connection lost! Attempting reconnect...");
-        }
-        _reconnectAttempts = 0;
-    }
-    
-    if (!currentlyConnected) {
-        // Attempt reconnect every WIFI_RECONNECT_INTERVAL_MS (5s default)
-        if (now - _lastReconnectAttempt >= WIFI_RECONNECT_INTERVAL_MS) {
-            _lastReconnectAttempt = now;
-            _reconnectAttempts++;
-            
-            if (_reconnectAttempts <= 10) {
-                engine->info("🔄 WiFi reconnect attempt " + String(_reconnectAttempts) + "/10...");
-                WiFi.reconnect();
-            } else if (_reconnectAttempts == 11) {
-                engine->warn("⚠️ WiFi reconnect failed 10 times, continuing in background...");
-            }
-            if (_reconnectAttempts > 10) {
-                WiFi.reconnect();
-            }
-        }
-    }
-    
-    // ═══════════════════════════════════════════════════════════════════════
-    // CASE 2: Reconnected → Re-announce mDNS
-    // ═══════════════════════════════════════════════════════════════════════
-    if (currentlyConnected && !_wasConnected) {
-        _cachedIP = WiFi.localIP().toString();
-        engine->info("✅ WiFi reconnected! IP: " + _cachedIP);
-        engine->info("🔄 Re-announcing mDNS...");
-        _reconnectAttempts = 0;
+    if (wifiConnected) {
+        // ═══════════════════════════════════════════════════════════════════
+        // STEP 2: DNS resolution check (L3/L7 — tests gateway + DNS + internet)
+        // WiFi.status() can return WL_CONNECTED even when IP stack is dead
+        // ═══════════════════════════════════════════════════════════════════
+        IPAddress resolvedIP;
+        bool dnsOk = (WiFi.hostByName("pool.ntp.org", resolvedIP) == 1);
         
-        MDNS.end();
-        delay(50);
-        setupMDNS();
-        _lastMdnsRefresh = now;
+        // ═══════════════════════════════════════════════════════════════════
+        // STEP 3: Proactive mDNS refresh (ESP32 can't self-query .local)
+        // MDNS.queryHost(self) always returns 0.0.0.0 on ESP32 — the mDNS
+        // responder answers OTHER devices but doesn't loop back to itself.
+        // Instead: periodic silent re-announce to prevent stale mDNS.
+        // ═══════════════════════════════════════════════════════════════════
+        if (now - _lastMdnsRefresh >= WATCHDOG_MDNS_REFRESH_MS) {
+            MDNS.end();
+            delay(50);
+            setupMDNS();
+            _lastMdnsRefresh = now;
+            engine->debug("🔄 Watchdog: Proactive mDNS refresh");
+        }
+        
+        if (dnsOk) {
+            // ═══════════════════════════════════════════════════════════════
+            // HEALTHY — WiFi up + DNS resolves + mDNS maintained
+            // ═══════════════════════════════════════════════════════════════
+            if (_wdState != WD_HEALTHY) {
+                engine->info("✅ Watchdog: Connection fully restored (WiFi + DNS OK) after " +
+                             String(_wdSoftRetries) + " soft + " + String(_wdHardRetries) + " hard retries");
+                
+                // Re-sync NTP after recovery
+                setupNTP();
+            }
+            _wdState = WD_HEALTHY;
+            _wdSoftRetries = 0;
+            _wdHardRetries = 0;
+            _wasConnected = true;
+            _cachedIP = WiFi.localIP().toString();
+            return;
+        }
+        
+        // WiFi says connected but DNS fails → half-dead connection
+        engine->warn("⚠️ Watchdog: WiFi connected but DNS resolution FAILED → treating as disconnected");
+        wifiConnected = false;  // Force into recovery path
     }
     
-    _wasConnected = currentlyConnected;
+    // ═══════════════════════════════════════════════════════════════════════
+    // RECOVERY PATH (WiFi down OR DNS failed)
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    // Log initial disconnect (once)
+    if (_wasConnected && _wdState == WD_HEALTHY) {
+        engine->warn("⚠️ Watchdog: Connection lost! Starting 3-tier recovery...");
+        if (ENABLE_PARALLEL_AP) {
+            engine->info("📡 AP still active at " + WiFi.softAPIP().toString());
+        }
+    }
+    _wasConnected = false;
+    
+    // ── TIER 1: Soft recovery (WiFi.reconnect) ─────────────────────────
+    if (_wdSoftRetries < WATCHDOG_SOFT_MAX_RETRIES) {
+        _wdState = WD_RECOVERING_SOFT;
+        _wdSoftRetries++;
+        engine->info("🔄 Watchdog [Tier 1]: Soft reconnect " + String(_wdSoftRetries) + "/" + String(WATCHDOG_SOFT_MAX_RETRIES));
+        WiFi.reconnect();
+        return;
+    }
+    
+    // ── TIER 2: Hard recovery (full disconnect + re-associate) ──────────
+    if (_wdHardRetries < WATCHDOG_HARD_MAX_RETRIES) {
+        _wdState = WD_RECOVERING_HARD;
+        _wdHardRetries++;
+        engine->warn("🔧 Watchdog [Tier 2]: Hard reconnect " + String(_wdHardRetries) + "/" + String(WATCHDOG_HARD_MAX_RETRIES));
+        
+        // Full disconnect (true = erase AP credentials from WiFi driver RAM)
+        WiFi.disconnect(true);
+        delay(1000);
+        
+        // Reload credentials from NVS or Config.h
+        String targetSSID, targetPassword;
+        if (WiFiConfig.isConfigured() && WiFiConfig.loadConfig(targetSSID, targetPassword)) {
+            engine->info("🔑 Hard reconnect using NVS credentials");
+        } else {
+            targetSSID = ssid;
+            targetPassword = password;
+            engine->info("🔑 Hard reconnect using Config.h credentials");
+        }
+        
+        // Full re-association
+        WiFi.mode(ENABLE_PARALLEL_AP ? WIFI_AP_STA : WIFI_STA);
+        WiFi.setHostname(otaHostname);
+        WiFi.setSleep(WIFI_PS_NONE);
+        WiFi.begin(targetSSID.c_str(), targetPassword.c_str());
+        
+        // Blocking wait for connection
+        unsigned long start = millis();
+        while (WiFi.status() != WL_CONNECTED && (millis() - start) < WATCHDOG_HARD_RECONNECT_TIMEOUT_MS) {
+            delay(500);
+        }
+        
+        if (WiFi.status() == WL_CONNECTED) {
+            _cachedIP = WiFi.localIP().toString();
+            engine->info("✅ Watchdog [Tier 2]: Hard reconnect succeeded! IP: " + _cachedIP);
+            
+            // Restore all services
+            MDNS.end();
+            delay(50);
+            setupMDNS();
+            _lastMdnsRefresh = millis();
+            setupNTP();
+            
+            // Restore parallel AP if enabled
+            if (ENABLE_PARALLEL_AP) {
+                startParallelAP();
+            }
+            
+            _wdState = WD_HEALTHY;
+            _wdSoftRetries = 0;
+            _wdHardRetries = 0;
+            _wasConnected = true;
+            return;
+        }
+        
+        engine->error("❌ Watchdog [Tier 2]: Hard reconnect " + String(_wdHardRetries) + "/" + String(WATCHDOG_HARD_MAX_RETRIES) + " failed");
+        return;
+    }
+    
+    // ── TIER 3: Emergency reboot ────────────────────────────────────────
+    if (!WATCHDOG_AUTO_REBOOT_ENABLED) {
+        engine->error("❌ Watchdog: All recovery exhausted. Auto-reboot DISABLED → cycling back to Tier 1");
+        _wdSoftRetries = 0;
+        _wdHardRetries = 0;
+        return;
+    }
+    
+    _wdState = WD_REBOOTING;
+    engine->error("🚨 Watchdog [Tier 3]: All recovery exhausted (" +
+        String(WATCHDOG_SOFT_MAX_RETRIES) + " soft + " + String(WATCHDOG_HARD_MAX_RETRIES) + 
+        " hard). REBOOTING in " + String(WATCHDOG_REBOOT_DELAY_MS / 1000) + "s...");
+    
+    safeShutdown();
+    delay(WATCHDOG_REBOOT_DELAY_MS);
+    ESP.restart();
 }
 
 // ============================================================================

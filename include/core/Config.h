@@ -238,6 +238,19 @@ constexpr uint32_t STATS_SAVE_INTERVAL_MS = 60000;      // Auto-save stats to fi
 constexpr uint32_t WEBSOCKET_RECONNECT_MS = 2000;       // Client-side WS reconnect delay
 
 // ============================================================================
+// CONFIGURATION - Connection Watchdog (STA mode auto-recovery)
+// ============================================================================
+// Three-tier escalation: Soft reconnect → Hard re-association → Emergency reboot
+constexpr uint32_t WATCHDOG_CHECK_INTERVAL_MS          = 60000;  // Deep health check when healthy (60s)
+constexpr uint32_t WATCHDOG_RECOVERY_INTERVAL_MS       = 20000;  // Faster checks during active recovery (20s)
+constexpr uint8_t  WATCHDOG_SOFT_MAX_RETRIES           = 5;      // Tier 1: WiFi.reconnect() attempts
+constexpr uint8_t  WATCHDOG_HARD_MAX_RETRIES           = 3;      // Tier 2: Full disconnect + re-associate attempts
+constexpr uint32_t WATCHDOG_HARD_RECONNECT_TIMEOUT_MS  = 15000;  // Timeout for WiFi.begin() during hard reconnect
+constexpr uint32_t WATCHDOG_REBOOT_DELAY_MS            = 2000;   // Safety delay before ESP.restart()
+constexpr uint32_t WATCHDOG_MDNS_REFRESH_MS            = 60000;  // Proactive mDNS re-announce interval (60s)
+constexpr bool     WATCHDOG_AUTO_REBOOT_ENABLED        = true;   // Master switch for Tier 3 auto-reboot
+
+// ============================================================================
 // CONFIGURATION - Motion Limits
 // ============================================================================
 constexpr float MAX_SPEED_MM_PER_SEC = 300.0f;          // Absolute max motor speed
