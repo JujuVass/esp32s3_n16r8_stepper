@@ -29,10 +29,8 @@
 // Notification state management
 const NotificationManager = {
   container: null,
-  activeNotifications: [],
-  recentMessages: new Map(), // Anti-duplicate: message -> timestamp
+  activeNotifications: [],  // {element, message, timeoutId, removeFunc, duration}
   MAX_NOTIFICATIONS: 5,
-  DEDUPE_WINDOW_MS: 1000, // Ignore duplicate messages within 1 second
 
   init() {
     if (this.container) return this.container;
@@ -45,27 +43,34 @@ const NotificationManager = {
     return this.container;
   },
 
-  isDuplicate(message) {
-    const now = Date.now();
-    const lastShown = this.recentMessages.get(message);
-    if (lastShown && (now - lastShown) < this.DEDUPE_WINDOW_MS) {
-      return true;
+  /**
+   * Find an active notification with the same message.
+   * If found, reset its timeout (extend its lifetime) and return true.
+   */
+  extendIfDuplicate(message, duration) {
+    const entry = this.activeNotifications.find(n => n.message === message);
+    if (!entry) return false;
+
+    // Cancel current timeout, restart with full duration
+    if (entry.timeoutId) clearTimeout(entry.timeoutId);
+    if (duration > 0) {
+      entry.timeoutId = setTimeout(entry.removeFunc, duration);
     }
-    this.recentMessages.set(message, now);
-    // Cleanup old entries
-    if (this.recentMessages.size > 50) {
-      for (const [msg, time] of this.recentMessages) {
-        if (now - time > 5000) this.recentMessages.delete(msg);
-      }
-    }
-    return false;
+
+    // Visual bump: brief scale pulse so user sees it was refreshed
+    entry.element.classList.remove('notif-bump');
+    // Force reflow so re-adding the class triggers the animation again
+    void entry.element.offsetWidth;
+    entry.element.classList.add('notif-bump');
+
+    return true;
   },
 
   removeOldest() {
     if (this.activeNotifications.length >= this.MAX_NOTIFICATIONS) {
       const oldest = this.activeNotifications.shift();
-      if (oldest && oldest.parentNode) {
-        oldest.remove();
+      if (oldest && oldest.element.parentNode) {
+        oldest.element.remove();
       }
     }
   }
@@ -78,11 +83,6 @@ const NotificationManager = {
  * @param {number} duration - How long to show (ms), null for type default
  */
 function showNotification(message, type = 'info', duration = null) {
-  // Skip duplicate messages within dedupe window
-  if (NotificationManager.isDuplicate(message)) {
-    return null;
-  }
-
   // Default durations per type (longer for important messages)
   const defaultDurations = {
     success: 3000,
@@ -94,6 +94,11 @@ function showNotification(message, type = 'info', duration = null) {
 
   // Use provided duration or default based on type
   const actualDuration = duration !== null ? duration : (defaultDurations[type] || 3500);
+
+  // If same message is already displayed, just extend its duration
+  if (NotificationManager.extendIfDuplicate(message, actualDuration)) {
+    return null;
+  }
 
   // Initialize container if needed
   const container = NotificationManager.init();
@@ -120,28 +125,28 @@ function showNotification(message, type = 'info', duration = null) {
   msgSpan.textContent = message;
   notification.append(iconSpan, msgSpan);
 
-  // Store timeout ID to allow cancellation
-  let timeoutId = null;
-
   // Function to remove notification with animation
   const removeNotification = () => {
-    if (timeoutId) clearTimeout(timeoutId);
+    if (entry.timeoutId) clearTimeout(entry.timeoutId);
     notification.classList.add('slide-out');
     setTimeout(() => {
       if (notification.parentNode) notification.remove();
-      const idx = NotificationManager.activeNotifications.indexOf(notification);
+      const idx = NotificationManager.activeNotifications.indexOf(entry);
       if (idx > -1) NotificationManager.activeNotifications.splice(idx, 1);
     }, 300);
   };
+
+  // Track this notification for dedup/extend
+  const entry = { element: notification, message, timeoutId: null, removeFunc: removeNotification, duration: actualDuration };
 
   // Allow click to dismiss early
   notification.addEventListener('click', removeNotification);
 
   container.appendChild(notification);
-  NotificationManager.activeNotifications.push(notification);
+  NotificationManager.activeNotifications.push(entry);
 
   if (actualDuration > 0) {
-    timeoutId = setTimeout(removeNotification, actualDuration);
+    entry.timeoutId = setTimeout(removeNotification, actualDuration);
   }
 
   return notification;

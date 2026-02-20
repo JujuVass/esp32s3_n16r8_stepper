@@ -944,6 +944,17 @@ select.select-input:focus {
   100% { transform: scale(1) rotate(0deg); }
 }
 
+/* Bump animation when duplicate notification extends an existing one */
+.notification.notif-bump {
+  animation: notifBump 0.25s ease-out;
+}
+
+@keyframes notifBump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
 /* ============================================================================
  * WELCOME MESSAGE
  * ============================================================================ */
