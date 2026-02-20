@@ -165,31 +165,6 @@ void BaseMovementControllerClass::setSpeedInternal(float speedLevel, bool isForw
     }
 }
 
-void BaseMovementControllerClass::setCyclePause(bool enabled, float durationSec, 
-                                              bool isRandom, float minSec, float maxSec) {
-    MutexGuard guard(motionMutex);
-    if (!guard) {
-        engine->warn("setCyclePause: mutex timeout");
-        return;
-    }
-    
-    motion.cyclePause.enabled = enabled;
-    motion.cyclePause.pauseDurationSec = durationSec;
-    motion.cyclePause.isRandom = isRandom;
-    motion.cyclePause.minPauseSec = minSec;
-    motion.cyclePause.maxPauseSec = maxSec;
-    
-    if (enabled) {
-        if (isRandom) {
-            engine->debug(String("⏸️ Cycle pause enabled: random ") + String(minSec, 1) + "-" + String(maxSec, 1) + "s");
-        } else {
-            engine->debug(String("⏸️ Cycle pause enabled: fixed ") + String(durationSec, 1) + "s");
-        }
-    } else {
-        engine->debug("⏸️ Cycle pause disabled");
-    }
-}
-
 // ============================================================================
 // CALCULATION METHODS
 // ============================================================================

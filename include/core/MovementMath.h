@@ -78,10 +78,6 @@ void safeDurationCalc(const ChaosBaseConfig& cfg, float craziness, float maxFact
 /** Waveform value (−1 to +1). SINE uses −cos convention. */
 float waveformValue(OscillationWaveform waveform, float phase);
 
-/** Waveform position in mm = center + waveformValue × amplitude. */
-float waveformPosition(OscillationWaveform waveform, float phase,
-                       float centerMM, float amplitudeMM);
-
 /**
  * Effective frequency capped by hardware speed limit.
  * Pure math — no OscillationController dependency.

@@ -75,17 +75,6 @@ inline float ChaosController::calculateMaxAmplitude(float minLimit, float maxLim
     );
 }
 
-inline bool ChaosController::forceDirectionAtLimits(float currentPos, float minLimit, float maxLimit, bool& movingFwd) {
-    if (currentPos <= minLimit + 1.0) {
-        movingFwd = true;
-        return true;
-    } else if (currentPos >= maxLimit - 1.0) {
-        movingFwd = false;
-        return true;
-    }
-    return false;
-}
-
 // DRY helper: set target position based on movingForward direction
 inline void ChaosController::setDirectionalTarget(float amplitude, float minLimit, float maxLimit) {
     if (chaosState.movingForward) {

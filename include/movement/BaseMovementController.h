@@ -70,17 +70,6 @@ public:
      */
     void setSpeedBackward(float speedLevel);
     
-    /**
-     * Configure cycle pause
-     * @param enabled Enable/disable pause between cycles
-     * @param durationSec Fixed pause duration (seconds)
-     * @param isRandom Use random duration
-     * @param minSec Minimum random duration
-     * @param maxSec Maximum random duration
-     */
-    void setCyclePause(bool enabled, float durationSec = 1.5, 
-                       bool isRandom = false, float minSec = 1.5, float maxSec = 5.0);
-    
     // ========================================================================
     // CALCULATION METHODS
     // ========================================================================

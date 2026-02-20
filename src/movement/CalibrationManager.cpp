@@ -462,26 +462,6 @@ bool CalibrationManager::returnToStart() {
 }
 
 // ============================================================================
-// GETTERS
-// ============================================================================
-
-bool CalibrationManager::isAtStart() const {
-    return currentStep == 0;
-}
-
-bool CalibrationManager::isCalibrated() const {
-    return m_calibrated;
-}
-
-float CalibrationManager::getTotalDistanceMM() const {
-    return m_totalDistanceMM;
-}
-
-long CalibrationManager::getMaxStep() const {
-    return m_maxStep;
-}
-
-// ============================================================================
 // CALLBACK SETTERS
 // ============================================================================
 

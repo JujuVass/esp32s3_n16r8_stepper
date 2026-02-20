@@ -123,20 +123,6 @@ public:
    */
   void getFilesystemStats(uint32_t& usedBytes, uint32_t& totalBytes, uint32_t& freeBytes);
 
-  /**
-   * Read entire file content
-   * @param path File path
-   * @return File content as String, or empty if not found
-   */
-  String readFileContent(const String& path);
-
-  /**
-   * Write file content
-   * @param path File path
-   * @param content Content to write
-   * @return true on success
-   */
-  bool writeFileContent(const String& path, const String& content);
 };
 
 #endif // FILESYSTEM_MANAGER_H

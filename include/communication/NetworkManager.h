@@ -86,11 +86,6 @@ public:
     bool isAPMode() const { return _mode == NET_AP_SETUP; }
     
     /**
-     * Check if STA is connected to a router
-     */
-    bool isConnected() const { return _mode == NET_STA_AP && WiFi.status() == WL_CONNECTED; }
-    
-    /**
      * Get configured SSID (from EEPROM or default)
      */
     String getConfiguredSSID() const;

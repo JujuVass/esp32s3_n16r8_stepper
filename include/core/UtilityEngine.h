@@ -154,12 +154,6 @@ public:
   bool saveJsonFile(const String& path, const JsonDocument& doc) { return _fs.saveJsonFile(path, doc); }
   
   // ========================================================================
-  // WEBSOCKET FACADE
-  // ========================================================================
-  
-  uint8_t getConnectedClients() const   { return _ws.connectedClients(); }
-  
-  // ========================================================================
   // STATISTICS FACADE
   // ========================================================================
   

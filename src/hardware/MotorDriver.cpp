@@ -97,10 +97,6 @@ void MotorDriver::setDirection(bool forward) {
     m_direction = forward;  // Store logical direction
 }
 
-bool MotorDriver::getDirection() const {
-    return m_direction;
-}
-
 // ============================================================================
 // ENABLE/DISABLE CONTROL
 // ============================================================================
@@ -121,10 +117,6 @@ void MotorDriver::disable() {
     // MCU LOW → Driver HIGH (disabled)
     digitalWrite(PIN_ENABLE, LOW);
     m_enabled = false;
-}
-
-bool MotorDriver::isEnabled() const {
-    return m_enabled;
 }
 
 // ============================================================================

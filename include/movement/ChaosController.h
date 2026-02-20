@@ -130,12 +130,6 @@ private:
     inline float calculateMaxAmplitude(float minLimit, float maxLimit);
     
     /**
-     * Force direction at limits to prevent infinite loop
-     * @return true if direction was forced
-     */
-    inline bool forceDirectionAtLimits(float currentPos, float minLimit, float maxLimit, bool& movingFwd);
-    
-    /**
      * DRY helper: compute speed multiplier + pattern duration from base config
      */
     inline void calcSpeedAndDuration(const ChaosBaseConfig& cfg, float craziness,

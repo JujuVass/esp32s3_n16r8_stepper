@@ -55,12 +55,6 @@ public:
     unsigned long getAdaptiveBroadcastInterval() const;
     
     /**
-     * Request system stats to be included in next status broadcast
-     * Stats are included on-demand to reduce overhead
-     */
-    void requestStats() { statsRequested = true; }
-    
-    /**
      * Reset broadcast deduplication hash.
      * Call when a new client connects so the next send() is guaranteed
      * to broadcast even if the payload hasn't changed.

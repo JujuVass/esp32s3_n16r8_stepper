@@ -84,36 +84,6 @@ public:
      */
     bool returnToStart();
     
-    /**
-     * Quick position check - verify if at expected position
-     * Does NOT move motor, just checks current step vs expected
-     * 
-     * @return true if currentStep == 0
-     */
-    bool isAtStart() const;
-    
-    /**
-     * Check if system has been calibrated
-     * @return true if calibration has completed successfully
-     */
-    bool isCalibrated() const;
-    
-    // ========================================================================
-    // CALIBRATION RESULTS (read-only access)
-    // ========================================================================
-    
-    /**
-     * Get calibrated total distance in mm
-     * @return Total travel distance (0 if not calibrated)
-     */
-    float getTotalDistanceMM() const;
-    
-    /**
-     * Get maximum step position
-     * @return Max step count (0 if not calibrated)
-     */
-    long getMaxStep() const;
-    
     // ========================================================================
     // CALLBACKS (set by main code)
     // ========================================================================

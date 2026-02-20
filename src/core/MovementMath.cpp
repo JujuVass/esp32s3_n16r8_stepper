@@ -158,11 +158,6 @@ float waveformValue(OscillationWaveform waveform, float phase) {
     }
 }
 
-float waveformPosition(OscillationWaveform waveform, float phase,
-                        float centerMM, float amplitudeMM) {
-    return centerMM + waveformValue(waveform, phase) * amplitudeMM;
-}
-
 float effectiveFrequency(float requestedHz, float amplitudeMM) {
     if (amplitudeMM > 0.0f) {
         float maxAllowedFreq = OSC_MAX_SPEED_MM_S / (2.0f * PI * amplitudeMM);

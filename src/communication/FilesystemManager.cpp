@@ -504,31 +504,4 @@ void FilesystemManager::getFilesystemStats(uint32_t& usedBytes, uint32_t& totalB
   freeBytes = totalBytes - usedBytes;
 }
 
-String FilesystemManager::readFileContent(const String& path) {
-  String normalizedPath = normalizePath(path);
-  if (!LittleFS.exists(normalizedPath)) return "";
 
-  File file = LittleFS.open(normalizedPath, "r");
-  if (!file) return "";
-
-  String content = file.readString();
-  file.close();
-  return content;
-}
-
-bool FilesystemManager::writeFileContent(const String& path, const String& content) {
-  String normalizedPath = normalizePath(path);
-  File file = LittleFS.open(normalizedPath, "w");
-  if (!file) return false;
-
-  size_t written = file.print(content);
-  
-  // 🛡️ PROTECTION: Flush before closing
-  file.flush();
-  
-  // 🛡️ VALIDATION: Check file still valid and write succeeded
-  bool success = (file && written == content.length());
-  
-  file.close();
-  return success;
-}

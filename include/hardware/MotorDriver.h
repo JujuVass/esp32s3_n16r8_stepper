@@ -49,12 +49,6 @@ public:
     void setDirection(bool forward);
     
     /**
-     * Get current direction setting
-     * @return true if forward, false if backward
-     */
-    bool getDirection() const;
-    
-    /**
      * Enable motor driver (start holding torque)
      * HSS86 ENABLE is active LOW, but BSS138 level shifter inverts the signal
      * MCU HIGH → level shifter → Driver LOW (enabled)
@@ -67,12 +61,6 @@ public:
      * MCU LOW → level shifter → Driver HIGH (disabled)
      */
     void disable();
-    
-    /**
-     * Check if motor is currently enabled
-     * @return true if motor is enabled (holding torque)
-     */
-    bool isEnabled() const;
     
     // ========================================================================
     // HSS86 FEEDBACK SIGNALS (ALM & PEND)

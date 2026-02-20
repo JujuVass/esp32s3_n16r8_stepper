@@ -1038,90 +1038,6 @@ void test_zone_accel_triangle_inv_at_extremity() {
 }
 
 // ============================================================================
-// 12. OSCILLATION WAVEFORM MATH — uses MovementMath::waveformPosition (real)
-// ============================================================================
-// Production convention:
-//   SINE:     −cos(phase × 2π)  → phase=0: −1 (bottom), 0.25: 0, 0.5: +1, 0.75: 0
-//   TRIANGLE: starts at +1, falls to −1 (phase=0.5), rises back to +1
-//   SQUARE:   +1 first half, −1 second half
-// ============================================================================
-
-void test_osc_sine_at_zero_phase() {
-    // -cos(0) = -1 → center - amplitude
-    float pos = MovementMath::waveformPosition(OscillationWaveform::OSC_SINE, 0.0f, 100.0f, 50.0f);
-    TEST_ASSERT_FLOAT_NEAR(50.0f, pos, 0.1f);
-}
-
-void test_osc_sine_at_quarter() {
-    // -cos(PI/2) = 0 → center
-    float pos = MovementMath::waveformPosition(OscillationWaveform::OSC_SINE, 0.25f, 100.0f, 50.0f);
-    TEST_ASSERT_FLOAT_NEAR(100.0f, pos, 0.1f);
-}
-
-void test_osc_sine_at_half() {
-    // -cos(PI) = +1 → center + amplitude
-    float pos = MovementMath::waveformPosition(OscillationWaveform::OSC_SINE, 0.5f, 100.0f, 50.0f);
-    TEST_ASSERT_FLOAT_NEAR(150.0f, pos, 0.1f);
-}
-
-void test_osc_sine_at_three_quarter() {
-    // -cos(3PI/2) = 0 → center
-    float pos = MovementMath::waveformPosition(OscillationWaveform::OSC_SINE, 0.75f, 100.0f, 50.0f);
-    TEST_ASSERT_FLOAT_NEAR(100.0f, pos, 0.1f);
-}
-
-void test_osc_triangle_at_zero() {
-    // phase=0 → waveValue = 1.0 - 0 = +1 → center + amplitude
-    float pos = MovementMath::waveformPosition(OscillationWaveform::OSC_TRIANGLE, 0.0f, 100.0f, 50.0f);
-    TEST_ASSERT_FLOAT_NEAR(150.0f, pos, 0.1f);
-}
-
-void test_osc_triangle_at_quarter() {
-    // phase=0.25 → waveValue = 1.0 - 1.0 = 0 → center
-    float pos = MovementMath::waveformPosition(OscillationWaveform::OSC_TRIANGLE, 0.25f, 100.0f, 50.0f);
-    TEST_ASSERT_FLOAT_NEAR(100.0f, pos, 0.1f);
-}
-
-void test_osc_triangle_at_half() {
-    // phase=0.5 → waveValue = -3.0 + 2.0 = −1 → center - amplitude
-    float pos = MovementMath::waveformPosition(OscillationWaveform::OSC_TRIANGLE, 0.5f, 100.0f, 50.0f);
-    TEST_ASSERT_FLOAT_NEAR(50.0f, pos, 0.1f);
-}
-
-void test_osc_triangle_at_three_quarter() {
-    // phase=0.75 → waveValue = -3.0 + 3.0 = 0 → center
-    float pos = MovementMath::waveformPosition(OscillationWaveform::OSC_TRIANGLE, 0.75f, 100.0f, 50.0f);
-    TEST_ASSERT_FLOAT_NEAR(100.0f, pos, 0.1f);
-}
-
-void test_osc_square_first_half() {
-    // First half of cycle → +1 → center + amplitude
-    float pos = MovementMath::waveformPosition(OscillationWaveform::OSC_SQUARE, 0.1f, 100.0f, 50.0f);
-    TEST_ASSERT_FLOAT_NEAR(150.0f, pos, 0.1f);
-}
-
-void test_osc_square_second_half() {
-    // Second half of cycle → -1 → center - amplitude
-    float pos = MovementMath::waveformPosition(OscillationWaveform::OSC_SQUARE, 0.6f, 100.0f, 50.0f);
-    TEST_ASSERT_FLOAT_NEAR(50.0f, pos, 0.1f);
-}
-
-void test_osc_all_waveforms_bounded() {
-    // For any phase in [0,1), position must be within [center-amplitude, center+amplitude]
-    // Note: waveformValue is designed for phase ∈ [0,1) — production fmods before calling
-    OscillationWaveform wfs[] = { OscillationWaveform::OSC_SINE,
-                                   OscillationWaveform::OSC_TRIANGLE,
-                                   OscillationWaveform::OSC_SQUARE };
-    for (auto wf : wfs) {
-        for (float phase = 0.0f; phase < 1.0f; phase += 0.05f) {
-            float pos = MovementMath::waveformPosition(wf, phase, 100.0f, 50.0f);
-            TEST_ASSERT_TRUE(pos >= 49.9f);
-            TEST_ASSERT_TRUE(pos <= 150.1f);
-        }
-    }
-}
-
-// ============================================================================
 // 13. POSITION ↔ STEPS CONVERSIONS
 // ============================================================================
 // Verify STEPS_PER_MM-based conversions are consistent.
@@ -1680,83 +1596,6 @@ void test_zone_accel_increases_speed() {
 }
 
 // ============================================================================
-// 26. WAVEFORM FULL-CYCLE PROPERTIES
-// ============================================================================
-// Verify mathematical properties of waveforms over complete cycles.
-// ============================================================================
-
-void test_sine_waveform_period_one() {
-    // Phase 0 and phase 1 should give the same position (one full period)
-    float p0 = MovementMath::waveformPosition(OscillationWaveform::OSC_SINE, 0.0f, 100.0f, 50.0f);
-    float p1 = MovementMath::waveformPosition(OscillationWaveform::OSC_SINE, 1.0f, 100.0f, 50.0f);
-    TEST_ASSERT_FLOAT_NEAR(p0, p1, 0.5f);
-}
-
-void test_triangle_waveform_period_one() {
-    float p0 = MovementMath::waveformPosition(OscillationWaveform::OSC_TRIANGLE, 0.0f, 100.0f, 50.0f);
-    float p1 = MovementMath::waveformPosition(OscillationWaveform::OSC_TRIANGLE, 1.0f, 100.0f, 50.0f);
-    TEST_ASSERT_FLOAT_NEAR(p0, p1, 0.5f);
-}
-
-void test_sine_average_is_center() {
-    // Average of sine over one period should be the center position
-    float sum = 0.0f;
-    int N = 100;
-    for (int i = 0; i < N; i++) {
-        float phase = (float)i / (float)N;
-        sum += MovementMath::waveformPosition(OscillationWaveform::OSC_SINE, phase, 100.0f, 50.0f);
-    }
-    float avg = sum / N;
-    TEST_ASSERT_FLOAT_NEAR(100.0f, avg, 1.0f);  // Average ≈ center
-}
-
-void test_triangle_average_is_center() {
-    float sum = 0.0f;
-    int N = 100;
-    for (int i = 0; i < N; i++) {
-        float phase = (float)i / (float)N;
-        sum += MovementMath::waveformPosition(OscillationWaveform::OSC_TRIANGLE, phase, 100.0f, 50.0f);
-    }
-    float avg = sum / N;
-    TEST_ASSERT_FLOAT_NEAR(100.0f, avg, 1.5f);  // Average ≈ center
-}
-
-void test_square_average_is_center() {
-    float sum = 0.0f;
-    int N = 100;
-    for (int i = 0; i < N; i++) {
-        float phase = (float)i / (float)N;
-        sum += MovementMath::waveformPosition(OscillationWaveform::OSC_SQUARE, phase, 100.0f, 50.0f);
-    }
-    float avg = sum / N;
-    TEST_ASSERT_FLOAT_NEAR(100.0f, avg, 1.5f);  // Average ≈ center
-}
-
-void test_sine_symmetry_half_period() {
-    // Value at phase and at phase+0.5 should be symmetric around center
-    // For -cos: -cos(φ·2π) + -cos((φ+0.5)·2π) = -cos(φ·2π) + cos(φ·2π) = 0
-    // So pos(phase) + pos(phase+0.5) = 2*center
-    for (float phase = 0.0f; phase < 0.5f; phase += 0.05f) {
-        float p1 = MovementMath::waveformPosition(OscillationWaveform::OSC_SINE, phase, 100.0f, 50.0f);
-        float p2 = MovementMath::waveformPosition(OscillationWaveform::OSC_SINE, phase + 0.5f, 100.0f, 50.0f);
-        TEST_ASSERT_FLOAT_NEAR(200.0f, p1 + p2, 0.5f);  // p1+p2 = 2*center
-    }
-}
-
-void test_waveform_extreme_amplitude_zero() {
-    // With amplitude 0, all waveforms should return center regardless of phase
-    OscillationWaveform wfs[] = { OscillationWaveform::OSC_SINE,
-                                   OscillationWaveform::OSC_TRIANGLE,
-                                   OscillationWaveform::OSC_SQUARE };
-    for (auto wf : wfs) {
-        for (float phase = 0.0f; phase < 1.0f; phase += 0.1f) {
-            float pos = MovementMath::waveformPosition(wf, phase, 100.0f, 0.0f);
-            TEST_ASSERT_FLOAT_NEAR(100.0f, pos, 0.01f);
-        }
-    }
-}
-
-// ============================================================================
 // 27. Effective Frequency capping (7 tests)
 // ============================================================================
 
@@ -1966,19 +1805,6 @@ int main(int argc, char **argv) {
     RUN_TEST(test_zone_accel_triangle_inv_at_boundary);
     RUN_TEST(test_zone_accel_triangle_inv_at_extremity);
 
-    // 12. Oscillation waveform math (11 tests)
-    RUN_TEST(test_osc_sine_at_zero_phase);
-    RUN_TEST(test_osc_sine_at_quarter);
-    RUN_TEST(test_osc_sine_at_half);
-    RUN_TEST(test_osc_sine_at_three_quarter);
-    RUN_TEST(test_osc_triangle_at_zero);
-    RUN_TEST(test_osc_triangle_at_quarter);
-    RUN_TEST(test_osc_triangle_at_half);
-    RUN_TEST(test_osc_triangle_at_three_quarter);
-    RUN_TEST(test_osc_square_first_half);
-    RUN_TEST(test_osc_square_second_half);
-    RUN_TEST(test_osc_all_waveforms_bounded);
-
     // 13. Position ↔ Steps conversions (5 tests)
     RUN_TEST(test_mm_to_steps_basic);
     RUN_TEST(test_steps_to_mm_basic);
@@ -2061,15 +1887,6 @@ int main(int argc, char **argv) {
     RUN_TEST(test_all_delays_above_minimum);
     RUN_TEST(test_zone_decel_reduces_speed);
     RUN_TEST(test_zone_accel_increases_speed);
-
-    // 26. Waveform full-cycle properties (7 tests)
-    RUN_TEST(test_sine_waveform_period_one);
-    RUN_TEST(test_triangle_waveform_period_one);
-    RUN_TEST(test_sine_average_is_center);
-    RUN_TEST(test_triangle_average_is_center);
-    RUN_TEST(test_square_average_is_center);
-    RUN_TEST(test_sine_symmetry_half_period);
-    RUN_TEST(test_waveform_extreme_amplitude_zero);
 
     // 27. Effective frequency capping (7 tests)
     RUN_TEST(test_effective_freq_passthrough_low_request);
