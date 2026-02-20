@@ -30,9 +30,7 @@ SequenceTableManager& SeqTable = SequenceTableManager::getInstance();
 // CONSTRUCTOR
 // ============================================================================
 
-SequenceTableManager::SequenceTableManager() {
-  // engine is a global pointer (extern UtilityEngine* engine)
-}
+SequenceTableManager::SequenceTableManager() = default;
 
 // ============================================================================
 // CRUD OPERATIONS

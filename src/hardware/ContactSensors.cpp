@@ -48,22 +48,22 @@ void ContactSensors::init() {
 // Supports sensorsInverted mode (swaps START <-> END pins)
 // ============================================================================
 
-bool ContactSensors::isStartActive() {
+bool ContactSensors::isStartActive() const {
     uint8_t pin = sensorsInverted ? PIN_END_CONTACT : PIN_START_CONTACT;
     return digitalRead(pin) == HIGH;
 }
 
-bool ContactSensors::isEndActive() {
+bool ContactSensors::isEndActive() const {
     uint8_t pin = sensorsInverted ? PIN_START_CONTACT : PIN_END_CONTACT;
     return digitalRead(pin) == HIGH;
 }
 
-bool ContactSensors::isStartClear() {
+bool ContactSensors::isStartClear() const {
     uint8_t pin = sensorsInverted ? PIN_END_CONTACT : PIN_START_CONTACT;
     return digitalRead(pin) == LOW;
 }
 
-bool ContactSensors::isActive(uint8_t pin) {
+bool ContactSensors::isActive(uint8_t pin) const {
     // Generic method - apply inversion if using standard pins
     if (sensorsInverted) {
         if (pin == PIN_START_CONTACT) pin = PIN_END_CONTACT;
@@ -72,7 +72,7 @@ bool ContactSensors::isActive(uint8_t pin) {
     return digitalRead(pin) == HIGH;
 }
 
-bool ContactSensors::isClear(uint8_t pin) {
+bool ContactSensors::isClear(uint8_t pin) const {
     // Generic method - apply inversion if using standard pins
     if (sensorsInverted) {
         if (pin == PIN_START_CONTACT) pin = PIN_END_CONTACT;

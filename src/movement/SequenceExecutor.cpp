@@ -625,7 +625,7 @@ void SequenceExecutor::startChaosLine(SequenceLine* line) {
     sendStatus();
 }
 
-void SequenceExecutor::startCalibrationLine(SequenceLine* line) {
+void SequenceExecutor::startCalibrationLine([[maybe_unused]] SequenceLine* line) {
     engine->info(String("▶️ Line ") + String(seqState.currentLineIndex + 1) + "/" + String(sequenceLineCount) + 
           " | 📏 CALIBRATION | Starting full calibration...");
     

@@ -430,7 +430,7 @@ void setupAPIRoutes() {
     
     engine->info("📥 Stats import request - body size: " + String(body.length()) + " bytes");
     
-    if (body.length() == 0) {
+    if (body.isEmpty()) {
       engine->error("❌ Empty body received for stats import");
       sendJsonError(400, "Empty request body");
       return;
@@ -532,7 +532,7 @@ void setupAPIRoutes() {
     
     engine->debug("📋 GET /api/playlists: File size=" + String(fileSize) + ", content length=" + String(content.length()));
     
-    if (content.length() == 0) {
+    if (content.isEmpty()) {
       engine->warn("⚠️ Playlist file exists but is empty");
       sendEmptyPlaylistStructure();
       return;
@@ -1056,7 +1056,7 @@ void setupAPIRoutes() {
     String ssid = doc["ssid"] | "";
     String password = doc["password"] | "";
     
-    if (ssid.length() == 0) {
+    if (ssid.isEmpty()) {
       sendJsonError(400, "SSID required");
       return;
     }
@@ -1108,7 +1108,7 @@ void setupAPIRoutes() {
     String ssid = doc["ssid"] | "";
     String password = doc["password"] | "";
     
-    if (ssid.length() == 0) {
+    if (ssid.isEmpty()) {
       sendJsonError(400, "SSID required");
       return;
     }

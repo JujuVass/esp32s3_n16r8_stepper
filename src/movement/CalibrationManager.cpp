@@ -8,12 +8,10 @@
 #include "core/GlobalState.h"
 #include "core/MovementMath.h"
 #include "core/UtilityEngine.h"
-
-extern UtilityEngine* engine;
-
-// External WebSocket/Server (for servicing during long operations)
 #include <WebSocketsServer.h>
 #include <WebServer.h>
+
+extern UtilityEngine* engine;
 
 using enum SystemState;
 

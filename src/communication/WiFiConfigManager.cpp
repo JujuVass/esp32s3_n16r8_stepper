@@ -65,7 +65,7 @@ bool WiFiConfigManager::loadConfig(String& ssid, String& password) {
     ssid = _prefs.getString("ssid", "");
     password = _prefs.getString("password", "");
     
-    if (ssid.length() == 0) {
+    if (ssid.isEmpty()) {
         return false;
     }
     
@@ -81,7 +81,7 @@ bool WiFiConfigManager::loadConfig(String& ssid, String& password) {
 // ============================================================================
 
 bool WiFiConfigManager::saveConfig(const String& ssid, const String& password) {
-    if (ssid.length() == 0 || ssid.length() > WIFI_SSID_MAX_LEN - 1) {
+    if (ssid.isEmpty() || ssid.length() > WIFI_SSID_MAX_LEN - 1) {
         if (engine) engine->error("❌ WiFi save: Invalid SSID length");
         return false;
     }
@@ -96,7 +96,7 @@ bool WiFiConfigManager::saveConfig(const String& ssid, const String& password) {
     
     // Write all keys and check return values
     size_t ssidWritten = _prefs.putString("ssid", ssid);
-    size_t passWritten = _prefs.putString("password", password);
+    _prefs.putString("password", password);
     _prefs.putBool("configured", true);
     
     if (ssidWritten == 0) {
@@ -173,7 +173,7 @@ int WiFiConfigManager::scanNetworks(WiFiNetworkInfo* networks, int maxNetworks) 
         int32_t currentRSSI = WiFi.RSSI(i);
         
         // Skip empty SSIDs
-        if (currentSSID.length() == 0) continue;
+        if (currentSSID.isEmpty()) continue;
         
         // Check if this SSID already exists in our list
         bool isDuplicate = false;

@@ -51,12 +51,13 @@ bool StepperNetworkManager::shouldStartAPSetup() {
     }
     
     // GPIO 19 is LOW (GND) = normal mode, check credentials
-    String savedSSID, savedPassword;
+    String savedSSID;
+    String savedPassword;
     bool eepromConfigured = WiFiConfig.isConfigured();
     engine->info("📦 NVS configured: " + String(eepromConfigured ? "YES" : "NO"));
     
     if (eepromConfigured && WiFiConfig.loadConfig(savedSSID, savedPassword)) {
-        if (savedSSID.length() > 0) {
+        if (!savedSSID.isEmpty()) {
             engine->info("📡 Found saved WiFi config: '" + savedSSID + "' → Try STA+AP mode");
             return false;  // Have credentials, try STA mode
         }
@@ -86,7 +87,7 @@ void StepperNetworkManager::startAPSetupMode() {
     
     // Start Access Point
     String apName = String(otaHostname) + "-Setup";
-    WiFi.softAP(apName.c_str(), NULL, 1);  // Open network, explicit channel 1
+    WiFi.softAP(apName.c_str(), nullptr, 1);  // Open network, explicit channel 1
     
     WiFi.setSleep(WIFI_PS_NONE);
     
@@ -119,7 +120,7 @@ void StepperNetworkManager::startAPDirectMode() {
     if (strlen(AP_DIRECT_PASSWORD) > 0) {
         WiFi.softAP(apName.c_str(), AP_DIRECT_PASSWORD, AP_DIRECT_CHANNEL, 0, AP_DIRECT_MAX_CLIENTS);
     } else {
-        WiFi.softAP(apName.c_str(), NULL, AP_DIRECT_CHANNEL, 0, AP_DIRECT_MAX_CLIENTS);
+        WiFi.softAP(apName.c_str(), nullptr, AP_DIRECT_CHANNEL, 0, AP_DIRECT_MAX_CLIENTS);
     }
     
     WiFi.setSleep(WIFI_PS_NONE);
@@ -152,7 +153,7 @@ void StepperNetworkManager::startParallelAP() {
     if (strlen(AP_DIRECT_PASSWORD) > 0) {
         WiFi.softAP(apName.c_str(), AP_DIRECT_PASSWORD, AP_DIRECT_CHANNEL, 0, AP_DIRECT_MAX_CLIENTS);
     } else {
-        WiFi.softAP(apName.c_str(), NULL, AP_DIRECT_CHANNEL, 0, AP_DIRECT_MAX_CLIENTS);
+        WiFi.softAP(apName.c_str(), nullptr, AP_DIRECT_CHANNEL, 0, AP_DIRECT_MAX_CLIENTS);
     }
     
     // Start DNS server so AP clients' connectivity checks resolve
@@ -184,7 +185,8 @@ bool StepperNetworkManager::startSTAMode() {
     WiFi.mode(ENABLE_PARALLEL_AP ? WIFI_AP_STA : WIFI_STA);
     
     // Get credentials - check NVS first, then Config.h defaults
-    String targetSSID, targetPassword;
+    String targetSSID;
+    String targetPassword;
     String credentialSource;
     
     if (WiFiConfig.isConfigured() && WiFiConfig.loadConfig(targetSSID, targetPassword)) {
@@ -266,7 +268,8 @@ bool StepperNetworkManager::startSTAMode() {
 // ============================================================================
 
 String StepperNetworkManager::getConfiguredSSID() const {
-    String savedSSID, savedPassword;
+    String savedSSID;
+    String savedPassword;
     if (WiFiConfig.isConfigured() && WiFiConfig.loadConfig(savedSSID, savedPassword)) {
         return savedSSID;
     }
@@ -312,10 +315,11 @@ void StepperNetworkManager::setupNTP() {
     
     delay(1000);
     time_t now = time(nullptr);
-    struct tm *timeinfo = localtime(&now);
-    if (timeinfo->tm_year > (2020 - 1900)) {
+    struct tm timeinfo;
+    localtime_r(&now, &timeinfo);
+    if (timeinfo.tm_year > (2020 - 1900)) {
         char timeStr[64];
-        strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", timeinfo);
+        strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
         engine->info("✓ Time: " + String(timeStr));
     }
 }
@@ -570,7 +574,8 @@ void StepperNetworkManager::checkConnectionHealth() {
         delay(1000);
         
         // Reload credentials from NVS or Config.h
-        String targetSSID, targetPassword;
+        String targetSSID;
+        String targetPassword;
         if (WiFiConfig.isConfigured() && WiFiConfig.loadConfig(targetSSID, targetPassword)) {
             engine->info("🔑 Hard reconnect using NVS credentials");
         } else {
@@ -649,12 +654,13 @@ void StepperNetworkManager::syncTimeFromClient(uint64_t epochMs) {
     struct timeval tv;
     tv.tv_sec = epochMs / 1000;
     tv.tv_usec = (epochMs % 1000) * 1000;
-    settimeofday(&tv, NULL);
+    settimeofday(&tv, nullptr);
     _timeSynced = true;
     
     time_t now = epochMs / 1000;
-    struct tm *timeinfo = localtime(&now);
+    struct tm timeinfo;
+    localtime_r(&now, &timeinfo);
     char timeStr[64];
-    strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", timeinfo);
+    strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &timeinfo);
     engine->info("⏰ Time synced from client: " + String(timeStr));
 }

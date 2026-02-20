@@ -18,11 +18,11 @@ public:
     // ========================================================================
     // SIMPLE API - Direct opto reading (no debounce needed)
     // ========================================================================
-    bool isStartActive();       // true if START opto blocked (HIGH)
-    bool isEndActive();         // true if END opto blocked (HIGH)
-    bool isStartClear();        // true if START opto clear (LOW)
-    bool isActive(uint8_t pin); // Generic: true if pin is HIGH (blocked)
-    bool isClear(uint8_t pin);  // Generic: true if pin is LOW (clear)
+    bool isStartActive() const;       // true if START opto blocked (HIGH)
+    bool isEndActive() const;         // true if END opto blocked (HIGH)
+    bool isStartClear() const;        // true if START opto clear (LOW)
+    bool isActive(uint8_t pin) const; // Generic: true if pin is HIGH (blocked)
+    bool isClear(uint8_t pin) const;  // Generic: true if pin is LOW (clear)
     
     // ========================================================================
     // DRIFT DETECTION & CORRECTION

@@ -109,16 +109,18 @@ void UtilityEngine::saveSensorsInverted() {
 
 String UtilityEngine::getFormattedTime(const char* format) const {
   time_t now = time(nullptr);
-  struct tm* timeinfo = localtime(&now);
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
   char buffer[64];
-  strftime(buffer, sizeof(buffer), format, timeinfo);
+  strftime(buffer, sizeof(buffer), format, &timeinfo);
   return String(buffer);
 }
 
 bool UtilityEngine::isTimeSynchronized() const {
   time_t now = time(nullptr);
-  struct tm* timeinfo = localtime(&now);
-  return (timeinfo->tm_year > (2020 - 1900));
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
+  return (timeinfo.tm_year > (2020 - 1900));
 }
 
 // ============================================================================

@@ -79,8 +79,9 @@ bool Logger::initializeLogFile() {
   // Write session header
   char ts[30];
   time_t now = time(nullptr);
-  struct tm* tmstruct = localtime(&now);
-  strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", tmstruct);
+  struct tm tmstruct;
+  localtime_r(&now, &tmstruct);
+  strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", &tmstruct);
 
   _logFile.println("");
   _logFile.println("========================================");
@@ -208,16 +209,18 @@ void Logger::flushLogBuffer(bool forceFlush) {
 
   // Get current time for timestamps
   time_t currentTime = time(nullptr);
-  struct tm* tmstruct = localtime(&currentTime);
-  bool timeValid = (tmstruct->tm_year > (2020 - 1900));
+  struct tm tmstruct;
+  localtime_r(&currentTime, &tmstruct);
+  bool timeValid = (tmstruct.tm_year > (2020 - 1900));
 
   // Write all valid entries in one batch (no mutex needed - local copy)
   for (int i = 0; i < localCount; i++) {
       if (timeValid) {
         char ts[30];
         time_t logTime = currentTime - ((now - localBuffer[i].timestamp) / 1000);
-        struct tm* logTm = localtime(&logTime);
-        strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", logTm);
+        struct tm logTm;
+        localtime_r(&logTime, &logTm);
+        strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", &logTm);
         _logFile.print("[");
         _logFile.print(ts);
         _logFile.print("] ");
@@ -248,10 +251,11 @@ void Logger::flushLogBuffer(bool forceFlush) {
 
 String Logger::generateLogFilename() {
   time_t now = time(nullptr);
-  struct tm* tmstruct = localtime(&now);
+  struct tm tmstruct;
+  localtime_r(&now, &tmstruct);
 
   char dateBuf[20];
-  strftime(dateBuf, sizeof(dateBuf), "%Y%m%d", tmstruct);
+  strftime(dateBuf, sizeof(dateBuf), "%Y%m%d", &tmstruct);
   String dateStr = String(dateBuf);
 
   // Find max suffix by scanning /logs directory
@@ -294,6 +298,7 @@ const char* Logger::getLevelPrefix(LogLevel level) const {
 
 bool Logger::isTimeSynchronized() const {
   time_t now = time(nullptr);
-  struct tm* timeinfo = localtime(&now);
-  return (timeinfo->tm_year > (2020 - 1900));
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
+  return (timeinfo.tm_year > (2020 - 1900));
 }

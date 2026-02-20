@@ -68,7 +68,7 @@ public:
    * Constructor
    * @param webServer Reference to WebServer instance (must be initialized)
    */
-  FilesystemManager(WebServer& webServer);
+  explicit FilesystemManager(WebServer& webServer);
 
   /**
    * Register all filesystem API routes with WebServer

@@ -741,7 +741,8 @@ void BaseMovementControllerClass::process() {
         }
         
         // CRITICAL: Direction matters for zones!
-        float movementStartMM, movementEndMM;
+        float movementStartMM;
+        float movementEndMM;
         if (movingForward) {
             movementStartMM = 0.0;
             movementEndMM = motion.targetDistanceMM;
@@ -752,7 +753,6 @@ void BaseMovementControllerClass::process() {
         }
         
         // Calculate distance into each zone
-        float distanceFromStart = abs(currentPositionMM - movementStartMM);
         float distanceFromEnd = abs(movementEndMM - currentPositionMM);
         
         // Check for random turnback in START zone (when moving backward)

@@ -73,7 +73,7 @@ void CommandDispatcher::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pa
 // MAIN COMMAND ROUTER
 // ============================================================================
 
-void CommandDispatcher::handleCommand(uint8_t clientNum, const String& message) {
+void CommandDispatcher::handleCommand([[maybe_unused]] uint8_t clientNum, const String& message) {
     // Parse JSON
     JsonDocument doc;
     if (!parseJsonCommand(message, doc)) {
@@ -117,7 +117,7 @@ bool CommandDispatcher::parseJsonCommand(const String& jsonStr, JsonDocument& do
 }
 
 bool CommandDispatcher::validateAndReport(bool isValid, const String& errorMsg) {
-    if (!isValid && errorMsg.length() > 0) {
+    if (!isValid && !errorMsg.isEmpty()) {
         Status.sendError(errorMsg);
         return false;
     }
@@ -570,7 +570,7 @@ bool CommandDispatcher::handlePursuitCommands(const char* cmd, JsonDocument& doc
 // HANDLER 6/8: CHAOS COMMANDS
 // ============================================================================
 
-bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, const String& message) {
+bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, [[maybe_unused]] const String& message) {
     if (strcmp(cmd, "startChaos") == 0) {
         if (config.currentState == STATE_CALIBRATING) {
             Status.sendError("⚠️ Cannot start Chaos mode: calibration in progress");
@@ -679,7 +679,7 @@ bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, 
 // HANDLER 7/8: OSCILLATION COMMANDS
 // ============================================================================
 
-bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument& doc, const String& message) {
+bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument& doc, [[maybe_unused]] const String& message) {
     if (strcmp(cmd, "setOscillation") == 0) {
         float oldCenter = oscillation.centerPositionMM;
         float oldAmplitude = oscillation.amplitudeMM;
@@ -808,7 +808,7 @@ bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument&
 // HANDLER 8/8: SEQUENCER COMMANDS
 // ============================================================================
 
-bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& doc, const String& message) {
+bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& doc, [[maybe_unused]] const String& message) {
     
     // ========================================================================
     // SEQUENCE TABLE MANAGEMENT (CRUD)
@@ -818,7 +818,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         SequenceLine newLine = SeqTable.parseFromJson(doc);
         
         String validationError = SeqTable.validatePhysics(newLine);
-        if (validationError.length() > 0) {
+        if (!validationError.isEmpty()) {
             Status.sendError("❌ Invalid line: " + validationError);
             return true;
         }
@@ -866,7 +866,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         SequenceLine updatedLine = SeqTable.parseFromJson(doc);
         
         String validationError = SeqTable.validatePhysics(updatedLine);
-        if (validationError.length() > 0) {
+        if (!validationError.isEmpty()) {
             Status.sendError("❌ Invalid line: " + validationError);
             return true;
         }

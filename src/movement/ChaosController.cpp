@@ -256,7 +256,8 @@ inline void ChaosController::calcSpeedAndDuration(const ChaosBaseConfig& cfg, fl
     float speedMax = cfg.speedMax + (cfg.speedCrazinessBoost * craziness);
     speedMultiplier = (random(100) / 100.0) * (speedMax - speedMin) + speedMin;
     
-    unsigned long durationMin, durationMax;
+    unsigned long durationMin;
+    unsigned long durationMax;
     MovementMath::safeDurationCalc(cfg, craziness, durationMaxFactor, durationMin, durationMax);
     patternDuration = random(durationMin, durationMax);
 }
@@ -466,7 +467,8 @@ void ChaosController::generatePattern() {
         enabledCount = CHAOS_PATTERN_COUNT;
     }
     
-    float effectiveMinLimit, effectiveMaxLimit;
+    float effectiveMinLimit;
+    float effectiveMaxLimit;
     calculateLimits(effectiveMinLimit, effectiveMaxLimit);
     
     // Weighted random selection
@@ -582,7 +584,7 @@ void ChaosController::processCalm(float effectiveMinLimit, float effectiveMaxLim
 // AT-TARGET HANDLERS
 // ============================================================================
 
-void ChaosController::handlePulseAtTarget(float effectiveMinLimit, float effectiveMaxLimit) {
+void ChaosController::handlePulseAtTarget([[maybe_unused]] float effectiveMinLimit, [[maybe_unused]] float effectiveMaxLimit) {
     float currentPos = MovementMath::stepsToMM(currentStep);
     
     if (!chaosState.pulsePhase) {

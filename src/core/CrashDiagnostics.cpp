@@ -137,10 +137,11 @@ bool CrashDiagnostics::saveDumpFile(UtilityEngine* engine, const char* taskName,
     // Generate filename: timestamp if NTP synced, else millis()
     String filename;
     time_t now = time(nullptr);
-    struct tm* t = localtime(&now);
-    if (t->tm_year > (2020 - 1900)) {
+    struct tm t;
+    localtime_r(&now, &t);
+    if (t.tm_year > (2020 - 1900)) {
         char ts[20];
-        strftime(ts, sizeof(ts), "%Y%m%d_%H%M%S", t);
+        strftime(ts, sizeof(ts), "%Y%m%d_%H%M%S", &t);
         filename = "/dumps/crash_" + String(ts) + ".txt";
     } else {
         filename = "/dumps/crash_" + String(millis()) + ".txt";

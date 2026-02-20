@@ -76,7 +76,6 @@ void StatusBroadcaster::send() {
         return;
     }
     if (_webSocket->connectedClients() == 0) {
-        //engine->debug("⚠️ sendStatus: No clients connected!");
         return;
     }
     

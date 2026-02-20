@@ -12,7 +12,7 @@ extern UtilityEngine* engine;
 // CONSTRUCTOR
 // ============================================================================
 
-EepromManager::EepromManager() {}
+EepromManager::EepromManager() = default;
 
 // ============================================================================
 // LIFECYCLE

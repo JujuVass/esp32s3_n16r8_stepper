@@ -107,13 +107,14 @@ void StatsManager::incrementDailyStats(float distanceMM) {
 
   // Guard against NTP not synced yet (would record under "1970-01-01")
   time_t now = time(nullptr);
-  struct tm* timeinfo = localtime(&now);
-  if (timeinfo->tm_year <= (2020 - 1900)) {
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
+  if (timeinfo.tm_year <= (2020 - 1900)) {
     if (engine) engine->debug("📊 NTP not synced - deferring stats save");
     return;
   }
   char dateStr[11];
-  strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", timeinfo);
+  strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", &timeinfo);
 
   // Load existing stats
   JsonDocument statsDoc;
@@ -153,9 +154,10 @@ void StatsManager::incrementDailyStats(float distanceMM) {
 float StatsManager::getTodayDistance() {
   // Get current date
   time_t now = time(nullptr);
-  struct tm* timeinfo = localtime(&now);
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
   char dateStr[11];
-  strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", timeinfo);
+  strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", &timeinfo);
 
   // Load stats
   JsonDocument statsDoc;

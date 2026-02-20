@@ -98,7 +98,7 @@ public:
   // CONSTRUCTOR & LIFECYCLE
   // ========================================================================
   
-  UtilityEngine(WebSocketsServer& webSocketServer);
+  explicit UtilityEngine(WebSocketsServer& webSocketServer);
   
   /**
    * Full initialization sequence:
