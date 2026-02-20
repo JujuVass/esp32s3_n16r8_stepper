@@ -81,10 +81,10 @@ struct CyclePauseConfig {
   
   constexpr CyclePauseConfig() :
     enabled(false),
-    pauseDurationSec(1.5),
+    pauseDurationSec(1.5f),
     isRandom(false),
-    minPauseSec(0.5),
-    maxPauseSec(5.0) {}
+    minPauseSec(0.5f),
+    maxPauseSec(5.0f) {}
 
   /** DRY: Calculate pause duration in ms (random or fixed) */
   unsigned long calculateDurationMs() const {
@@ -172,10 +172,10 @@ struct MotionConfig {
   CyclePauseConfig cyclePause;  // Inter-cycle pause
   
   constexpr MotionConfig() : 
-    startPositionMM(0.0),
-    targetDistanceMM(50.0),
-    speedLevelForward(5.0),
-    speedLevelBackward(5.0) {}
+    startPositionMM(0.0f),
+    targetDistanceMM(50.0f),
+    speedLevelForward(5.0f),
+    speedLevelBackward(5.0f) {}
 };
 
 struct PendingMotionConfig {
@@ -241,17 +241,17 @@ struct ZoneEffectConfig {
     enableStart(true),
     enableEnd(true),
     mirrorOnReturn(false),
-    zoneMM(50.0),
+    zoneMM(50.0f),
     speedEffect(SpeedEffect::SPEED_DECEL),
     speedCurve(SpeedCurve::CURVE_SINE),
-    speedIntensity(75.0),
+    speedIntensity(75.0f),
     randomTurnbackEnabled(false),
     turnbackChance(30),
     endPauseEnabled(false),
     endPauseIsRandom(false),
-    endPauseDurationSec(1.0),
-    endPauseMinSec(0.5),
-    endPauseMaxSec(2.0) {}
+    endPauseDurationSec(1.0f),
+    endPauseMinSec(0.5f),
+    endPauseMaxSec(2.0f) {}
 };
 
 // Runtime state for zone effects (separated from config for clean copy semantics)
@@ -267,7 +267,7 @@ struct ZoneEffectState {
   constexpr ZoneEffectState() :
     hasPendingTurnback(false),
     hasRolledForTurnback(false),
-    turnbackPointMM(0.0),
+    turnbackPointMM(0.0f),
     isPausing(false),
     pauseStartMs(0),
     pauseDurationMs(0) {}
@@ -289,8 +289,8 @@ struct PursuitState {
   constexpr PursuitState() :
     targetStep(0),
     lastTargetStep(0),
-    maxSpeedLevel(10.0),
-    lastMaxSpeedLevel(10.0),
+    maxSpeedLevel(10.0f),
+    lastMaxSpeedLevel(10.0f),
     stepDelay(1000),
     isMoving(false),
     direction(true) {}
@@ -332,14 +332,14 @@ struct OscillationConfig {
   
   constexpr OscillationConfig() :
     centerPositionMM(0),
-    amplitudeMM(20.0),
+    amplitudeMM(20.0f),
     waveform(OscillationWaveform::OSC_SINE),
-    frequencyHz(0.5),
+    frequencyHz(0.5f),
     enableRampIn(true),
-    rampInDurationMs(2000.0),
+    rampInDurationMs(2000.0f),
     rampInType(RampType::RAMP_LINEAR),
     enableRampOut(true),
-    rampOutDurationMs(2000.0),
+    rampOutDurationMs(2000.0f),
     rampOutType(RampType::RAMP_LINEAR),
     cycleCount(0),
     returnToCenter(true) {}
@@ -389,9 +389,9 @@ struct OscillationState {
     transitionStartMs(0),
     oldFrequencyHz(0),
     targetFrequencyHz(0),
-    accumulatedPhase(0.0),
+    accumulatedPhase(0.0f),
     lastPhaseUpdateMs(0),
-    lastPhase(0.0),
+    lastPhase(0.0f),
     isCenterTransitioning(false),
     centerTransitionStartMs(0),
     oldCenterMM(0),
@@ -430,12 +430,12 @@ struct ChaosRuntimeConfig {
   bool patternsEnabled[CHAOS_PATTERN_COUNT];    // Enable/disable each pattern (ZIGZAG, SWEEP, PULSE, DRIFT, BURST, WAVE, PENDULUM, SPIRAL, CALM, BRUTE_FORCE, LIBERATOR)
   
   constexpr ChaosRuntimeConfig() : 
-    centerPositionMM(110.0), 
-    amplitudeMM(50.0), 
-    maxSpeedLevel(5.0),
+    centerPositionMM(110.0f), 
+    amplitudeMM(50.0f), 
+    maxSpeedLevel(5.0f),
     durationSeconds(0),
     seed(0),
-    crazinessPercent(50.0) {
+    crazinessPercent(50.0f) {
       // Enable all patterns by default
       for (int i = 0; i < CHAOS_PATTERN_COUNT; i++) {
         patternsEnabled[i] = true;
@@ -505,7 +505,7 @@ struct ChaosExecutionState {
     isInPatternPause(false),
     pauseStartTime(0),
     pauseDuration(0),
-    lastCalmSineValue(0.0),
+    lastCalmSineValue(0.0f),
     brutePhase(0),
     liberatorPhase(0),
     stepDelay(1000),
@@ -565,23 +565,23 @@ struct SequenceLine {
     movementType(MovementType::MOVEMENT_VAET),
     startPositionMM(0),
     distanceMM(100),
-    speedForward(5.0),
-    speedBackward(5.0),
+    speedForward(5.0f),
+    speedBackward(5.0f),
     vaetZoneEffect(),  // Uses ZoneEffectConfig default constructor
     vaetCyclePause(),  // Uses CyclePauseConfig default constructor
-    oscCenterPositionMM(100.0),
-    oscAmplitudeMM(50.0),
+    oscCenterPositionMM(100.0f),
+    oscAmplitudeMM(50.0f),
     oscWaveform(OscillationWaveform::OSC_SINE),
-    oscFrequencyHz(0.5),
+    oscFrequencyHz(0.5f),
     oscEnableRampIn(false),
     oscEnableRampOut(false),
-    oscRampInDurationMs(1000.0),
-    oscRampOutDurationMs(1000.0),
+    oscRampInDurationMs(1000.0f),
+    oscRampOutDurationMs(1000.0f),
     oscCyclePause(),  // Uses CyclePauseConfig default constructor
-    chaosCenterPositionMM(110.0),
-    chaosAmplitudeMM(50.0),
-    chaosMaxSpeedLevel(10.0),
-    chaosCrazinessPercent(50.0),
+    chaosCenterPositionMM(110.0f),
+    chaosAmplitudeMM(50.0f),
+    chaosMaxSpeedLevel(10.0f),
+    chaosCrazinessPercent(50.0f),
     chaosDurationSeconds(30),
     chaosSeed(0),
     cycleCount(1),
