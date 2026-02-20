@@ -331,8 +331,11 @@ bool SequenceExecutor::blockingMoveToStep(long targetStepPos, unsigned long time
         
         unsigned long nowMs = millis();
         if (nowMs - lastWsService >= BLOCKING_MOVE_WS_SERVICE_MS) {
-            if (_webSocket) _webSocket->loop();
-            server.handleClient();
+            if (wsMutex && xSemaphoreTake(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+                if (_webSocket) _webSocket->loop();
+                server.handleClient();
+                xSemaphoreGive(wsMutex);
+            }
             lastWsService = nowMs;
         }
         if (nowMs - lastStatusUpdate >= BLOCKING_MOVE_STATUS_INTERVAL_MS) {

@@ -289,14 +289,9 @@ void StatusBroadcaster::addOscillationFields(JsonDocument& doc) {
     oscObj["waveform"] = (int)oscillation.waveform;
     oscObj["frequencyHz"] = serialized(String(oscillation.frequencyHz, 3));
     
-    // Calculate effective frequency (capped if exceeds max speed)
-    float effectiveFrequencyHz = oscillation.frequencyHz;
-    if (oscillation.amplitudeMM > 0.0) {
-        float maxAllowedFreq = OSC_MAX_SPEED_MM_S / (2.0 * PI * oscillation.amplitudeMM);
-        if (oscillation.frequencyHz > maxAllowedFreq) {
-            effectiveFrequencyHz = maxAllowedFreq;
-        }
-    }
+    // Effective frequency (capped by hardware speed limit) — DRY: uses shared helper
+    float effectiveFrequencyHz = OscillationControllerClass::getEffectiveFrequency(
+        oscillation.frequencyHz, oscillation.amplitudeMM);
     oscObj["effectiveFrequencyHz"] = serialized(String(effectiveFrequencyHz, 3));
     oscObj["actualSpeedMMS"] = serialized(String(actualOscillationSpeedMMS, 1));
     oscObj["enableRampIn"] = oscillation.enableRampIn;

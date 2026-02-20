@@ -345,6 +345,13 @@ bool CommandDispatcher::handleConfigCommands(const char* cmd, JsonDocument& doc)
 
 bool CommandDispatcher::handleDecelZoneCommands(const char* cmd, JsonDocument& doc, const String& message) {
     if (strcmp(cmd, "setDecelZone") == 0 || strcmp(cmd, "setZoneEffect") == 0) {
+        // motionMutex: zoneEffect is read by Core 1 (BaseMovement.process())
+        MutexGuard guard(motionMutex);
+        if (!guard) {
+            engine->warn("handleDecelZoneCommands: mutex timeout");
+            return true;
+        }
+        
         // === Zone Settings ===
         zoneEffect.enabled = doc["enabled"] | false;
         zoneEffect.enableStart = doc["enableStart"] | zoneEffect.enableStart;

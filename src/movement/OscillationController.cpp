@@ -220,13 +220,7 @@ void OscillationControllerClass::process() {
     }
     
     // 🚀 SPEED CALCULATION: Calculate effective frequency (capped if exceeds max speed)
-    float effectiveFrequency = oscillation.frequencyHz;
-    if (oscillation.amplitudeMM > 0.0) {
-        float maxAllowedFreq = OSC_MAX_SPEED_MM_S / (2.0 * PI * oscillation.amplitudeMM);
-        if (oscillation.frequencyHz > maxAllowedFreq) {
-            effectiveFrequency = maxAllowedFreq;
-        }
-    }
+    float effectiveFrequency = getEffectiveFrequency(oscillation.frequencyHz, oscillation.amplitudeMM);
     
     // Calculate actual peak speed using effective frequency
     actualSpeedMMS_ = 2.0 * PI * effectiveFrequency * oscillation.amplitudeMM;
@@ -263,21 +257,16 @@ float OscillationControllerClass::calculatePosition() {
     unsigned long currentMs = millis();
     
     // 🎯 SMOOTH FREQUENCY TRANSITION: Use accumulated phase for perfect continuity
-    float effectiveFrequency = oscillation.frequencyHz;
+    float effectiveFrequency = getEffectiveFrequency(oscillation.frequencyHz, oscillation.amplitudeMM);
     
-    // 🚀 SPEED LIMIT: Cap frequency if theoretical speed exceeds OSC_MAX_SPEED_MM_S (300 mm/s)
-    if (oscillation.amplitudeMM > 0.0) {
-        float maxAllowedFreq = OSC_MAX_SPEED_MM_S / (2.0 * PI * oscillation.amplitudeMM);
-        if (oscillation.frequencyHz > maxAllowedFreq) {
-            effectiveFrequency = maxAllowedFreq;
-            
-            // Log warning (throttled to avoid spam)
-            if (currentMs - lastSpeedLimitLogMs_ > 5000) {
-                engine->warn("⚠️ Frequency reduced: " + String(oscillation.frequencyHz, 2) + " Hz → " + 
-                      String(effectiveFrequency, 2) + " Hz (max speed: " + 
-                      String(OSC_MAX_SPEED_MM_S, 0) + " mm/s)");
-                lastSpeedLimitLogMs_ = currentMs;
-            }
+    // 🚀 SPEED LIMIT: Log if frequency was capped
+    if (oscillation.amplitudeMM > 0.0 && effectiveFrequency < oscillation.frequencyHz) {
+        // Log warning (throttled to avoid spam)
+        if (currentMs - lastSpeedLimitLogMs_ > 5000) {
+            engine->warn("⚠️ Frequency reduced: " + String(oscillation.frequencyHz, 2) + " Hz → " + 
+                  String(effectiveFrequency, 2) + " Hz (max speed: " + 
+                  String(OSC_MAX_SPEED_MM_S, 0) + " mm/s)");
+            lastSpeedLimitLogMs_ = currentMs;
         }
     }
     

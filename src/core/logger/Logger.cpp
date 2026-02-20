@@ -7,6 +7,10 @@
 #include "core/UtilityEngine.h"  // For LogLevel enum values
 #include <time.h>
 
+// WebSocket mutex — declared in GlobalState.h, defined in StepperController.cpp
+// Used here to guard broadcastTXT from cross-core races
+extern SemaphoreHandle_t wsMutex;
+
 // ============================================================================
 // CONSTRUCTOR
 // ============================================================================
@@ -113,19 +117,23 @@ void Logger::log(LogLevel level, const String& message) {
   Serial.println(message);
 
   // 2. WebSocket broadcast (if clients connected)
-  if (_ws.connectedClients() > 0) {
-    // Pre-sized buffer avoids heap allocation for typical log messages
-    static const char* levelNames[] = {"ERROR", "WARN", "INFO", "DEBUG"};
-    const char* levelName = (level >= 0 && level <= 3) ? levelNames[level] : "INFO";
-    
-    JsonDocument doc;
-    doc["type"] = "log";
-    doc["level"] = levelName;
-    doc["message"] = message;
+  // Guard with wsMutex to prevent cross-core race (Core 1 motor logging vs Core 0 network)
+  if (_ws.connectedClients() > 0 && wsMutex != nullptr) {
+    if (xSemaphoreTake(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+      static const char* levelNames[] = {"ERROR", "WARN", "INFO", "DEBUG"};
+      const char* levelName = (level >= 0 && level <= 3) ? levelNames[level] : "INFO";
+      
+      JsonDocument doc;
+      doc["type"] = "log";
+      doc["level"] = levelName;
+      doc["message"] = message;
 
-    String payload;
-    serializeJson(doc, payload);
-    _ws.broadcastTXT(payload);
+      String payload;
+      serializeJson(doc, payload);
+      _ws.broadcastTXT(payload);
+      xSemaphoreGive(wsMutex);
+    }
+    // If mutex not available, skip WS broadcast (Serial + ring buffer still capture it)
   }
 
   // 3. Buffer for async file write (if filesystem ready)
@@ -205,7 +213,6 @@ void Logger::flushLogBuffer(bool forceFlush) {
 
   // Write all valid entries in one batch (no mutex needed - local copy)
   for (int i = 0; i < localCount; i++) {
-    {
       if (timeValid) {
         char ts[30];
         time_t logTime = currentTime - ((now - localBuffer[i].timestamp) / 1000);
@@ -221,7 +228,6 @@ void Logger::flushLogBuffer(bool forceFlush) {
       }
 
       _logFile.println(localBuffer[i].message);
-    }
   }
 
   // 🛡️ PROTECTION: Flush AND verify file is still valid
