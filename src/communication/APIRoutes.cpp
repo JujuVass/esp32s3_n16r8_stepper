@@ -927,6 +927,61 @@ void setupAPIRoutes() {
     server.send(200, "application/json", "{\"success\":true,\"message\":\"Logging preferences saved\"}");
   });
 
+  // ========================================================================
+  // CRASH DUMPS API (readable over OTA — no USB needed)
+  // ========================================================================
+  
+  // GET /api/system/dumps - List all crash dump files
+  server.on("/api/system/dumps", HTTP_GET, []() {
+    sendCORSHeaders();
+    JsonDocument doc;
+    JsonArray files = doc["files"].to<JsonArray>();
+    
+    File dir = LittleFS.open("/dumps");
+    if (dir && dir.isDirectory()) {
+      File f = dir.openNextFile();
+      while (f) {
+        if (!f.isDirectory()) {
+          JsonObject entry = files.add<JsonObject>();
+          entry["name"] = String(f.name());
+          entry["size"] = f.size();
+          entry["path"] = "/dumps/" + String(f.name());
+        }
+        f = dir.openNextFile();
+      }
+    }
+    
+    String response;
+    serializeJson(doc, response);
+    server.send(200, "application/json", response);
+  });
+  
+  // GET /api/system/dumps/latest - Get most recent crash dump content
+  server.on("/api/system/dumps/latest", HTTP_GET, []() {
+    sendCORSHeaders();
+    String latestName;
+    
+    File dir = LittleFS.open("/dumps");
+    if (dir && dir.isDirectory()) {
+      File f = dir.openNextFile();
+      while (f) {
+        if (!f.isDirectory()) {
+          String name = f.name();
+          if (name > latestName) latestName = name;  // Lexicographic = chronological (YYYYMMDD_HHMMSS)
+        }
+        f = dir.openNextFile();
+      }
+    }
+    
+    if (latestName.isEmpty()) {
+      server.send(200, "text/plain", "No crash dumps found.");
+      return;
+    }
+    
+    String content = engine->readFileAsString("/dumps/" + latestName);
+    server.send(200, "text/plain", content);
+  });
+
   // ============================================================================
   // WIFI CONFIGURATION API
   // ============================================================================

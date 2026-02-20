@@ -197,6 +197,50 @@ void setup() {
         engine->warn("⚠️ Backtrace may be corrupted");
       }
       engine->error("💥 Full decode: pio run -t coredump-info");
+      
+      // Save crash dump to LittleFS for OTA access (no USB needed)
+      if (engine->isFilesystemReady()) {
+        engine->createDirectory("/dumps");
+        
+        // Build dump content with addr2line-ready format
+        String dump;
+        dump.reserve(512);
+        dump += "=== CRASH DUMP ===\n";
+        dump += "Task: " + String(summary.exc_task) + "\n";
+        dump += "PC:   0x" + String(summary.exc_pc, HEX) + "\n";
+        dump += "Backtrace depth: " + String(summary.exc_bt_info.depth) + "\n";
+        dump += "Corrupted: " + String(summary.exc_bt_info.corrupted ? "YES" : "no") + "\n\n";
+        
+        // Raw backtrace (one per line for readability)
+        dump += "--- Backtrace ---\n";
+        for (uint32_t i = 0; i < summary.exc_bt_info.depth && i < 16; i++) {
+          dump += "  [" + String(i) + "] 0x" + String(summary.exc_bt_info.bt[i], HEX) + "\n";
+        }
+        
+        // addr2line command (copy-paste ready)
+        dump += "\n--- Decode command (run on PC) ---\n";
+        dump += "xtensa-esp32s3-elf-addr2line -pfiaC -e .pio/build/esp32s3_n16r8/firmware.elf";
+        for (uint32_t i = 0; i < summary.exc_bt_info.depth && i < 16; i++) {
+          dump += " 0x" + String(summary.exc_bt_info.bt[i], HEX);
+        }
+        dump += "\n";
+        
+        // Generate filename with timestamp if available, else use boot count
+        String filename = "/dumps/crash_" + String(millis()) + ".txt";
+        time_t now = time(nullptr);
+        struct tm *t = localtime(&now);
+        if (t->tm_year > (2020 - 1900)) {
+          char ts[20];
+          strftime(ts, sizeof(ts), "%Y%m%d_%H%M%S", t);
+          filename = "/dumps/crash_" + String(ts) + ".txt";
+        }
+        
+        if (engine->writeFileAsString(filename, dump)) {
+          engine->info("📁 Crash dump saved: " + filename);
+        } else {
+          engine->error("❌ Failed to save crash dump");
+        }
+      }
     } else {
       engine->error(String("💥 Could not read coredump (err ") + String(cdErr) + ") — use Serial monitor for live backtrace");
     }
