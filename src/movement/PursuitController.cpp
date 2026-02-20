@@ -69,9 +69,7 @@ void PursuitControllerClass::move(float targetPositionMM, float maxSpeedLevel) {
     // Only recalculate speed if target or speed setting changed significantly
     bool targetChanged = (abs(pursuit.targetStep - pursuit.lastTargetStep) > 6);  // >1mm change
     bool speedSettingChanged = (abs(pursuit.maxSpeedLevel - pursuit.lastMaxSpeedLevel) > 0.5);
-    bool hasWork = (errorSteps != 0);  // There's actual movement needed
-
-    if (targetChanged || speedSettingChanged || !pursuit.isMoving || hasWork) {
+    if (auto hasWork = (errorSteps != 0); targetChanged || speedSettingChanged || !pursuit.isMoving || hasWork) {
         // Calculate step delay based on error distance
         pursuit.stepDelay = MovementMath::pursuitStepDelay(errorMM, pursuit.maxSpeedLevel);
 

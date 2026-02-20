@@ -56,11 +56,9 @@ bool StepperNetworkManager::shouldStartAPSetup() {
     bool eepromConfigured = WiFiConfig.isConfigured();
     engine->info("📦 NVS configured: " + String(eepromConfigured ? "YES" : "NO"));
 
-    if (eepromConfigured && WiFiConfig.loadConfig(savedSSID, savedPassword)) {
-        if (!savedSSID.isEmpty()) {
-            engine->info("📡 Found saved WiFi config: '" + savedSSID + "' → Try STA+AP mode");
-            return false;  // Have credentials, try STA mode
-        }
+    if (eepromConfigured && WiFiConfig.loadConfig(savedSSID, savedPassword) && !savedSSID.isEmpty()) {
+        engine->info("📡 Found saved WiFi config: '" + savedSSID + "' → Try STA+AP mode");
+        return false;  // Have credentials, try STA mode
     }
 
     // Check hardcoded defaults from Config.h
@@ -269,8 +267,7 @@ bool StepperNetworkManager::startSTAMode() {
 
 String StepperNetworkManager::getConfiguredSSID() const {
     String savedSSID;
-    String savedPassword;
-    if (WiFiConfig.isConfigured() && WiFiConfig.loadConfig(savedSSID, savedPassword)) {
+    if (String savedPassword; WiFiConfig.isConfigured() && WiFiConfig.loadConfig(savedSSID, savedPassword)) {
         return savedSSID;
     }
     return String(ssid);  // Default from Config.h

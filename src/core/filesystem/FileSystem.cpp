@@ -119,7 +119,7 @@ String FileSystem::readFileAsString(const String& path, size_t maxSize) {
   size_t readSize = min(file.size(), maxSize);
 
   // Bulk read for performance
-  char* buf = new (std::nothrow) char[readSize + 1];
+  auto* buf = new (std::nothrow) char[readSize + 1];
   if (!buf) {
     file.close();
     return "";

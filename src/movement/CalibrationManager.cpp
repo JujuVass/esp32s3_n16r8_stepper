@@ -31,9 +31,9 @@ CalibrationManager& Calibration = CalibrationManager::getInstance();
 // INITIALIZATION
 // ============================================================================
 
-void CalibrationManager::init(WebSocketsServer* ws, WebServer* server) {
+void CalibrationManager::init(WebSocketsServer* ws, WebServer* webServer) {
     m_webSocket = ws;
-    m_server = server;
+    m_server = webServer;
     m_initialized = true;
     engine->debug("CalibrationManager initialized");
 }

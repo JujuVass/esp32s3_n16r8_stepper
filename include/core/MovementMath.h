@@ -12,8 +12,7 @@
 // Native test env compiles MovementMath.cpp via build_src_filter.
 // ============================================================================
 
-#ifndef MOVEMENT_MATH_H
-#define MOVEMENT_MATH_H
+#pragma once
 
 #include <cmath>
 #include "Config.h"
@@ -33,10 +32,10 @@ namespace MovementMath {
 // ============================================================================
 
 /** Convert millimeters to steps */
-inline long mmToSteps(float mm) { return (long)(mm * STEPS_PER_MM); }
+constexpr long mmToSteps(float mm) { return (long)(mm * STEPS_PER_MM); }
 
 /** Convert steps to millimeters */
-inline float stepsToMM(long steps) { return static_cast<float>(steps) / STEPS_PER_MM; }
+constexpr float stepsToMM(long steps) { return static_cast<float>(steps) / STEPS_PER_MM; }
 
 // ============================================================================
 // SPEED / DELAY
@@ -87,5 +86,3 @@ float waveformValue(OscillationWaveform waveform, float phase);
 float effectiveFrequency(float requestedHz, float amplitudeMM);
 
 } // namespace MovementMath
-
-#endif // MOVEMENT_MATH_H

@@ -43,19 +43,19 @@ public:
 
     /**
      * Load WiFi credentials from NVS
-     * @param ssid Output: SSID string
-     * @param password Output: Password string
+     * @param outSsid Output: SSID string
+     * @param outPassword Output: Password string
      * @return true if valid config loaded
      */
-    bool loadConfig(String& ssid, String& password);
+    bool loadConfig(String& outSsid, String& outPassword);
 
     /**
      * Save WiFi credentials to NVS
-     * @param ssid SSID to save (max 31 chars)
-     * @param password Password to save (max 63 chars)
+     * @param newSsid SSID to save (max 31 chars)
+     * @param newPassword Password to save (max 63 chars)
      * @return true if saved successfully
      */
-    bool saveConfig(const String& ssid, const String& password);
+    bool saveConfig(const String& newSsid, const String& newPassword);
 
     /**
      * Clear WiFi configuration from NVS
@@ -74,12 +74,12 @@ public:
     /**
      * Test WiFi connection with given credentials
      * Does NOT save to NVS - just tests
-     * @param ssid SSID to test
-     * @param password Password to test
+     * @param testSsid SSID to test
+     * @param testPassword Password to test
      * @param timeoutMs Connection timeout in milliseconds
      * @return true if connection successful
      */
-    bool testConnection(const String& ssid, const String& password, unsigned long timeoutMs = 15000);
+    bool testConnection(const String& testSsid, const String& testPassword, unsigned long timeoutMs = 15000);
 
     /**
      * Get stored SSID (without password for security)

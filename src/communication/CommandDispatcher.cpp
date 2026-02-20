@@ -64,7 +64,7 @@ void CommandDispatcher::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pa
 
     // Text message received
     if (type == WStype_TEXT) {
-        String message = String((char*)payload);
+        auto message = String((char*)payload);
         handleCommand(num, message);
     }
 }
@@ -105,9 +105,7 @@ void CommandDispatcher::handleCommand([[maybe_unused]] uint8_t clientNum, const 
 // ============================================================================
 
 bool CommandDispatcher::parseJsonCommand(const String& jsonStr, JsonDocument& doc) {
-    DeserializationError error = deserializeJson(doc, jsonStr);
-
-    if (error) {
+    if (auto error = deserializeJson(doc, jsonStr); error) {
         engine->error("JSON parse error: " + String(error.c_str()));
         Status.sendError("❌ Invalid JSON command: " + String(error.c_str()));
         return false;
@@ -295,8 +293,7 @@ bool CommandDispatcher::handleConfigCommands(const char* cmd, JsonDocument& doc)
     if (strcmp(cmd, "setDistance") == 0) {
         float dist = doc["distance"] | 0.0f;
 
-        String errorMsg;
-        if (!validateAndReport(Validators::distance(dist, errorMsg), errorMsg)) return true;
+        if (String errorMsg; !validateAndReport(Validators::distance(dist, errorMsg), errorMsg)) return true;
 
         engine->debug("Command: Set distance (" + String(dist, 1) + "mm)");
         BaseMovement.setDistance(dist);  // Direct call to BaseMovement singleton
@@ -306,8 +303,7 @@ bool CommandDispatcher::handleConfigCommands(const char* cmd, JsonDocument& doc)
     if (strcmp(cmd, "setStartPosition") == 0) {
         float startPos = doc["startPosition"] | 0.0f;
 
-        String errorMsg;
-        if (!validateAndReport(Validators::position(startPos, errorMsg), errorMsg)) return true;
+        if (String errorMsg; !validateAndReport(Validators::position(startPos, errorMsg), errorMsg)) return true;
 
         engine->debug("Command: Set start position (" + String(startPos, 1) + "mm)");
         BaseMovement.setStartPosition(startPos);  // Direct call to BaseMovement singleton
@@ -317,8 +313,7 @@ bool CommandDispatcher::handleConfigCommands(const char* cmd, JsonDocument& doc)
     if (strcmp(cmd, "setSpeedForward") == 0) {
         float spd = doc["speed"] | 5.0f;
 
-        String errorMsg;
-        if (!validateAndReport(Validators::speed(spd, errorMsg), errorMsg)) return true;
+        if (String errorMsg; !validateAndReport(Validators::speed(spd, errorMsg), errorMsg)) return true;
 
         engine->debug("Command: Set forward speed (" + String(spd, 1) + ")");
         BaseMovement.setSpeedForward(spd);  // Direct call to BaseMovement singleton
@@ -328,8 +323,7 @@ bool CommandDispatcher::handleConfigCommands(const char* cmd, JsonDocument& doc)
     if (strcmp(cmd, "setSpeedBackward") == 0) {
         float spd = doc["speed"] | 5.0f;
 
-        String errorMsg;
-        if (!validateAndReport(Validators::speed(spd, errorMsg), errorMsg)) return true;
+        if (String errorMsg; !validateAndReport(Validators::speed(spd, errorMsg), errorMsg)) return true;
 
         engine->debug("Command: Set backward speed (" + String(spd, 1) + ")");
         BaseMovement.setSpeedBackward(spd);  // Direct call to BaseMovement singleton
@@ -427,14 +421,20 @@ bool CommandDispatcher::handleDecelZoneCommands(const char* cmd, JsonDocument& d
         if (zoneEffect.enableEnd) zones += "END";
         if (zoneEffect.mirrorOnReturn) zones += " PHYS_POS";
 
-        engine->debug("✅ Zone Effect: " + String(zoneEffect.enabled ? "ON" : "OFF") +
-              (zoneEffect.enabled ? " | zones=" + zones +
-               " | speed=" + speedEffectNames[static_cast<int>(zoneEffect.speedEffect)] +
-               " " + curveNames[static_cast<int>(zoneEffect.speedCurve)] + " " + String(zoneEffect.speedIntensity, 0) + "%" +
-               " | zone=" + String(zoneEffect.zoneMM, 1) + "mm" +
-               (zoneEffect.randomTurnbackEnabled ? " | turnback=" + String(zoneEffect.turnbackChance) + "%" : "") +
-               (zoneEffect.endPauseEnabled ? " | pause=" + String(zoneEffect.endPauseDurationSec, 1) + "s" : "")
-               : ""));
+        String zoneDebug = "✅ Zone Effect: " + String(zoneEffect.enabled ? "ON" : "OFF");
+        if (zoneEffect.enabled) {
+            zoneDebug += " | zones=" + zones +
+                " | speed=" + speedEffectNames[static_cast<int>(zoneEffect.speedEffect)] +
+                " " + curveNames[static_cast<int>(zoneEffect.speedCurve)] + " " + String(zoneEffect.speedIntensity, 0) + "%" +
+                " | zone=" + String(zoneEffect.zoneMM, 1) + "mm";
+            if (zoneEffect.randomTurnbackEnabled) {
+                zoneDebug += " | turnback=" + String(zoneEffect.turnbackChance) + "%";
+            }
+            if (zoneEffect.endPauseEnabled) {
+                zoneDebug += " | pause=" + String(zoneEffect.endPauseDurationSec, 1) + "s";
+            }
+        }
+        engine->debug(zoneDebug);
 
         sendStatus();
         return true;
@@ -594,15 +594,13 @@ bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, 
         }
         chaos.seed = doc["seed"] | (int)millis();
 
-        String errorMsg;
-        if (!validateAndReport(Validators::chaosParams(chaos.centerPositionMM, chaos.amplitudeMM,
+        if (String errorMsg; !validateAndReport(Validators::chaosParams(chaos.centerPositionMM, chaos.amplitudeMM,
             chaos.maxSpeedLevel, chaos.crazinessPercent, errorMsg), errorMsg)) {
             return true;
         }
 
         // Parse patterns array
-        JsonArray patternsArray = doc["patternsEnabled"];
-        if (patternsArray) {
+        if (JsonArray patternsArray = doc["patternsEnabled"]; patternsArray) {
             int idx = 0;
             for (JsonVariant v : patternsArray) {
                 if (idx < CHAOS_PATTERN_COUNT) {
@@ -635,8 +633,7 @@ bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, 
             chaos.durationSeconds = doc["durationSeconds"].as<unsigned long>();
         }
 
-        String errorMsg;
-        if (!validateAndReport(Validators::chaosParams(chaos.centerPositionMM, chaos.amplitudeMM,
+        if (String errorMsg; !validateAndReport(Validators::chaosParams(chaos.centerPositionMM, chaos.amplitudeMM,
             chaos.maxSpeedLevel, chaos.crazinessPercent, errorMsg), errorMsg)) {
             return true;
         }
@@ -645,8 +642,7 @@ bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, 
             chaos.seed = doc["seed"] | chaos.seed;
         }
 
-        JsonArray patternsArray = doc["patternsEnabled"];
-        if (patternsArray) {
+        if (JsonArray patternsArray = doc["patternsEnabled"]; patternsArray) {
             int idx = 0;
             for (JsonVariant v : patternsArray) {
                 if (idx < CHAOS_PATTERN_COUNT) {
@@ -717,8 +713,7 @@ bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument&
         }
 
         // Validate BEFORE applying transitions (rollback on failure)
-        String errorMsg;
-        if (!validateAndReport(Validators::oscillationParams(oscillation.centerPositionMM,
+        if (String errorMsg; !validateAndReport(Validators::oscillationParams(oscillation.centerPositionMM,
             oscillation.amplitudeMM, oscillation.frequencyHz, errorMsg), errorMsg)) {
             // Rollback to previous values
             oscillation.centerPositionMM = oldCenter;
@@ -817,8 +812,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     if (strcmp(cmd, "addSequenceLine") == 0) {
         SequenceLine newLine = SeqTable.parseFromJson(doc);
 
-        String validationError = SeqTable.validatePhysics(newLine);
-        if (!validationError.isEmpty()) {
+        if (auto validationError = SeqTable.validatePhysics(newLine); !validationError.isEmpty()) {
             Status.sendError("❌ Invalid line: " + validationError);
             return true;
         }
@@ -865,8 +859,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
         int lineId = doc["lineId"] | -1;
         SequenceLine updatedLine = SeqTable.parseFromJson(doc);
 
-        String validationError = SeqTable.validatePhysics(updatedLine);
-        if (!validationError.isEmpty()) {
+        if (auto validationError = SeqTable.validatePhysics(updatedLine); !validationError.isEmpty()) {
             Status.sendError("❌ Invalid line: " + validationError);
             return true;
         }
@@ -962,8 +955,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     }
 
     if (strcmp(cmd, "importSequence") == 0) {
-        const char* jsonData = doc["jsonData"];
-        if (jsonData) {
+        if (const char* jsonData = doc["jsonData"]; jsonData) {
             SeqTable.importFromJson(String(jsonData));
             SeqTable.broadcast();
         } else {

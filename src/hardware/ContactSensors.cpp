@@ -149,9 +149,7 @@ bool ContactSensors::checkHardDriftEnd() {
     // OPTIMIZATION: Only test when close to config.maxStep (reduces false positives + CPU overhead)
 
     long stepsToLimit = config.maxStep - currentStep;
-    float distanceToLimitMM = MovementMath::stepsToMM(stepsToLimit);
-
-    if (distanceToLimitMM <= HARD_DRIFT_TEST_ZONE_MM && isEndActive()) {
+    if (auto distanceToLimitMM = MovementMath::stepsToMM(stepsToLimit); distanceToLimitMM <= HARD_DRIFT_TEST_ZONE_MM && isEndActive()) {
         // Close to limit and opto sensor triggered → critical error
         float currentPos = MovementMath::stepsToMM(currentStep);
 
@@ -175,9 +173,7 @@ bool ContactSensors::checkHardDriftStart() {
     // HARD DRIFT at START: Physical contact reached = critical error
     // OPTIMIZATION: Only test when close to position 0 (reduces false positives + CPU overhead)
 
-    float distanceToStartMM = MovementMath::stepsToMM(currentStep);
-
-    if (distanceToStartMM <= HARD_DRIFT_TEST_ZONE_MM && isStartActive()) {
+    if (auto distanceToStartMM = MovementMath::stepsToMM(currentStep); distanceToStartMM <= HARD_DRIFT_TEST_ZONE_MM && isStartActive()) {
         // Close to start and opto sensor triggered → critical error
         float currentPos = MovementMath::stepsToMM(currentStep);
 

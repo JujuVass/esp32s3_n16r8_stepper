@@ -341,8 +341,7 @@ bool BaseMovementControllerClass::checkAndHandleEndPause() {
     }
 
     // Check if pause duration has elapsed
-    unsigned long elapsed = millis() - zoneEffectState.pauseStartMs;
-    if (elapsed >= zoneEffectState.pauseDurationMs) {
+    if (auto elapsed = millis() - zoneEffectState.pauseStartMs; elapsed >= zoneEffectState.pauseDurationMs) {
         // Pause complete
         zoneEffectState.isPausing = false;
         if (engine->isDebugEnabled()) {
@@ -677,9 +676,7 @@ void BaseMovementControllerClass::returnToStart() {
     // (contact + decontact + SAFETY_OFFSET_STEPS)
     // ============================================================================
 
-    bool success = Calibration.returnToStart();
-
-    if (!success) {
+    if (auto success = Calibration.returnToStart(); !success) {
         // Error already logged by CalibrationManager
         return;
     }
@@ -706,8 +703,7 @@ void BaseMovementControllerClass::process() {
 
     // Check if in cycle pause (between cycles)
     if (motionPauseState.isPausing) [[unlikely]] {
-        unsigned long elapsedMs = millis() - motionPauseState.pauseStartMs;
-        if (elapsedMs >= motionPauseState.currentPauseDuration) {
+        if (auto elapsedMs = millis() - motionPauseState.pauseStartMs; elapsedMs >= motionPauseState.currentPauseDuration) {
             // End of pause, resume movement
             motionPauseState.isPausing = false;
             movingForward = true;  // Resume forward direction

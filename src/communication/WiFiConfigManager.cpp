@@ -55,21 +55,21 @@ bool WiFiConfigManager::isConfigured() {
 // LOAD CONFIGURATION
 // ============================================================================
 
-bool WiFiConfigManager::loadConfig(String& ssid, String& password) {
+bool WiFiConfigManager::loadConfig(String& outSsid, String& outPassword) {
     ensureInitialized();
     if (!isConfigured()) {
         return false;
     }
 
-    ssid = _prefs.getString("ssid", "");
-    password = _prefs.getString("password", "");
+    outSsid = _prefs.getString("ssid", "");
+    outPassword = _prefs.getString("password", "");
 
-    if (ssid.isEmpty()) {
+    if (outSsid.isEmpty()) {
         return false;
     }
 
     if (engine) {
-        engine->info("📶 WiFi config loaded from NVS: " + ssid);
+        engine->info("📶 WiFi config loaded from NVS: " + outSsid);
     }
 
     return true;
@@ -79,23 +79,23 @@ bool WiFiConfigManager::loadConfig(String& ssid, String& password) {
 // SAVE CONFIGURATION
 // ============================================================================
 
-bool WiFiConfigManager::saveConfig(const String& ssid, const String& password) {
-    if (ssid.isEmpty() || ssid.length() > WIFI_SSID_MAX_LEN - 1) {
+bool WiFiConfigManager::saveConfig(const String& newSsid, const String& newPassword) {
+    if (newSsid.isEmpty() || newSsid.length() > WIFI_SSID_MAX_LEN - 1) {
         if (engine) engine->error("❌ WiFi save: Invalid SSID length");
         return false;
     }
-    if (password.length() > WIFI_PASSWORD_MAX_LEN - 1) {
+    if (newPassword.length() > WIFI_PASSWORD_MAX_LEN - 1) {
         if (engine) engine->error("❌ WiFi save: Password too long");
         return false;
     }
 
-    if (engine) engine->info("💾 Saving WiFi config: " + ssid + " (" + String(ssid.length()) + " chars)");
+    if (engine) engine->info("💾 Saving WiFi config: " + newSsid + " (" + String(newSsid.length()) + " chars)");
 
     ensureInitialized();
 
     // Write all keys and check return values
-    size_t ssidWritten = _prefs.putString("ssid", ssid);
-    _prefs.putString("password", password);
+    size_t ssidWritten = _prefs.putString("ssid", newSsid);
+    _prefs.putString("password", newPassword);
     _prefs.putBool("configured", true);
 
     if (ssidWritten == 0) {
@@ -106,8 +106,8 @@ bool WiFiConfigManager::saveConfig(const String& ssid, const String& password) {
     // Verify: Read back and check
     String verifySSID = _prefs.getString("ssid", "");
 
-    if (verifySSID != ssid) {
-        if (engine) engine->error("❌ NVS verify failed: SSID mismatch! Saved='" + ssid + "' Read='" + verifySSID + "'");
+    if (verifySSID != newSsid) {
+        if (engine) engine->error("❌ NVS verify failed: SSID mismatch! Saved='" + newSsid + "' Read='" + verifySSID + "'");
         return false;
     }
 
@@ -227,16 +227,16 @@ int WiFiConfigManager::scanNetworks(WiFiNetworkInfo* networks, int maxNetworks) 
 // TEST CONNECTION
 // ============================================================================
 
-bool WiFiConfigManager::testConnection(const String& ssid, const String& password, unsigned long timeoutMs) {
+bool WiFiConfigManager::testConnection(const String& testSsid, const String& testPassword, unsigned long timeoutMs) {
     if (engine) {
-        engine->info("🔌 Testing WiFi connection to: " + ssid);
+        engine->info("🔌 Testing WiFi connection to: " + testSsid);
     }
 
     // We're already in AP_STA mode (set in startAPMode), so we can just use
     // WiFi.begin() without changing modes - this keeps the AP stable!
 
     // Try to connect as STA (AP stays active and stable)
-    WiFi.begin(ssid.c_str(), password.c_str());
+    WiFi.begin(testSsid.c_str(), testPassword.c_str());
 
     unsigned long startTime = millis();
     while (WiFi.status() != WL_CONNECTED && (millis() - startTime) < timeoutMs) {
@@ -253,7 +253,7 @@ bool WiFiConfigManager::testConnection(const String& ssid, const String& passwor
         }
     } else {
         if (engine) {
-            engine->warn("❌ WiFi test failed for: " + ssid);
+            engine->warn("❌ WiFi test failed for: " + testSsid);
         }
     }
 
@@ -264,7 +264,7 @@ bool WiFiConfigManager::testConnection(const String& ssid, const String& passwor
     if (engine) {
         engine->info("📡 AP still active: " + WiFi.softAPIP().toString());
         if (connected) {
-            engine->info("📡 STA also connected to: " + ssid + " (will disconnect on reboot)");
+            engine->info("📡 STA also connected to: " + testSsid + " (will disconnect on reboot)");
         }
     }
 

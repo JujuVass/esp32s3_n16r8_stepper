@@ -224,9 +224,6 @@ public:
     // trackDistance() removed — callers use stats.trackDelta(currentStep) directly
 
 private:
-    // Cycle counting state
-    unsigned long _cycleCounter = 0;
-
     /**
      * Recalculate startStep/targetStep from current motion config (DRY)
      */

@@ -145,7 +145,7 @@ void UtilityEngine::printStatus() const {
   EngineStatus status = getStatus();
 
   const char* levelNames[] = {"ERROR", "WARN", "INFO", "DEBUG"};
-  int lvl = (int)status.currentLogLevel;
+  auto lvl = (int)status.currentLogLevel;
 
   // Use Serial directly for formatted status dump — this is intentionally
   // a diagnostic console output (not a log event)

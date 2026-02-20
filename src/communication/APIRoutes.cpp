@@ -86,8 +86,6 @@ void handleCORSPreflight() {
 // HELPER FUNCTIONS IMPLEMENTATION
 // ============================================================================
 
-// getFormattedDate/Time removed — use engine->getFormattedTime("%Y-%m-%d") / engine->getFormattedTime("%H:%M:%S")
-
 void sendJsonError(int code, const String& message) {
   JsonDocument doc;
   doc["success"] = false;
@@ -294,7 +292,7 @@ void setupAPIRoutes() {
       // Client is on the STA/router network → return STA IP
       responseIP = StepperNetwork.getIPAddress();
     }
-    server.send(200, "application/json", "{\"ip\":\"" + responseIP + "\"}");
+    server.send(200, "application/json", R"({"ip":")" + responseIP + R"("})");
   });
 
   // ========================================================================
@@ -513,7 +511,7 @@ void setupAPIRoutes() {
 
     if (!LittleFS.exists(PLAYLIST_FILE_PATH)) {
       // Create empty playlists file
-      const char* emptyPlaylists = "{\"simple\":[],\"oscillation\":[],\"chaos\":[],\"pursuit\":[]}";
+      const char* emptyPlaylists = R"({"simple":[],"oscillation":[],"chaos":[],"pursuit":[]})";
       ensureFileExists(PLAYLIST_FILE_PATH, emptyPlaylists);
       sendEmptyPlaylistStructure();
       return;
@@ -611,9 +609,14 @@ void setupAPIRoutes() {
     }
 
     // Debug: Check what's in the loaded document
-    engine->debug("📋 Loaded doc - simple: " + String(playlistDoc["simple"].isNull() ? "null" : (playlistDoc["simple"].is<JsonArray>() ? "array" : "other")));
-    engine->debug("📋 Loaded doc - oscillation: " + String(playlistDoc["oscillation"].isNull() ? "null" : (playlistDoc["oscillation"].is<JsonArray>() ? "array" : "other")));
-    engine->debug("📋 Loaded doc - chaos: " + String(playlistDoc["chaos"].isNull() ? "null" : (playlistDoc["chaos"].is<JsonArray>() ? "array" : "other")));
+    auto jsonTypeOf = [](JsonVariant v) -> const char* {
+      if (v.isNull()) return "null";
+      if (v.is<JsonArray>()) return "array";
+      return "other";
+    };
+    engine->debug("📋 Loaded doc - simple: " + String(jsonTypeOf(playlistDoc["simple"])));
+    engine->debug("📋 Loaded doc - oscillation: " + String(jsonTypeOf(playlistDoc["oscillation"])));
+    engine->debug("📋 Loaded doc - chaos: " + String(jsonTypeOf(playlistDoc["chaos"])));
 
     // Get or create mode array
     JsonArray modeArray;
@@ -807,7 +810,7 @@ void setupAPIRoutes() {
       while (logFile) {
         if (!logFile.isDirectory()) {
           // Get file name (without directory path)
-          String fileName = String(logFile.name());
+          auto fileName = String(logFile.name());
 
           // Close file before deleting
           logFile.close();
@@ -830,7 +833,9 @@ void setupAPIRoutes() {
 
     engine->info("📋 Deleted " + String(deletedCount) + " log files");
     server.send(200, "application/json",
-      "{\"status\":\"ok\",\"message\":\"" + String(deletedCount) + " logs deleted\",\"count\":" + String(deletedCount) + "}");
+      R"({"status":"ok","message":")"
+      + String(deletedCount) + R"( logs deleted","count":)"
+      + String(deletedCount) + "}");
   });
 
   // ============================================================================
@@ -839,7 +844,7 @@ void setupAPIRoutes() {
 
   // GET /api/ping - Simple health check endpoint
   server.on("/api/ping", HTTP_GET, []() {
-    server.send(200, "application/json", "{\"status\":\"ok\",\"uptime\":" + String(millis()) + "}");
+    server.send(200, "application/json", R"({"status":"ok","uptime":)" + String(millis()) + "}");
   });
 
   // POST /api/system/reboot - Reboot ESP32
@@ -847,7 +852,7 @@ void setupAPIRoutes() {
     engine->info("🔄 Reboot requested via API");
 
     // Send success response before rebooting
-    server.send(200, "application/json", "{\"success\":true,\"message\":\"Rebooting ESP32...\"}");
+    server.send(200, "application/json", R"({"success":true,"message":"Rebooting ESP32..."})");
 
     // Safe shutdown: stop movement, disable motor, flush logs
     StepperNetwork.safeShutdown();
@@ -864,7 +869,7 @@ void setupAPIRoutes() {
     engine->info("📶 WiFi reconnect requested via API");
 
     // Send success response before disconnecting
-    server.send(200, "application/json", "{\"success\":true,\"message\":\"Reconnecting WiFi...\"}");
+    server.send(200, "application/json", R"({"success":true,"message":"Reconnecting WiFi..."})");
 
     // Simple reconnect - WiFi.reconnect() handles everything
     // Don't call disconnect() first - it can cause issues
@@ -924,7 +929,7 @@ void setupAPIRoutes() {
     // Save to NVS
     engine->saveLoggingPreferences();
 
-    server.send(200, "application/json", "{\"success\":true,\"message\":\"Logging preferences saved\"}");
+    server.send(200, "application/json", R"({"success":true,"message":"Logging preferences saved"})");
   });
 
   // ========================================================================
@@ -1053,23 +1058,23 @@ void setupAPIRoutes() {
       return;
     }
 
-    String ssid = doc["ssid"] | "";
-    String password = doc["password"] | "";
+    String wifiSsid = doc["ssid"] | "";
+    String wifiPassword = doc["password"] | "";
 
-    if (ssid.isEmpty()) {
+    if (wifiSsid.isEmpty()) {
       sendJsonError(400, "SSID required");
       return;
     }
 
-    engine->info("💾 Saving WiFi config to NVS: " + ssid);
+    engine->info("💾 Saving WiFi config to NVS: " + wifiSsid);
 
-    bool saved = WiFiConfig.saveConfig(ssid, password);
+    bool saved = WiFiConfig.saveConfig(wifiSsid, wifiPassword);
 
     if (saved) {
       JsonDocument respDoc;
       respDoc["success"] = true;
       respDoc["message"] = "WiFi configuration saved";
-      respDoc["ssid"] = ssid;
+      respDoc["ssid"] = wifiSsid;
       respDoc["rebootRequired"] = true;
 
       String response;
@@ -1105,15 +1110,15 @@ void setupAPIRoutes() {
       return;
     }
 
-    String ssid = doc["ssid"] | "";
-    String password = doc["password"] | "";
+    String wifiSsid = doc["ssid"] | "";
+    String wifiPassword = doc["password"] | "";
 
-    if (ssid.isEmpty()) {
+    if (wifiSsid.isEmpty()) {
       sendJsonError(400, "SSID required");
       return;
     }
 
-    engine->info("🔌 Testing WiFi: " + ssid);
+    engine->info("🔌 Testing WiFi: " + wifiSsid);
 
     // Save credentials FIRST, then test (recommended for AP mode)
     // Even if test fails, credentials are saved for retry on reboot
@@ -1122,7 +1127,7 @@ void setupAPIRoutes() {
     if (saveFirst) {
       // Save to NVS before testing
       engine->info("💾 Saving WiFi credentials...");
-      bool saved = WiFiConfig.saveConfig(ssid, password);
+      bool saved = WiFiConfig.saveConfig(wifiSsid, wifiPassword);
 
       if (!saved) {
         sendJsonError(500, "Failed to save WiFi config");
@@ -1133,7 +1138,7 @@ void setupAPIRoutes() {
     }
 
     // Test connection (we're in AP_STA mode so AP stays stable)
-    bool connected = WiFiConfig.testConnection(ssid, password, 15000);
+    bool connected = WiFiConfig.testConnection(wifiSsid, wifiPassword, 15000);
 
     if (connected) {
       // LED GREEN = Success! Stop blinking
@@ -1142,13 +1147,13 @@ void setupAPIRoutes() {
 
       // Already saved above (if saveFirst=true)
       if (!saveFirst) {
-        WiFiConfig.saveConfig(ssid, password);
+        WiFiConfig.saveConfig(wifiSsid, wifiPassword);
       }
 
       JsonDocument respDoc;
       respDoc["success"] = true;
       respDoc["message"] = "WiFi configured successfully!";
-      respDoc["ssid"] = ssid;
+      respDoc["ssid"] = wifiSsid;
       respDoc["rebootRequired"] = true;
       respDoc["hostname"] = String(otaHostname) + ".local";
 
@@ -1168,21 +1173,21 @@ void setupAPIRoutes() {
       respDoc["warning"] = "WiFi credentials saved but connection test failed";
       respDoc["message"] = "Configuration saved. Reboot to try connecting.";
       respDoc["details"] = "Connection test timed out - password may be wrong or signal too weak";
-      respDoc["ssid"] = ssid;
+      respDoc["ssid"] = wifiSsid;
       respDoc["rebootRequired"] = true;
 
       String response;
       serializeJson(respDoc, response);
       server.send(200, "application/json", response);
 
-      engine->warn("⚠️ WiFi saved but test failed: " + ssid + " (will retry on reboot)");
+      engine->warn("⚠️ WiFi saved but test failed: " + wifiSsid + " (will retry on reboot)");
     }
   });
 
   // POST /api/wifi/reboot - Explicit reboot after config
   server.on("/api/wifi/reboot", HTTP_POST, []() {
     engine->info("🔄 WiFi config reboot requested");
-    server.send(200, "application/json", "{\"success\":true,\"message\":\"Rebooting...\"}");
+    server.send(200, "application/json", R"({"success":true,"message":"Rebooting..."})");
     delay(500);
     ESP.restart();
   });
@@ -1193,7 +1198,7 @@ void setupAPIRoutes() {
 
     WiFiConfig.clearConfig();
 
-    server.send(200, "application/json", "{\"success\":true,\"message\":\"WiFi configuration cleared. Rebooting...\"}");
+    server.send(200, "application/json", R"({"success":true,"message":"WiFi configuration cleared. Rebooting..."})");
 
     // Reboot to enter setup mode
     delay(1000);
@@ -1213,7 +1218,7 @@ void setupAPIRoutes() {
     // Call the SequenceTableManager import function
     SeqTable.importFromJson(jsonData);
 
-    server.send(200, "application/json", "{\"success\":true,\"message\":\"Sequence imported successfully\"}");
+    server.send(200, "application/json", R"({"success":true,"message":"Sequence imported successfully"})");
   });
 
   // ========================================================================
@@ -1283,9 +1288,11 @@ void setupAPIRoutes() {
   // ========================================================================
   server.onNotFound([]() {
     String uri = server.uri();
-    String method = (server.method() == HTTP_GET) ? "GET" :
-                    (server.method() == HTTP_POST) ? "POST" :
-                    (server.method() == HTTP_OPTIONS) ? "OPTIONS" : "OTHER";
+    String method;
+    if (server.method() == HTTP_GET) method = "GET";
+    else if (server.method() == HTTP_POST) method = "POST";
+    else if (server.method() == HTTP_OPTIONS) method = "OPTIONS";
+    else method = "OTHER";
     engine->debug("📥 Request: " + method + " " + uri);
 
     // In AP_SETUP mode, redirect everything except /setup.html and /api/wifi/* to /setup.html

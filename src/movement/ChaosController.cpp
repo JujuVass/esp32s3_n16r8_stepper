@@ -120,9 +120,7 @@ bool ChaosController::checkLimits() {
 
     if (movingForward) {
         float maxAllowed = Validators::getMaxAllowedMM();
-        float effectiveMaxLimit = min(chaos.centerPositionMM + chaos.amplitudeMM, maxAllowed);
-
-        if (nextPosMM > effectiveMaxLimit) {
+        if (auto effectiveMaxLimit = min(chaos.centerPositionMM + chaos.amplitudeMM, maxAllowed); nextPosMM > effectiveMaxLimit) {
             engine->warn(String("🛡️ CHAOS: Hit upper limit! Current: ") +
                   String(currentPosMM, 1) + "mm | Limit: " + String(effectiveMaxLimit, 1) + "mm");
             targetStep = currentStep;
@@ -139,9 +137,7 @@ bool ChaosController::checkLimits() {
         }
 
     } else {
-        float effectiveMinLimit = max(chaos.centerPositionMM - chaos.amplitudeMM, 0.0f);
-
-        if (nextPosMM < effectiveMinLimit) {
+        if (auto effectiveMinLimit = max(chaos.centerPositionMM - chaos.amplitudeMM, 0.0f); nextPosMM < effectiveMinLimit) {
             if (engine->isDebugEnabled()) {
                 engine->debug(String("🛡️ CHAOS: Hit lower limit! Current: ") +
                       String(currentPosMM, 1) + "mm | Limit: " + String(effectiveMinLimit, 1) + "mm");
@@ -544,8 +540,7 @@ void ChaosController::processWave(float effectiveMinLimit, float effectiveMaxLim
 
 void ChaosController::processCalm(float effectiveMinLimit, float effectiveMaxLimit) {
     if (chaosState.isInPatternPause) {
-        unsigned long pauseElapsed = millis() - chaosState.pauseStartTime;
-        if (pauseElapsed >= chaosState.pauseDuration) {
+        if (auto pauseElapsed = millis() - chaosState.pauseStartTime; pauseElapsed >= chaosState.pauseDuration) {
             chaosState.isInPatternPause = false;
             chaosState.patternStartTime = millis();
             engine->debug("😮 CALM: pause complete, resuming breathing");
@@ -803,9 +798,7 @@ void ChaosController::process() {
     }
 
     // Check if at target
-    bool isAtTarget = (abs(currentStep - targetStep) <= 2);
-
-    if (isAtTarget) {
+    if (auto isAtTarget = (abs(currentStep - targetStep) <= 2); isAtTarget) {
         switch (chaosState.currentPattern) {
             case CHAOS_PULSE:
                 handlePulseAtTarget(effectiveMinLimit, effectiveMaxLimit);

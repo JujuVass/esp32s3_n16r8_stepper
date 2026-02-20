@@ -54,9 +54,7 @@ namespace Validators {
   }
 
   // Use effective max distance (with limitation factor applied)
-  float maxAllowed = getMaxAllowedMM();
-
-  if (maxAllowed > 0 && distMM > maxAllowed) {
+  if (auto maxAllowed = getMaxAllowedMM(); maxAllowed > 0 && distMM > maxAllowed) {
     errorMsg = "Distance exceeds limit: " + String(distMM, 1) + " > " + String(maxAllowed, 1) + " mm";
     if (maxDistanceLimitPercent < 100.0) {
       errorMsg += " (limit " + String(maxDistanceLimitPercent, 0) + "%)";
@@ -100,9 +98,7 @@ namespace Validators {
   }
 
   // Use effective max distance (with limitation factor applied)
-  float maxAllowed = getMaxAllowedMM();
-
-  if (maxAllowed > 0 && positionMM > maxAllowed) {
+  if (auto maxAllowed = getMaxAllowedMM(); maxAllowed > 0 && positionMM > maxAllowed) {
     errorMsg = "Position exceeds limit: " + String(positionMM, 1) + " > " + String(maxAllowed, 1) + " mm";
     if (maxDistanceLimitPercent < 100.0) {
       errorMsg += " (limit " + String(maxDistanceLimitPercent, 0) + "%)";
@@ -137,9 +133,7 @@ namespace Validators {
 
   // Validate combined range
   float endPositionMM = startMM + distMM;
-  float maxAllowed = getMaxAllowedMM();
-
-  if (maxAllowed > 0 && endPositionMM > maxAllowed) {
+  if (auto maxAllowed = getMaxAllowedMM(); maxAllowed > 0 && endPositionMM > maxAllowed) {
     errorMsg = "End position exceeds limit: " + String(endPositionMM, 1) + " mm (start " +
                String(startMM, 1) + " + distance " + String(distMM, 1) + ") > " +
                String(maxAllowed, 1) + " mm";
@@ -274,9 +268,7 @@ namespace Validators {
   float maxAllowed = getMaxAllowedMM();
 
   // Calculate maximum safe amplitude
-  float maxAmplitude = min(centerMM, maxAllowed - centerMM);
-
-  if (amplitudeMM > maxAmplitude) {
+  if (auto maxAmplitude = min(centerMM, maxAllowed - centerMM); amplitudeMM > maxAmplitude) {
     errorMsg = "Amplitude " + String(amplitudeMM, 1) + "mm too large for center " +
                String(centerMM, 1) + "mm. Maximum: " + String(maxAmplitude, 1) + "mm";
     return false;

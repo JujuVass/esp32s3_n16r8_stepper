@@ -51,7 +51,7 @@ bool Logger::initializeLogFile() {
   if (logsDir && logsDir.isDirectory()) {
     File logFile = logsDir.openNextFile();
     while (logFile) {
-      String fileName = String(logFile.name());
+      auto fileName = String(logFile.name());
       if (fileName.indexOf("1970") >= 0) {
         String fullPath = "/logs/" + fileName;
         logFile.close();
@@ -256,20 +256,18 @@ String Logger::generateLogFilename() {
 
   char dateBuf[20];
   strftime(dateBuf, sizeof(dateBuf), "%Y%m%d", &tmstruct);
-  String dateStr = String(dateBuf);
+  auto dateStr = String(dateBuf);
 
   // Find max suffix by scanning /logs directory
   int maxSuffix = -1;
 
   // Direct LittleFS: intentional (directory iteration not supported by FileSystem wrapper)
-  File scanDir = LittleFS.open("/logs");
-  if (scanDir) {
+  if (auto scanDir = LittleFS.open("/logs"); scanDir) {
     File file = scanDir.openNextFile();
     while (file) {
-      String fileName = String(file.name());
-      String prefix = "log_" + dateStr + "_";
+      auto fileName = String(file.name());
 
-      if (fileName.startsWith(prefix) && fileName.endsWith(".txt")) {
+      if (String prefix = "log_" + dateStr + "_"; fileName.startsWith(prefix) && fileName.endsWith(".txt")) {
         String suffixStr = fileName.substring(
           prefix.length(),
           fileName.length() - 4

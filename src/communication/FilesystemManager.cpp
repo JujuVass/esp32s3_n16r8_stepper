@@ -64,7 +64,6 @@ String FilesystemManager::normalizePath(String path) {
   return path;
 }
 
-// sendJsonError() and sendJsonSuccess() are now shared free functions from APIRoutes.h
 
 // ============================================================================
 // ROUTE REGISTRATION
@@ -153,7 +152,7 @@ void FilesystemManager::handleListFiles() {
 
     File file = root.openNextFile();
     while (file) {
-      String fileName = String(file.name());
+      auto fileName = String(file.name());
       String path = String(dirname) + "/" + fileName;
       if (path.startsWith("//")) path = path.substring(1);
 
@@ -324,8 +323,8 @@ void FilesystemManager::handleUploadFile() {
         else Serial.printf("Upload rejected: file too large (%d bytes needed, only %d bytes available)\n",
                      contentLength, available);
         server.send(413, "application/json",
-          "{\"error\":\"File too large\",\"needed\":" + String(contentLength) +
-          ",\"available\":" + String(available) + "}");
+          R"({"error":"File too large","needed":)" + String(contentLength) +
+          R"(,"available":)" + String(available) + "}");
         return;
       }
     }
@@ -350,12 +349,10 @@ void FilesystemManager::handleUploadFile() {
         _uploadFailed = true;
       }
     }
-  } else if (upload.status == UPLOAD_FILE_END) {
-    if (uploadFile) {
-      // 🛡️ PROTECTION: Flush before closing
-      uploadFile.flush();
-      uploadFile.close();
-    }
+  } else if (upload.status == UPLOAD_FILE_END && uploadFile) {
+    // 🛡️ PROTECTION: Flush before closing
+    uploadFile.flush();
+    uploadFile.close();
   }
 }
 

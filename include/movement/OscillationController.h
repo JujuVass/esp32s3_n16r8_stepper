@@ -167,14 +167,14 @@ private:
      * @param targetStep Target position in steps
      * @param isCatchUp true if in catch-up mode (multiple steps)
      */
-    void executeSteps(long targetStep, bool isCatchUp);
+    void executeSteps(long oscTargetStep, bool isCatchUp);
 
     /**
      * Check safety contacts near oscillation limits
      * @param targetStep Target position in steps
      * @return true if safe, false if contact hit
      */
-    bool checkSafetyContacts(long targetStep);
+    bool checkSafetyContacts(long oscTargetStep);
 };
 
 // ============================================================================

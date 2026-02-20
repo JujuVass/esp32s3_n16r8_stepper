@@ -206,15 +206,15 @@ void OscillationControllerClass::process() {
     }
 
     // Convert to steps
-    long targetStep = MovementMath::mmToSteps(targetPositionMM);
+    long oscTargetStep = MovementMath::mmToSteps(targetPositionMM);
 
     // Safety check contacts near limits
-    if (!checkSafetyContacts(targetStep)) [[unlikely]] {
+    if (!checkSafetyContacts(oscTargetStep)) [[unlikely]] {
         return;  // Contact hit - stop
     }
 
     // Move towards target position
-    long errorSteps = targetStep - currentStep;
+    long errorSteps = oscTargetStep - currentStep;
 
     if (errorSteps == 0) [[unlikely]] {
         return;  // Already at target
@@ -228,9 +228,7 @@ void OscillationControllerClass::process() {
 
     // Use minimum step delay (speed is controlled by effective frequency, not delay)
     unsigned long currentMicros = micros();
-    unsigned long elapsedMicros = currentMicros - lastStepMicros_;
-
-    if (elapsedMicros < OSC_MIN_STEP_DELAY_MICROS) [[likely]] {
+    if (auto elapsedMicros = currentMicros - lastStepMicros_; elapsedMicros < OSC_MIN_STEP_DELAY_MICROS) [[likely]] {
         return;  // Too early for next step
     }
 
@@ -508,8 +506,7 @@ bool OscillationControllerClass::handleCyclePause() {
         return false;
     }
 
-    unsigned long elapsedMs = millis() - oscPauseState.pauseStartMs;
-    if (elapsedMs >= oscPauseState.currentPauseDuration) {
+    if (auto elapsedMs = millis() - oscPauseState.pauseStartMs; elapsedMs >= oscPauseState.currentPauseDuration) {
         // Pause complete - reset phase timer to avoid phase jump
         unsigned long pauseDuration = elapsedMs;
         oscillationState.lastPhaseUpdateMs = millis();  // Reset timer to avoid huge deltaMs
@@ -525,8 +522,8 @@ bool OscillationControllerClass::handleCyclePause() {
 bool OscillationControllerClass::handleInitialPositioning() {
     // Target = center (no sine wave during initial positioning)
     float targetPositionMM = oscillation.centerPositionMM;
-    long targetStep = MovementMath::mmToSteps(targetPositionMM);
-    long errorSteps = targetStep - currentStep;
+    long oscTargetStep = MovementMath::mmToSteps(targetPositionMM);
+    long errorSteps = oscTargetStep - currentStep;
 
     // Log current position on first call
     if (firstPositioningCall_) {
@@ -543,9 +540,7 @@ bool OscillationControllerClass::handleInitialPositioning() {
     }
 
     unsigned long currentMicros = micros();
-    unsigned long elapsedMicros = currentMicros - lastStepMicros_;
-
-    if (elapsedMicros < OSC_POSITIONING_STEP_DELAY_MICROS) {
+    if (auto elapsedMicros = currentMicros - lastStepMicros_; elapsedMicros < OSC_POSITIONING_STEP_DELAY_MICROS) {
         return true;  // Too early for next step
     }
 
@@ -566,8 +561,7 @@ bool OscillationControllerClass::handleInitialPositioning() {
     lastStepMicros_ = currentMicros;
 
     // Disable initial positioning when at center
-    long absErrorSteps = abs(errorSteps);
-    if (absErrorSteps < MovementMath::mmToSteps(OSC_INITIAL_POSITIONING_TOLERANCE_MM)) {
+    if (auto absErrorSteps = abs(errorSteps); absErrorSteps < MovementMath::mmToSteps(OSC_INITIAL_POSITIONING_TOLERANCE_MM)) {
         oscillationState.isInitialPositioning = false;
         oscillationState.startTimeMs = millis();  // Reset timer for oscillation
         oscillationState.rampStartMs = millis();  // 🔧 FIX: Reset ramp timer AFTER positioning
@@ -579,15 +573,14 @@ bool OscillationControllerClass::handleInitialPositioning() {
     return true;  // Still positioning
 }
 
-bool OscillationControllerClass::checkSafetyContacts(long targetStep) {
+bool OscillationControllerClass::checkSafetyContacts(long oscTargetStep) {
     // Safety check: only test contacts when oscillation is near limits
     float minOscPositionMM = oscillation.centerPositionMM - oscillation.amplitudeMM;
     float maxOscPositionMM = oscillation.centerPositionMM + oscillation.amplitudeMM;
 
     // Test END contact only if oscillation approaches upper limit
-    float distanceToEndLimitMM = config.totalDistanceMM - maxOscPositionMM;
-    if (distanceToEndLimitMM <= HARD_DRIFT_TEST_ZONE_MM
-            && targetStep >= config.maxStep && Contacts.isEndActive()) {
+    if (auto distanceToEndLimitMM = config.totalDistanceMM - maxOscPositionMM; distanceToEndLimitMM <= HARD_DRIFT_TEST_ZONE_MM
+            && oscTargetStep >= config.maxStep && Contacts.isEndActive()) {
         Status.sendError("❌ OSCILLATION: END contact reached unexpectedly (amplitude near limit)");
         config.currentState = STATE_PAUSED;  // Stop movement (single source of truth)
         return false;
@@ -595,7 +588,7 @@ bool OscillationControllerClass::checkSafetyContacts(long targetStep) {
 
     // Test START contact only if oscillation approaches lower limit
     if (minOscPositionMM <= HARD_DRIFT_TEST_ZONE_MM
-            && targetStep <= config.minStep && Contacts.isStartActive()) {
+            && oscTargetStep <= config.minStep && Contacts.isStartActive()) {
         Status.sendError("❌ OSCILLATION: START contact reached unexpectedly (amplitude near limit)");
         config.currentState = STATE_PAUSED;  // Stop movement (single source of truth)
         return false;
@@ -604,8 +597,8 @@ bool OscillationControllerClass::checkSafetyContacts(long targetStep) {
     return true;  // Safe
 }
 
-void OscillationControllerClass::executeSteps(long targetStep, bool isCatchUp) {
-    long errorSteps = targetStep - currentStep;
+void OscillationControllerClass::executeSteps(long oscTargetStep, bool isCatchUp) {
+    long errorSteps = oscTargetStep - currentStep;
     long absErrorSteps = abs(errorSteps);
 
     int stepsToExecute;

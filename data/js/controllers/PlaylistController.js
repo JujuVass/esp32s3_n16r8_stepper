@@ -821,7 +821,7 @@ function quickAddToSequencer(mode, presetId) {
   
   const newLine = {
     enabled: true,
-    movementType: mode === 'simple' ? 0 : mode === 'oscillation' ? 1 : 2,
+    movementType: { simple: 0, oscillation: 1, chaos: 2 }[mode] ?? 2,
     cycleCount: config.cycleCount || 1,
     pauseAfterMs: 0,
     startPositionMM: config.startPositionMM || 0,

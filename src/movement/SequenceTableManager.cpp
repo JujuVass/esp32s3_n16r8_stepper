@@ -275,8 +275,7 @@ SequenceLine SequenceTableManager::parseFromJson(JsonVariantConst obj) {
   line.speedBackward = obj["speedBackward"] | 5.0f;
 
   // VA-ET-VIENT zone effects (embedded ZoneEffectConfig)
-  JsonVariantConst ze = obj["vaetZoneEffect"];
-  if (!ze.isNull()) {
+  if (JsonVariantConst ze = obj["vaetZoneEffect"]; !ze.isNull()) {
     // New format: vaetZoneEffect object
     line.vaetZoneEffect.enabled = ze["enabled"] | false;
     line.vaetZoneEffect.enableStart = ze["enableStart"] | true;
@@ -348,8 +347,7 @@ SequenceLine SequenceTableManager::parseFromJson(JsonVariantConst obj) {
   line.chaosSeed = obj["chaosSeed"] | 0UL;
 
   // Parse patterns array
-  JsonVariantConst patternsVar = obj["chaosPatternsEnabled"];
-  if (patternsVar.is<JsonArrayConst>()) {
+  if (JsonVariantConst patternsVar = obj["chaosPatternsEnabled"]; patternsVar.is<JsonArrayConst>()) {
     JsonArrayConst patterns = patternsVar.as<JsonArrayConst>();
     int idx = 0;
     for (JsonVariantConst val : patterns) {
@@ -470,8 +468,7 @@ int SequenceTableManager::importFromJson(String jsonData) {
   clear();
 
   JsonDocument importDoc;
-  DeserializationError error = deserializeJson(importDoc, jsonData);
-  if (error) {
+  if (auto error = deserializeJson(importDoc, jsonData); error) {
     engine->error("JSON parse error: " + String(error.c_str()));
     Status.sendError("❌ Invalid JSON: " + String(error.c_str()));
     return -1;
@@ -528,7 +525,9 @@ int SequenceTableManager::importFromJson(String jsonData) {
 
 void SequenceTableManager::sendJsonResponse(const char* type, const String& data) {
   if (webSocket.connectedClients() > 0) {
-    String response = "{\"type\":\"" + String(type) + "\",\"data\":" + data + "}";
+    String response = R"({"type":")"
+      + String(type) + R"(","data":)"
+      + data + "}";
     webSocket.broadcastTXT(response);
   }
 }

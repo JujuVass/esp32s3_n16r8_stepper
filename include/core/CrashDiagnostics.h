@@ -25,7 +25,7 @@ public:
      * Must be called after UtilityEngine is initialized (needs filesystem + logging).
      * @param engine Pointer to initialized UtilityEngine
      */
-    static void processBootReason(UtilityEngine* engine);
+    static void processBootReason(UtilityEngine* eng);
 
     /**
      * Get human-readable name for ESP32 reset reason
@@ -36,13 +36,13 @@ private:
     /**
      * Read coredump summary, log it, and save dump file to LittleFS
      */
-    static void handlePanicCrash(UtilityEngine* engine);
+    static void handlePanicCrash(UtilityEngine* eng);
 
     /**
      * Save crash dump file with backtrace + addr2line command
      * @return true if file was saved successfully
      */
-    static bool saveDumpFile(UtilityEngine* engine, const char* taskName,
+    static bool saveDumpFile(UtilityEngine* eng, const char* taskName,
                              uint32_t excPC, const uint32_t* backtrace,
                              uint32_t depth, bool corrupted);
 };

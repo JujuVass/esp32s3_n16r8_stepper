@@ -58,7 +58,7 @@ public:
      * @param ws Pointer to WebSocketsServer instance
      * @param server Pointer to WebServer instance
      */
-    void init(WebSocketsServer* ws, WebServer* server);
+    void init(WebSocketsServer* ws, WebServer* webServer);
 
     // ========================================================================
     // CALIBRATION OPERATIONS

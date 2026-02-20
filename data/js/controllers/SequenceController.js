@@ -891,9 +891,14 @@ function initializeTrashZones() {
 function updateSequenceStatus(status) {
   if (!status) return;
   
-  const modeText = status.isRunning 
-    ? (status.isLoopMode ? '🔁 ' + t('sequencer.loopInfinite') : '▶️ ' + t('sequencer.singlePlay'))
-    : '⏹️ ' + t('sequencer.stopped');
+  let modeText;
+  if (!status.isRunning) {
+    modeText = '⏹️ ' + t('sequencer.stopped');
+  } else if (status.isLoopMode) {
+    modeText = '🔁 ' + t('sequencer.loopInfinite');
+  } else {
+    modeText = '▶️ ' + t('sequencer.singlePlay');
+  }
   DOM.seqMode.textContent = modeText;
   DOM.seqMode.style.color = status.isRunning ? '#4CAF50' : '#999';
   
