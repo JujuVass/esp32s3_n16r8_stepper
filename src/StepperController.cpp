@@ -13,7 +13,6 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <WebSocketsServer.h>
-#include <esp_core_dump.h>
 
 // ============================================================================
 // PROJECT HEADERS
@@ -127,6 +126,66 @@ void sendStatus();
 void stopMovement();
 void motorTask(void* param);
 void networkTask(void* param);
+
+// ============================================================================
+// UTILITY HELPERS (shared by FreeRTOS tasks)
+// ============================================================================
+
+/**
+ * Log FreeRTOS stack high-water mark periodically (safety diagnostic).
+ * Each caller must provide its own lastCheckMs to avoid shared-state between tasks.
+ */
+void logStackHighWaterMark(const char* taskName, uint32_t stackSize, unsigned long& lastCheckMs) {
+  if (millis() - lastCheckMs > STACK_HWM_LOG_INTERVAL_MS) {
+    lastCheckMs = millis();
+    UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
+    engine->info(String("📐 ") + taskName + " stack HWM: " + String(hwm) + " bytes free (of " + String(stackSize) + ")");
+    if (hwm < 500) {
+      engine->warn(String("⚠️ ") + taskName + " stack critically low! Consider increasing stack size.");
+    }
+  }
+}
+
+/**
+ * Debug-only diagnostics: HSS86 PEND transitions + cycle counter.
+ * Only active when log level is DEBUG and motor is running.
+ */
+void logDebugDiagnostics() {
+  if (engine->getLogLevel() != LOG_DEBUG || config.currentState != SystemState::STATE_RUNNING) return;
+  
+  Motor.updatePendTracking();
+  
+  static unsigned long lastPendLogMs = 0;
+  static unsigned long lastPendCount = 0;
+  
+  if (millis() - lastPendLogMs > SUMMARY_LOG_INTERVAL_MS) {
+    unsigned long currentPendCount = Motor.getPendInterruptCount();
+    unsigned long pendTransitions = currentPendCount - lastPendCount;
+    int rawAlm = digitalRead(PIN_ALM);
+    
+    engine->debug("📊 HSS86: PEND transitions=" + String(pendTransitions) + "/10s" +
+          " (total=" + String(currentPendCount) + ") | ALM=" + String(rawAlm));
+    
+    lastPendCount = currentPendCount;
+    lastPendLogMs = millis();
+  }
+
+  static unsigned long lastSummary = 0;
+  static unsigned long cycleCounter = 0;
+  static bool lastWasAtStart = false;
+  
+  bool nowAtStart = (currentStep == startStep);
+  if (nowAtStart && !lastWasAtStart) {
+    cycleCounter++;
+  }
+  lastWasAtStart = nowAtStart;
+  
+  if (millis() - lastSummary > SUMMARY_LOG_INTERVAL_MS) {
+    engine->debug("Status: " + String(cycleCounter) + " cycles | " + 
+          String(stats.totalDistanceTraveled / 1000000.0, 2) + " km");
+    lastSummary = millis();
+  }
+}
 
 // ============================================================================
 // SETUP - INITIALIZATION
@@ -400,61 +459,8 @@ void motorTask(void* param) {
     }
     lastAlarmState = alarmActive;
     
-    // ═══════════════════════════════════════════════════════════════════════
-    // PEND + CYCLE COUNTER (periodic stats) - Debug only
-    // ═══════════════════════════════════════════════════════════════════════
-    if (engine->getLogLevel() == LOG_DEBUG && config.currentState == SystemState::STATE_RUNNING) {
-      Motor.updatePendTracking();
-      
-      static unsigned long lastPendLogMs = 0;
-      static unsigned long lastPendCount = 0;
-      
-      // Periodic HSS86 stats (PEND transitions count is sufficient for health check)
-      if (millis() - lastPendLogMs > SUMMARY_LOG_INTERVAL_MS) {
-        unsigned long currentPendCount = Motor.getPendInterruptCount();
-        unsigned long pendTransitions = currentPendCount - lastPendCount;
-        int rawAlm = digitalRead(PIN_ALM);
-        
-        engine->debug("📊 HSS86: PEND transitions=" + String(pendTransitions) + "/10s" +
-              " (total=" + String(currentPendCount) + ") | ALM=" + String(rawAlm));
-        
-        lastPendCount = currentPendCount;
-        lastPendLogMs = millis();
-      }
-
-      static unsigned long lastSummary = 0;
-      static unsigned long cycleCounter = 0;
-      static bool lastWasAtStart = false;
-      
-      bool nowAtStart = (currentStep == startStep);
-      if (nowAtStart && !lastWasAtStart) {
-        cycleCounter++;
-      }
-      lastWasAtStart = nowAtStart;
-      
-      if (millis() - lastSummary > SUMMARY_LOG_INTERVAL_MS) {
-        engine->debug("Status: " + String(cycleCounter) + " cycles | " + 
-              String(stats.totalDistanceTraveled / 1000000.0, 2) + " km");
-        lastSummary = millis();
-      }
-    }
-
-
-    
-    // ═══════════════════════════════════════════════════════════════════════
-    // STACK HIGH-WATER MARK (periodic safety diagnostic)
-    // ═══════════════════════════════════════════════════════════════════════
-    {
-      static unsigned long lastStackCheckMs = 0;
-      if (millis() - lastStackCheckMs > STACK_HWM_LOG_INTERVAL_MS) {
-        lastStackCheckMs = millis();
-        UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
-        engine->info("📐 MotorTask stack HWM: " + String(hwm) + " bytes free (of 6144)");
-        if (hwm < 500) {
-          engine->warn("⚠️ MotorTask stack critically low! Consider increasing stack size.");
-        }
-      }
-    }
+    logDebugDiagnostics();
+    { static unsigned long hwmTimer = 0; logStackHighWaterMark("MotorTask", 6144, hwmTimer); }
 
     // ═══════════════════════════════════════════════════════════════════════
     // TASK YIELD - Adaptive based on motor state
@@ -512,20 +518,7 @@ void networkTask(void* param) {
       engine->flushLogBuffer();
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // STACK HIGH-WATER MARK (periodic safety diagnostic)
-    // ═══════════════════════════════════════════════════════════════════════
-    {
-      static unsigned long lastStackCheckMs = 0;
-      if (millis() - lastStackCheckMs > STACK_HWM_LOG_INTERVAL_MS) {
-        lastStackCheckMs = millis();
-        UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
-        engine->info("📐 NetworkTask stack HWM: " + String(hwm) + " bytes free (of 12288)");
-        if (hwm < 500) {
-          engine->warn("⚠️ NetworkTask stack critically low! Consider increasing stack size.");
-        }
-      }
-    }
+    { static unsigned long hwmTimer = 0; logStackHighWaterMark("NetworkTask", 12288, hwmTimer); }
     
     // Small delay to prevent watchdog and allow other tasks
     vTaskDelay(pdMS_TO_TICKS(1));  // 1ms between iterations
