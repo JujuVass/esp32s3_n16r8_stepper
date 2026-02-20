@@ -227,6 +227,12 @@ constexpr int LOG_BUFFER_SIZE = 100;  // Circular buffer size for async log writ
 // Slow broadcast threshold for performance monitoring (microseconds)
 constexpr unsigned long BROADCAST_SLOW_THRESHOLD_US = 200000;  // 200ms
 
+// Stack high-water mark monitoring interval
+// Why 60s? Provides early warning of stack pressure without log spam.
+// Reports the minimum free stack bytes ever seen for each FreeRTOS task.
+// If HWM drops below ~500 bytes, increase the task's stack allocation.
+constexpr unsigned long STACK_HWM_LOG_INTERVAL_MS = 240000;  // 240s between stack checks
+
 // ============================================================================
 // CONFIGURATION - System Timing Intervals
 // ============================================================================

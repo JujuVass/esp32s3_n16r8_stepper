@@ -9,6 +9,7 @@
 // ============================================================================
 // LIBRARIES
 // ============================================================================
+#include <Arduino.h>
 #include <WiFi.h>
 #include <WebServer.h>
 #include <WebSocketsServer.h>
@@ -116,8 +117,11 @@ WebServer server(80);
 WebSocketsServer webSocket(81);
 FilesystemManager filesystemManager(server);
 
-// Forward declaration
+// Forward declarations (required for .cpp — functions used before definition)
 void sendStatus();
+void stopMovement();
+void motorTask(void* param);
+void networkTask(void* param);
 
 // ============================================================================
 // SETUP - INITIALIZATION
@@ -252,7 +256,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     motorTask,           // Task function
     "MotorTask",         // Name
-    4096,                // Stack size (bytes)
+    6144,                // Stack size (bytes)
     NULL,                // Parameters
     10,                  // Priority (10 = high, ensures motor runs first)
     &motorTaskHandle,    // Task handle
@@ -263,7 +267,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     networkTask,         // Task function
     "NetworkTask",       // Name
-    8192,                // Stack size (larger for JSON serialization)
+    12288,                // Stack size (larger for JSON serialization)
     NULL,                // Parameters
     1,                   // Priority (1 = normal)
     &networkTaskHandle,  // Task handle
@@ -417,6 +421,21 @@ void motorTask(void* param) {
 
     
     // ═══════════════════════════════════════════════════════════════════════
+    // STACK HIGH-WATER MARK (periodic safety diagnostic)
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+      static unsigned long lastStackCheckMs = 0;
+      if (millis() - lastStackCheckMs > STACK_HWM_LOG_INTERVAL_MS) {
+        lastStackCheckMs = millis();
+        UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
+        engine->info("📐 MotorTask stack HWM: " + String(hwm) + " bytes free (of 4096)");
+        if (hwm < 500) {
+          engine->warn("⚠️ MotorTask stack critically low! Consider increasing stack size.");
+        }
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // TASK YIELD - Adaptive based on motor state
     // ═══════════════════════════════════════════════════════════════════════
     if (config.currentState == SystemState::STATE_RUNNING) {
@@ -464,6 +483,21 @@ void networkTask(void* param) {
     // ═══════════════════════════════════════════════════════════════════════
     if (engine) {
       engine->flushLogBuffer();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STACK HIGH-WATER MARK (periodic safety diagnostic)
+    // ═══════════════════════════════════════════════════════════════════════
+    {
+      static unsigned long lastStackCheckMs = 0;
+      if (millis() - lastStackCheckMs > STACK_HWM_LOG_INTERVAL_MS) {
+        lastStackCheckMs = millis();
+        UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
+        engine->info("📐 NetworkTask stack HWM: " + String(hwm) + " bytes free (of 8192)");
+        if (hwm < 500) {
+          engine->warn("⚠️ NetworkTask stack critically low! Consider increasing stack size.");
+        }
+      }
     }
     
     // Small delay to prevent watchdog and allow other tasks
