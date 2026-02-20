@@ -23,19 +23,19 @@
  * ┌───────────────────────────────┬───────────────────────────────────┬──────────────────┐
  * │ Variable                      │ Defined in                        │ Protected by     │
  * ├───────────────────────────────┼───────────────────────────────────┼──────────────────┤
- * │ config                        │ StepperController.ino             │ stateMutex       │
- * │ motion, pendingMotion         │ StepperController.ino             │ motionMutex      │
- * │ zoneEffect, zoneEffectState   │ StepperController.ino             │ motionMutex      │
- * │ motionPauseState, oscPauseState│ StepperController.ino            │ —                │
- * │ currentStep, startStep, etc.  │ StepperController.ino             │ volatile 32-bit  │
- * │ stats                         │ StepperController.ino             │ statsMutex       │
- * │ server, webSocket             │ StepperController.ino             │ Core 0 only      │
+ * │ config                        │ StepperController.cpp             │ stateMutex       │
+ * │ motion, pendingMotion         │ StepperController.cpp             │ motionMutex      │
+ * │ zoneEffect, zoneEffectState   │ StepperController.cpp             │ motionMutex      │
+ * │ motionPauseState, oscPauseState│ StepperController.cpp            │ —                │
+ * │ currentStep, startStep, etc.  │ StepperController.cpp             │ volatile 32-bit  │
+ * │ stats                         │ StepperController.cpp             │ statsMutex       │
+ * │ server, webSocket             │ StepperController.cpp             │ wsMutex          │
  * │ chaos, chaosState             │ ChaosController.cpp               │ stateMutex       │
  * │ oscillation, oscillationState │ OscillationController.cpp         │ stateMutex       │
  * │ pursuit                       │ PursuitController.cpp             │ —                │
  * │ seqState, sequenceTable[]     │ SequenceExecutor/TableManager.cpp │ —                │
  * │ currentMovement               │ SequenceExecutor.cpp              │ volatile 32-bit  │
- * │ engine                        │ StepperController.ino             │ — (init in setup)│
+ * │ engine                        │ StepperController.cpp             │ — (init in setup)│
  * └───────────────────────────────┴───────────────────────────────────┴──────────────────┘
  * ============================================================================
  */
@@ -121,6 +121,10 @@ private:
     SemaphoreHandle_t _mutex;
     bool _locked;
 };
+
+// WebSocket/Server mutex — prevents concurrent access from Core 0 (networkTask)
+// and Core 1 (calibration/blocking moves that service WebSocket)
+extern SemaphoreHandle_t wsMutex;
 
 // Atomic flags (no mutex needed - set from Core 0, read from Core 1)
 // Safe: bool and long are 32-bit on ESP32 Xtensa → single-instruction read/write

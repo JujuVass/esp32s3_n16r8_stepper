@@ -370,15 +370,15 @@ function initUIListeners() {
         const modalMessage = document.getElementById('modalMessage');
         if (isPursuitActive()) {
           modalMessage.innerHTML = 
-            t('modal.pursuitRunning') + '<br>' +
-            '• ' + t('modal.pursuitDisable') + '<br>' +
-            '• ' + t('modal.pursuitReturn') + '<br>' +
-            '• ' + t('modal.pursuitCalibrate') + '<br><br>' +
-            '<strong>' + t('modal.modeChangeContinue') + '</strong>';
+            escapeHtml(t('modal.pursuitRunning')) + '<br>' +
+            '• ' + escapeHtml(t('modal.pursuitDisable')) + '<br>' +
+            '• ' + escapeHtml(t('modal.pursuitReturn')) + '<br>' +
+            '• ' + escapeHtml(t('modal.pursuitCalibrate')) + '<br><br>' +
+            '<strong>' + escapeHtml(t('modal.modeChangeContinue')) + '</strong>';
         } else {
           modalMessage.innerHTML = 
-            t('modal.modeChangeRunning') + '<br><br>' +
-            '<strong>' + t('modal.modeChangeContinue') + '</strong>';
+            escapeHtml(t('modal.modeChangeRunning')) + '<br><br>' +
+            '<strong>' + escapeHtml(t('modal.modeChangeContinue')) + '</strong>';
         }
         
         // Show confirmation modal
@@ -462,7 +462,7 @@ function showAlert(message, options = {}) {
     DOM.unifiedAlertIcon.textContent = config.icon;
     DOM.unifiedAlertTitle.textContent = modalTitle;
     DOM.unifiedAlertTitle.style.color = config.color;
-    DOM.unifiedAlertMessage.innerHTML = message.replace(/\n/g, '<br>');
+    DOM.unifiedAlertMessage.innerHTML = escapeHtml(message).replace(/\n/g, '<br>');
     DOM.unifiedAlertOkBtn.textContent = buttonText;
     
     // Set callback
@@ -517,7 +517,7 @@ function showConfirm(message, options = {}) {
     DOM.unifiedConfirmIcon.textContent = config.icon;
     DOM.unifiedConfirmTitle.textContent = title;
     DOM.unifiedConfirmTitle.style.color = config.color;
-    DOM.unifiedConfirmMessage.innerHTML = message.replace(/\n/g, '<br>');
+    DOM.unifiedConfirmMessage.innerHTML = escapeHtml(message).replace(/\n/g, '<br>');
     DOM.unifiedConfirmCancelBtn.textContent = cancelText;
     
     const confirmBtn = DOM.unifiedConfirmOkBtn;

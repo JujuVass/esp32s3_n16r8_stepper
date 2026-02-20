@@ -161,6 +161,12 @@ function connectWebSocket(useFallback) {
  * @param {object} data - Parsed JSON message from ESP32
  */
 function handleWebSocketMessage(data) {
+  // Basic schema validation — must be an object with identifiable structure
+  if (!data || typeof data !== 'object') {
+    console.warn('WS: Ignoring non-object message');
+    return;
+  }
+
   // Error messages (high priority)
   if (data.type === 'error') {
     showNotification(data.message, 'error');

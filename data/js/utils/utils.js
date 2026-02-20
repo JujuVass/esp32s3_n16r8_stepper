@@ -639,6 +639,25 @@ function initMainNumericConstraints() {
 }
 
 // ============================================================================
+// HTML SANITIZATION
+// ============================================================================
+
+/**
+ * Escape HTML special characters to prevent XSS
+ * @param {string} str - Raw string that may contain HTML
+ * @returns {string} Escaped string safe for innerHTML
+ */
+function escapeHtml(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ============================================================================
 // FETCH WITH RETRY (Network resilience for ESP32 communication)
 // ============================================================================
 
@@ -738,6 +757,11 @@ async function postWithRetry(url, data, retryConfig = {}) {
     body: JSON.stringify(data)
   }, retryConfig);
   
+  if (!response.ok) {
+    let errorMsg = `HTTP ${response.status}`;
+    try { const errData = await response.json(); errorMsg = errData.error || errorMsg; } catch(e) {}
+    throw new Error(errorMsg);
+  }
   return response.json();
 }
 
@@ -752,5 +776,10 @@ async function getWithRetry(url, retryConfig = {}) {
     method: 'GET'
   }, retryConfig);
   
+  if (!response.ok) {
+    let errorMsg = `HTTP ${response.status}`;
+    try { const errData = await response.json(); errorMsg = errData.error || errorMsg; } catch(e) {}
+    throw new Error(errorMsg);
+  }
   return response.json();
 }

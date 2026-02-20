@@ -106,6 +106,7 @@ TaskHandle_t networkTaskHandle = NULL;
 SemaphoreHandle_t motionMutex = NULL;
 SemaphoreHandle_t stateMutex = NULL;
 SemaphoreHandle_t statsMutex = NULL;
+SemaphoreHandle_t wsMutex = NULL;
 volatile bool requestCalibration = false;  // Flag to trigger calibration from Core 1
 volatile bool calibrationInProgress = false;  // Cooperative flag: networkTask skips webSocket/server
 volatile bool blockingMoveInProgress = false;  // Cooperative flag: networkTask skips webSocket/server during blocking moves
@@ -246,8 +247,9 @@ void setup() {
   motionMutex = xSemaphoreCreateMutex();
   stateMutex = xSemaphoreCreateMutex();
   statsMutex = xSemaphoreCreateMutex();
+  wsMutex = xSemaphoreCreateMutex();
   
-  if (motionMutex == NULL || stateMutex == NULL || statsMutex == NULL) {
+  if (motionMutex == NULL || stateMutex == NULL || statsMutex == NULL || wsMutex == NULL) {
     engine->error("❌ Failed to create FreeRTOS mutexes!");
     return;
   }
@@ -428,7 +430,7 @@ void motorTask(void* param) {
       if (millis() - lastStackCheckMs > STACK_HWM_LOG_INTERVAL_MS) {
         lastStackCheckMs = millis();
         UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
-        engine->info("📐 MotorTask stack HWM: " + String(hwm) + " bytes free (of 4096)");
+        engine->info("📐 MotorTask stack HWM: " + String(hwm) + " bytes free (of 6144)");
         if (hwm < 500) {
           engine->warn("⚠️ MotorTask stack critically low! Consider increasing stack size.");
         }
@@ -465,8 +467,11 @@ void networkTask(void* param) {
     // HTTP server and WebSocket - skip during calibration or blocking moves
     // (CalibrationManager/blocking loops handle them internally via serviceWebSocket())
     if (!calibrationInProgress && !blockingMoveInProgress) {
-      server.handleClient();
-      webSocket.loop();
+      if (wsMutex && xSemaphoreTake(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+        server.handleClient();
+        webSocket.loop();
+        xSemaphoreGive(wsMutex);
+      }
     
       // ═══════════════════════════════════════════════════════════════════════
       // STATUS BROADCAST (adaptive rate: 10Hz active, 5Hz calibrating, 1Hz idle)
@@ -474,7 +479,10 @@ void networkTask(void* param) {
       static unsigned long lastUpdate = 0;
       if (millis() - lastUpdate > Status.getAdaptiveBroadcastInterval()) {
         lastUpdate = millis();
-        sendStatus();  // Uses webSocket.broadcastTXT - must not run concurrently with Core 1
+        if (wsMutex && xSemaphoreTake(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+          sendStatus();  // Uses webSocket.broadcastTXT - must not run concurrently with Core 1
+          xSemaphoreGive(wsMutex);
+        }
       }
     }
     
@@ -493,7 +501,7 @@ void networkTask(void* param) {
       if (millis() - lastStackCheckMs > STACK_HWM_LOG_INTERVAL_MS) {
         lastStackCheckMs = millis();
         UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
-        engine->info("📐 NetworkTask stack HWM: " + String(hwm) + " bytes free (of 8192)");
+        engine->info("📐 NetworkTask stack HWM: " + String(hwm) + " bytes free (of 12288)");
         if (hwm < 500) {
           engine->warn("⚠️ NetworkTask stack critically low! Consider increasing stack size.");
         }

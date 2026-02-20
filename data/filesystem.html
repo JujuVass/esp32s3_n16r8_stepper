@@ -457,8 +457,10 @@
         
         // Build actions for files only (not folders)
         const actions = file.isDir ? '' : `
-          <button class="btn-info" onclick="downloadFile('${file.path}')" title="Download">⬇️</button>
-          <button class="btn-danger" onclick="deleteFile('${file.path}')" title="Delete">🗑️</button>
+          <button class="btn-info" onclick="downloadFile('${file.path.replace(/'/g, "\\'")}')"
+            title="Download">⬇️</button>
+          <button class="btn-danger" onclick="deleteFile('${file.path.replace(/'/g, "\\'")}')"
+            title="Delete">🗑️</button>
         `;
         
         // For folders, add toggle button
@@ -469,11 +471,13 @@
         const displayStyle = isOpen ? 'display: block;' : 'display: none;';
         
         // Folders: clickable name to toggle, Files: clickable name to edit (text files only)
+        const safeFileName = file.name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         const fileNameHtml = file.isDir 
-          ? `<span class="file-name-link" onclick="toggleFolder('${folderId}')" title="Click to expand/collapse">${file.name}</span>`
+          ? `<span class="file-name-link" onclick="toggleFolder('${folderId}')" title="Click to expand/collapse">${safeFileName}</span>`
           : (!isBinaryFile(file.name) 
-              ? `<span class="file-name-link" onclick="editFile('${file.path}', '${file.name}')" title="Click to edit">${file.name}</span>`
-              : `<span>${file.name}</span>`);
+              ? `<span class="file-name-link" onclick="editFile('${file.path.replace(/'/g, "\\'")}'` +
+                `, '${file.name.replace(/'/g, "\\'")}')" title="Click to edit">${safeFileName}</span>`
+              : `<span>${safeFileName}</span>`);
         
         // For folders, show file count instead of date
         const dateOrCount = file.isDir 

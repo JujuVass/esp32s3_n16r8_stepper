@@ -17,7 +17,9 @@ Logger::Logger(WebSocketsServer& ws, FileSystem& fs)
     _currentLogLevel(LOG_INFO),
     _loggingEnabled(true),
     _logBufferWriteIndex(0),
-    _lastLogFlush(0) {
+    _lastLogFlush(0),
+    _logMutex(nullptr) {
+  _logMutex = xSemaphoreCreateMutex();
   for (int i = 0; i < LOG_BUFFER_SIZE; i++) {
     _logBuffer[i].valid = false;
   }
@@ -135,13 +137,14 @@ void Logger::log(LogLevel level, const String& message) {
       initializeLogFile();
     }
 
-    if (_logFile) {
+    if (_logFile && _logMutex && xSemaphoreTake(_logMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
       _logBuffer[_logBufferWriteIndex].timestamp = millis();
       _logBuffer[_logBufferWriteIndex].level = level;
       _logBuffer[_logBufferWriteIndex].message = String(prefix) + message;
       _logBuffer[_logBufferWriteIndex].valid = true;
 
       _logBufferWriteIndex = (_logBufferWriteIndex + 1) % LOG_BUFFER_SIZE;
+      xSemaphoreGive(_logMutex);
     }
   }
 }
@@ -156,9 +159,12 @@ void Logger::debug(const String& message) { log(LOG_DEBUG, message); }
 // ============================================================================
 
 void Logger::flushLogBuffer(bool forceFlush) {
-  if (!_logFile || !_fs.isReady()) return;
+  if (!_logFile || !_fs.isReady() || !_logMutex) return;
 
   unsigned long now = millis();
+
+  // Take mutex to safely read buffer (short hold: count + copy)
+  if (xSemaphoreTake(_logMutex, pdMS_TO_TICKS(50)) != pdTRUE) return;
 
   // Count valid entries
   int validEntries = 0;
@@ -172,24 +178,44 @@ void Logger::flushLogBuffer(bool forceFlush) {
   bool shouldForce = (bufferUsagePercent >= 80.0);
 
   // Flush every 5 seconds OR if forced/critical
-  if (!forceFlush && !shouldForce && now - _lastLogFlush < 5000) return;
+  if (!forceFlush && !shouldForce && now - _lastLogFlush < 5000) {
+    xSemaphoreGive(_logMutex);
+    return;
+  }
 
   if (validEntries == 0) {
     _lastLogFlush = now;
+    xSemaphoreGive(_logMutex);
     return;
   }
+
+  // Copy entries under mutex, then release for writing to disk
+  LogEntry localBuffer[LOG_BUFFER_SIZE];
+  for (int i = 0; i < LOG_BUFFER_SIZE; i++) {
+    if (_logBuffer[i].valid) {
+      localBuffer[i].timestamp = _logBuffer[i].timestamp;
+      localBuffer[i].level = _logBuffer[i].level;
+      localBuffer[i].message = _logBuffer[i].message;
+      localBuffer[i].valid = true;
+      _logBuffer[i].valid = false;
+      _logBuffer[i].message = "";
+    } else {
+      localBuffer[i].valid = false;
+    }
+  }
+  xSemaphoreGive(_logMutex);
 
   // Get current time for timestamps
   time_t currentTime = time(nullptr);
   struct tm* tmstruct = localtime(&currentTime);
   bool timeValid = (tmstruct->tm_year > (2020 - 1900));
 
-  // Write all valid entries in one batch
+  // Write all valid entries in one batch (no mutex needed - local copy)
   for (int i = 0; i < LOG_BUFFER_SIZE; i++) {
-    if (_logBuffer[i].valid) {
+    if (localBuffer[i].valid) {
       if (timeValid) {
         char ts[30];
-        time_t logTime = currentTime - ((now - _logBuffer[i].timestamp) / 1000);
+        time_t logTime = currentTime - ((now - localBuffer[i].timestamp) / 1000);
         struct tm* logTm = localtime(&logTime);
         strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", logTm);
         _logFile.print("[");
@@ -197,13 +223,11 @@ void Logger::flushLogBuffer(bool forceFlush) {
         _logFile.print("] ");
       } else {
         _logFile.print("[T+");
-        _logFile.print(_logBuffer[i].timestamp / 1000);
+        _logFile.print(localBuffer[i].timestamp / 1000);
         _logFile.print("s] ");
       }
 
-      _logFile.println(_logBuffer[i].message);
-      _logBuffer[i].valid = false;
-      _logBuffer[i].message = "";
+      _logFile.println(localBuffer[i].message);
     }
   }
 

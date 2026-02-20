@@ -48,8 +48,11 @@ void CalibrationManager::serviceWebSocket(unsigned long durationMs) {
     
     unsigned long start = millis();
     while (millis() - start < durationMs) {
-        m_webSocket->loop();
-        m_server->handleClient();
+        if (wsMutex && xSemaphoreTake(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+            m_webSocket->loop();
+            m_server->handleClient();
+            xSemaphoreGive(wsMutex);
+        }
         yield();
         delay(1);
     }
@@ -112,8 +115,11 @@ bool CalibrationManager::findContact(bool moveForward, uint8_t contactPin, const
         // Service WebSocket periodically
         if (stepCount % WEBSOCKET_SERVICE_INTERVAL_STEPS == 0) {
             yield();
-            if (m_webSocket) m_webSocket->loop();
-            if (m_server) m_server->handleClient();
+            if (wsMutex && xSemaphoreTake(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+                if (m_webSocket) m_webSocket->loop();
+                if (m_server) m_server->handleClient();
+                xSemaphoreGive(wsMutex);
+            }
         }
         
         // Timeout protection
@@ -148,11 +154,19 @@ void CalibrationManager::releaseContact(uint8_t contactPin, bool moveForward) {
     Motor.setDirection(moveForward);
     
     // Move slowly until opto clears (HIGH->LOW transition)
-    while (Contacts.isActive(contactPin)) {
+    // Timeout: if we can't release within SAFETY_OFFSET_STEPS*4 steps, sensor is stuck
+    int releaseSteps = 0;
+    const int MAX_RELEASE_STEPS = SAFETY_OFFSET_STEPS * 4;
+    while (Contacts.isActive(contactPin) && releaseSteps < MAX_RELEASE_STEPS) {
         Motor.step();
         if (!moveForward) currentStep = currentStep - 1;
         else currentStep = currentStep + 1;
+        releaseSteps++;
         delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR * 2);
+    }
+    
+    if (releaseSteps >= MAX_RELEASE_STEPS) {
+        engine->error("❌ Cannot release contact - sensor stuck after " + String(releaseSteps) + " steps");
     }
     
     // Add safety margin
@@ -323,8 +337,11 @@ bool CalibrationManager::startCalibration() {
         // Service WebSocket periodically
         if (currentStep % WEBSOCKET_SERVICE_INTERVAL_STEPS == 0) {
             yield();
-            if (m_webSocket) m_webSocket->loop();
-            if (m_server) m_server->handleClient();
+            if (wsMutex && xSemaphoreTake(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+                if (m_webSocket) m_webSocket->loop();
+                if (m_server) m_server->handleClient();
+                xSemaphoreGive(wsMutex);
+            }
         }
     }
     
@@ -395,8 +412,11 @@ bool CalibrationManager::returnToStart() {
         
         if (currentStep % WEBSOCKET_SERVICE_INTERVAL_STEPS == 0) {
             yield();
-            if (m_webSocket) m_webSocket->loop();
-            if (m_server) m_server->handleClient();
+            if (wsMutex && xSemaphoreTake(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+                if (m_webSocket) m_webSocket->loop();
+                if (m_server) m_server->handleClient();
+                xSemaphoreGive(wsMutex);
+            }
         }
         
         if (currentStep < -CALIBRATION_ERROR_MARGIN_STEPS) {
@@ -413,10 +433,20 @@ bool CalibrationManager::returnToStart() {
     engine->debug("START contact detected - releasing...");
     Motor.setDirection(true);  // Forward
     
-    while (Contacts.isStartActive()) {
+    int releaseCount = 0;
+    const int MAX_RELEASE = SAFETY_OFFSET_STEPS * 4;
+    while (Contacts.isStartActive() && releaseCount < MAX_RELEASE) {
         Motor.step();
         currentStep = currentStep + 1;
+        releaseCount++;
         delayMicroseconds(CALIB_DELAY * CALIBRATION_SLOW_FACTOR * 2);
+    }
+    
+    if (releaseCount >= MAX_RELEASE) {
+        engine->error("❌ Cannot release START contact in returnToStart()");
+        Motor.disable();
+        config.currentState = STATE_ERROR;
+        return false;
     }
     
     // Add safety margin

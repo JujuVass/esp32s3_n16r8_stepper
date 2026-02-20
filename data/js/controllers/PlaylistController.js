@@ -269,7 +269,7 @@ function refreshPlaylistPresets(mode) {
            data-tooltip="${tooltipContent.replace(/"/g, '&quot;')}">
         <div class="flex-between" style="gap: 6px;">
           <div style="flex: 1; min-width: 0;">
-            <div class="text-500 text-md mb-4" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${preset.name}</div>
+            <div class="text-500 text-md mb-4" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(preset.name)}</div>
             <div class="text-xs" style="color: #888;">${new Date(preset.timestamp * 1000).toLocaleString(I18n.getLang() === 'fr' ? 'fr-FR' : 'en-US', {dateStyle: 'short', timeStyle: 'short'})}</div>
           </div>
           <div class="flex-gap-6" style="flex-shrink: 0;">

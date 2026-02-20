@@ -15,6 +15,8 @@
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "core/Config.h"
 
 // Forward declaration
@@ -131,10 +133,11 @@ private:
   LogLevel _currentLogLevel;
   bool _loggingEnabled;
 
-  // Circular log buffer
+  // Circular log buffer (protected by _logMutex for cross-core safety)
   LogEntry _logBuffer[LOG_BUFFER_SIZE];
   int _logBufferWriteIndex;
   unsigned long _lastLogFlush;
+  SemaphoreHandle_t _logMutex;
 
   // ========================================================================
   // PRIVATE HELPERS
