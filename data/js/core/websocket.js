@@ -263,13 +263,41 @@ function handleFileSystemList(files) {
 }
 
 /**
+ * Log panel buffering - batches DOM appends via requestAnimationFrame
+ * to prevent reflow storms during log bursts (calibration, errors, etc.)
+ */
+const _logBuffer = [];
+let _logFlushScheduled = false;
+
+function _flushLogBuffer() {
+  _logFlushScheduled = false;
+  if (_logBuffer.length === 0) return;
+
+  const logPanel = DOM.logConsolePanel || document.getElementById('logConsolePanel');
+  if (!logPanel) { _logBuffer.length = 0; return; }
+
+  // Append all buffered entries in one batch (single reflow)
+  const fragment = document.createDocumentFragment();
+  for (const el of _logBuffer) fragment.appendChild(el);
+  _logBuffer.length = 0;
+
+  logPanel.appendChild(fragment);
+
+  // Trim to 500 lines
+  while (logPanel.children.length > 500) {
+    logPanel.removeChild(logPanel.firstChild);
+  }
+
+  logPanel.scrollTop = logPanel.scrollHeight;
+}
+
+/**
  * Handle log messages from backend - display in console panel
+ * Messages are buffered and flushed once per animation frame to avoid
+ * DOM thrashing when the backend bursts multiple log lines at once.
  * @param {object} logData - Log message with level and content
  */
 function handleLogMessage(logData) {
-  const logPanel = document.getElementById('logConsolePanel');
-  if (!logPanel) return;
-  
   const level = logData.level || 'INFO';
   const msg = logData.message || '';
   
@@ -293,12 +321,11 @@ function handleLogMessage(logData) {
   lineEl.style.color = color;
   lineEl.textContent = `[${timestamp}] [${level}] ${msg}`;
   
-  logPanel.appendChild(lineEl);
-  logPanel.scrollTop = logPanel.scrollHeight;
-  
-  // Limit to 500 lines to prevent memory issues
-  while (logPanel.children.length > 500) {
-    logPanel.removeChild(logPanel.firstChild);
+  _logBuffer.push(lineEl);
+
+  if (!_logFlushScheduled) {
+    _logFlushScheduled = true;
+    requestAnimationFrame(_flushLogBuffer);
   }
 }
 
