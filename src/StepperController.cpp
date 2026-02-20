@@ -439,6 +439,9 @@ void motorTask(void* param) {
           Chaos.process();
         }
         break;
+
+      case MovementType::MOVEMENT_CALIBRATION:
+        break;  // Calibration handled via requestCalibration flag
     }
     
     // ═══════════════════════════════════════════════════════════════════════

@@ -5,6 +5,7 @@
         }
     ],
     "settings": {
+        "sonarlint.pathToCompileCommands": "${workspaceFolder}/compile_commands.json",
         "files.exclude": {
             "**/.git": true,
             "**/.DS_Store": true

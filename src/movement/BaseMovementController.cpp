@@ -37,11 +37,7 @@ BaseMovementControllerClass BaseMovement;
 // CONSTRUCTOR
 // ============================================================================
 
-BaseMovementControllerClass::BaseMovementControllerClass()
-{
-    // Global variables (motion, pendingMotion, motionPauseState, timing vars)
-    // are initialized in main.ino - no member initialization needed
-}
+BaseMovementControllerClass::BaseMovementControllerClass() = default;
 
 // DRY helper: recalculate startStep/targetStep from current motion config
 inline void BaseMovementControllerClass::recalcStepPositions() {
@@ -265,7 +261,7 @@ int BaseMovementControllerClass::calculateAdjustedDelay(float currentPositionMM,
 // RANDOM TURNBACK LOGIC
 // ============================================================================
 
-void BaseMovementControllerClass::checkAndTriggerRandomTurnback(float distanceIntoZone, bool isEndZone) {
+void BaseMovementControllerClass::checkAndTriggerRandomTurnback(float distanceIntoZone, [[maybe_unused]] bool isEndZone) {
     // Only process if random turnback is enabled
     if (!zoneEffect.randomTurnbackEnabled) {
         return;
@@ -313,9 +309,9 @@ void BaseMovementControllerClass::checkAndTriggerRandomTurnback(float distanceIn
         if (roll < zoneEffect.turnbackChance) {
             // Decide to turn back at a random point in the zone
             // Don't turn back in the first 10% or last 10% of the zone
-            float minTurnback = zoneEffect.zoneMM * 0.1;
-            float maxTurnback = zoneEffect.zoneMM * 0.9;
-            zoneEffectState.turnbackPointMM = minTurnback + (random(0, 1000) / 1000.0) * (maxTurnback - minTurnback);
+            float minTurnback = zoneEffect.zoneMM * 0.1f;
+            float maxTurnback = zoneEffect.zoneMM * 0.9f;
+            zoneEffectState.turnbackPointMM = minTurnback + (random(0, 1000) / 1000.0f) * (maxTurnback - minTurnback);
             zoneEffectState.hasPendingTurnback = true;
             if (engine->isDebugEnabled()) {
                 engine->debug("🔄 Random turnback planned at " + String(zoneEffectState.turnbackPointMM, 1) + "mm (roll=" + String(roll) + " < " + String(zoneEffect.turnbackChance) + "%)");
@@ -366,11 +362,11 @@ void BaseMovementControllerClass::triggerEndPause() {
     
     // Calculate pause duration
     if (zoneEffect.endPauseIsRandom) {
-        float minMs = zoneEffect.endPauseMinSec * 1000.0;
-        float maxMs = zoneEffect.endPauseMaxSec * 1000.0;
-        zoneEffectState.pauseDurationMs = (unsigned long)(minMs + (random(0, 1000) / 1000.0) * (maxMs - minMs));
+        float minMs = zoneEffect.endPauseMinSec * 1000.0f;
+        float maxMs = zoneEffect.endPauseMaxSec * 1000.0f;
+        zoneEffectState.pauseDurationMs = (unsigned long)(minMs + (random(0, 1000) / 1000.0f) * (maxMs - minMs));
     } else {
-        zoneEffectState.pauseDurationMs = (unsigned long)(zoneEffect.endPauseDurationSec * 1000.0);
+        zoneEffectState.pauseDurationMs = (unsigned long)(zoneEffect.endPauseDurationSec * 1000.0f);
     }
     
     zoneEffectState.isPausing = true;
@@ -401,7 +397,7 @@ void BaseMovementControllerClass::validateZoneEffect() {
     
     // If both zones enabled, each can use max 50% of movement amplitude
     if (zoneEffect.enableStart && zoneEffect.enableEnd) {
-        maxAllowedZone = movementAmplitudeMM / 2.0;
+        maxAllowedZone = movementAmplitudeMM / 2.0f;
     } else {
         maxAllowedZone = movementAmplitudeMM;
     }
@@ -430,11 +426,11 @@ void BaseMovementControllerClass::validateZoneEffect() {
     }
     
     // Validate pause durations
-    if (zoneEffect.endPauseMinSec < 0.1) zoneEffect.endPauseMinSec = 0.1;
+    if (zoneEffect.endPauseMinSec < 0.1f) zoneEffect.endPauseMinSec = 0.1f;
     if (zoneEffect.endPauseMaxSec < zoneEffect.endPauseMinSec) {
-        zoneEffect.endPauseMaxSec = zoneEffect.endPauseMinSec + 0.5;
+        zoneEffect.endPauseMaxSec = zoneEffect.endPauseMinSec + 0.5f;
     }
-    if (zoneEffect.endPauseDurationSec < 0.1) zoneEffect.endPauseDurationSec = 0.1;
+    if (zoneEffect.endPauseDurationSec < 0.1f) zoneEffect.endPauseDurationSec = 0.1f;
 }
 
 // ============================================================================
