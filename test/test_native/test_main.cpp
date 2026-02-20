@@ -1757,6 +1757,68 @@ void test_waveform_extreme_amplitude_zero() {
 }
 
 // ============================================================================
+// 27. Effective Frequency capping (7 tests)
+// ============================================================================
+
+void test_effective_freq_passthrough_low_request() {
+    // Low frequency + small amplitude → well under max speed → passthrough
+    float result = MovementMath::effectiveFrequency(1.0f, 10.0f);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, result);
+}
+
+void test_effective_freq_capped_high_request() {
+    // maxAllowedFreq = OSC_MAX_SPEED_MM_S / (2π × amplitude)
+    // With amplitude=10mm: maxAllowed = 700 / (2π×10) ≈ 11.14 Hz
+    // Request 50 Hz → should be capped
+    float result = MovementMath::effectiveFrequency(50.0f, 10.0f);
+    float expected = OSC_MAX_SPEED_MM_S / (2.0f * PI * 10.0f);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, expected, result);
+    TEST_ASSERT_TRUE(result < 50.0f);
+}
+
+void test_effective_freq_zero_amplitude_passthrough() {
+    // Amplitude 0 → no capping possible → return requested
+    float result = MovementMath::effectiveFrequency(999.0f, 0.0f);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 999.0f, result);
+}
+
+void test_effective_freq_negative_amplitude_passthrough() {
+    // Negative amplitude → guard (amplitudeMM > 0) is false → passthrough
+    float result = MovementMath::effectiveFrequency(100.0f, -5.0f);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 100.0f, result);
+}
+
+void test_effective_freq_exactly_at_limit() {
+    // Request exactly the max allowed freq → should return that exact value
+    float amplitude = 20.0f;
+    float maxAllowed = OSC_MAX_SPEED_MM_S / (2.0f * PI * amplitude);
+    float result = MovementMath::effectiveFrequency(maxAllowed, amplitude);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, maxAllowed, result);
+}
+
+void test_effective_freq_monotonic_with_amplitude() {
+    // Larger amplitude → lower max allowed freq → more capping
+    float highFreq = 100.0f;
+    float r1 = MovementMath::effectiveFrequency(highFreq, 5.0f);
+    float r2 = MovementMath::effectiveFrequency(highFreq, 10.0f);
+    float r3 = MovementMath::effectiveFrequency(highFreq, 50.0f);
+    TEST_ASSERT_TRUE(r1 >= r2);
+    TEST_ASSERT_TRUE(r2 >= r3);
+}
+
+void test_effective_freq_speed_invariant() {
+    // Effective speed = 2π × effectiveFreq × amplitude ≤ OSC_MAX_SPEED_MM_S
+    float testCases[][2] = {{50.0f, 5.0f}, {100.0f, 20.0f}, {0.5f, 100.0f}, {200.0f, 1.0f}};
+    for (auto& tc : testCases) {
+        float freq = tc[0], amp = tc[1];
+        float effFreq = MovementMath::effectiveFrequency(freq, amp);
+        float peakSpeed = 2.0f * PI * effFreq * amp;
+        // Must never exceed hardware limit (small tolerance for float)
+        TEST_ASSERT_TRUE(peakSpeed <= OSC_MAX_SPEED_MM_S + 0.1f);
+    }
+}
+
+// ============================================================================
 // MAIN — Register all tests
 // ============================================================================
 
@@ -2008,6 +2070,15 @@ int main(int argc, char **argv) {
     RUN_TEST(test_square_average_is_center);
     RUN_TEST(test_sine_symmetry_half_period);
     RUN_TEST(test_waveform_extreme_amplitude_zero);
+
+    // 27. Effective frequency capping (7 tests)
+    RUN_TEST(test_effective_freq_passthrough_low_request);
+    RUN_TEST(test_effective_freq_capped_high_request);
+    RUN_TEST(test_effective_freq_zero_amplitude_passthrough);
+    RUN_TEST(test_effective_freq_negative_amplitude_passthrough);
+    RUN_TEST(test_effective_freq_exactly_at_limit);
+    RUN_TEST(test_effective_freq_monotonic_with_amplitude);
+    RUN_TEST(test_effective_freq_speed_invariant);
 
     return UNITY_END();
 }
