@@ -22,6 +22,7 @@
 #include "core/Types.h"
 #include "core/GlobalState.h"
 #include "core/UtilityEngine.h"
+#include "core/CrashDiagnostics.h"
 
 #include "hardware/MotorDriver.h"
 #include "hardware/ContactSensors.h"
@@ -130,22 +131,6 @@ void networkTask(void* param);
 // ============================================================================
 // SETUP - INITIALIZATION
 // ============================================================================
-// Reset reason decoder (runs before logging is ready → Serial only)
-static const char* getResetReasonName(esp_reset_reason_t reason) {
-  switch (reason) {
-    case ESP_RST_POWERON:  return "POWER_ON";
-    case ESP_RST_EXT:      return "EXTERNAL_PIN";
-    case ESP_RST_SW:       return "SOFTWARE (ESP.restart)";
-    case ESP_RST_PANIC:    return "PANIC (crash/exception)";
-    case ESP_RST_INT_WDT:  return "INTERRUPT_WDT (task starved)";
-    case ESP_RST_TASK_WDT: return "TASK_WDT (task hung)";
-    case ESP_RST_WDT:      return "OTHER_WDT";
-    case ESP_RST_DEEPSLEEP:return "DEEP_SLEEP";
-    case ESP_RST_BROWNOUT: return "BROWNOUT (power dip!)";
-    case ESP_RST_SDIO:     return "SDIO";
-    default:               return "UNKNOWN";
-  }
-}
 
 void setup() {
   Serial.begin(115200);
@@ -155,7 +140,8 @@ void setup() {
   // RESET REASON (logged ASAP — before anything else, helps diagnose reboots)
   // ============================================================================
   esp_reset_reason_t resetReason = esp_reset_reason();
-  Serial.printf("\n🔄 RESET REASON: %s (code %d)\n", getResetReasonName(resetReason), (int)resetReason);
+  Serial.printf("\n🔄 RESET REASON: %s (code %d)\n",
+                CrashDiagnostics::getResetReasonName(resetReason), (int)resetReason);
   
   // ============================================================================
   // 0. RGB LED INITIALIZATION (Early for visual feedback) - OFF initially
@@ -174,90 +160,21 @@ void setup() {
     engine->info("✅ UtilityEngine initialized (LittleFS + Logging ready)");
   }
   
-  // Log reset reason to file too (persistent across reboots)
-  engine->warn(String("🔄 RESET REASON: ") + getResetReasonName(resetReason) + " (code " + String((int)resetReason) + ")");
-  if (resetReason == ESP_RST_BROWNOUT) {
-    engine->error("⚡ BROWNOUT detected! Check power supply (USB cable, PSU capacity, motor current draw)");
-  } else if (resetReason == ESP_RST_PANIC) {
-    engine->error("💥 PANIC crash detected! Reading coredump from flash...");
-    // Coredump-to-flash: the panic handler writes crash state to the coredump partition
-    // automatically. On next boot we read the summary.
-    esp_core_dump_summary_t summary;
-    esp_err_t cdErr = esp_core_dump_get_summary(&summary);
-    if (cdErr == ESP_OK) {
-      engine->error(String("💥 Crashed task: ") + summary.exc_task);
-      engine->error(String("💥 Exception PC: 0x") + String(summary.exc_pc, HEX));
-      // Log backtrace addresses
-      String bt = "💥 Backtrace:";
-      for (uint32_t i = 0; i < summary.exc_bt_info.depth && i < 16; i++) {
-        bt += " 0x" + String(summary.exc_bt_info.bt[i], HEX);
-      }
-      engine->error(bt);
-      if (summary.exc_bt_info.corrupted) {
-        engine->warn("⚠️ Backtrace may be corrupted");
-      }
-      engine->error("💥 Full decode: pio run -t coredump-info");
-      
-      // Save crash dump to LittleFS for OTA access (no USB needed)
-      if (engine->isFilesystemReady()) {
-        engine->createDirectory("/dumps");
-        
-        // Build dump content with addr2line-ready format
-        String dump;
-        dump.reserve(512);
-        dump += "=== CRASH DUMP ===\n";
-        dump += "Task: " + String(summary.exc_task) + "\n";
-        dump += "PC:   0x" + String(summary.exc_pc, HEX) + "\n";
-        dump += "Backtrace depth: " + String(summary.exc_bt_info.depth) + "\n";
-        dump += "Corrupted: " + String(summary.exc_bt_info.corrupted ? "YES" : "no") + "\n\n";
-        
-        // Raw backtrace (one per line for readability)
-        dump += "--- Backtrace ---\n";
-        for (uint32_t i = 0; i < summary.exc_bt_info.depth && i < 16; i++) {
-          dump += "  [" + String(i) + "] 0x" + String(summary.exc_bt_info.bt[i], HEX) + "\n";
-        }
-        
-        // addr2line command (copy-paste ready)
-        dump += "\n--- Decode command (run on PC) ---\n";
-        dump += "xtensa-esp32s3-elf-addr2line -pfiaC -e .pio/build/esp32s3_n16r8/firmware.elf";
-        for (uint32_t i = 0; i < summary.exc_bt_info.depth && i < 16; i++) {
-          dump += " 0x" + String(summary.exc_bt_info.bt[i], HEX);
-        }
-        dump += "\n";
-        
-        // Generate filename with timestamp if available, else use boot count
-        String filename = "/dumps/crash_" + String(millis()) + ".txt";
-        time_t now = time(nullptr);
-        struct tm *t = localtime(&now);
-        if (t->tm_year > (2020 - 1900)) {
-          char ts[20];
-          strftime(ts, sizeof(ts), "%Y%m%d_%H%M%S", t);
-          filename = "/dumps/crash_" + String(ts) + ".txt";
-        }
-        
-        if (engine->writeFileAsString(filename, dump)) {
-          engine->info("📁 Crash dump saved: " + filename);
-        } else {
-          engine->error("❌ Failed to save crash dump");
-        }
-      }
-    } else {
-      engine->error(String("💥 Could not read coredump (err ") + String(cdErr) + ") — use Serial monitor for live backtrace");
-    }
-  } else if (resetReason == ESP_RST_TASK_WDT || resetReason == ESP_RST_INT_WDT) {
-    engine->error("⏱️ WATCHDOG timeout! A task is blocked or starving other tasks");
-  }
+  // ============================================================================
+  // 2. CRASH DIAGNOSTICS (reads coredump, saves dump file if PANIC)
+  // ============================================================================
+  CrashDiagnostics::processBootReason(engine);
   
   engine->info("\n=== ESP32-S3 Stepper Controller ===");
   randomSeed(analogRead(0) + esp_random());
   
   // ============================================================================
-  // 2. NETWORK (WiFi - determines AP or STA mode)
+  // 3. NETWORK (WiFi - determines AP or STA mode)
   // ============================================================================
   StepperNetwork.begin();
   
   // ============================================================================
-  // 3. WEB SERVERS (HTTP + WebSocket)
+  // 4. WEB SERVERS (HTTP + WebSocket)
   // ============================================================================
   server.begin();
   webSocket.begin();
@@ -266,7 +183,7 @@ void setup() {
   });
   
   // ============================================================================
-  // 4. API ROUTES (WiFi config routes needed in both modes)
+  // 5. API ROUTES (WiFi config routes needed in both modes)
   // ============================================================================
   filesystemManager.registerRoutes();
   setupAPIRoutes();
@@ -305,7 +222,7 @@ void setup() {
   engine->info("✅ Command dispatcher + Status broadcaster ready");
   
   // ============================================================================
-  // 5. HARDWARE (Motor + Contacts) - STA mode only
+  // 6. HARDWARE (Motor + Contacts) - STA mode only
   // ============================================================================
   Motor.init();
   Contacts.init();
@@ -313,7 +230,7 @@ void setup() {
   engine->info("✅ Hardware initialized (Motor + Contacts)");
   
   // ============================================================================
-  // 6. CALIBRATION MANAGER - STA mode only
+  // 7. CALIBRATION MANAGER - STA mode only
   // ============================================================================
   Calibration.init(&webSocket, &server);
   Calibration.setStatusCallback(sendStatus);
@@ -322,7 +239,7 @@ void setup() {
   engine->info("✅ CalibrationManager ready");
   
   // ============================================================================
-  // 7. STARTUP COMPLETE - STA mode
+  // 8. STARTUP COMPLETE - STA mode
   // ============================================================================
   engine->printStatus();
   
@@ -342,7 +259,7 @@ void setup() {
   engine->info("╚════════════════════════════════════════════════════════╝\n");
   
   // ============================================================================
-  // 8. DUAL-CORE FREERTOS INITIALIZATION - STA mode only
+  // 9. DUAL-CORE FREERTOS INITIALIZATION - STA mode only
   // ============================================================================
   
   // Create mutexes for shared data protection
