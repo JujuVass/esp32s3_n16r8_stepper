@@ -148,21 +148,6 @@ public:
     void applyPendingChanges();
     
     /**
-     * Check if there are pending changes
-     * @return true if changes are queued
-     */
-    bool hasPendingChanges() const { return pendingMotion.hasChanges; }
-    
-    // ========================================================================
-    // STATUS METHODS
-    // ========================================================================
-    
-    /**
-     * Get current motion configuration (read-only access)
-     */
-    const MotionConfig& getConfig() const { return motion; }
-    
-    /**
      * Reset cycle timing measurements
      */
     void resetCycleTiming();
@@ -249,16 +234,6 @@ public:
     
     // trackDistance() removed — callers use stats.trackDelta(currentStep) directly
     
-    // ========================================================================
-    // CYCLE COUNTING
-    // ========================================================================
-    
-    /**
-     * Get current cycle count (incremented each time startStep is reached)
-     * @return Number of completed cycles since last reset
-     */
-    unsigned long getCycleCount() const { return _cycleCounter; }
-
 private:
     // Cycle counting state
     unsigned long _cycleCounter = 0;

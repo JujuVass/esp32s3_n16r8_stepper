@@ -109,24 +109,6 @@ public:
     // ========================================================================
     
     /**
-     * Get actual oscillation speed (considering hardware limits)
-     * @return Speed in mm/s
-     */
-    float getActualSpeed() const { return actualSpeedMMS_; }
-    
-    /**
-     * Get current amplitude (may differ during ramping)
-     * @return Current effective amplitude in mm
-     */
-    float getCurrentAmplitude() const { return oscillationState.currentAmplitude; }
-    
-    /**
-     * Get completed cycles count
-     * @return Number of full cycles completed
-     */
-    int getCompletedCycles() const { return oscillationState.completedCycles; }
-    
-    /**
      * Check if currently in ramp-in phase
      */
     bool isRampingIn() const { return oscillationState.isRampingIn; }

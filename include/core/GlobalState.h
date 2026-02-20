@@ -68,39 +68,6 @@ extern SemaphoreHandle_t motionMutex;      // Protects: motion, pendingMotion, z
 extern SemaphoreHandle_t stateMutex;       // Protects: config.currentState changes
 extern SemaphoreHandle_t statsMutex;       // Protects: stats compound operations (reset, save)
 
-// ============================================================================
-// MUTEX HELPER FUNCTIONS (inline for performance)
-// ============================================================================
-// Usage: if (takeMotionMutex()) { ... giveMotionMutex(); }
-// Default timeout: 10ms (non-blocking for real-time motor task)
-
-inline bool takeMotionMutex(TickType_t timeout = pdMS_TO_TICKS(10)) {
-    if (motionMutex == NULL) return true;  // Not initialized yet
-    return xSemaphoreTake(motionMutex, timeout) == pdTRUE;
-}
-
-inline void giveMotionMutex() {
-    if (motionMutex != NULL) xSemaphoreGive(motionMutex);
-}
-
-inline bool takeStateMutex(TickType_t timeout = pdMS_TO_TICKS(10)) {
-    if (stateMutex == NULL) return true;  // Not initialized yet
-    return xSemaphoreTake(stateMutex, timeout) == pdTRUE;
-}
-
-inline void giveStateMutex() {
-    if (stateMutex != NULL) xSemaphoreGive(stateMutex);
-}
-
-inline bool takeStatsMutex(TickType_t timeout = pdMS_TO_TICKS(10)) {
-    if (statsMutex == NULL) return true;  // Not initialized yet
-    return xSemaphoreTake(statsMutex, timeout) == pdTRUE;
-}
-
-inline void giveStatsMutex() {
-    if (statsMutex != NULL) xSemaphoreGive(statsMutex);
-}
-
 // RAII-style mutex guard for automatic release (C++ scope-based)
 class MutexGuard {
 public:

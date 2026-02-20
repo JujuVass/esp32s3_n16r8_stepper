@@ -91,16 +91,6 @@ public:
     bool isConnected() const { return _mode == NET_STA_AP && WiFi.status() == WL_CONNECTED; }
     
     /**
-     * Check if hardware should be initialized (all modes except AP_SETUP)
-     */
-    bool shouldInitHardware() const { return _mode != NET_AP_SETUP; }
-    
-    /**
-     * Check if WiFi is configured in EEPROM
-     */
-    bool isWiFiConfigured() const { return WiFiConfig.isConfigured(); }
-    
-    /**
      * Get configured SSID (from EEPROM or default)
      */
     String getConfiguredSSID() const;
@@ -110,11 +100,6 @@ public:
      * Uses cached value for performance (updated on connect/reconnect)
      */
     const String& getIPAddress() const { return _cachedIP; }
-    
-    /**
-     * Get AP IP address (192.168.4.1)
-     */
-    String getAPIPAddress() const { return WiFi.softAPIP().toString(); }
     
     /**
      * Get number of clients connected to AP
@@ -154,11 +139,6 @@ public:
      * @param epochMs JavaScript Date.now() value (milliseconds since epoch)
      */
     void syncTimeFromClient(uint64_t epochMs);
-    
-    /**
-     * Check if time has been synced (NTP or client)
-     */
-    bool isTimeSynced() const { return _timeSynced; }
     
     /**
      * AP Mode LED blink control (can be disabled after successful config)

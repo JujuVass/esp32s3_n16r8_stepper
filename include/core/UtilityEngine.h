@@ -110,15 +110,6 @@ public:
   void shutdown();
   
   // ========================================================================
-  // SUB-OBJECT ACCESS (for callers that need direct access)
-  // ========================================================================
-  
-  Logger&        logger()       { return _logger; }
-  FileSystem&    fs()           { return _fs; }
-  StatsManager&  statsManager() { return _stats; }
-  EepromManager& eeprom()       { return _eeprom; }
-  
-  // ========================================================================
   // LOGGING FACADE (inline forwarding — zero overhead)
   // ========================================================================
   
@@ -167,7 +158,6 @@ public:
   // ========================================================================
   
   uint8_t getConnectedClients() const   { return _ws.connectedClients(); }
-  bool hasConnectedClients() const      { return getConnectedClients() > 0; }
   
   // ========================================================================
   // STATISTICS FACADE
@@ -192,7 +182,6 @@ public:
   // TIME UTILITIES (kept here — tiny, no dedicated class needed)
   // ========================================================================
   
-  unsigned long getUptimeSeconds() const { return millis() / 1000; }
   String getFormattedTime(const char* format = "%Y-%m-%d %H:%M:%S") const;
   bool isTimeSynchronized() const;
   
