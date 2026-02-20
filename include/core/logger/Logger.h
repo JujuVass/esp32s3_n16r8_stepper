@@ -34,11 +34,11 @@ constexpr const char* LOG_FILE_EXTENSION = ".txt";
 // LOG ENTRY STRUCTURE
 // ============================================================================
 struct LogEntry {
-  unsigned long timestamp;  // millis() when log was created
-  LogLevel level;
+  unsigned long timestamp = 0;  // millis() when log was created
+  LogLevel level = (LogLevel)2;
   String message;
 
-  LogEntry() : timestamp(0), level((LogLevel)2), message("") {}
+  LogEntry() = default;
 };
 
 // ============================================================================

@@ -2,7 +2,7 @@
  * ============================================================================
  * SequenceExecutor.h - Sequence Execution Engine
  * ============================================================================
- * 
+ *
  * Manages the execution of sequence tables: starting, stopping, pausing,
  * advancing through lines, and coordinating with movement controllers.
  */
@@ -34,81 +34,81 @@ class SequenceExecutor {
 public:
     // Singleton pattern
     static SequenceExecutor& getInstance();
-    
+
     // ========================================================================
     // INITIALIZATION
     // ========================================================================
-    
+
     /**
      * Initialize the executor with WebSocket reference
      * @param ws Pointer to WebSocketsServer for status broadcasting
      */
     void begin(WebSocketsServer* ws);
-    
+
     // ========================================================================
     // SEQUENCE CONTROL
     // ========================================================================
-    
+
     /**
      * Start sequence execution
      * @param loopMode false=single pass, true=infinite loop
      */
     void start(bool loopMode = false);
-    
+
     /**
      * Stop sequence execution
      */
     void stop();
-    
+
     /**
      * Toggle pause/resume
      */
     void togglePause();
-    
+
     /**
      * Skip to next sequence line
      */
     void skipToNextLine();
-    
+
     // ========================================================================
     // MAIN LOOP PROCESSING
     // ========================================================================
-    
+
     /**
      * Process sequence execution (call in main loop)
      * Advances through lines and manages timing
      */
     void process();
-    
+
     // ========================================================================
     // STATUS
     // ========================================================================
-    
+
     /**
      * Send sequence status via WebSocket
      */
     void sendStatus();
-    
+
     /**
      * Check if sequence is currently running
      */
     bool isRunning() const { return seqState.isRunning; }
-    
+
     /**
      * Check if sequence is paused
      */
     bool isPaused() const { return seqState.isPaused; }
-    
+
     // ========================================================================
     // COMPLETION HANDLER
     // ========================================================================
-    
+
     /**
      * Called when a movement cycle completes
      * Handles cycle counting and state transitions
      */
     void onMovementComplete();
-    
+
     /**
      * Blocking move to a specific step position with WS servicing.
      * Sets/clears blockingMoveInProgress flag. Services WebSocket + HTTP
@@ -118,51 +118,51 @@ public:
      * @return true if position reached, false if timeout
      */
     [[nodiscard]] bool blockingMoveToStep(long targetStepPos, unsigned long timeoutMs = 30000);
-    
+
 private:
-    SequenceExecutor() : _webSocket(nullptr), _lastPauseStatusSend(0) {}
+    SequenceExecutor() = default;
     SequenceExecutor(const SequenceExecutor&) = delete;
     SequenceExecutor& operator=(const SequenceExecutor&) = delete;
-    
-    WebSocketsServer* _webSocket;
-    unsigned long _lastPauseStatusSend;  // Rate-limit status during line pauses
-    
+
+    WebSocketsServer* _webSocket = nullptr;
+    unsigned long _lastPauseStatusSend = 0;  // Rate-limit status during line pauses
+
     // ========================================================================
     // INTERNAL HELPERS
     // ========================================================================
-    
+
     /**
      * Position motor for next sequence line
      */
     void positionForNextLine();
-    
+
     /**
      * Complete sequence execution (cleanup, optional return to start)
      * @param autoReturnToStart If true, motor returns to position 0 before cleanup
      */
     void completeSequence(bool autoReturnToStart);
-    
+
     /**
      * Check and handle sequence end logic
      * @return true if sequence continues, false if ended
      */
     bool checkAndHandleSequenceEnd();
-    
+
     /**
      * Start VA-ET-VIENT movement for current line
      */
     void startVaEtVientLine(SequenceLine* line);
-    
+
     /**
      * Start OSCILLATION movement for current line
      */
     void startOscillationLine(SequenceLine* line);
-    
+
     /**
      * Start CHAOS movement for current line
      */
     void startChaosLine(SequenceLine* line);
-    
+
     /**
      * Start CALIBRATION for current line
      */

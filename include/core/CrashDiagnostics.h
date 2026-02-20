@@ -1,12 +1,12 @@
 /**
  * CrashDiagnostics.h - Boot-time crash analysis & dump file management
- * 
+ *
  * On each boot:
  *  1. Reads ESP32 reset reason
  *  2. If PANIC: reads coredump summary from flash partition
  *  3. Saves crash dump file to /dumps/ (addr2line-ready)
  *  4. Logs diagnostics via UtilityEngine
- * 
+ *
  * Crash dumps are accessible over OTA via /api/system/dumps/* (APIRoutes.cpp)
  */
 

@@ -29,8 +29,8 @@ FilesystemManager::FilesystemManager(WebServer& webServer) : server(webServer) {
 // ============================================================================
 
 bool FilesystemManager::isBinaryFile(const String& path) {
-  for (int i = 0; i < 8; i++) {
-    if (path.endsWith(binaryExtensions[i])) {
+  for (const auto& ext : binaryExtensions) {
+    if (path.endsWith(ext)) {
       return true;
     }
   }
@@ -282,18 +282,18 @@ void FilesystemManager::handleWriteFile() {
   }
 
   size_t written = file.print(content);
-  
+
   // 🛡️ PROTECTION: Flush to ensure data written to flash
   file.flush();
-  
+
   // 🛡️ VALIDATION: Verify write completed
   if (!file) {
     sendJsonError(500, "File corrupted during write (flush failed)");
     return;
   }
-  
+
   file.close();
-  
+
   // 🛡️ CHECK: Verify expected bytes written
   if (written != content.length()) {
     String errorMsg = "Incomplete write: " + String(written) + "/" + String(content.length()) + " bytes";
@@ -318,13 +318,13 @@ void FilesystemManager::handleUploadFile() {
       size_t totalBytes = LittleFS.totalBytes();
       size_t usedBytes = LittleFS.usedBytes();
       size_t available = totalBytes - usedBytes;
-      
+
       if (contentLength > available) {
         if (engine) engine->error("Upload rejected: file too large (" + String(contentLength) + " bytes needed, only " + String(available) + " bytes available)");
-        else Serial.printf("Upload rejected: file too large (%d bytes needed, only %d bytes available)\n", 
+        else Serial.printf("Upload rejected: file too large (%d bytes needed, only %d bytes available)\n",
                      contentLength, available);
-        server.send(413, "application/json", 
-          "{\"error\":\"File too large\",\"needed\":" + String(contentLength) + 
+        server.send(413, "application/json",
+          "{\"error\":\"File too large\",\"needed\":" + String(contentLength) +
           ",\"available\":" + String(available) + "}");
         return;
       }
@@ -342,7 +342,7 @@ void FilesystemManager::handleUploadFile() {
     if (uploadFile) {
       size_t written = uploadFile.write(upload.buf, upload.currentSize);
       totalWritten += written;
-      
+
       // 🛡️ PROTECTION: Verify all bytes were written
       if (written != upload.currentSize) {
         uploadFile.close();

@@ -29,7 +29,7 @@
 
 /**
  * FilesystemManager - REST API for LittleFS file operations
- * 
+ *
  * Provides HTTP endpoints for file management:
  *   GET  /filesystem        - Serve filesystem.html UI
  *   GET  /api/fs/list       - Get file list (recursive, JSON)
@@ -51,7 +51,7 @@ private:
   // Private helper methods
   bool isBinaryFile(const String& path);
   String normalizePath(String path);
-  
+
   // JSON response helpers: uses free functions from APIRoutes.h (DRY)
 
   // Route handlers (called by registerRoutes lambdas)

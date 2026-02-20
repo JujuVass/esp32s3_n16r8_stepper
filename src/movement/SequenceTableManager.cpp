@@ -41,83 +41,83 @@ int SequenceTableManager::addLine(const SequenceLine& newLine) {
     Status.sendError("❌ Sequencer full! Max 20 lines");
     return -1;
   }
-  
+
   sequenceTable[sequenceLineCount] = newLine;
   sequenceTable[sequenceLineCount].lineId = config.nextLineId++;  // Assign ID after copy
   int assignedId = sequenceTable[sequenceLineCount].lineId;
   sequenceLineCount++;
-  
-  engine->info("✅ Line added: ID=" + String(assignedId) + " | Pos:" + 
+
+  engine->info("✅ Line added: ID=" + String(assignedId) + " | Pos:" +
         String(newLine.startPositionMM, 1) + "mm, Dist:" + String(newLine.distanceMM, 1) + "mm");
-  
+
   return assignedId;
 }
 
 bool SequenceTableManager::deleteLine(int lineId) {
   int idx = findLineIndex(lineId);
-  
+
   if (idx == -1) {
     Status.sendError("❌ Line not found");
     return false;
   }
-  
+
   // Shift lines down
   for (int i = idx; i < sequenceLineCount - 1; i++) {
     sequenceTable[i] = sequenceTable[i + 1];
   }
-  
+
   sequenceLineCount--;
   engine->info("🗑️ Line deleted: ID=" + String(lineId));
-  
+
   return true;
 }
 
 bool SequenceTableManager::updateLine(int lineId, const SequenceLine& updatedLine) {
   int idx = findLineIndex(lineId);
-  
+
   if (idx == -1) {
     Status.sendError("❌ Line not found");
     return false;
   }
-  
+
   sequenceTable[idx] = updatedLine;
   sequenceTable[idx].lineId = lineId;  // Keep original ID
-  
+
   engine->info("✏️ Line updated: ID=" + String(lineId));
   return true;
 }
 
 bool SequenceTableManager::moveLine(int lineId, int direction) {
   int idx = findLineIndex(lineId);
-  
+
   if (idx == -1) return false;
-  
+
   int newIdx = idx + direction;
   if (newIdx < 0 || newIdx >= sequenceLineCount) {
     return false;  // Out of bounds
   }
-  
+
   // Swap lines
   SequenceLine temp = sequenceTable[idx];
   sequenceTable[idx] = sequenceTable[newIdx];
   sequenceTable[newIdx] = temp;
-  
-  engine->info(String("↕️ Line moved: ID=") + String(lineId) + " | " + 
+
+  engine->info(String("↕️ Line moved: ID=") + String(lineId) + " | " +
         String(idx + 1) + " → " + String(newIdx + 1));
-  
+
   return true;
 }
 
 bool SequenceTableManager::reorderLine(int lineId, int newIndex) {
   int oldIndex = findLineIndex(lineId);
-  
+
   if (oldIndex == -1) return false;
   if (newIndex < 0 || newIndex >= sequenceLineCount) return false;
   if (oldIndex == newIndex) return true;  // Already at target
-  
+
   // Store the line to move
   SequenceLine lineToMove = sequenceTable[oldIndex];
-  
+
   // Shift lines to fill the gap
   if (oldIndex < newIndex) {
     // Moving down: shift lines up
@@ -130,32 +130,32 @@ bool SequenceTableManager::reorderLine(int lineId, int newIndex) {
       sequenceTable[i] = sequenceTable[i - 1];
     }
   }
-  
+
   // Place the line at new position
   sequenceTable[newIndex] = lineToMove;
-  
-  engine->info(String("🔄 Line reordered: ID=") + String(lineId) + " | " + 
+
+  engine->info(String("🔄 Line reordered: ID=") + String(lineId) + " | " +
         String(oldIndex + 1) + " → " + String(newIndex + 1));
-  
+
   return true;
 }
 
 bool SequenceTableManager::toggleLine(int lineId, bool enabled) {
   int idx = findLineIndex(lineId);
-  
+
   if (idx == -1) return false;
-  
+
   sequenceTable[idx].enabled = enabled;
-  engine->info(String(enabled ? "✓" : "✗") + " Line ID=" + String(lineId) + 
+  engine->info(String(enabled ? "✓" : "✗") + " Line ID=" + String(lineId) +
         (enabled ? " enabled" : " disabled"));
   return true;
 }
 
 int SequenceTableManager::duplicateLine(int lineId) {
   int idx = findLineIndex(lineId);
-  
+
   if (idx == -1) return -1;
-  
+
   SequenceLine duplicate = sequenceTable[idx];
   return addLine(duplicate);
 }
@@ -185,12 +185,12 @@ int SequenceTableManager::findLineIndex(int lineId) {
 
 String SequenceTableManager::validatePhysics(const SequenceLine& line) {
   float effectiveMax = Validators::getMaxAllowedMM();
-  
+
   switch (line.movementType) {
     case MOVEMENT_VAET: {
       // VA-ET-VIENT validation
       float endPosition = line.startPositionMM + line.distanceMM;
-      
+
       if (line.startPositionMM < 0) {
         return "Start position negative";
       }
@@ -205,12 +205,12 @@ String SequenceTableManager::validatePhysics(const SequenceLine& line) {
       }
       break;
     }
-    
+
     case MOVEMENT_OSC: {
       // OSCILLATION validation
       float minPos = line.oscCenterPositionMM - line.oscAmplitudeMM;
       float maxPos = line.oscCenterPositionMM + line.oscAmplitudeMM;
-      
+
       if (minPos < 0) {
         return "Oscillation min position (" + String(minPos, 1) + "mm) is negative";
       }
@@ -222,12 +222,12 @@ String SequenceTableManager::validatePhysics(const SequenceLine& line) {
       }
       break;
     }
-    
+
     case MOVEMENT_CHAOS: {
       // CHAOS validation
       float minPos = line.chaosCenterPositionMM - line.chaosAmplitudeMM;
       float maxPos = line.chaosCenterPositionMM + line.chaosAmplitudeMM;
-      
+
       if (minPos < 0) {
         return "Chaos min position (" + String(minPos, 1) + "mm) is negative";
       }
@@ -239,11 +239,11 @@ String SequenceTableManager::validatePhysics(const SequenceLine& line) {
       }
       break;
     }
-    
+
     default:
       break;
   }
-  
+
   return "";  // Valid
 }
 
@@ -253,27 +253,27 @@ String SequenceTableManager::validatePhysics(const SequenceLine& line) {
 
 SequenceLine SequenceTableManager::parseFromJson(JsonVariantConst obj) {
   SequenceLine line;
-  
+
   // Common fields
   line.enabled = obj["enabled"] | true;
   line.movementType = (MovementType)(obj["movementType"] | 0);
-  
+
   // Cycle count: always 1 for CALIBRATION, else from JSON
   if (line.movementType == MOVEMENT_CALIBRATION) {
     line.cycleCount = 1;
   } else {
     line.cycleCount = obj["cycleCount"] | 1;
   }
-  
+
   // Pause after movement
   line.pauseAfterMs = obj["pauseAfterMs"] | 0;
-  
+
   // VA-ET-VIENT fields
   line.startPositionMM = obj["startPositionMM"] | 0.0f;
   line.distanceMM = obj["distanceMM"] | 100.0f;
   line.speedForward = obj["speedForward"] | 5.0f;
   line.speedBackward = obj["speedBackward"] | 5.0f;
-  
+
   // VA-ET-VIENT zone effects (embedded ZoneEffectConfig)
   JsonVariantConst ze = obj["vaetZoneEffect"];
   if (!ze.isNull()) {
@@ -300,7 +300,7 @@ SequenceLine SequenceTableManager::parseFromJson(JsonVariantConst obj) {
     float decelZoneMM = obj["decelZoneMM"] | 50.0f;
     float decelEffectPercent = obj["decelEffectPercent"] | 50.0f;
     int decelMode = obj["decelMode"] | 0;
-    
+
     // Convert to ZoneEffectConfig
     line.vaetZoneEffect.enabled = (decelStartEnabled || decelEndEnabled);
     line.vaetZoneEffect.enableStart = decelStartEnabled;
@@ -313,14 +313,14 @@ SequenceLine SequenceTableManager::parseFromJson(JsonVariantConst obj) {
     line.vaetZoneEffect.randomTurnbackEnabled = false;
     line.vaetZoneEffect.endPauseEnabled = false;
   }
-  
+
   // VA-ET-VIENT cycle pause (DRY: uses CyclePauseConfig struct)
   line.vaetCyclePause.enabled = obj["vaetCyclePauseEnabled"] | false;
   line.vaetCyclePause.isRandom = obj["vaetCyclePauseIsRandom"] | false;
   line.vaetCyclePause.pauseDurationSec = obj["vaetCyclePauseDurationSec"] | 0.0f;
   line.vaetCyclePause.minPauseSec = obj["vaetCyclePauseMinSec"] | 0.5f;
   line.vaetCyclePause.maxPauseSec = obj["vaetCyclePauseMaxSec"] | 3.0f;
-  
+
   // OSCILLATION fields
   float effectiveMax = Validators::getMaxAllowedMM();
   line.oscCenterPositionMM = obj["oscCenterPositionMM"] | (effectiveMax / 2.0f);
@@ -331,14 +331,14 @@ SequenceLine SequenceTableManager::parseFromJson(JsonVariantConst obj) {
   line.oscEnableRampOut = obj["oscEnableRampOut"] | false;
   line.oscRampInDurationMs = obj["oscRampInDurationMs"] | 1000.0f;
   line.oscRampOutDurationMs = obj["oscRampOutDurationMs"] | 1000.0f;
-  
+
   // OSCILLATION cycle pause (DRY: uses CyclePauseConfig struct)
   line.oscCyclePause.enabled = obj["oscCyclePauseEnabled"] | false;
   line.oscCyclePause.isRandom = obj["oscCyclePauseIsRandom"] | false;
   line.oscCyclePause.pauseDurationSec = obj["oscCyclePauseDurationSec"] | 0.0f;
   line.oscCyclePause.minPauseSec = obj["oscCyclePauseMinSec"] | 0.5f;
   line.oscCyclePause.maxPauseSec = obj["oscCyclePauseMaxSec"] | 3.0f;
-  
+
   // CHAOS fields
   line.chaosCenterPositionMM = obj["chaosCenterPositionMM"] | (effectiveMax / 2.0f);
   line.chaosAmplitudeMM = obj["chaosAmplitudeMM"] | 50.0f;
@@ -346,7 +346,7 @@ SequenceLine SequenceTableManager::parseFromJson(JsonVariantConst obj) {
   line.chaosCrazinessPercent = obj["chaosCrazinessPercent"] | 50.0f;
   line.chaosDurationSeconds = obj["chaosDurationSeconds"] | 30UL;
   line.chaosSeed = obj["chaosSeed"] | 0UL;
-  
+
   // Parse patterns array
   JsonVariantConst patternsVar = obj["chaosPatternsEnabled"];
   if (patternsVar.is<JsonArrayConst>()) {
@@ -357,11 +357,11 @@ SequenceLine SequenceTableManager::parseFromJson(JsonVariantConst obj) {
     }
   } else {
     // Default: all patterns enabled
-    for (int i = 0; i < CHAOS_PATTERN_COUNT; i++) {
-      line.chaosPatternsEnabled[i] = true;
+    for (auto& flag : line.chaosPatternsEnabled) {
+      flag = true;
     }
   }
-  
+
   return line;
 }
 
@@ -371,28 +371,28 @@ SequenceLine SequenceTableManager::parseFromJson(JsonVariantConst obj) {
 
 String SequenceTableManager::exportToJson() {
   JsonDocument doc;
-  
+
   doc["version"] = "2.0";
   doc["sequenceLineCount"] = sequenceLineCount;
-  
+
   JsonArray linesArray = doc["lines"].to<JsonArray>();
-  
+
   for (int i = 0; i < sequenceLineCount; i++) {
     SequenceLine* line = &sequenceTable[i];
-    
+
     JsonObject lineObj = linesArray.add<JsonObject>();
-    
+
     // Common fields
     lineObj["lineId"] = line->lineId;
     lineObj["enabled"] = line->enabled;
     lineObj["movementType"] = (int)line->movementType;
-    
+
     // VA-ET-VIENT fields
     lineObj["startPositionMM"] = serialized(String(line->startPositionMM, 1));
     lineObj["distanceMM"] = serialized(String(line->distanceMM, 1));
     lineObj["speedForward"] = serialized(String(line->speedForward, 1));
     lineObj["speedBackward"] = serialized(String(line->speedBackward, 1));
-    
+
     // VA-ET-VIENT zone effects (embedded ZoneEffectConfig)
     JsonObject ze = lineObj["vaetZoneEffect"].to<JsonObject>();
     ze["enabled"] = line->vaetZoneEffect.enabled;
@@ -410,14 +410,14 @@ String SequenceTableManager::exportToJson() {
     ze["endPauseDurationSec"] = serialized(String(line->vaetZoneEffect.endPauseDurationSec, 1));
     ze["endPauseMinSec"] = serialized(String(line->vaetZoneEffect.endPauseMinSec, 1));
     ze["endPauseMaxSec"] = serialized(String(line->vaetZoneEffect.endPauseMaxSec, 1));
-    
+
     // VA-ET-VIENT cycle pause (JSON keys unchanged for front-end compatibility)
     lineObj["vaetCyclePauseEnabled"] = line->vaetCyclePause.enabled;
     lineObj["vaetCyclePauseIsRandom"] = line->vaetCyclePause.isRandom;
     lineObj["vaetCyclePauseDurationSec"] = serialized(String(line->vaetCyclePause.pauseDurationSec, 1));
     lineObj["vaetCyclePauseMinSec"] = serialized(String(line->vaetCyclePause.minPauseSec, 1));
     lineObj["vaetCyclePauseMaxSec"] = serialized(String(line->vaetCyclePause.maxPauseSec, 1));
-    
+
     // OSCILLATION fields
     lineObj["oscCenterPositionMM"] = serialized(String(line->oscCenterPositionMM, 1));
     lineObj["oscAmplitudeMM"] = serialized(String(line->oscAmplitudeMM, 1));
@@ -427,14 +427,14 @@ String SequenceTableManager::exportToJson() {
     lineObj["oscEnableRampOut"] = line->oscEnableRampOut;
     lineObj["oscRampInDurationMs"] = serialized(String(line->oscRampInDurationMs, 0));
     lineObj["oscRampOutDurationMs"] = serialized(String(line->oscRampOutDurationMs, 0));
-    
+
     // OSCILLATION cycle pause (JSON keys unchanged for front-end compatibility)
     lineObj["oscCyclePauseEnabled"] = line->oscCyclePause.enabled;
     lineObj["oscCyclePauseIsRandom"] = line->oscCyclePause.isRandom;
     lineObj["oscCyclePauseDurationSec"] = serialized(String(line->oscCyclePause.pauseDurationSec, 1));
     lineObj["oscCyclePauseMinSec"] = serialized(String(line->oscCyclePause.minPauseSec, 1));
     lineObj["oscCyclePauseMaxSec"] = serialized(String(line->oscCyclePause.maxPauseSec, 1));
-    
+
     // CHAOS fields
     lineObj["chaosCenterPositionMM"] = serialized(String(line->chaosCenterPositionMM, 1));
     lineObj["chaosAmplitudeMM"] = serialized(String(line->chaosAmplitudeMM, 1));
@@ -442,17 +442,17 @@ String SequenceTableManager::exportToJson() {
     lineObj["chaosCrazinessPercent"] = serialized(String(line->chaosCrazinessPercent, 1));
     lineObj["chaosDurationSeconds"] = line->chaosDurationSeconds;
     lineObj["chaosSeed"] = line->chaosSeed;
-    
+
     JsonArray patternsArray = lineObj["chaosPatternsEnabled"].to<JsonArray>();
-    for (int p = 0; p < CHAOS_PATTERN_COUNT; p++) {
-      patternsArray.add(line->chaosPatternsEnabled[p]);
+    for (bool flag : line->chaosPatternsEnabled) {
+      patternsArray.add(flag);
     }
-    
+
     // COMMON fields
     lineObj["cycleCount"] = line->cycleCount;
     lineObj["pauseAfterMs"] = line->pauseAfterMs;
   }
-  
+
   String output;
   serializeJson(doc, output);
   return output;
@@ -463,12 +463,12 @@ String SequenceTableManager::exportToJson() {
 // ============================================================================
 
 int SequenceTableManager::importFromJson(String jsonData) {
-  engine->debug(String("📤 JSON received (") + String(jsonData.length()) + " chars): " + 
+  engine->debug(String("📤 JSON received (") + String(jsonData.length()) + " chars): " +
         jsonData.substring(0, min(200, (int)jsonData.length())));
-  
+
   // Clear existing table
   clear();
-  
+
   JsonDocument importDoc;
   DeserializationError error = deserializeJson(importDoc, jsonData);
   if (error) {
@@ -476,49 +476,49 @@ int SequenceTableManager::importFromJson(String jsonData) {
     Status.sendError("❌ Invalid JSON: " + String(error.c_str()));
     return -1;
   }
-  
+
   // Validate sequenceLineCount
   int importLineCount = importDoc["sequenceLineCount"] | 0;
   if (importLineCount <= 0 || importLineCount > MAX_SEQUENCE_LINES) {
     Status.sendError("❌ Invalid JSON or too many lines");
     return -1;
   }
-  
+
   // Validate lines array
   if (!importDoc["lines"].is<JsonArray>()) {
     Status.sendError("❌ 'lines' array not found or invalid");
     return -1;
   }
-  
+
   JsonArray linesArray = importDoc["lines"].as<JsonArray>();
   engine->info(String("📥 Import: ") + String(importLineCount) + " lines");
-  
+
   int maxLineId = 0;
   int importedCount = 0;
-  
+
   for (JsonObject lineObj : linesArray) {
     if (sequenceLineCount >= MAX_SEQUENCE_LINES) {
       engine->warn("⚠️ Table full, stopping import");
       break;
     }
-    
+
     SequenceLine newLine = parseFromJson(lineObj);
     newLine.lineId = lineObj["lineId"] | 0;
-    
+
     if (newLine.lineId > maxLineId) {
       maxLineId = newLine.lineId;
     }
-    
+
     sequenceTable[sequenceLineCount] = newLine;
     sequenceLineCount++;
     importedCount++;
   }
-  
+
   config.nextLineId = maxLineId + 1;
-  
+
   engine->info(String("✅ ") + String(importedCount) + " lines imported");
   engine->info(String("📢 nextLineId updated: ") + String(config.nextLineId));
-  
+
   return importedCount;
 }
 

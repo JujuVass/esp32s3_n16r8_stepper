@@ -14,7 +14,7 @@ class ContactSensors {
 public:
     static ContactSensors& getInstance();
     void init();
-    
+
     // ========================================================================
     // SIMPLE API - Direct opto reading (no debounce needed)
     // ========================================================================
@@ -23,7 +23,7 @@ public:
     bool isStartClear() const;        // true if START opto clear (LOW)
     bool isActive(uint8_t pin) const; // Generic: true if pin is HIGH (blocked)
     bool isClear(uint8_t pin) const;  // Generic: true if pin is LOW (clear)
-    
+
     // ========================================================================
     // DRIFT DETECTION & CORRECTION
     // ========================================================================

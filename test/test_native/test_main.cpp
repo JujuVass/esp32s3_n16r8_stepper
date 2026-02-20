@@ -50,7 +50,7 @@ struct SystemConfig {
     int lastEndContactState;
     bool currentMotorDirection;
     int nextLineId;
-    
+
     SystemConfig() :
         currentState(SystemState::STATE_INIT),
         executionContext(ExecutionContext::CONTEXT_STANDALONE),
@@ -569,7 +569,7 @@ void test_safe_duration_all_patterns_valid() {
         MovementMath::safeDurationCalc(*cfg, 0.0f, 0.5f, outMin, outMax);
         TEST_ASSERT_TRUE(outMin < outMax);
         TEST_ASSERT_TRUE(outMin >= 100);
-        
+
         MovementMath::safeDurationCalc(*cfg, 1.0f, 0.5f, outMin, outMax);
         TEST_ASSERT_TRUE(outMin < outMax);
         TEST_ASSERT_TRUE(outMin >= 100);
@@ -777,7 +777,7 @@ void test_validator_distance_limit_percent() {
     maxDistanceLimitPercent = 50.0f;
     TEST_ASSERT_TRUE(Validators::distance(100.0f, err));   // Within effective limit
     TEST_ASSERT_FALSE(Validators::distance(101.0f, err));   // Exceeds effective limit
-    
+
     // Restore
     effectiveMaxDistanceMM = 200.0f;
     maxDistanceLimitPercent = 100.0f;

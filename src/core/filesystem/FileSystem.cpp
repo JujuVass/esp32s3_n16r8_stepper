@@ -69,7 +69,7 @@ bool FileSystem::mount() {
     size_t usedBytes = LittleFS.usedBytes();
     String msg = "LittleFS: " + String(totalBytes / 1024) + " KB total, " +
                  String(usedBytes / 1024) + " KB used (" +
-                 String((usedBytes * 100.0f) / totalBytes, 1) + "%)";
+                 String((static_cast<float>(usedBytes) * 100.0f) / static_cast<float>(totalBytes), 1) + "%)";
     if (engine) engine->info(msg);
     else Serial.println("[FileSystem] " + msg);
   }
@@ -117,14 +117,14 @@ String FileSystem::readFileAsString(const String& path, size_t maxSize) {
 
   // Limit read size for safety
   size_t readSize = min(file.size(), maxSize);
-  
+
   // Bulk read for performance
   char* buf = new (std::nothrow) char[readSize + 1];
   if (!buf) {
     file.close();
     return "";
   }
-  
+
   size_t bytesRead = file.readBytes(buf, readSize);
   buf[bytesRead] = '\0';
   String content(buf);
@@ -189,7 +189,7 @@ float FileSystem::getDiskUsagePercent() const {
   uint32_t total = getTotalBytes();
   if (total == 0) return 0.0f;
   uint32_t used = getUsedBytes();
-  return (used * 100.0f) / total;
+  return (static_cast<float>(used) * 100.0f) / static_cast<float>(total);
 }
 
 // ============================================================================

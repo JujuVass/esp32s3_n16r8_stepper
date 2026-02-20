@@ -31,14 +31,14 @@ ContactSensors& Contacts = ContactSensors::getInstance();
 
 void ContactSensors::init() {
     if (m_initialized) return;
-    
+
     // Opto sensors: HIGH when beam blocked, LOW when clear
     // No pull-up needed - opto drives the signal
     pinMode(PIN_START_CONTACT, INPUT);
     pinMode(PIN_END_CONTACT, INPUT);
-    
+
     m_initialized = true;
-    engine->info("✅ Opto sensors initialized (START=GPIO" + String(PIN_START_CONTACT) + 
+    engine->info("✅ Opto sensors initialized (START=GPIO" + String(PIN_START_CONTACT) +
                  ", END=GPIO" + String(PIN_END_CONTACT) + ") - HIGH=blocked, LOW=clear");
 }
 
@@ -89,29 +89,29 @@ bool ContactSensors::checkAndCorrectDriftEnd() {
     // LEVEL 3: SOFT DRIFT at END
     // Position beyond config.maxStep but within buffer zone (SAFETY_OFFSET_STEPS)
     // Action: Physically move motor backward to correct position
-    
+
     if (currentStep > config.maxStep && currentStep <= config.maxStep + SAFETY_OFFSET_STEPS) {
         int correctionSteps = currentStep - config.maxStep;
-        
-        engine->debug(String("🔧 LEVEL 3 - Soft drift END: ") + String(currentStep) + 
+
+        engine->debug(String("🔧 LEVEL 3 - Soft drift END: ") + String(currentStep) +
               " steps (" + String(MovementMath::stepsToMM(currentStep), 2) + "mm) → " +
-              "Backing " + String(correctionSteps) + " steps to config.maxStep (" + 
+              "Backing " + String(correctionSteps) + " steps to config.maxStep (" +
               String(MovementMath::stepsToMM(config.maxStep), 2) + "mm)");
-        
+
         Motor.setDirection(false);  // Backward (includes 50µs delay)
         for (int i = 0; i < correctionSteps; i++) {
             Motor.step();
             currentStep = currentStep - 1;  // Update position as we move
         }
-        
+
         // Now physically synchronized at config.maxStep
         currentStep = config.maxStep;
-        engine->debug(String("✓ Position physically corrected to config.maxStep (") + 
+        engine->debug(String("✓ Position physically corrected to config.maxStep (") +
               String(MovementMath::stepsToMM(config.maxStep), 2) + "mm)");
-        
+
         return true;  // Drift corrected, caller should reverse direction
     }
-    
+
     return false;  // No drift detected
 }
 
@@ -119,84 +119,80 @@ bool ContactSensors::checkAndCorrectDriftStart() {
     // LEVEL 1: SOFT DRIFT at START
     // Negative position within buffer zone (-SAFETY_OFFSET_STEPS to 0)
     // Action: Physically move motor forward to correct position
-    
+
     if (currentStep < 0 && currentStep >= -SAFETY_OFFSET_STEPS) {
         int correctionSteps = abs(currentStep);
-        
-        engine->debug(String("🔧 LEVEL 1 - Soft drift START: ") + String(currentStep) + 
+
+        engine->debug(String("🔧 LEVEL 1 - Soft drift START: ") + String(currentStep) +
               " steps (" + String(MovementMath::stepsToMM(currentStep), 2) + "mm) → " +
               "Advancing " + String(correctionSteps) + " steps to position 0");
-        
+
         Motor.setDirection(true);  // Forward (includes 50µs delay)
         for (int i = 0; i < correctionSteps; i++) {
             Motor.step();
             currentStep = currentStep + 1;  // Update position as we move
         }
-        
+
         // Now physically synchronized at position 0
         currentStep = 0;
         config.minStep = 0;
         engine->debug("✓ Position physically corrected to 0");
-        
+
         return true;  // Drift corrected, caller should return
     }
-    
+
     return false;  // No drift detected
 }
 
 bool ContactSensors::checkHardDriftEnd() {
     // HARD DRIFT at END: Physical contact reached = critical error
     // OPTIMIZATION: Only test when close to config.maxStep (reduces false positives + CPU overhead)
-    
+
     long stepsToLimit = config.maxStep - currentStep;
     float distanceToLimitMM = MovementMath::stepsToMM(stepsToLimit);
-    
-    if (distanceToLimitMM <= HARD_DRIFT_TEST_ZONE_MM) {
-        // Close to limit → activate opto sensor test (no debounce needed)
-        if (isEndActive()) {
-            float currentPos = MovementMath::stepsToMM(currentStep);
-            
-            engine->error(String("🔴 Hard drift END! Opto triggered at ") + 
-                  String(currentPos, 1) + "mm (currentStep: " + String(currentStep) + 
-                  " | " + String(distanceToLimitMM, 1) + "mm from limit)");
-            
-            Status.sendError("❌ CRITICAL ERROR: Opto END triggered - Position drifted beyond safety buffer");
-            
-            stopMovement();
-            config.currentState = SystemState::STATE_ERROR;
-            Motor.disable();  // Safety: disable motor on critical error
-            
-            return false;  // Hard drift detected - critical error
-        }
+
+    if (distanceToLimitMM <= HARD_DRIFT_TEST_ZONE_MM && isEndActive()) {
+        // Close to limit and opto sensor triggered → critical error
+        float currentPos = MovementMath::stepsToMM(currentStep);
+
+        engine->error(String("🔴 Hard drift END! Opto triggered at ") +
+              String(currentPos, 1) + "mm (currentStep: " + String(currentStep) +
+              " | " + String(distanceToLimitMM, 1) + "mm from limit)");
+
+        Status.sendError("❌ CRITICAL ERROR: Opto END triggered - Position drifted beyond safety buffer");
+
+        stopMovement();
+        config.currentState = SystemState::STATE_ERROR;
+        Motor.disable();  // Safety: disable motor on critical error
+
+        return false;  // Hard drift detected - critical error
     }
-    
+
     return true;  // Safe to continue
 }
 
 bool ContactSensors::checkHardDriftStart() {
     // HARD DRIFT at START: Physical contact reached = critical error
     // OPTIMIZATION: Only test when close to position 0 (reduces false positives + CPU overhead)
-    
+
     float distanceToStartMM = MovementMath::stepsToMM(currentStep);
-    
-    if (distanceToStartMM <= HARD_DRIFT_TEST_ZONE_MM) {
-        // Close to start → activate opto sensor test (no debounce needed)
-        if (isStartActive()) {
-            float currentPos = MovementMath::stepsToMM(currentStep);
-            
-            engine->error(String("🔴 Hard drift START! Opto triggered at ") +
-                  String(currentPos, 1) + "mm (currentStep: " + String(currentStep) + 
-                  " | " + String(distanceToStartMM, 1) + "mm from start)");
-            
-            Status.sendError("❌ CRITICAL ERROR: Opto START triggered - Position drifted beyond safety buffer");
-            
-            stopMovement();
-            config.currentState = SystemState::STATE_ERROR;
-            Motor.disable();  // Safety: disable motor on critical error
-            
-            return false;  // Hard drift detected - critical error
-        }
+
+    if (distanceToStartMM <= HARD_DRIFT_TEST_ZONE_MM && isStartActive()) {
+        // Close to start and opto sensor triggered → critical error
+        float currentPos = MovementMath::stepsToMM(currentStep);
+
+        engine->error(String("🔴 Hard drift START! Opto triggered at ") +
+              String(currentPos, 1) + "mm (currentStep: " + String(currentStep) +
+              " | " + String(distanceToStartMM, 1) + "mm from start)");
+
+        Status.sendError("❌ CRITICAL ERROR: Opto START triggered - Position drifted beyond safety buffer");
+
+        stopMovement();
+        config.currentState = SystemState::STATE_ERROR;
+        Motor.disable();  // Safety: disable motor on critical error
+
+        return false;  // Hard drift detected - critical error
     }
-    
+
     return true;  // Safe to continue
 }

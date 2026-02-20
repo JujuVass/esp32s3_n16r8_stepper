@@ -2,10 +2,10 @@
  * ============================================================================
  * GlobalState.h - Centralized Global Variables Declaration
  * ============================================================================
- * 
+ *
  * Declares extern for variables that are truly GLOBAL and shared across modules.
  * Actual definitions are in main (.ino) or owning module .cpp files.
- * 
+ *
  * Module-specific data is owned by modules - include their header:
  *   - chaos, chaosState          → ChaosController.h
  *   - oscillation, oscState...   → OscillationController.h
@@ -13,7 +13,7 @@
  *   - decelZone                  → BaseMovementController.h (integrated)
  *   - seqState, currentMovement  → SequenceExecutor.h
  *   - sequenceTable[]            → SequenceTableManager.h
- * 
+ *
  * DUAL-CORE ARCHITECTURE (ESP32-S3):
  *   - Core 0 (APP_CPU): StepperNetwork tasks (WiFi, WebSocket, HTTP, OTA)
  *   - Core 1 (PRO_CPU): Motor tasks (stepping, timing-critical operations)
@@ -71,8 +71,8 @@ extern SemaphoreHandle_t statsMutex;       // Protects: stats compound operation
 // RAII-style mutex guard for automatic release (C++ scope-based)
 class MutexGuard {
 public:
-    explicit MutexGuard(SemaphoreHandle_t mutex, TickType_t timeout = pdMS_TO_TICKS(10)) 
-        : _mutex(mutex), _locked(false) {
+    explicit MutexGuard(SemaphoreHandle_t mutex, TickType_t timeout = pdMS_TO_TICKS(10))
+        : _mutex(mutex) {
         if (_mutex != NULL) {
             _locked = (xSemaphoreTake(_mutex, timeout) == pdTRUE);
         }
@@ -86,7 +86,7 @@ public:
     [[nodiscard]] explicit operator bool() const { return _locked; }
 private:
     SemaphoreHandle_t _mutex;
-    bool _locked;
+    bool _locked = false;
 };
 
 // WebSocket/Server mutex — prevents concurrent access from Core 0 (networkTask)

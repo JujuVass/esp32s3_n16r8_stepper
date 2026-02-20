@@ -1,12 +1,12 @@
 /**
  * WiFiConfigManager.h - WiFi Configuration Management
- * 
+ *
  * Manages WiFi credentials stored in NVS (Preferences API):
  * - Load/Save WiFi SSID and password
  * - Scan available networks
  * - Test connection before saving
  * - Clear configuration (factory reset)
- * 
+ *
  * NVS Namespace: "wifi_cfg"
  *   Key "configured" : bool   (true = valid config exists)
  *   Key "ssid"       : String (max 32 chars)
@@ -34,13 +34,13 @@ struct WiFiNetworkInfo {
 class WiFiConfigManager {
 public:
     static WiFiConfigManager& getInstance();
-    
+
     /**
      * Check if WiFi is configured in NVS
      * @return true if valid configuration exists
      */
     bool isConfigured();
-    
+
     /**
      * Load WiFi credentials from NVS
      * @param ssid Output: SSID string
@@ -48,7 +48,7 @@ public:
      * @return true if valid config loaded
      */
     bool loadConfig(String& ssid, String& password);
-    
+
     /**
      * Save WiFi credentials to NVS
      * @param ssid SSID to save (max 31 chars)
@@ -56,13 +56,13 @@ public:
      * @return true if saved successfully
      */
     bool saveConfig(const String& ssid, const String& password);
-    
+
     /**
      * Clear WiFi configuration from NVS
      * @return true if cleared successfully
      */
     bool clearConfig();
-    
+
     /**
      * Scan available WiFi networks
      * @param networks Output: Vector of network info
@@ -70,7 +70,7 @@ public:
      * @return Number of networks found
      */
     int scanNetworks(WiFiNetworkInfo* networks, int maxNetworks);
-    
+
     /**
      * Test WiFi connection with given credentials
      * Does NOT save to NVS - just tests
@@ -80,13 +80,13 @@ public:
      * @return true if connection successful
      */
     bool testConnection(const String& ssid, const String& password, unsigned long timeoutMs = 15000);
-    
+
     /**
      * Get stored SSID (without password for security)
      * @return SSID or empty string if not configured
      */
     String getStoredSSID();
-    
+
     /**
      * Get encryption type as readable string
      */
@@ -96,9 +96,9 @@ private:
     WiFiConfigManager();
     WiFiConfigManager(const WiFiConfigManager&) = delete;
     WiFiConfigManager& operator=(const WiFiConfigManager&) = delete;
-    
+
     void ensureInitialized();
-    
+
     Preferences _prefs;
     bool _initialized = false;
     static constexpr const char* NVS_NAMESPACE = "wifi_cfg";

@@ -46,73 +46,61 @@ enum LogLevel : int {
 // and sequencer ID counter. All other runtime state uses globals directly.
 // ============================================================================
 struct SystemConfig {
-  
+
   // ========================================================================
   // SYSTEM STATE (SSoT - used by all modules via config.currentState)
   // volatile: both fields are read/written from both cores
   // ========================================================================
-  volatile SystemState currentState;         // Current operation state (INIT, RUNNING, PAUSED, etc.)
-  volatile ExecutionContext executionContext; // Execution context (STANDALONE vs SEQUENCER)
-  
+  volatile SystemState currentState = SystemState::STATE_INIT;         // Current operation state (INIT, RUNNING, PAUSED, etc.)
+  volatile ExecutionContext executionContext = ExecutionContext::CONTEXT_STANDALONE; // Execution context (STANDALONE vs SEQUENCER)
+
   // ========================================================================
   // CALIBRATION RESULTS (SSoT - written by CalibrationManager)
   // ========================================================================
-  long minStep;                      // Minimum position (after START contact)
-  long maxStep;                      // Maximum position (before END contact)
-  float totalDistanceMM;             // Total travel distance (mm)
-  
+  long minStep = 0;                      // Minimum position (after START contact)
+  long maxStep = 0;                      // Maximum position (before END contact)
+  float totalDistanceMM = 0;             // Total travel distance (mm)
+
   // ========================================================================
   // CONTACT SENSING PERSISTENCE
   // ========================================================================
-  int lastStartContactState;         // Last read START contact state
-  int lastEndContactState;           // Last read END contact state
-  bool currentMotorDirection;        // Current motor direction (HIGH/LOW)
-  
+  int lastStartContactState = HIGH;      // Last read START contact state
+  int lastEndContactState = HIGH;        // Last read END contact state
+  bool currentMotorDirection = HIGH;     // Current motor direction (HIGH/LOW)
+
   // ========================================================================
   // SEQUENCER (SSoT - auto-increment ID, used by SequenceTableManager)
   // ========================================================================
-  int nextLineId;                    // Auto-increment ID counter
-  
-  // ========================================================================
-  // CONSTRUCTOR - Initialize all fields to defaults
-  // ========================================================================
-  SystemConfig() :
-    currentState(SystemState::STATE_INIT),
-    executionContext(ExecutionContext::CONTEXT_STANDALONE),
-    minStep(0),
-    maxStep(0),
-    totalDistanceMM(0),
-    lastStartContactState(HIGH),
-    lastEndContactState(HIGH),
-    currentMotorDirection(HIGH),
-    nextLineId(1) {}
+  int nextLineId = 1;                    // Auto-increment ID counter
+
+  SystemConfig() = default;
 };
 
 // ============================================================================
 // UTILITY ENGINE CLASS
 // ============================================================================
 class UtilityEngine {
-  
+
 public:
   // ========================================================================
   // CONSTRUCTOR & LIFECYCLE
   // ========================================================================
-  
+
   explicit UtilityEngine(WebSocketsServer& webSocketServer);
-  
+
   /**
    * Full initialization sequence:
    * 1. EEPROM → 2. FileSystem → 3. Logger → 4. StatsManager
    */
   bool initialize();
-  
+
   /** Cleanup before shutdown or OTA update */
   void shutdown();
-  
+
   // ========================================================================
   // LOGGING FACADE (inline forwarding — zero overhead)
   // ========================================================================
-  
+
   void log(LogLevel level, const String& message)  { _logger.log(level, message); }
   void error(const String& message)                { _logger.error(message); }
   void warn(const String& message)                 { _logger.warn(message); }
@@ -125,20 +113,20 @@ public:
   void setLoggingEnabled(bool enabled)              { _logger.setLoggingEnabled(enabled); }
   bool isLoggingEnabled() const                     { return _logger.isLoggingEnabled(); }
   String getCurrentLogFile() const                  { return _logger.getCurrentLogFile(); }
-  
+
   // ========================================================================
   // PREFERENCES FACADE (logging preferences — bridges Logger + EepromManager)
   // ========================================================================
-  
+
   void saveLoggingPreferences() {
     _eeprom.saveLoggingPreferences(_logger.isLoggingEnabled(), (uint8_t)_logger.getLogLevel());
   }
   void loadLoggingPreferences();  // Implemented in .cpp (loads + restores Logger state)
-  
+
   // ========================================================================
   // FILESYSTEM FACADE
   // ========================================================================
-  
+
   bool isFilesystemReady() const                            { return _fs.isReady(); }
   bool fileExists(const String& path) const                 { return _fs.fileExists(path); }
   bool directoryExists(const String& path) const            { return _fs.directoryExists(path); }
@@ -152,11 +140,11 @@ public:
   float getDiskUsagePercent() const                         { return _fs.getDiskUsagePercent(); }
   bool loadJsonFile(const String& path, JsonDocument& doc)  { return _fs.loadJsonFile(path, doc); }
   bool saveJsonFile(const String& path, const JsonDocument& doc) { return _fs.saveJsonFile(path, doc); }
-  
+
   // ========================================================================
   // STATISTICS FACADE
   // ========================================================================
-  
+
   void incrementDailyStats(float distanceMM)  { _stats.incrementDailyStats(distanceMM); }
   float getTodayDistance()                     { return _stats.getTodayDistance(); }
   void setStatsRecordingEnabled(bool enabled)  { _stats.setStatsRecordingEnabled(enabled); }
@@ -164,25 +152,25 @@ public:
   void saveCurrentSessionStats()               { _stats.saveCurrentSessionStats(); }
   void resetTotalDistance()                     { _stats.resetTotalDistance(); }
   void updateEffectiveMaxDistance()             { _stats.updateEffectiveMaxDistance(); }
-  
+
   // ========================================================================
   // SENSORS NVS FACADE
   // ========================================================================
-  
+
   void loadSensorsInverted();  // Implemented in .cpp (bridges NVS → global)
   void saveSensorsInverted();  // Implemented in .cpp (bridges global → NVS)
-  
+
   // ========================================================================
   // TIME UTILITIES (kept here — tiny, no dedicated class needed)
   // ========================================================================
-  
+
   String getFormattedTime(const char* format = "%Y-%m-%d %H:%M:%S") const;
   bool isTimeSynchronized() const;
-  
+
   // ========================================================================
   // STATE INSPECTION
   // ========================================================================
-  
+
   struct EngineStatus {
     bool filesystemReady;
     bool fileOpen;
@@ -194,7 +182,7 @@ public:
     LogLevel currentLogLevel;
     String currentLogFile;
   };
-  
+
   EngineStatus getStatus() const;
   void printStatus() const;
 
@@ -202,13 +190,13 @@ private:
   // ========================================================================
   // SUB-OBJECTS (owned)
   // ========================================================================
-  
+
   WebSocketsServer& _ws;
   FileSystem     _fs;
   EepromManager  _eeprom;
   Logger         _logger;
   StatsManager   _stats;
-  
+
 }; // class UtilityEngine
 
 // ============================================================================

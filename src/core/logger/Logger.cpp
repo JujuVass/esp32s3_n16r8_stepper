@@ -123,7 +123,7 @@ void Logger::log(LogLevel level, const String& message) {
     if (xSemaphoreTakeRecursive(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
       static const char* levelNames[] = {"ERROR", "WARN", "INFO", "DEBUG"};
       const char* levelName = (level >= 0 && level <= 3) ? levelNames[level] : "INFO";
-      
+
       JsonDocument doc;
       doc["type"] = "log";
       doc["level"] = levelName;

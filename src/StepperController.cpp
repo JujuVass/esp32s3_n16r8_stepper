@@ -152,20 +152,20 @@ void logStackHighWaterMark(const char* taskName, uint32_t stackSize, unsigned lo
  */
 void logDebugDiagnostics() {
   if (engine->getLogLevel() != LOG_DEBUG || config.currentState != SystemState::STATE_RUNNING) return;
-  
+
   Motor.updatePendTracking();
-  
+
   static unsigned long lastPendLogMs = 0;
   static unsigned long lastPendCount = 0;
-  
+
   if (millis() - lastPendLogMs > SUMMARY_LOG_INTERVAL_MS) {
     unsigned long currentPendCount = Motor.getPendInterruptCount();
     unsigned long pendTransitions = currentPendCount - lastPendCount;
     int rawAlm = digitalRead(PIN_ALM);
-    
+
     engine->debug("📊 HSS86: PEND transitions=" + String(pendTransitions) + "/10s" +
           " (total=" + String(currentPendCount) + ") | ALM=" + String(rawAlm));
-    
+
     lastPendCount = currentPendCount;
     lastPendLogMs = millis();
   }
@@ -173,15 +173,15 @@ void logDebugDiagnostics() {
   static unsigned long lastSummary = 0;
   static unsigned long cycleCounter = 0;
   static bool lastWasAtStart = false;
-  
+
   bool nowAtStart = (currentStep == startStep);
   if (nowAtStart && !lastWasAtStart) {
     cycleCounter++;
   }
   lastWasAtStart = nowAtStart;
-  
+
   if (millis() - lastSummary > SUMMARY_LOG_INTERVAL_MS) {
-    engine->debug("Status: " + String(cycleCounter) + " cycles | " + 
+    engine->debug("Status: " + String(cycleCounter) + " cycles | " +
           String(stats.totalDistanceTraveled / 1000000.0, 2) + " km");
     lastSummary = millis();
   }
@@ -194,19 +194,19 @@ void logDebugDiagnostics() {
 void setup() {
   Serial.begin(115200);
   delay(100);  // Brief pause for Serial stability
-  
+
   // ============================================================================
   // RESET REASON (logged ASAP — before anything else, helps diagnose reboots)
   // ============================================================================
   esp_reset_reason_t resetReason = esp_reset_reason();
   Serial.printf("\n🔄 RESET REASON: %s (code %d)\n",
                 CrashDiagnostics::getResetReasonName(resetReason), (int)resetReason);
-  
+
   // ============================================================================
   // 0. RGB LED INITIALIZATION (Early for visual feedback) - OFF initially
   // ============================================================================
   setRgbLed(0, 0, 0);
-  
+
   // ============================================================================
   // 1. FILESYSTEM & LOGGING (First for early logging capability)
   // ============================================================================
@@ -218,20 +218,20 @@ void setup() {
   } else {
     engine->info("✅ UtilityEngine initialized (LittleFS + Logging ready)");
   }
-  
+
   // ============================================================================
   // 2. CRASH DIAGNOSTICS (reads coredump, saves dump file if PANIC)
   // ============================================================================
   CrashDiagnostics::processBootReason(engine);
-  
+
   engine->info("\n=== ESP32-S3 Stepper Controller ===");
   randomSeed(analogRead(0) + esp_random());
-  
+
   // ============================================================================
   // 3. NETWORK (WiFi - determines AP or STA mode)
   // ============================================================================
   StepperNetwork.begin();
-  
+
   // ============================================================================
   // 4. WEB SERVERS (HTTP + WebSocket)
   // ============================================================================
@@ -240,14 +240,14 @@ void setup() {
   webSocket.onEvent([](uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
     Dispatcher.onWebSocketEvent(num, type, payload, length);
   });
-  
+
   // ============================================================================
   // 5. API ROUTES (WiFi config routes needed in both modes)
   // ============================================================================
   filesystemManager.registerRoutes();
   setupAPIRoutes();
   engine->info("✅ HTTP (80) + WebSocket (81) servers started");
-  
+
   // ============================================================================
   // AP_SETUP MODE: Minimal setup complete - WiFi configuration only
   // ============================================================================
@@ -262,24 +262,24 @@ void setup() {
     engine->info("╚════════════════════════════════════════════════════════╝\n");
     return;  // Skip stepper initialization in AP_SETUP mode
   }
-  
+
   // ============================================================================
   // STA+AP or AP_DIRECT: Full stepper controller initialization
   // ============================================================================
-  
+
   // LED color based on mode
   if (StepperNetwork.isSTAMode()) {
     setRgbLed(0, 50, 0);  // GREEN = WiFi connected + AP
   } else {
     setRgbLed(0, 25, 50);  // CYAN = AP Direct mode
   }
-  
+
   // Command dispatcher and status broadcaster
   Dispatcher.begin(&webSocket);
   Status.begin(&webSocket);
   SeqExecutor.begin(&webSocket);  // SequenceExecutor needs WebSocket for status updates
   engine->info("✅ Command dispatcher + Status broadcaster ready");
-  
+
   // ============================================================================
   // 6. HARDWARE (Motor + Contacts) - STA mode only
   // ============================================================================
@@ -287,7 +287,7 @@ void setup() {
   Contacts.init();
   Motor.setDirection(false);
   engine->info("✅ Hardware initialized (Motor + Contacts)");
-  
+
   // ============================================================================
   // 7. CALIBRATION MANAGER - STA mode only
   // ============================================================================
@@ -296,12 +296,12 @@ void setup() {
   Calibration.setErrorCallback([](const String& msg) { Status.sendError(msg); });
   Calibration.setCompletionCallback([]() { SeqExecutor.onMovementComplete(); });
   engine->info("✅ CalibrationManager ready");
-  
+
   // ============================================================================
   // 8. STARTUP COMPLETE - STA mode
   // ============================================================================
   engine->printStatus();
-  
+
   config.currentState = SystemState::STATE_READY;
   engine->info("\n╔════════════════════════════════════════════════════════╗");
   if (StepperNetwork.isSTAMode()) {
@@ -316,22 +316,22 @@ void setup() {
   }
   engine->info("║  Auto-calibration starts in 1 second...               ║");
   engine->info("╚════════════════════════════════════════════════════════╝\n");
-  
+
   // ============================================================================
   // 9. DUAL-CORE FREERTOS INITIALIZATION - STA mode only
   // ============================================================================
-  
+
   // Create mutexes for shared data protection
   motionMutex = xSemaphoreCreateMutex();
   stateMutex = xSemaphoreCreateMutex();
   statsMutex = xSemaphoreCreateMutex();
   wsMutex = xSemaphoreCreateRecursiveMutex();  // Recursive: Logger::log() may re-enter from WS callback
-  
+
   if (motionMutex == NULL || stateMutex == NULL || statsMutex == NULL || wsMutex == NULL) {
     engine->error("❌ Failed to create FreeRTOS mutexes!");
     return;
   }
-  
+
   // Create MOTOR task on Core 1 (PRO_CPU) - HIGH priority for real-time stepping
   xTaskCreatePinnedToCore(
     motorTask,           // Task function
@@ -342,7 +342,7 @@ void setup() {
     &motorTaskHandle,    // Task handle
     1                    // Core 1 (PRO_CPU)
   );
-  
+
   // Create NETWORK task on Core 0 (APP_CPU) - Normal priority for network ops
   xTaskCreatePinnedToCore(
     networkTask,         // Task function
@@ -353,7 +353,7 @@ void setup() {
     &networkTaskHandle,  // Task handle
     0                    // Core 0 (APP_CPU)
   );
-  
+
   engine->info("✅ DUAL-CORE initialized: Motor=Core1(P10), StepperNetwork=Core0(P1)");
 }
 
@@ -362,11 +362,11 @@ void setup() {
 // ============================================================================
 void motorTask(void* param) {
   engine->info("🔧 MotorTask started on Core " + String(xPortGetCoreID()));
-  
+
   // Initial calibration (with delay for web interface access)
   static bool calibrationStarted = false;
   static unsigned long calibrationDelayStart = 0;
-  
+
   while (true) {
     // ═══════════════════════════════════════════════════════════════════════
     // MANUAL CALIBRATION REQUEST (triggered from Core 0 via flag)
@@ -374,17 +374,17 @@ void motorTask(void* param) {
     if (requestCalibration) {
       requestCalibration = false;
       engine->info("=== Manual calibration requested ===");
-      
+
       // Cooperative flag: networkTask will skip webSocket/server during calibration
       // (CalibrationManager handles them internally via serviceWebSocket())
       calibrationInProgress = true;
-      
+
       Calibration.startCalibration();
-      
+
       // Resume normal networkTask operation
       calibrationInProgress = false;
     }
-    
+
     // ═══════════════════════════════════════════════════════════════════════
     // INITIAL CALIBRATION (with delay for web interface access)
     // ═══════════════════════════════════════════════════════════════════════
@@ -393,23 +393,23 @@ void motorTask(void* param) {
         calibrationDelayStart = millis();
         engine->info("=== Web interface ready - Calibration will start in 1 second ===");
       }
-      
+
       if (millis() - calibrationDelayStart >= 1000) {
         calibrationStarted = true;
         engine->info("=== Starting automatic calibration ===");
-        
+
         // Cooperative flag: networkTask will skip webSocket/server during calibration
         // (CalibrationManager handles them internally via serviceWebSocket())
         calibrationInProgress = true;
-        
+
         Calibration.startCalibration();
         needsInitialCalibration = false;
-        
+
         // Resume normal networkTask operation
         calibrationInProgress = false;
       }
     }
-    
+
     // ═══════════════════════════════════════════════════════════════════════
     // MOVEMENT EXECUTION (timing-critical, runs on dedicated core)
     // ═══════════════════════════════════════════════════════════════════════
@@ -417,7 +417,7 @@ void motorTask(void* param) {
       case MovementType::MOVEMENT_VAET:
         BaseMovement.process();
         break;
-        
+
       case MovementType::MOVEMENT_PURSUIT:
         if (pursuit.isMoving) {
           unsigned long currentMicros = micros();
@@ -427,13 +427,13 @@ void motorTask(void* param) {
           }
         }
         break;
-        
+
       case MovementType::MOVEMENT_OSC:
         if (config.currentState == SystemState::STATE_RUNNING) {
           Osc.process();
         }
         break;
-        
+
       case MovementType::MOVEMENT_CHAOS:
         if (config.currentState == SystemState::STATE_RUNNING) {
           Chaos.process();
@@ -443,7 +443,7 @@ void motorTask(void* param) {
       case MovementType::MOVEMENT_CALIBRATION:
         break;  // Calibration handled via requestCalibration flag
     }
-    
+
     // ═══════════════════════════════════════════════════════════════════════
     // SEQUENCER (logic only, no network blocking)
     // ═══════════════════════════════════════════════════════════════════════
@@ -454,14 +454,14 @@ void motorTask(void* param) {
     // ALM monitoring always active (safety critical)
     static bool lastAlarmState = false;
     bool alarmActive = Motor.isAlarmActive();
-    
+
     if (alarmActive && !lastAlarmState) {
       engine->warn("🚨 HSS86 ALARM ACTIVE - Check motor/mechanics!");
     } else if (!alarmActive && lastAlarmState) {
       engine->info("✅ HSS86 Alarm cleared");
     }
     lastAlarmState = alarmActive;
-    
+
     logDebugDiagnostics();
     { static unsigned long hwmTimer = 0; logStackHighWaterMark("MotorTask", 6144, hwmTimer); }
 
@@ -483,7 +483,7 @@ void motorTask(void* param) {
 // ============================================================================
 void networkTask(void* param) {
   engine->info("🌐 NetworkTask started on Core " + String(xPortGetCoreID()));
-  
+
   while (true) {
     // ═══════════════════════════════════════════════════════════════════════
     // NETWORK SERVICES (can block without affecting motor)
@@ -491,7 +491,7 @@ void networkTask(void* param) {
     StepperNetwork.handleOTA();
     StepperNetwork.handleCaptivePortal();  // DNS server for AP clients (all AP modes)
     StepperNetwork.checkConnectionHealth();
-    
+
     // HTTP server and WebSocket - skip during calibration or blocking moves
     // (CalibrationManager/blocking loops handle them internally via serviceWebSocket())
     if (!calibrationInProgress && !blockingMoveInProgress) {
@@ -500,7 +500,7 @@ void networkTask(void* param) {
         webSocket.loop();
         xSemaphoreGiveRecursive(wsMutex);
       }
-    
+
       // ═══════════════════════════════════════════════════════════════════════
       // STATUS BROADCAST (adaptive rate: 10Hz active, 5Hz calibrating, 1Hz idle)
       // ═══════════════════════════════════════════════════════════════════════
@@ -513,7 +513,7 @@ void networkTask(void* param) {
         }
       }
     }
-    
+
     // ═══════════════════════════════════════════════════════════════════════
     // LOG BUFFER FLUSH (I/O to filesystem)
     // ═══════════════════════════════════════════════════════════════════════
@@ -522,7 +522,7 @@ void networkTask(void* param) {
     }
 
     { static unsigned long hwmTimer = 0; logStackHighWaterMark("NetworkTask", 12288, hwmTimer); }
-    
+
     // Small delay to prevent watchdog and allow other tasks
     vTaskDelay(pdMS_TO_TICKS(1));  // 1ms between iterations
   }
@@ -537,22 +537,22 @@ void loop() {
   // ═══════════════════════════════════════════════════════════════════════════
   if (StepperNetwork.isAPSetupMode()) {
     StepperNetwork.handleCaptivePortal();
-    
+
     // Blink LED Blue/Red every 500ms
     static unsigned long lastLedToggle = 0;
     static bool ledIsBlue = true;
-    
+
     if (StepperNetwork.apLedBlinkEnabled && millis() - lastLedToggle > AP_LED_BLINK_INTERVAL_MS) {
       lastLedToggle = millis();
       setRgbLed(ledIsBlue ? 50 : 0, 0, ledIsBlue ? 0 : 50);
       ledIsBlue = !ledIsBlue;
     }
-    
+
     server.handleClient();
     webSocket.loop();
     return;
   }
-  
+
   // ═══════════════════════════════════════════════════════════════════════════
   // STA MODE: loop() is empty - FreeRTOS tasks handle everything
   // ═══════════════════════════════════════════════════════════════════════════

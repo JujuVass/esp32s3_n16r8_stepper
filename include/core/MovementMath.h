@@ -24,6 +24,8 @@
 #define PI 3.14159265358979323846
 #endif
 
+constexpr float PI_F = 3.14159265f;  // Float-precision PI (avoids double promotion)
+
 namespace MovementMath {
 
 // ============================================================================
@@ -34,7 +36,7 @@ namespace MovementMath {
 inline long mmToSteps(float mm) { return (long)(mm * STEPS_PER_MM); }
 
 /** Convert steps to millimeters */
-inline float stepsToMM(long steps) { return steps / STEPS_PER_MM; }
+inline float stepsToMM(long steps) { return static_cast<float>(steps) / STEPS_PER_MM; }
 
 // ============================================================================
 // SPEED / DELAY

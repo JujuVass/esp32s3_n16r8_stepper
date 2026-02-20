@@ -15,7 +15,7 @@ namespace MovementMath {
 
 float speedLevelToCPM(float speedLevel) {
     float cpm = speedLevel * 10.0f;
-    if (cpm < 0) cpm = 0;
+    if (cpm < 0) cpm = 0.0f;
     if (cpm > MAX_SPEED_LEVEL * 10.0f) cpm = MAX_SPEED_LEVEL * 10.0f;
     return cpm;
 }
@@ -31,9 +31,9 @@ unsigned long vaetStepDelay(float speedLevel, float distanceMM) {
 
     float halfCycleMs   = (60000.0f / cpm) / 2.0f;
     float rawDelay      = (halfCycleMs * 1000.0f) / (float)stepsPerDirection;
-    float delay         = (rawDelay - STEP_EXECUTION_TIME_MICROS) / SPEED_COMPENSATION_FACTOR;
+    float delay         = (rawDelay - static_cast<float>(STEP_EXECUTION_TIME_MICROS)) / SPEED_COMPENSATION_FACTOR;
 
-    if (delay < 20) delay = 20;
+    if (delay < 20) delay = 20.0f;
     return (unsigned long)delay;
 }
 
@@ -65,11 +65,11 @@ unsigned long pursuitStepDelay(float errorMM, float maxSpeedLevel) {
 
     float mmPerSecond    = speedLevel * 10.0f;
     float stepsPerSecond = mmPerSecond * STEPS_PER_MM;
-    if (stepsPerSecond < 30)   stepsPerSecond = 30;
-    if (stepsPerSecond > 6000) stepsPerSecond = 6000;
+    if (stepsPerSecond < 30)   stepsPerSecond = 30.0f;
+    if (stepsPerSecond > 6000) stepsPerSecond = 6000.0f;
 
-    float delayMicros = ((1000000.0f / stepsPerSecond) - STEP_EXECUTION_TIME_MICROS) / SPEED_COMPENSATION_FACTOR;
-    if (delayMicros < 20) delayMicros = 20;
+    float delayMicros = ((1000000.0f / stepsPerSecond) - static_cast<float>(STEP_EXECUTION_TIME_MICROS)) / SPEED_COMPENSATION_FACTOR;
+    if (delayMicros < 20) delayMicros = 20.0f;
     return (unsigned long)delayMicros;
 }
 
@@ -123,8 +123,8 @@ float zoneSpeedFactor(SpeedEffect effect, SpeedCurve curve,
 
 void safeDurationCalc(const ChaosBaseConfig& cfg, float craziness, float maxFactor,
                       unsigned long& outMin, unsigned long& outMax) {
-    long minVal = (long)cfg.durationMin - (long)(cfg.durationCrazinessReduction * craziness);
-    long maxVal = (long)cfg.durationMax - (long)((cfg.durationMax - cfg.durationMin) * craziness * maxFactor);
+    long minVal = (long)cfg.durationMin - (long)(static_cast<float>(cfg.durationCrazinessReduction) * craziness);
+    long maxVal = (long)cfg.durationMax - (long)(static_cast<float>(cfg.durationMax - cfg.durationMin) * craziness * maxFactor);
 
     if (minVal < 100) minVal = 100;
     if (maxVal < 100) maxVal = 100;
@@ -160,7 +160,7 @@ float waveformValue(OscillationWaveform waveform, float phase) {
 
 float effectiveFrequency(float requestedHz, float amplitudeMM) {
     if (amplitudeMM > 0.0f) {
-        float maxAllowedFreq = OSC_MAX_SPEED_MM_S / (2.0f * PI * amplitudeMM);
+        float maxAllowedFreq = OSC_MAX_SPEED_MM_S / (2.0f * PI_F * amplitudeMM);
         if (requestedHz > maxAllowedFreq) {
             return maxAllowedFreq;
         }

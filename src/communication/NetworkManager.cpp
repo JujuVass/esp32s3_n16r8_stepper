@@ -1,6 +1,6 @@
 /**
  * NetworkManager.cpp - WiFi StepperNetwork Management Implementation
- * 
+ *
  * Three modes (GPIO 19: GND = normal, floating = AP_SETUP):
  * - AP_SETUP:  GPIO 19 floating or no credentials → Config-only (setup.html + captive portal)
  * - STA+AP:    GPIO 19 GND + WiFi connected → Full app on both interfaces (STA + AP parallel)
@@ -40,36 +40,36 @@ bool StepperNetworkManager::shouldStartAPSetup() {
     // Pin disconnected/floating = HIGH via pull-up = force AP_SETUP
     pinMode(PIN_AP_MODE, INPUT_PULLUP);
     delay(10);  // Let pin stabilize
-    
+
     int pinState = digitalRead(PIN_AP_MODE);
     engine->info("📌 GPIO" + String(PIN_AP_MODE) + " state: " + String(pinState == HIGH ? "HIGH (floating → AP_SETUP)" : "LOW (GND → normal)"));
-    
+
     // GPIO 19 HIGH (floating, not connected to GND) = force AP_SETUP mode
     if (pinState == HIGH) {
         engine->info("🔧 GPIO " + String(PIN_AP_MODE) + " is HIGH (floating) - Forcing AP_SETUP mode");
         return true;
     }
-    
+
     // GPIO 19 is LOW (GND) = normal mode, check credentials
     String savedSSID;
     String savedPassword;
     bool eepromConfigured = WiFiConfig.isConfigured();
     engine->info("📦 NVS configured: " + String(eepromConfigured ? "YES" : "NO"));
-    
+
     if (eepromConfigured && WiFiConfig.loadConfig(savedSSID, savedPassword)) {
         if (!savedSSID.isEmpty()) {
             engine->info("📡 Found saved WiFi config: '" + savedSSID + "' → Try STA+AP mode");
             return false;  // Have credentials, try STA mode
         }
     }
-    
+
     // Check hardcoded defaults from Config.h
     engine->info("📄 Config.h SSID: '" + String(ssid) + "'");
     if (strlen(ssid) > 0 && strcmp(ssid, "YOUR_WIFI_SSID") != 0) {
         engine->info("📶 Using Config.h WiFi config: '" + String(ssid) + "' → Try STA+AP mode");
         return false;  // Have defaults, try STA mode
     }
-    
+
     // No credentials available - must use AP_SETUP for configuration
     engine->warn("⚠️ No WiFi credentials found - Entering AP_SETUP mode");
     return true;
@@ -81,21 +81,21 @@ bool StepperNetworkManager::shouldStartAPSetup() {
 
 void StepperNetworkManager::startAPSetupMode() {
     _mode = NetworkMode::NET_AP_SETUP;
-    
+
     // Use AP_STA mode so we can test WiFi connections without disrupting the AP
     WiFi.mode(WIFI_AP_STA);
-    
+
     // Start Access Point
     String apName = String(otaHostname) + "-Setup";
     WiFi.softAP(apName.c_str(), nullptr, 1);  // Open network, explicit channel 1
-    
+
     WiFi.setSleep(WIFI_PS_NONE);
-    
+
     // Start Captive Portal DNS server
     _dnsServer.start(53, "*", WiFi.softAPIP());
     _captivePortalActive = true;
     _cachedIP = WiFi.softAPIP().toString();
-    
+
     engine->info("═══════════════════════════════════════════════════════");
     engine->info("🔧 AP_SETUP MODE - WiFi Configuration + Captive Portal");
     engine->info("═══════════════════════════════════════════════════════");
@@ -112,9 +112,9 @@ void StepperNetworkManager::startAPSetupMode() {
 
 void StepperNetworkManager::startAPDirectMode() {
     _mode = NetworkMode::NET_AP_DIRECT;
-    
+
     WiFi.mode(WIFI_AP);
-    
+
     // Start Access Point with optional password
     String apName = String(otaHostname) + "-AP";
     if (strlen(AP_DIRECT_PASSWORD) > 0) {
@@ -122,15 +122,15 @@ void StepperNetworkManager::startAPDirectMode() {
     } else {
         WiFi.softAP(apName.c_str(), nullptr, AP_DIRECT_CHANNEL, 0, AP_DIRECT_MAX_CLIENTS);
     }
-    
+
     WiFi.setSleep(WIFI_PS_NONE);
     _cachedIP = WiFi.softAPIP().toString();
-    
+
     // Start DNS server so clients' connectivity checks resolve
     // (prevents OS from marking this WiFi as "no internet" and blocking WebSocket)
     _dnsServer.start(53, "*", WiFi.softAPIP());
     _captivePortalActive = true;
-    
+
     engine->info("═══════════════════════════════════════════════════════");
     engine->info("📡 AP_DIRECT MODE - Full Stepper Control via WiFi AP");
     engine->info("═══════════════════════════════════════════════════════");
@@ -155,12 +155,12 @@ void StepperNetworkManager::startParallelAP() {
     } else {
         WiFi.softAP(apName.c_str(), nullptr, AP_DIRECT_CHANNEL, 0, AP_DIRECT_MAX_CLIENTS);
     }
-    
+
     // Start DNS server so AP clients' connectivity checks resolve
     // (prevents OS from marking this WiFi as "no internet" and blocking WebSocket)
     _dnsServer.start(53, "*", WiFi.softAPIP());
     _captivePortalActive = true;
-    
+
     engine->info("📡 Parallel AP started: " + apName + " (IP: " + WiFi.softAPIP().toString() + ", DNS active)");
 }
 
@@ -180,15 +180,15 @@ void StepperNetworkManager::handleCaptivePortal() {
 
 bool StepperNetworkManager::startSTAMode() {
     _mode = NetworkMode::NET_STA_AP;
-    
+
     // Set WiFi mode: STA-only for best performance, AP_STA if parallel AP enabled
     WiFi.mode(ENABLE_PARALLEL_AP ? WIFI_AP_STA : WIFI_STA);
-    
+
     // Get credentials - check NVS first, then Config.h defaults
     String targetSSID;
     String targetPassword;
     String credentialSource;
-    
+
     if (WiFiConfig.isConfigured() && WiFiConfig.loadConfig(targetSSID, targetPassword)) {
         credentialSource = "NVS";
         engine->info("🔑 WiFi credentials from: NVS (saved config)");
@@ -199,45 +199,45 @@ bool StepperNetworkManager::startSTAMode() {
         credentialSource = "Config.h";
         engine->info("🔑 WiFi credentials from: Config.h (hardcoded defaults)");
     }
-    
+
     // Connect to WiFi
     // Set hostname BEFORE WiFi.begin() — registers with DHCP & helps mDNS reliability
     WiFi.setHostname(otaHostname);
     WiFi.begin(targetSSID.c_str(), targetPassword.c_str());
     engine->info("📶 Connecting to WiFi: " + targetSSID + " [" + credentialSource + "]");
-    
+
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 40) {  // 20 seconds timeout
         delay(500);
         Serial.print(".");
         attempts++;
-        
+
         if (attempts % 10 == 0) {
             engine->info("\n[" + String(attempts) + "/40] Still connecting...");
         }
     }
     Serial.println();
-    
+
     if (WiFi.status() != WL_CONNECTED) {
         engine->error("❌ WiFi connection failed after " + String(attempts * 500 / 1000) + "s");
         engine->warn("⚠️ Credentials from " + credentialSource + " - Switching to AP_DIRECT mode...");
-        
+
         // NVS writes are atomic, no busy-wait needed
-        
+
         // Failed to connect - switch to AP_DIRECT (full app, not setup!)
         WiFi.disconnect();
         startAPDirectMode();
         return false;
     }
-    
+
     // Connected successfully - cache IP
     _cachedIP = WiFi.localIP().toString();
-    
+
     // Start parallel AP if enabled (device also accessible via 192.168.4.1)
     if (ENABLE_PARALLEL_AP) {
         startParallelAP();
     }
-    
+
     engine->info("═══════════════════════════════════════════════════════");
     engine->info(ENABLE_PARALLEL_AP ? "✅ STA+AP MODE - Stepper Controller Active" : "✅ STA MODE - Stepper Controller Active");
     engine->info("═══════════════════════════════════════════════════════");
@@ -249,17 +249,17 @@ bool StepperNetworkManager::startSTAMode() {
     engine->info("   Hostname: http://" + String(otaHostname) + ".local");
     engine->info(ENABLE_PARALLEL_AP ? "   🎮 App accessible on BOTH interfaces!" : "   🎮 STA-only (no parallel AP → lower latency)");
     engine->info("═══════════════════════════════════════════════════════");
-    
+
     // Disable WiFi power saving
     WiFi.setSleep(WIFI_PS_NONE);
     engine->info("⚡ WiFi power save: DISABLED (always active)");
-    
+
     // Setup additional services (only available with router connection)
     setupMDNS(false);  // http/80 + ws/81 only (ArduinoOTA will register arduino/3232)
     _lastMdnsRefresh = millis();
     setupNTP();
     setupOTA();        // Calls MDNS.begin() internally (no-op) + enableArduino()
-    
+
     return true;
 }
 
@@ -287,18 +287,18 @@ String StepperNetworkManager::getConfiguredSSID() const {
 bool StepperNetworkManager::setupMDNS(bool includeOtaService) {
     if (MDNS.begin(otaHostname)) {
         engine->debug("✅ mDNS: http://" + String(otaHostname) + ".local");
-        
+
         // Add services for discovery
         MDNS.addService("http", "tcp", 80);        // Web server
         MDNS.addService("ws", "tcp", 81);          // WebSocket
         if (includeOtaService) {
             MDNS.addService("arduino", "tcp", 3232);  // OTA discovery (for health check refresh)
         }
-        
+
         // Add TXT record with device info for better discovery
         MDNS.addServiceTxt("http", "tcp", "board", "ESP32-S3");
         MDNS.addServiceTxt("http", "tcp", "path", "/");
-        
+
         return true;
     }
     engine->error("❌ mDNS failed to start");
@@ -312,7 +312,7 @@ bool StepperNetworkManager::setupMDNS(bool includeOtaService) {
 void StepperNetworkManager::setupNTP() {
     configTime(3600, 0, "pool.ntp.org", "time.nist.gov");  // GMT+1
     engine->info("⏰ NTP configured (GMT+1)");
-    
+
     delay(1000);
     time_t now = time(nullptr);
     struct tm timeinfo;
@@ -330,23 +330,23 @@ void StepperNetworkManager::setupNTP() {
 
 void StepperNetworkManager::setupOTA() {
     ArduinoOTA.setHostname(otaHostname);
-    
+
     if (strlen(otaPassword) > 0) {
         ArduinoOTA.setPassword(otaPassword);
     }
-    
+
     ArduinoOTA.onStart([]() {
         String type = (ArduinoOTA.getCommand() == U_FLASH) ? "firmware" : "filesystem";
         engine->info("🔄 OTA Update: " + type);
-        
+
         // Reuse shared safe shutdown (stop movement, disable motor, flush logs)
         StepperNetwork.safeShutdown();
     });
-    
+
     ArduinoOTA.onEnd([]() {
         engine->info("✅ OTA Complete - Rebooting...");
     });
-    
+
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
         static unsigned int lastPercent = 100;  // Force log at 0% on each new OTA
         unsigned int percent = (progress * 100) / total;
@@ -356,11 +356,11 @@ void StepperNetworkManager::setupOTA() {
             lastPercent = percent;
         }
     });
-    
+
     ArduinoOTA.onError([](ota_error_t error) {
         engine->error("❌ OTA Error [" + String(error) + "]");
     });
-    
+
     ArduinoOTA.begin();
     engine->info("✅ OTA Ready");
     _otaConfigured = true;
@@ -372,13 +372,13 @@ void StepperNetworkManager::setupOTA() {
 
 bool StepperNetworkManager::begin() {
     engine->info("🌐 StepperNetwork initialization...");
-    
+
     // Check if we should enter AP_SETUP (no credentials available)
     if (shouldStartAPSetup()) {
         startAPSetupMode();
         return false;  // AP_SETUP mode = no stepper control
     }
-    
+
     // We have credentials → try STA+AP mode (falls back to AP_DIRECT on failure)
     bool connected = startSTAMode();
     _wasConnected = connected;
@@ -392,15 +392,15 @@ bool StepperNetworkManager::begin() {
 
 void StepperNetworkManager::safeShutdown() {
     engine->warn("🛑 Safe shutdown initiated...");
-    
+
     // Stop all movement and motor activity
     stopMovement();
     if (seqState.isRunning) SeqExecutor.stop();
     Motor.disable();
-    
+
     // Flush logs to filesystem (blocks until done)
     if (engine) engine->flushLogBuffer(true);
-    
+
     engine->info("✅ Safe shutdown complete");
 }
 
@@ -416,31 +416,31 @@ void StepperNetworkManager::safeShutdown() {
 static bool pingGateway() {
     IPAddress gw = WiFi.gatewayIP();
     if (gw == IPAddress(0, 0, 0, 0)) return false;
-    
+
     esp_ping_config_t cfg = ESP_PING_DEFAULT_CONFIG();
     cfg.target_addr.u_addr.ip4.addr = gw;
     cfg.target_addr.type = ESP_IPADDR_TYPE_V4;
     cfg.count = 2;           // Send 2 pings — 1 success = pass
     cfg.timeout_ms = 1000;
     cfg.interval_ms = 200;   // 200ms between attempts
-    
+
     volatile bool got_reply = false;
     esp_ping_callbacks_t cbs = {};
     cbs.cb_args = (void*)&got_reply;
     cbs.on_ping_success = [](esp_ping_handle_t h, void* arg) {
         *(volatile bool*)arg = true;
     };
-    
+
     esp_ping_handle_t handle = nullptr;
     if (esp_ping_new_session(&cfg, &cbs, &handle) != ESP_OK) return false;
     esp_ping_start(handle);
-    
+
     // Wait for ping to complete (max ~2.5s for 2 pings)
     unsigned long start = millis();
     while (!got_reply && (millis() - start) < 2500) {
         vTaskDelay(pdMS_TO_TICKS(50));
     }
-    
+
     esp_ping_stop(handle);
     esp_ping_delete_session(handle);
     return got_reply;
@@ -449,9 +449,9 @@ static bool pingGateway() {
 void StepperNetworkManager::checkConnectionHealth() {
     // Only in STA+AP mode (AP_DIRECT and AP_SETUP don't need health checks)
     if (_mode != NetworkMode::NET_STA_AP) return;
-    
+
     unsigned long now = millis();
-    
+
     // One-shot delayed mDNS re-announce after boot
     // The initial MDNS.begin() fires before WiFi IGMP joins propagate,
     // so the first multicast announcement is often lost. Re-announce once
@@ -476,12 +476,12 @@ void StepperNetworkManager::checkConnectionHealth() {
     }
     if (now - _lastHealthCheck < checkInterval) return;
     _lastHealthCheck = now;
-    
+
     // ═══════════════════════════════════════════════════════════════════════
     // STEP 1: WiFi L2 link check
     // ═══════════════════════════════════════════════════════════════════════
     bool wifiConnected = (WiFi.status() == WL_CONNECTED);
-    
+
     if (wifiConnected) {
         // ═══════════════════════════════════════════════════════════════════
         // STEP 2: Gateway ping (L3 — tests local network reachability)
@@ -489,7 +489,7 @@ void StepperNetworkManager::checkConnectionHealth() {
         // WiFi.status() can return WL_CONNECTED even when IP stack is dead
         // ═══════════════════════════════════════════════════════════════════
         bool networkOk = pingGateway();
-        
+
         if (!networkOk) {
             _pingFailCount++;
             if (_pingFailCount < WATCHDOG_PING_FAIL_THRESHOLD) {
@@ -500,7 +500,7 @@ void StepperNetworkManager::checkConnectionHealth() {
         } else {
             _pingFailCount = 0;  // Reset on success
         }
-        
+
         // ═══════════════════════════════════════════════════════════════════
         // STEP 3: Proactive mDNS refresh (ESP32 can't self-query .local)
         // MDNS.queryHost(self) always returns 0.0.0.0 on ESP32 — the mDNS
@@ -514,7 +514,7 @@ void StepperNetworkManager::checkConnectionHealth() {
             _lastMdnsRefresh = now;
             engine->debug("🔄 Watchdog: Proactive mDNS refresh");
         }
-        
+
         if (networkOk) {
             // ═══════════════════════════════════════════════════════════════
             // HEALTHY — WiFi up + gateway reachable + mDNS maintained
@@ -522,7 +522,7 @@ void StepperNetworkManager::checkConnectionHealth() {
             if (_wdState != WatchdogState::WD_HEALTHY) {
                 engine->info("✅ Watchdog: Connection fully restored (WiFi + gateway OK) after " +
                              String(_wdSoftRetries) + " soft + " + String(_wdHardRetries) + " hard retries");
-                
+
                 // Re-sync NTP after recovery
                 setupNTP();
             }
@@ -534,17 +534,17 @@ void StepperNetworkManager::checkConnectionHealth() {
             _cachedIP = WiFi.localIP().toString();
             return;
         }
-        
+
         // WiFi says connected but gateway unreachable (3 consecutive fails) → half-dead connection
         engine->warn("⚠️ Watchdog: WiFi connected but gateway ping FAILED " + String(WATCHDOG_PING_FAIL_THRESHOLD) + "x → treating as disconnected");
         _pingFailCount = 0;  // Reset for next recovery cycle
         wifiConnected = false;  // Force into recovery path
     }
-    
+
     // ═══════════════════════════════════════════════════════════════════════
     // RECOVERY PATH (WiFi down OR DNS failed)
     // ═══════════════════════════════════════════════════════════════════════
-    
+
     // Log initial disconnect (once)
     if (_wasConnected && _wdState == WatchdogState::WD_HEALTHY) {
         engine->warn("⚠️ Watchdog: Connection lost! Starting 3-tier recovery...");
@@ -553,7 +553,7 @@ void StepperNetworkManager::checkConnectionHealth() {
         }
     }
     _wasConnected = false;
-    
+
     // ── TIER 1: Soft recovery (WiFi.reconnect) ─────────────────────────
     if (_wdSoftRetries < WATCHDOG_SOFT_MAX_RETRIES) {
         _wdState = WatchdogState::WD_RECOVERING_SOFT;
@@ -562,17 +562,17 @@ void StepperNetworkManager::checkConnectionHealth() {
         WiFi.reconnect();
         return;
     }
-    
+
     // ── TIER 2: Hard recovery (full disconnect + re-associate) ──────────
     if (_wdHardRetries < WATCHDOG_HARD_MAX_RETRIES) {
         _wdState = WatchdogState::WD_RECOVERING_HARD;
         _wdHardRetries++;
         engine->warn("🔧 Watchdog [Tier 2]: Hard reconnect " + String(_wdHardRetries) + "/" + String(WATCHDOG_HARD_MAX_RETRIES));
-        
+
         // Full disconnect (true = erase AP credentials from WiFi driver RAM)
         WiFi.disconnect(true);
         delay(1000);
-        
+
         // Reload credentials from NVS or Config.h
         String targetSSID;
         String targetPassword;
@@ -583,35 +583,35 @@ void StepperNetworkManager::checkConnectionHealth() {
             targetPassword = password;
             engine->info("🔑 Hard reconnect using Config.h credentials");
         }
-        
+
         // Full re-association
         WiFi.mode(ENABLE_PARALLEL_AP ? WIFI_AP_STA : WIFI_STA);
         WiFi.setHostname(otaHostname);
         WiFi.setSleep(WIFI_PS_NONE);
         WiFi.begin(targetSSID.c_str(), targetPassword.c_str());
-        
+
         // Blocking wait for connection
         unsigned long start = millis();
         while (WiFi.status() != WL_CONNECTED && (millis() - start) < WATCHDOG_HARD_RECONNECT_TIMEOUT_MS) {
             delay(500);
         }
-        
+
         if (WiFi.status() == WL_CONNECTED) {
             _cachedIP = WiFi.localIP().toString();
             engine->info("✅ Watchdog [Tier 2]: Hard reconnect succeeded! IP: " + _cachedIP);
-            
+
             // Restore all services
             MDNS.end();
             delay(50);
             setupMDNS();
             _lastMdnsRefresh = millis();
             setupNTP();
-            
+
             // Restore parallel AP if enabled
             if (ENABLE_PARALLEL_AP) {
                 startParallelAP();
             }
-            
+
             _wdState = WatchdogState::WD_HEALTHY;
             _wdSoftRetries = 0;
             _wdHardRetries = 0;
@@ -619,11 +619,11 @@ void StepperNetworkManager::checkConnectionHealth() {
             _wasConnected = true;
             return;
         }
-        
+
         engine->error("❌ Watchdog [Tier 2]: Hard reconnect " + String(_wdHardRetries) + "/" + String(WATCHDOG_HARD_MAX_RETRIES) + " failed");
         return;
     }
-    
+
     // ── TIER 3: Emergency reboot ────────────────────────────────────────
     if (!WATCHDOG_AUTO_REBOOT_ENABLED) {
         engine->error("❌ Watchdog: All recovery exhausted. Auto-reboot DISABLED → cycling back to Tier 1");
@@ -631,12 +631,12 @@ void StepperNetworkManager::checkConnectionHealth() {
         _wdHardRetries = 0;
         return;
     }
-    
+
     _wdState = WatchdogState::WD_REBOOTING;
     engine->error("🚨 Watchdog [Tier 3]: All recovery exhausted (" +
-        String(WATCHDOG_SOFT_MAX_RETRIES) + " soft + " + String(WATCHDOG_HARD_MAX_RETRIES) + 
+        String(WATCHDOG_SOFT_MAX_RETRIES) + " soft + " + String(WATCHDOG_HARD_MAX_RETRIES) +
         " hard). REBOOTING in " + String(WATCHDOG_REBOOT_DELAY_MS / 1000) + "s...");
-    
+
     safeShutdown();
     delay(WATCHDOG_REBOOT_DELAY_MS);
     ESP.restart();
@@ -650,13 +650,13 @@ void StepperNetworkManager::syncTimeFromClient(uint64_t epochMs) {
     if (_timeSynced && _mode == NetworkMode::NET_STA_AP) {
         return;  // NTP already synced in STA mode, ignore client time
     }
-    
+
     struct timeval tv;
     tv.tv_sec = epochMs / 1000;
     tv.tv_usec = (epochMs % 1000) * 1000;
     settimeofday(&tv, nullptr);
     _timeSynced = true;
-    
+
     time_t now = epochMs / 1000;
     struct tm timeinfo;
     localtime_r(&now, &timeinfo);
