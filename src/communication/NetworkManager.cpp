@@ -253,10 +253,10 @@ bool StepperNetworkManager::startSTAMode() {
     engine->info("⚡ WiFi power save: DISABLED (always active)");
     
     // Setup additional services (only available with router connection)
-    setupMDNS();
+    setupMDNS(false);  // http/80 + ws/81 only (ArduinoOTA will register arduino/3232)
     _lastMdnsRefresh = millis();
     setupNTP();
-    setupOTA();
+    setupOTA();        // Calls MDNS.begin() internally (no-op) + enableArduino()
     
     return true;
 }
@@ -281,14 +281,16 @@ String StepperNetworkManager::getConfiguredSSID() const {
 // MDNS SETUP (STA mode only)
 // ============================================================================
 
-bool StepperNetworkManager::setupMDNS() {
+bool StepperNetworkManager::setupMDNS(bool includeOtaService) {
     if (MDNS.begin(otaHostname)) {
         engine->debug("✅ mDNS: http://" + String(otaHostname) + ".local");
         
         // Add services for discovery
         MDNS.addService("http", "tcp", 80);        // Web server
         MDNS.addService("ws", "tcp", 81);          // WebSocket
-        MDNS.addService("arduino", "tcp", 3232);   // OTA service (standard Arduino port)
+        if (includeOtaService) {
+            MDNS.addService("arduino", "tcp", 3232);  // OTA discovery (for health check refresh)
+        }
         
         // Add TXT record with device info for better discovery
         MDNS.addServiceTxt("http", "tcp", "board", "ESP32-S3");
@@ -472,7 +474,7 @@ void StepperNetworkManager::checkConnectionHealth() {
         if (now - _lastMdnsRefresh >= WATCHDOG_MDNS_REFRESH_MS) {
             MDNS.end();
             delay(50);
-            setupMDNS();
+            setupMDNS(true);  // Full re-registration including OTA service
             _lastMdnsRefresh = now;
             engine->debug("🔄 Watchdog: Proactive mDNS refresh");
         }

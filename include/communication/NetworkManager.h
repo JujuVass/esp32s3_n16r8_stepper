@@ -180,7 +180,7 @@ private:
     void startParallelAP();
     
     // STA services
-    bool setupMDNS();
+    bool setupMDNS(bool includeOtaService = true);
     void setupNTP();
     void setupOTA();
     
