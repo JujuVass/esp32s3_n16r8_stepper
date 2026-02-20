@@ -221,7 +221,7 @@ void OscillationControllerClass::process() {
     }
     
     // 🚀 SPEED CALCULATION: Calculate effective frequency (capped if exceeds max speed)
-    float effectiveFrequency = getEffectiveFrequency(oscillation.frequencyHz, oscillation.amplitudeMM);
+    float effectiveFrequency = MovementMath::effectiveFrequency(oscillation.frequencyHz, oscillation.amplitudeMM);
     
     // Calculate actual peak speed using effective frequency
     actualSpeedMMS_ = 2.0 * PI * effectiveFrequency * oscillation.amplitudeMM;
@@ -258,7 +258,7 @@ float OscillationControllerClass::calculatePosition() {
     unsigned long currentMs = millis();
     
     // 🎯 SMOOTH FREQUENCY TRANSITION: Use accumulated phase for perfect continuity
-    float effectiveFrequency = getEffectiveFrequency(oscillation.frequencyHz, oscillation.amplitudeMM);
+    float effectiveFrequency = MovementMath::effectiveFrequency(oscillation.frequencyHz, oscillation.amplitudeMM);
     
     // 🚀 SPEED LIMIT: Log if frequency was capped
     if (oscillation.amplitudeMM > 0.0 && effectiveFrequency < oscillation.frequencyHz) {

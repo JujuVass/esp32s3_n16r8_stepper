@@ -58,12 +58,6 @@ static const char* executionContextName(ExecutionContext ctx) {
     }
 }
 
-// Delegate to MovementMath::safeDurationCalc (testable pure function)
-static void safeDurationCalc(const ChaosBaseConfig& cfg, float craziness, float maxFactor,
-                              unsigned long& outMin, unsigned long& outMax) {
-    MovementMath::safeDurationCalc(cfg, craziness, maxFactor, outMin, outMax);
-}
-
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -255,7 +249,7 @@ inline void ChaosController::calcSpeedAndDuration(const ChaosBaseConfig& cfg, fl
     speedMultiplier = (random(100) / 100.0) * (speedMax - speedMin) + speedMin;
     
     unsigned long durationMin, durationMax;
-    safeDurationCalc(cfg, craziness, durationMaxFactor, durationMin, durationMax);
+    MovementMath::safeDurationCalc(cfg, craziness, durationMaxFactor, durationMin, durationMax);
     patternDuration = random(durationMin, durationMax);
 }
 

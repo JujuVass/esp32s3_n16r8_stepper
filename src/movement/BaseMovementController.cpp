@@ -153,11 +153,11 @@ void BaseMovementControllerClass::setSpeedInternal(float speedLevel, bool isForw
         pendingMotion.hasChanges = true;
         
         engine->debug(String("⏳ ") + dirName + " speed queued: " + String(oldSpeedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0) + " → " + 
-              String(speedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0) + " (" + String(speedLevelToCyclesPerMin(speedLevel), 0) + " c/min)");
+              String(speedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0) + " (" + String(MovementMath::speedLevelToCPM(speedLevel), 0) + " c/min)");
     } else {
         currentLevel = speedLevel;
         engine->debug(String("✓ ") + dirName + " speed: " + String(speedLevel, 1) + "/" + String(MAX_SPEED_LEVEL, 0) + " (" + 
-              String(speedLevelToCyclesPerMin(speedLevel), 0) + " c/min)");
+              String(MovementMath::speedLevelToCPM(speedLevel), 0) + " c/min)");
         calculateStepDelay();
     }
 }
@@ -235,18 +235,9 @@ void BaseMovementControllerClass::calculateStepDelay() {
           "µs → final=" + String(stepDelayMicrosForward) + "µs");
 }
 
-float BaseMovementControllerClass::speedLevelToCyclesPerMin(float speedLevel) {
-    return MovementMath::speedLevelToCPM(speedLevel);
-}
-
 // ============================================================================
 // ZONE EFFECT METHODS (Speed Effect + Special Effects)
 // ============================================================================
-
-float BaseMovementControllerClass::calculateSpeedFactor(float zoneProgress) {
-    return MovementMath::zoneSpeedFactor(zoneEffect.speedEffect, zoneEffect.speedCurve,
-                                         zoneEffect.speedIntensity, zoneProgress);
-}
 
 int BaseMovementControllerClass::calculateAdjustedDelay(float currentPositionMM, float movementStartMM, 
                                                         float movementEndMM, int baseDelayMicros,
@@ -270,13 +261,15 @@ int BaseMovementControllerClass::calculateAdjustedDelay(float currentPositionMM,
     // Check if in START zone
     if (effectiveEnableStart && distanceFromStart <= zoneEffect.zoneMM) {
         float zoneProgress = distanceFromStart / zoneEffect.zoneMM;
-        speedFactor = calculateSpeedFactor(zoneProgress);
+        speedFactor = MovementMath::zoneSpeedFactor(zoneEffect.speedEffect, zoneEffect.speedCurve,
+                                                       zoneEffect.speedIntensity, zoneProgress);
     }
     
     // Check if in END zone
     if (effectiveEnableEnd && distanceFromEnd <= zoneEffect.zoneMM) {
         float zoneProgress = distanceFromEnd / zoneEffect.zoneMM;
-        float endFactor = calculateSpeedFactor(zoneProgress);
+        float endFactor = MovementMath::zoneSpeedFactor(zoneEffect.speedEffect, zoneEffect.speedCurve,
+                                                           zoneEffect.speedIntensity, zoneProgress);
         
         // For decel: use max slowdown; for accel: use max speedup (min factor)
         if (zoneEffect.speedEffect == SPEED_DECEL) {
@@ -640,7 +633,7 @@ void BaseMovementControllerClass::start(float distMM, float speedLevel) {
     motion.speedLevelBackward = speedLevel;
     
     engine->info("▶ Start movement: " + String(distMM, 1) + " mm @ speed " + 
-          String(speedLevel, 1) + " (" + String(speedLevelToCyclesPerMin(speedLevel), 0) + " c/min)");
+          String(speedLevel, 1) + " (" + String(MovementMath::speedLevelToCPM(speedLevel), 0) + " c/min)");
     
     calculateStepDelay();
     
@@ -986,8 +979,8 @@ void BaseMovementControllerClass::measureCycleTime() {
         cycleTimeMillis = currentMillis - lastStartContactMillis;
         measuredCyclesPerMinute = 60000.0 / cycleTimeMillis;
         
-        float avgTargetCPM = (speedLevelToCyclesPerMin(motion.speedLevelForward) + 
-                             speedLevelToCyclesPerMin(motion.speedLevelBackward)) / 2.0;
+        float avgTargetCPM = (MovementMath::speedLevelToCPM(motion.speedLevelForward) + 
+                             MovementMath::speedLevelToCPM(motion.speedLevelBackward)) / 2.0;
         float avgSpeedLevel = (motion.speedLevelForward + motion.speedLevelBackward) / 2.0;
         float diffPercent = ((measuredCyclesPerMinute - avgTargetCPM) / avgTargetCPM) * 100.0;
         

@@ -73,7 +73,7 @@ void PursuitControllerClass::move(float targetPositionMM, float maxSpeedLevel) {
     
     if (targetChanged || speedSettingChanged || !pursuit.isMoving || hasWork) {
         // Calculate step delay based on error distance
-        pursuit.stepDelay = calculateStepDelay(errorMM);
+        pursuit.stepDelay = MovementMath::pursuitStepDelay(errorMM, pursuit.maxSpeedLevel);
         
         // Remember last values
         pursuit.lastTargetStep = pursuit.targetStep;
@@ -149,9 +149,7 @@ void PursuitControllerClass::stop() {
 // INTERNAL HELPERS
 // ============================================================================
 
-unsigned long PursuitControllerClass::calculateStepDelay(float errorMM) {
-    return MovementMath::pursuitStepDelay(errorMM, pursuit.maxSpeedLevel);
-}
+
 
 bool PursuitControllerClass::checkSafetyContacts(bool moveForward) {
     // Hard drift detection: only test contacts when near limits

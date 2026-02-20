@@ -91,23 +91,9 @@ public:
      */
     void calculateStepDelay();
     
-    /**
-     * Convert speed level (0-20) to cycles per minute (0-200)
-     * @param speedLevel Speed level
-     * @return Cycles per minute
-     */
-    float speedLevelToCyclesPerMin(float speedLevel);
-    
     // ========================================================================
     // ZONE EFFECT METHODS (Speed Effects + Special Effects)
     // ========================================================================
-    
-    /**
-     * Calculate speed factor based on position within effect zone
-     * @param zoneProgress Position in zone: 0.0 (at boundary) to 1.0 (at extremity)
-     * @return Speed factor (1.0 = normal, >1.0 = slower for DECEL, <1.0 = faster for ACCEL)
-     */
-    float calculateSpeedFactor(float zoneProgress);
     
     /**
      * Calculate adjusted delay based on position within movement range

@@ -8,6 +8,7 @@
 
 #include "communication/StatusBroadcaster.h"
 #include "communication/NetworkManager.h"
+#include "core/MovementMath.h"
 #include "movement/ChaosController.h"
 #include "movement/OscillationController.h"
 #include "movement/PursuitController.h"
@@ -209,8 +210,8 @@ void StatusBroadcaster::sendError(const String& message) {
 
 void StatusBroadcaster::addVaEtVientFields(JsonDocument& doc) {
     // Motion-specific derived values
-    float cyclesPerMinForward = BaseMovement.speedLevelToCyclesPerMin(motion.speedLevelForward);
-    float cyclesPerMinBackward = BaseMovement.speedLevelToCyclesPerMin(motion.speedLevelBackward);
+    float cyclesPerMinForward = MovementMath::speedLevelToCPM(motion.speedLevelForward);
+    float cyclesPerMinBackward = MovementMath::speedLevelToCPM(motion.speedLevelBackward);
     
     // Motion object (nested)
     JsonObject motionObj = doc["motion"].to<JsonObject>();
@@ -290,7 +291,7 @@ void StatusBroadcaster::addOscillationFields(JsonDocument& doc) {
     oscObj["frequencyHz"] = serialized(String(oscillation.frequencyHz, 3));
     
     // Effective frequency (capped by hardware speed limit) — DRY: uses shared helper
-    float effectiveFrequencyHz = OscillationControllerClass::getEffectiveFrequency(
+    float effectiveFrequencyHz = MovementMath::effectiveFrequency(
         oscillation.frequencyHz, oscillation.amplitudeMM);
     oscObj["effectiveFrequencyHz"] = serialized(String(effectiveFrequencyHz, 3));
     oscObj["actualSpeedMMS"] = serialized(String(actualOscillationSpeedMMS, 1));

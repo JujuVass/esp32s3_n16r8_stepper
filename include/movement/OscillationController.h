@@ -115,22 +115,6 @@ public:
     float getActualSpeed() const { return actualSpeedMMS_; }
     
     /**
-     * DRY: Calculate effective frequency capped by hardware speed limit
-     * @param requestedHz Desired frequency
-     * @param amplitudeMM Oscillation amplitude
-     * @return Effective frequency in Hz (may be lower than requested)
-     */
-    static float getEffectiveFrequency(float requestedHz, float amplitudeMM) {
-        if (amplitudeMM > 0.0f) {
-            float maxAllowedFreq = OSC_MAX_SPEED_MM_S / (2.0f * PI * amplitudeMM);
-            if (requestedHz > maxAllowedFreq) {
-                return maxAllowedFreq;
-            }
-        }
-        return requestedHz;
-    }
-    
-    /**
      * Get current amplitude (may differ during ramping)
      * @return Current effective amplitude in mm
      */

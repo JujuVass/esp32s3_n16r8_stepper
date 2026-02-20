@@ -94,15 +94,6 @@ private:
     // ========================================================================
     
     /**
-     * Calculate step delay based on distance to target
-     * Uses proportional speed control with distance-based ramping
-     * 
-     * @param errorMM Distance to target in mm
-     * @return Step delay in microseconds
-     */
-    unsigned long calculateStepDelay(float errorMM);
-    
-    /**
      * Check safety contacts when near limits
      * @param moveForward Direction of movement
      * @return true if safe to continue, false if contact hit
