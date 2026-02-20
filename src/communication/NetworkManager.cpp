@@ -344,8 +344,9 @@ void StepperNetworkManager::setupOTA() {
     });
     
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-        static unsigned int lastPercent = 0;
+        static unsigned int lastPercent = 100;  // Force log at 0% on each new OTA
         unsigned int percent = (progress * 100) / total;
+        if (percent < lastPercent) lastPercent = 0;  // Reset on new transfer
         if (percent >= lastPercent + 10) {
             engine->info("📥 OTA: " + String(percent) + "%");
             lastPercent = percent;
@@ -609,6 +610,7 @@ void StepperNetworkManager::checkConnectionHealth() {
             _wdState = WD_HEALTHY;
             _wdSoftRetries = 0;
             _wdHardRetries = 0;
+            _pingFailCount = 0;
             _wasConnected = true;
             return;
         }
