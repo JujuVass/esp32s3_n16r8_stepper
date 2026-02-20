@@ -80,7 +80,7 @@ bool StepperNetworkManager::shouldStartAPSetup() {
 // ============================================================================
 
 void StepperNetworkManager::startAPSetupMode() {
-    _mode = NET_AP_SETUP;
+    _mode = NetworkMode::NET_AP_SETUP;
     
     // Use AP_STA mode so we can test WiFi connections without disrupting the AP
     WiFi.mode(WIFI_AP_STA);
@@ -111,7 +111,7 @@ void StepperNetworkManager::startAPSetupMode() {
 // ============================================================================
 
 void StepperNetworkManager::startAPDirectMode() {
-    _mode = NET_AP_DIRECT;
+    _mode = NetworkMode::NET_AP_DIRECT;
     
     WiFi.mode(WIFI_AP);
     
@@ -179,7 +179,7 @@ void StepperNetworkManager::handleCaptivePortal() {
 // ============================================================================
 
 bool StepperNetworkManager::startSTAMode() {
-    _mode = NET_STA_AP;
+    _mode = NetworkMode::NET_STA_AP;
     
     // Set WiFi mode: STA-only for best performance, AP_STA if parallel AP enabled
     WiFi.mode(ENABLE_PARALLEL_AP ? WIFI_AP_STA : WIFI_STA);
@@ -448,7 +448,7 @@ static bool pingGateway() {
 
 void StepperNetworkManager::checkConnectionHealth() {
     // Only in STA+AP mode (AP_DIRECT and AP_SETUP don't need health checks)
-    if (_mode != NET_STA_AP) return;
+    if (_mode != NetworkMode::NET_STA_AP) return;
     
     unsigned long now = millis();
     
@@ -467,7 +467,7 @@ void StepperNetworkManager::checkConnectionHealth() {
 
     // Rate limit: faster during recovery OR when ping failures are accumulating, slower when healthy
     uint32_t checkInterval;
-    if (_wdState != WD_HEALTHY) {
+    if (_wdState != WatchdogState::WD_HEALTHY) {
         checkInterval = WATCHDOG_RECOVERY_INTERVAL_MS;  // 20s during active recovery
     } else if (_pingFailCount > 0) {
         checkInterval = WATCHDOG_RECOVERY_INTERVAL_MS;  // 20s when verifying ping failures
@@ -519,14 +519,14 @@ void StepperNetworkManager::checkConnectionHealth() {
             // ═══════════════════════════════════════════════════════════════
             // HEALTHY — WiFi up + gateway reachable + mDNS maintained
             // ═══════════════════════════════════════════════════════════════
-            if (_wdState != WD_HEALTHY) {
+            if (_wdState != WatchdogState::WD_HEALTHY) {
                 engine->info("✅ Watchdog: Connection fully restored (WiFi + gateway OK) after " +
                              String(_wdSoftRetries) + " soft + " + String(_wdHardRetries) + " hard retries");
                 
                 // Re-sync NTP after recovery
                 setupNTP();
             }
-            _wdState = WD_HEALTHY;
+            _wdState = WatchdogState::WD_HEALTHY;
             _wdSoftRetries = 0;
             _wdHardRetries = 0;
             _pingFailCount = 0;
@@ -546,7 +546,7 @@ void StepperNetworkManager::checkConnectionHealth() {
     // ═══════════════════════════════════════════════════════════════════════
     
     // Log initial disconnect (once)
-    if (_wasConnected && _wdState == WD_HEALTHY) {
+    if (_wasConnected && _wdState == WatchdogState::WD_HEALTHY) {
         engine->warn("⚠️ Watchdog: Connection lost! Starting 3-tier recovery...");
         if (ENABLE_PARALLEL_AP) {
             engine->info("📡 AP still active at " + WiFi.softAPIP().toString());
@@ -556,7 +556,7 @@ void StepperNetworkManager::checkConnectionHealth() {
     
     // ── TIER 1: Soft recovery (WiFi.reconnect) ─────────────────────────
     if (_wdSoftRetries < WATCHDOG_SOFT_MAX_RETRIES) {
-        _wdState = WD_RECOVERING_SOFT;
+        _wdState = WatchdogState::WD_RECOVERING_SOFT;
         _wdSoftRetries++;
         engine->info("🔄 Watchdog [Tier 1]: Soft reconnect " + String(_wdSoftRetries) + "/" + String(WATCHDOG_SOFT_MAX_RETRIES));
         WiFi.reconnect();
@@ -565,7 +565,7 @@ void StepperNetworkManager::checkConnectionHealth() {
     
     // ── TIER 2: Hard recovery (full disconnect + re-associate) ──────────
     if (_wdHardRetries < WATCHDOG_HARD_MAX_RETRIES) {
-        _wdState = WD_RECOVERING_HARD;
+        _wdState = WatchdogState::WD_RECOVERING_HARD;
         _wdHardRetries++;
         engine->warn("🔧 Watchdog [Tier 2]: Hard reconnect " + String(_wdHardRetries) + "/" + String(WATCHDOG_HARD_MAX_RETRIES));
         
@@ -612,7 +612,7 @@ void StepperNetworkManager::checkConnectionHealth() {
                 startParallelAP();
             }
             
-            _wdState = WD_HEALTHY;
+            _wdState = WatchdogState::WD_HEALTHY;
             _wdSoftRetries = 0;
             _wdHardRetries = 0;
             _pingFailCount = 0;
@@ -632,7 +632,7 @@ void StepperNetworkManager::checkConnectionHealth() {
         return;
     }
     
-    _wdState = WD_REBOOTING;
+    _wdState = WatchdogState::WD_REBOOTING;
     engine->error("🚨 Watchdog [Tier 3]: All recovery exhausted (" +
         String(WATCHDOG_SOFT_MAX_RETRIES) + " soft + " + String(WATCHDOG_HARD_MAX_RETRIES) + 
         " hard). REBOOTING in " + String(WATCHDOG_REBOOT_DELAY_MS / 1000) + "s...");
@@ -647,7 +647,7 @@ void StepperNetworkManager::checkConnectionHealth() {
 // ============================================================================
 
 void StepperNetworkManager::syncTimeFromClient(uint64_t epochMs) {
-    if (_timeSynced && _mode == NET_STA_AP) {
+    if (_timeSynced && _mode == NetworkMode::NET_STA_AP) {
         return;  // NTP already synced in STA mode, ignore client time
     }
     

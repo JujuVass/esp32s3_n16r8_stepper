@@ -31,16 +31,16 @@ extern void Motor_disable();
 // ============================================================================
 // NETWORK MODE ENUM
 // ============================================================================
-enum NetworkMode {
-    NET_AP_SETUP,    // GPIO 19 floating or no credentials → Config-only (setup.html + captive portal)
-    NET_STA_AP,      // GPIO 19 GND + WiFi connected → Full app on both interfaces (STA + AP parallel)
-    NET_AP_DIRECT    // GPIO 19 GND + WiFi fail → AP-only with full stepper control
+enum class NetworkMode {
+    NET_AP_SETUP,    // GPIO 19 floating or no credentials -> Config-only (setup.html + captive portal)
+    NET_STA_AP,      // GPIO 19 GND + WiFi connected -> Full app on both interfaces (STA + AP parallel)
+    NET_AP_DIRECT    // GPIO 19 GND + WiFi fail -> AP-only with full stepper control
 };
 
 // ============================================================================
 // WATCHDOG STATE ENUM
 // ============================================================================
-enum WatchdogState : uint8_t {
+enum class WatchdogState : uint8_t {
     WD_HEALTHY          = 0,   // WiFi + DNS + mDNS all OK
     WD_RECOVERING_SOFT  = 1,   // Tier 1: WiFi.reconnect() attempts
     WD_RECOVERING_HARD  = 2,   // Tier 2: Full WiFi disconnect + re-associate
@@ -67,23 +67,23 @@ public:
      * Check if running in AP_SETUP mode (config only - setup.html)
      * This is the ONLY mode where hardware is NOT initialized
      */
-    bool isAPSetupMode() const { return _mode == NET_AP_SETUP; }
+    bool isAPSetupMode() const { return _mode == NetworkMode::NET_AP_SETUP; }
     
     /**
      * Check if running in AP_DIRECT mode (full app via AP, no router)
      */
-    bool isAPDirectMode() const { return _mode == NET_AP_DIRECT; }
+    bool isAPDirectMode() const { return _mode == NetworkMode::NET_AP_DIRECT; }
     
     /**
      * Check if running in STA+AP mode (router + AP parallel)
      */
-    bool isSTAMode() const { return _mode == NET_STA_AP; }
+    bool isSTAMode() const { return _mode == NetworkMode::NET_STA_AP; }
     
     /**
      * Legacy compatibility: isAPMode() returns true ONLY for AP_SETUP
      * Used by APIRoutes to decide setup.html vs index.html redirect
      */
-    bool isAPMode() const { return _mode == NET_AP_SETUP; }
+    bool isAPMode() const { return _mode == NetworkMode::NET_AP_SETUP; }
     
     /**
      * Get configured SSID (from EEPROM or default)
@@ -160,7 +160,7 @@ private:
     void setupOTA();
     
     // State
-    NetworkMode _mode = NET_AP_DIRECT;
+    NetworkMode _mode = NetworkMode::NET_AP_DIRECT;
     bool _otaConfigured = false;
     bool _timeSynced = false;
     bool _wasConnected = false;              // Track connection state for recovery detection
@@ -170,7 +170,7 @@ private:
     String _cachedIP;                        // Cached IP address string (avoids WiFi.localIP() calls)
     
     // Connection Watchdog state
-    WatchdogState _wdState = WD_HEALTHY;
+    WatchdogState _wdState = WatchdogState::WD_HEALTHY;
     uint8_t _wdSoftRetries = 0;              // Tier 1 attempt counter
     uint8_t _wdHardRetries = 0;              // Tier 2 attempt counter
     uint8_t _pingFailCount = 0;              // Consecutive gateway ping failures

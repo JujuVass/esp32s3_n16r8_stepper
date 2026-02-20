@@ -20,8 +20,8 @@
 #include <Preferences.h>
 #include <ArduinoJson.h>
 
-#define WIFI_SSID_MAX_LEN       32
-#define WIFI_PASSWORD_MAX_LEN   64
+constexpr int WIFI_SSID_MAX_LEN = 32;
+constexpr int WIFI_PASSWORD_MAX_LEN = 64;
 
 // WiFi network info structure (for scan results)
 struct WiFiNetworkInfo {

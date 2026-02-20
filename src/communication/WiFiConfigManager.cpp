@@ -15,11 +15,10 @@ extern UtilityEngine* engine;
 // CONSTRUCTOR
 // ============================================================================
 
-WiFiConfigManager::WiFiConfigManager() {
-    // NVS initialization is deferred to ensureInitialized()
-    // because this constructor runs during global static init,
-    // before NVS flash is ready (ESP-IDF 5.x / pioarduino).
-}
+// NVS initialization is deferred to ensureInitialized()
+// because this constructor runs during global static init,
+// before NVS flash is ready (ESP-IDF 5.x / pioarduino).
+WiFiConfigManager::WiFiConfigManager() = default;
 
 void WiFiConfigManager::ensureInitialized() {
     if (_initialized) return;

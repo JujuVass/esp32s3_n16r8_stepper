@@ -116,7 +116,7 @@ String FileSystem::readFileAsString(const String& path, size_t maxSize) {
   if (!file) return "";
 
   // Limit read size for safety
-  size_t readSize = min((size_t)file.size(), maxSize);
+  size_t readSize = min(file.size(), maxSize);
   
   // Bulk read for performance
   char* buf = new (std::nothrow) char[readSize + 1];

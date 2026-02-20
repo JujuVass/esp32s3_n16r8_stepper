@@ -101,7 +101,7 @@ void sendJsonError(int code, const String& message) {
 void sendJsonSuccess(const String& message) {
   JsonDocument doc;
   doc["success"] = true;
-  if (message.length() > 0) {
+  if (!message.isEmpty()) {
     doc["message"] = message;
   }
   String json;

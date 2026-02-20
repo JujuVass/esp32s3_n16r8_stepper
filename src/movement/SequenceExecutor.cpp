@@ -702,8 +702,7 @@ void SequenceExecutor::process() {
                 return;  // Sequence ended
             }
             
-            // Reload current line after moving to next
-            currentLine = &sequenceTable[seqState.currentLineIndex];
+            // Next line loaded below via currentLine assignment
         }
         // Execute next cycle for current line
         else {

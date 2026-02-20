@@ -400,7 +400,7 @@ float OscillationControllerClass::calculatePosition() {
         } else if (rampElapsed < (oscillation.rampInDurationMs + OSC_RAMP_START_DELAY_MS)) {
             // Ramp phase: calculate progress from end of delay
             unsigned long adjustedElapsed = rampElapsed - OSC_RAMP_START_DELAY_MS;
-            float rampProgress = (float)adjustedElapsed / (float)oscillation.rampInDurationMs;
+            float rampProgress = (float)adjustedElapsed / oscillation.rampInDurationMs;
             effectiveAmplitude = oscillation.amplitudeMM * rampProgress;
         } else {
             // Ramp in complete - switch to full amplitude
@@ -410,7 +410,7 @@ float OscillationControllerClass::calculatePosition() {
     } else if (oscillationState.isRampingOut) [[unlikely]] {
         unsigned long rampElapsed = currentMs - oscillationState.rampStartMs;
         if (rampElapsed < oscillation.rampOutDurationMs) {
-            float rampProgress = 1.0f - ((float)rampElapsed / (float)oscillation.rampOutDurationMs);
+            float rampProgress = 1.0f - ((float)rampElapsed / oscillation.rampOutDurationMs);
             effectiveAmplitude = oscillation.amplitudeMM * rampProgress;
         } else {
             // Ramp out complete, stop oscillation

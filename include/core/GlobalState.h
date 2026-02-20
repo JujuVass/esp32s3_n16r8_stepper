@@ -71,7 +71,7 @@ extern SemaphoreHandle_t statsMutex;       // Protects: stats compound operation
 // RAII-style mutex guard for automatic release (C++ scope-based)
 class MutexGuard {
 public:
-    MutexGuard(SemaphoreHandle_t mutex, TickType_t timeout = pdMS_TO_TICKS(10)) 
+    explicit MutexGuard(SemaphoreHandle_t mutex, TickType_t timeout = pdMS_TO_TICKS(10)) 
         : _mutex(mutex), _locked(false) {
         if (_mutex != NULL) {
             _locked = (xSemaphoreTake(_mutex, timeout) == pdTRUE);
@@ -83,7 +83,7 @@ public:
         }
     }
     [[nodiscard]] bool isLocked() const { return _locked; }
-    [[nodiscard]] operator bool() const { return _locked; }
+    [[nodiscard]] explicit operator bool() const { return _locked; }
 private:
     SemaphoreHandle_t _mutex;
     bool _locked;
