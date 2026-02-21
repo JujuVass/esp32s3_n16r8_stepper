@@ -292,7 +292,7 @@ static void handleIncrementStats() {
     return;
   }
 
-  float distanceMM = requestDoc["distanceMM"] | 0.0;
+  float distanceMM = requestDoc["distanceMM"] | 0.0f;
   if (distanceMM <= 0) {
     sendJsonError(400, "Invalid distance");
     return;
@@ -1008,7 +1008,7 @@ static void handleNotFound() {
 // API ROUTES SETUP
 // ============================================================================
 
-void setupAPIRoutes() {
+void setupAPIRoutes() {  // NOSONAR(cpp:S3776) — sequential route registration, no branching depth
   // ============================================================================
   // CORS PREFLIGHT HANDLER - Must be first!
   // ============================================================================

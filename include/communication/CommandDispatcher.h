@@ -166,7 +166,7 @@ private:
     bool cmdStart(JsonDocument& doc);
 
     /** addSequenceLine command logic (parse + validate + add) */
-    bool cmdAddSequenceLine(JsonDocument& doc);
+    bool cmdAddSequenceLine(const JsonDocument& doc);
 
     /** Zone effect configuration parsing from JSON */
     void applyZoneEffectConfig(JsonDocument& doc);

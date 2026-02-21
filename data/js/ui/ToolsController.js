@@ -659,7 +659,10 @@ function updateSystemHardwareStats(system) {
   if (system.temperatureC !== undefined) {
     const temp = Number.parseFloat(system.temperatureC);
     DOM.sysTemp.textContent = temp.toFixed(1) + ' °C';
-    DOM.sysTemp.style.color = temp > 80 ? '#f44336' : temp > 70 ? '#FF9800' : '#333';
+    let tempColor = '#333';
+    if (temp > 80) tempColor = '#f44336';
+    else if (temp > 70) tempColor = '#FF9800';
+    DOM.sysTemp.style.color = tempColor;
   }
   
   if (system.heapFree !== undefined && system.heapTotal !== undefined && system.heapUsedPercent !== undefined) {
@@ -709,13 +712,7 @@ function updateSystemNetworkStats(system) {
   if (system.ipSta !== undefined) {
     DOM.sysIpSta.textContent = system.ipSta;
     DOM.sysIpSta.style.color = (system.ipSta === '0.0') ? '#999' : '#333';
-    
-    if (system.ipSta !== '0.0' && !AppState.espIpAddress) {
-      if (typeof isSameSubnet === 'function' && isSameSubnet(system.ipSta, globalThis.location.hostname)) {
-        AppState.espIpAddress = system.ipSta;
-        console.debug('📍 Cached ESP32 IP for WS reconnection:', system.ipSta);
-      }
-    }
+    cacheESPIPAddress(system.ipSta);
   }
   if (system.ipAp !== undefined) {
     DOM.sysIpAp.textContent = system.ipAp;
@@ -734,11 +731,25 @@ function updateSystemNetworkStats(system) {
   }
   
   if (system.apMode !== undefined) {
-    DOM.sysDegradedBadge.style.display = system.apMode ? '' : 'none';
-    if (system.apMode) DOM.sysDegradedBadge.textContent = t('tools.apModeBadge');
-    DOM.networkInfoSection.style.borderLeftColor = system.apMode ? '#FF9800' : '#2196F3';
-    DOM.networkInfoSection.style.background = system.apMode ? '#fff3e0' : '#e3f2fd';
+    updateAPModeDisplay(system.apMode);
   }
+}
+
+/** Cache ESP32 IP for WebSocket reconnection if on same subnet */
+function cacheESPIPAddress(ipSta) {
+  if (ipSta === '0.0' || AppState.espIpAddress) return;
+  if (typeof isSameSubnet === 'function' && isSameSubnet(ipSta, globalThis.location.hostname)) {
+    AppState.espIpAddress = ipSta;
+    console.debug('📍 Cached ESP32 IP for WS reconnection:', ipSta);
+  }
+}
+
+/** Update AP mode badge and network section styling */
+function updateAPModeDisplay(apMode) {
+  DOM.sysDegradedBadge.style.display = apMode ? '' : 'none';
+  if (apMode) DOM.sysDegradedBadge.textContent = t('tools.apModeBadge');
+  DOM.networkInfoSection.style.borderLeftColor = apMode ? '#FF9800' : '#2196F3';
+  DOM.networkInfoSection.style.background = apMode ? '#fff3e0' : '#e3f2fd';
 }
 
 // ============================================================================

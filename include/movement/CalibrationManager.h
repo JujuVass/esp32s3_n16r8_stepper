@@ -138,6 +138,15 @@ private:
      */
     bool handleFailure();
 
+    /** Validate calibrated distance range. @return 0=OK, 1=retry, -1=fail */
+    int validateDistance();
+
+    /** Validate accuracy against tolerance. @return 0=OK, 1=retry, -1=fail */
+    int validateCalibrationAccuracy();
+
+    /** Position at 10% and finalize calibrated state. */
+    bool finalizeCalibration();
+
     /**
      * Validate calibration accuracy by checking return position
      * @return Error percentage (0 = perfect)

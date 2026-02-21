@@ -589,32 +589,36 @@ function updateZoneEffectUI(zoneEffect) {
   const headerText = document.getElementById('zoneEffectHeaderText');
   
   if (zoneEffect.enabled) {
-    if (section && headerText) {
-      section.classList.remove('collapsed');
-    }
+    if (section) section.classList.remove('collapsed');
     
     updateZoneCheckboxes(zoneEffect);
     updateZoneSize(zoneEffect);
     updateZoneSpeedEffect(zoneEffect);
     updateZoneTurnback(zoneEffect);
     updateZoneEndPause(zoneEffect);
-    
-    // Update zone preset active state
-    document.querySelectorAll('[data-zone-mm]').forEach(btn => {
-      const btnValue = Number.parseInt(btn.dataset.zoneMm);
-      btn.classList.toggle('active', btnValue === Math.round(zoneEffect.zoneMM));
-    });
-    
-    // Update header and redraw preview only if config changed
-    const zoneConfigKey = `${zoneEffect.enableStart}-${zoneEffect.enableEnd}-${zoneEffect.mirrorOnReturn}-${zoneEffect.speedEffect}-${zoneEffect.speedCurve}-${zoneEffect.speedIntensity}-${zoneEffect.zoneMM}-${zoneEffect.randomTurnbackEnabled}-${zoneEffect.endPauseEnabled}`;
-    if (zoneConfigKey !== AppState.zoneEffect.lastConfigKey) {
-      AppState.zoneEffect.lastConfigKey = zoneConfigKey;
-      updateZoneEffectHeaderText();
-      drawZoneEffectPreview();
-    }
+    updateZonePresetButtons(zoneEffect);
+    refreshZonePreviewIfChanged(zoneEffect);
   } else if (section && headerText) {
     section.classList.add('collapsed');
     headerText.textContent = t('simple.zoneEffectsDisabled');
+  }
+}
+
+/** Update zone size preset buttons active state */
+function updateZonePresetButtons(zoneEffect) {
+  document.querySelectorAll('[data-zone-mm]').forEach(btn => {
+    const btnValue = Number.parseInt(btn.dataset.zoneMm);
+    btn.classList.toggle('active', btnValue === Math.round(zoneEffect.zoneMM));
+  });
+}
+
+/** Redraw zone preview only if config actually changed */
+function refreshZonePreviewIfChanged(zoneEffect) {
+  const zoneConfigKey = `${zoneEffect.enableStart}-${zoneEffect.enableEnd}-${zoneEffect.mirrorOnReturn}-${zoneEffect.speedEffect}-${zoneEffect.speedCurve}-${zoneEffect.speedIntensity}-${zoneEffect.zoneMM}-${zoneEffect.randomTurnbackEnabled}-${zoneEffect.endPauseEnabled}`;
+  if (zoneConfigKey !== AppState.zoneEffect.lastConfigKey) {
+    AppState.zoneEffect.lastConfigKey = zoneConfigKey;
+    updateZoneEffectHeaderText();
+    drawZoneEffectPreview();
   }
 }
 

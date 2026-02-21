@@ -298,7 +298,35 @@ bool CalibrationManager::startCalibration() {
     config.maxStep = m_maxStep;
     config.totalDistanceMM = m_totalDistanceMM;
 
-    // Validate distance
+    // Validate distance: -1=fail, 1=retry, 0=ok
+    if (int distResult = validateDistance(); distResult != 0) {
+        if (distResult < 0) return false;
+        continue;
+    }
+
+    // ========================================
+    // Step 3: Return to START
+    // ========================================
+    if (!returnToStart()) {
+        return handleFailure();
+    }
+
+    // Validate accuracy: -1=fail, 1=retry, 0=ok
+    if (int accResult = validateCalibrationAccuracy(); accResult != 0) {
+        if (accResult < 0) return false;
+        continue;
+    }
+
+    return finalizeCalibration();
+
+    } // end while(true) retry loop
+}
+
+/**
+ * Validate calibrated distance range.
+ * @return 0=OK, 1=retry needed, -1=fatal failure
+ */
+int CalibrationManager::validateDistance() {
     if (m_totalDistanceMM < HARD_MIN_DISTANCE_MM) {
         m_attemptCount++;
         if (m_attemptCount >= MAX_CALIBRATION_RETRIES) {
@@ -309,12 +337,11 @@ bool CalibrationManager::startCalibration() {
             Motor.disable();
             config.currentState = STATE_ERROR;
             m_attemptCount = 0;
-            return false;
+            return -1;
         }
-
         engine->warn("⚠️ Distance too short - Retry " + String(m_attemptCount));
         serviceWebSocket(500);
-        continue;  // Retry via loop (was recursive call)
+        return 1;
     }
 
     if (m_totalDistanceMM > HARD_MAX_DISTANCE_MM) {
@@ -326,53 +353,45 @@ bool CalibrationManager::startCalibration() {
     }
 
     engine->debug("✓ Total distance: " + String(m_totalDistanceMM, 1) + " mm");
+    return 0;
+}
 
-    // ========================================
-    // Step 3: Return to START
-    // ========================================
-    if (!returnToStart()) {
-        return handleFailure();
-    }
-
-    // ========================================
-    // Step 4: Validate accuracy
-    // ========================================
+/**
+ * Validate calibration accuracy against tolerance.
+ * @return 0=OK, 1=retry needed, -1=fatal failure
+ */
+int CalibrationManager::validateCalibrationAccuracy() {
     float errorPercent = validateAccuracy();
+    if (errorPercent <= MAX_CALIBRATION_ERROR_PERCENT) return 0;
 
-    if (errorPercent > MAX_CALIBRATION_ERROR_PERCENT) {
-        m_attemptCount++;
-        if (m_attemptCount >= MAX_CALIBRATION_RETRIES) {
-            if (m_errorCallback) {
-                m_errorCallback("❌ Calibration failed - error too large");
-            }
-            Motor.disable();
-            config.currentState = STATE_ERROR;
-            m_attemptCount = 0;
-            return false;
+    m_attemptCount++;
+    if (m_attemptCount >= MAX_CALIBRATION_RETRIES) {
+        if (m_errorCallback) {
+            m_errorCallback("❌ Calibration failed - error too large");
         }
-
-        engine->warn("⚠️ Error too large - Retry");
-        serviceWebSocket(500);
-        continue;  // Retry via loop (was recursive call)
+        Motor.disable();
+        config.currentState = STATE_ERROR;
+        m_attemptCount = 0;
+        return -1;
     }
 
-    // ========================================
-    // SUCCESS
-    // ========================================
+    engine->warn("⚠️ Error too large - Retry");
+    serviceWebSocket(500);
+    return 1;
+}
+
+/** Position at 10% and finalize calibrated state. */
+bool CalibrationManager::finalizeCalibration() {
     currentStep = 0;
     config.minStep = 0;
 
-    // ========================================
-    // Step 5: Position at 10% of total distance
-    // (rounded up to nearest mm)
-    // ========================================
-    float tenPercentMM = ceil(m_totalDistanceMM * 0.1f);  // 10% rounded up
+    // Position at 10% of total distance (rounded up to nearest mm)
+    float tenPercentMM = ceil(m_totalDistanceMM * 0.1f);
     long targetSteps = MovementMath::mmToSteps(tenPercentMM);
 
     engine->info("📍 Positioning at 10% (" + String(tenPercentMM, 0) + " mm)...");
     positionAtOffset(targetSteps);
 
-    // Update start position (single source of truth)
     motion.startPositionMM = tenPercentMM;
     engine->info("✓ Start position set to " + String(tenPercentMM, 0) + " mm");
 
@@ -387,16 +406,14 @@ bool CalibrationManager::startCalibration() {
     }
 
     return true;
-
-    } // end while(true) retry loop
 }
 
 bool CalibrationManager::returnToStart() {
     engine->debug("Returning to START contact...");
 
     // Check if stuck at END contact (HIGH = opto blocked = still on contact)
-    if (Contacts.isEndActive()) {
-        if (!emergencyDecontactEnd()) return false;
+    if (Contacts.isEndActive() && !emergencyDecontactEnd()) {
+        return false;
     }
 
     // Search for START contact: move backward while opto is LOW (clear), stop when HIGH (blocked)
@@ -454,14 +471,14 @@ bool CalibrationManager::returnToStart() {
 // CALLBACK SETTERS
 // ============================================================================
 
-void CalibrationManager::setStatusCallback(void (*callback)()) {
+void CalibrationManager::setStatusCallback(void (*callback)()) {  // NOSONAR(cpp:S5205)
     m_statusCallback = callback;
 }
 
-void CalibrationManager::setErrorCallback(void (*callback)(const String& msg)) {
+void CalibrationManager::setErrorCallback(void (*callback)(const String& msg)) {  // NOSONAR(cpp:S5205)
     m_errorCallback = callback;
 }
 
-void CalibrationManager::setCompletionCallback(void (*callback)()) {
+void CalibrationManager::setCompletionCallback(void (*callback)()) {  // NOSONAR(cpp:S5205)
     m_completionCallback = callback;
 }

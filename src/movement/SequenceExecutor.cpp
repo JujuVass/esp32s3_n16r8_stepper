@@ -329,7 +329,7 @@ bool SequenceExecutor::blockingMoveToStep(long targetStepPos, unsigned long time
 
         unsigned long nowMs = millis();
         if (nowMs - lastWsService >= BLOCKING_MOVE_WS_SERVICE_MS) {
-            if (wsMutex && xSemaphoreTakeRecursive(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+            if (wsMutex && xSemaphoreTakeRecursive(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {  // NOSONAR(cpp:S134) — FreeRTOS mutex pattern
                 if (_webSocket) _webSocket->loop();
                 server.handleClient();
                 xSemaphoreGiveRecursive(wsMutex);
@@ -337,7 +337,7 @@ bool SequenceExecutor::blockingMoveToStep(long targetStepPos, unsigned long time
             lastWsService = nowMs;
         }
         if (nowMs - lastStatusUpdate >= BLOCKING_MOVE_STATUS_INTERVAL_MS) {
-            if (wsMutex && xSemaphoreTakeRecursive(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+            if (wsMutex && xSemaphoreTakeRecursive(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {  // NOSONAR(cpp:S134)
                 Status.send();
                 xSemaphoreGiveRecursive(wsMutex);
             }

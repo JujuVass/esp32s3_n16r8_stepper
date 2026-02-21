@@ -287,7 +287,7 @@ struct OscillationConfig {
   constexpr OscillationConfig() = default;
 };
 
-struct OscillationState {
+struct OscillationState {  // NOSONAR(cpp:S1820) — domain state, fields are tightly coupled
   unsigned long startTimeMs = 0;    // Start time for phase tracking
   unsigned long rampStartMs = 0;    // Ramp start time
   float currentAmplitude = 0;       // Current amplitude (for ramping)
@@ -351,7 +351,7 @@ struct ChaosRuntimeConfig {
   constexpr ChaosRuntimeConfig() = default;
 };
 
-struct ChaosExecutionState {
+struct ChaosExecutionState {  // NOSONAR(cpp:S1820) — runtime state, all fields needed together
   bool isRunning = false;
   ChaosPattern currentPattern = ChaosPattern::CHAOS_ZIGZAG;
   unsigned long startTime = 0;           // Chaos mode start time
@@ -400,7 +400,7 @@ struct ChaosExecutionState {
 // SEQUENCER
 // ============================================================================
 
-struct SequenceLine {
+struct SequenceLine {  // NOSONAR(cpp:S1820) — multi-mode sequence line, fields map to 3 movement types + common
   bool enabled = true;
   MovementType movementType = MovementType::MOVEMENT_VAET;  // Type of movement for this line
 

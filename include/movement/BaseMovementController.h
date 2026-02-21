@@ -104,6 +104,8 @@ public:
      * @param isEndZone True if this is the end zone, false for start zone
      */
     void checkAndTriggerRandomTurnback(float distanceIntoZone, bool isEndZone);
+    void executePendingTurnback(float distanceIntoZone);
+    void rollTurnbackDice(float distanceIntoZone);
 
     /**
      * Reset random turnback state

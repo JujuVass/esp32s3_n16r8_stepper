@@ -724,47 +724,34 @@ async function fetchWithRetry(url, options = {}, retryConfig = {}) {
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // Create AbortController for timeout only if no external signal provided
-      const hasExternalSignal = !!options.signal;
-      const controller = hasExternalSignal ? null : new AbortController();
-      const timeoutId = hasExternalSignal ? null : setTimeout(() => controller.abort(), timeout);
-      
-      const response = await fetch(url, {
-        ...options,
-        signal: options.signal || controller.signal
-      });
-      
-      if (timeoutId) clearTimeout(timeoutId);
-      
-      // Success - return response
+      const response = await attemptSingleFetch(url, options, timeout);
       if (attempt > 0 && !silent) {
         console.debug(`✅ Request succeeded after ${attempt} retry(ies): ${url}`);
       }
       return response;
-      
     } catch (error) {
       lastError = error;
-      
-      if (!isRetryableError(error) || attempt >= maxRetries) {
-        throw error;
-      }
-      
-      // Calculate delay with optional exponential backoff
-      const delay = exponentialBackoff 
-        ? baseDelay * Math.pow(2, attempt) 
-        : baseDelay;
-      
+      if (!isRetryableError(error) || attempt >= maxRetries) throw error;
+      const delay = exponentialBackoff ? baseDelay * Math.pow(2, attempt) : baseDelay;
       if (!silent) {
         console.warn(`⚠️ Request failed (${error.name}), retry ${attempt + 1}/${maxRetries} in ${delay}ms: ${url}`);
       }
-      
-      // Wait before retry
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
-  
-  // Should not reach here, but just in case
   throw lastError;
+}
+
+/** Execute a single fetch attempt with timeout. Extracted from fetchWithRetry (S3776). */
+async function attemptSingleFetch(url, options, timeout) {
+  const hasExternalSignal = !!options.signal;
+  const controller = hasExternalSignal ? null : new AbortController();
+  const timeoutId = hasExternalSignal ? null : setTimeout(() => controller.abort(), timeout);
+  try {
+    return await fetch(url, { ...options, signal: options.signal || controller.signal });
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 /**

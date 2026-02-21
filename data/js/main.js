@@ -221,33 +221,8 @@
      * @param {Object} data - Status data from backend
      */
     function updateControlsState(data) {
-      // Update max values and presets
       if (data.totalDistMM !== undefined) {
-        const effectiveMax = (data.effectiveMaxDistMM && data.effectiveMaxDistMM > 0) ? data.effectiveMaxDistMM : data.totalDistMM;
-        const startPos = data.motion?.startPositionMM ?? 0;
-        const maxAvailable = effectiveMax - startPos;
-        
-        DOM.startPosition.max = effectiveMax;
-        DOM.distance.max = maxAvailable;
-        
-        if (DOM.maxStart) {
-          if (data.maxDistLimitPercent && data.maxDistLimitPercent < 100) {
-            DOM.maxStart.textContent = effectiveMax.toFixed(2) + ' (' + data.maxDistLimitPercent.toFixed(0) + '% de ' + data.totalDistMM.toFixed(2) + ')';
-          } else {
-            DOM.maxStart.textContent = effectiveMax.toFixed(2);
-          }
-        }
-        
-        if (DOM.maxDist) {
-          DOM.maxDist.textContent = maxAvailable.toFixed(2);
-        }
-        updateStartPresets(effectiveMax);
-        updateDistancePresets(maxAvailable);
-        
-        // 🆕 Update relative presets for Simple mode
-        if (typeof updateSimpleRelativePresets === 'function') {
-          updateSimpleRelativePresets();
-        }
+        updateMaxValuesAndPresets(data);
       }
       
       // Enable/disable start button
@@ -256,18 +231,7 @@
       const canStart = canStartOperation() && !isRunning && !isPausedState;
       setButtonState(DOM.btnStart, canStart);
       
-      // Enable/disable calibrate button
-      if (DOM.btnCalibrateCommon) {
-        if (data.canCalibrate) {
-          DOM.btnCalibrateCommon.disabled = false;
-          DOM.btnCalibrateCommon.style.opacity = '1';
-          DOM.btnCalibrateCommon.style.cursor = 'pointer';
-        } else {
-          DOM.btnCalibrateCommon.disabled = true;
-          DOM.btnCalibrateCommon.style.opacity = '0.5';
-          DOM.btnCalibrateCommon.style.cursor = 'not-allowed';
-        }
-      }
+      updateCalibrateButton(data);
       
       // Disable inputs during calibration (but allow changes during running)
       const inputsEnabled = canStartOperation();
@@ -282,6 +246,41 @@
       // Update pursuit controls
       if (DOM.pursuitActiveCheckbox) DOM.pursuitActiveCheckbox.disabled = !inputsEnabled;
       setButtonState(DOM.btnActivatePursuit, inputsEnabled);
+    }
+
+    /** Update max values, distance presets and label text */
+    function updateMaxValuesAndPresets(data) {
+      const effectiveMax = (data.effectiveMaxDistMM && data.effectiveMaxDistMM > 0) ? data.effectiveMaxDistMM : data.totalDistMM;
+      const startPos = data.motion?.startPositionMM ?? 0;
+      const maxAvailable = effectiveMax - startPos;
+      
+      DOM.startPosition.max = effectiveMax;
+      DOM.distance.max = maxAvailable;
+      
+      if (DOM.maxStart) {
+        DOM.maxStart.textContent = (data.maxDistLimitPercent && data.maxDistLimitPercent < 100)
+          ? effectiveMax.toFixed(2) + ' (' + data.maxDistLimitPercent.toFixed(0) + '% de ' + data.totalDistMM.toFixed(2) + ')'
+          : effectiveMax.toFixed(2);
+      }
+      
+      if (DOM.maxDist) {
+        DOM.maxDist.textContent = maxAvailable.toFixed(2);
+      }
+      updateStartPresets(effectiveMax);
+      updateDistancePresets(maxAvailable);
+      
+      if (typeof updateSimpleRelativePresets === 'function') {
+        updateSimpleRelativePresets();
+      }
+    }
+
+    /** Update calibrate button enabled/disabled state */
+    function updateCalibrateButton(data) {
+      if (!DOM.btnCalibrateCommon) return;
+      const canCalibrate = !!data.canCalibrate;
+      DOM.btnCalibrateCommon.disabled = !canCalibrate;
+      DOM.btnCalibrateCommon.style.opacity = canCalibrate ? '1' : '0.5';
+      DOM.btnCalibrateCommon.style.cursor = canCalibrate ? 'pointer' : 'not-allowed';
     }
     
     // ============================================================================
@@ -331,26 +330,35 @@
           updateMaxDistLimitUI();
         }
 
-        // Pursuit mode variables + gauge limit line
-        AppState.pursuit.totalDistanceMM = data.totalDistMM;
-        if (data.maxDistLimitPercent !== undefined && !AppState.pursuit.isEditingMaxDistLimit) {
-          AppState.pursuit.maxDistLimitPercent = data.maxDistLimitPercent;
-        }
-        if (data.maxDistLimitPercent && data.maxDistLimitPercent < 100 && data.effectiveMaxDistMM) {
-          const limitPercent = (data.effectiveMaxDistMM / data.totalDistMM);
-          const containerHeight = DOM.gaugeContainer ? DOM.gaugeContainer.offsetHeight : 500;
-          const limitPixelPosition = containerHeight - (limitPercent * containerHeight);
-          if (DOM.gaugeLimitLine) {
-            DOM.gaugeLimitLine.style.top = limitPixelPosition + 'px';
-            DOM.gaugeLimitLine.style.display = 'block';
-          }
-        } else if (DOM.gaugeLimitLine) {
-          DOM.gaugeLimitLine.style.display = 'none';
-        }
+        updatePursuitStateFromData(data);
+        updateGaugeLimitLine(data);
       }
       if (data.positionMM !== undefined) {
         AppState.pursuit.currentPositionMM = data.positionMM;
         updateGaugePosition(AppState.pursuit.currentPositionMM);
+      }
+    }
+
+    /** Sync pursuit AppState variables from incoming data */
+    function updatePursuitStateFromData(data) {
+      AppState.pursuit.totalDistanceMM = data.totalDistMM;
+      if (data.maxDistLimitPercent !== undefined && !AppState.pursuit.isEditingMaxDistLimit) {
+        AppState.pursuit.maxDistLimitPercent = data.maxDistLimitPercent;
+      }
+    }
+
+    /** Show/hide and position the gauge limit line */
+    function updateGaugeLimitLine(data) {
+      if (data.maxDistLimitPercent && data.maxDistLimitPercent < 100 && data.effectiveMaxDistMM) {
+        const limitPercent = (data.effectiveMaxDistMM / data.totalDistMM);
+        const containerHeight = DOM.gaugeContainer ? DOM.gaugeContainer.offsetHeight : 500;
+        const limitPixelPosition = containerHeight - (limitPercent * containerHeight);
+        if (DOM.gaugeLimitLine) {
+          DOM.gaugeLimitLine.style.top = limitPixelPosition + 'px';
+          DOM.gaugeLimitLine.style.display = 'block';
+        }
+      } else if (DOM.gaugeLimitLine) {
+        DOM.gaugeLimitLine.style.display = 'none';
       }
     }
 

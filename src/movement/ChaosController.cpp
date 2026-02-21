@@ -398,7 +398,7 @@ void ChaosController::handleCalm(float craziness, float effectiveMinLimit, float
 void ChaosController::handleMultiPhase(const ChaosBaseConfig& cfg, const ChaosMultiPhaseExt& multi_cfg,
                                         const ChaosDirectionExt& dir_cfg, float craziness,
                                         float effectiveMinLimit, float effectiveMaxLimit,
-                                        float& speedMultiplier, unsigned long& patternDuration) {
+                                        float& speedMultiplier, unsigned long& patternDuration) {  // NOSONAR(cpp:S107)
     calcSpeedAndDuration(cfg, craziness, 0.75f, speedMultiplier, patternDuration);
 
     float maxPossibleAmplitude = calculateMaxAmplitude(effectiveMinLimit, effectiveMaxLimit);
@@ -646,7 +646,7 @@ void ChaosController::handleSweepAtTarget(float effectiveMinLimit, float effecti
 void ChaosController::handleMultiPhaseAtTarget(float effectiveMinLimit, float effectiveMaxLimit,
                                                 uint8_t& phase, float speedBase0, float speedScale0,
                                                 float speedBase2, float speedScale2,
-                                                const char* emoji, const char* name) {
+                                                const char* emoji, const char* name) {  // NOSONAR(cpp:S107)
     float craziness = chaos.crazinessPercent / 100.0f;
     float amplitude = chaosState.waveAmplitude;
 
@@ -729,44 +729,10 @@ void ChaosController::handleDiscreteAtTarget() {
 void ChaosController::process() {
     if (!chaosState.isRunning) [[unlikely]] return;
 
-    // Handle pause for multi-phase patterns (internal pattern pause, not user pause)
-    if (chaosState.isInPatternPause &&
-        (chaosState.currentPattern == CHAOS_BRUTE_FORCE ||
-         chaosState.currentPattern == CHAOS_LIBERATOR)) [[unlikely]] {
-        unsigned long pauseElapsed = millis() - chaosState.pauseStartTime;
-        if (pauseElapsed >= chaosState.pauseDuration) {
-            chaosState.isInPatternPause = false;
-            if (engine->isDebugEnabled()) {
-                String patternName = (chaosState.currentPattern == CHAOS_BRUTE_FORCE) ? "BRUTE_FORCE" : "LIBERATOR";
-                engine->debug(String(chaosState.currentPattern == CHAOS_BRUTE_FORCE ? "🔨" : "🔓") + " " +
-                      patternName + " pause complete, resuming");
-            }
-        } else {
-            return;
-        }
-    }
+    if (handlePatternPause()) return;
+    if (checkDurationLimit()) return;
 
-    // Check duration limit
-    if (chaos.durationSeconds > 0) {
-        unsigned long elapsed = (millis() - chaosState.startTime) / 1000;
-        if (elapsed >= chaos.durationSeconds) [[unlikely]] {
-            engine->info("⏱️ Chaos duration complete: " + String(elapsed) + "s");
-            if (engine->isDebugEnabled()) {
-                engine->debug(String("processChaosExecution(): config.executionContext=") +
-                      executionContextName(config.executionContext) + " seqState.isRunning=" + String(seqState.isRunning));
-            }
-
-            if (config.executionContext == CONTEXT_SEQUENCER) {
-                chaosState.isRunning = false;
-                SeqExecutor.onMovementComplete();
-            } else {
-                stop();
-            }
-            return;
-        }
-    }
-
-    // Check for new pattern (generatePattern now syncs targetStep via setTargetMM)
+    // Check for new pattern
     if (millis() >= chaosState.nextPatternChangeTime) [[unlikely]] {
         generatePattern();
         calculateStepDelay();
@@ -784,62 +750,92 @@ void ChaosController::process() {
     float effectiveMaxLimit = min(chaos.centerPositionMM + chaos.amplitudeMM, maxAllowed);
     float maxPossibleAmplitude = calculateMaxAmplitude(effectiveMinLimit, effectiveMaxLimit);
 
-    // Handle continuous patterns
+    processContinuousPatterns(effectiveMinLimit, effectiveMaxLimit);
+    if (chaosState.isInPatternPause) return;
+
+    processAtTarget(effectiveMinLimit, effectiveMaxLimit, maxPossibleAmplitude);
+    executeMovementStep();
+}
+
+/** Handle multi-phase pattern pauses. Returns true if still pausing. */
+bool ChaosController::handlePatternPause() {
+    if (!chaosState.isInPatternPause) return false;
+    if (chaosState.currentPattern != CHAOS_BRUTE_FORCE &&
+        chaosState.currentPattern != CHAOS_LIBERATOR) return false;
+
+    unsigned long pauseElapsed = millis() - chaosState.pauseStartTime;
+    if (pauseElapsed < chaosState.pauseDuration) return true;  // Still pausing
+
+    chaosState.isInPatternPause = false;
+    if (engine->isDebugEnabled()) {
+        String patternName = (chaosState.currentPattern == CHAOS_BRUTE_FORCE) ? "BRUTE_FORCE" : "LIBERATOR";
+        engine->debug(String(chaosState.currentPattern == CHAOS_BRUTE_FORCE ? "🔨" : "🔓") + " " +
+              patternName + " pause complete, resuming");
+    }
+    return false;
+}
+
+/** Check chaos duration limit. Returns true if duration expired. */
+bool ChaosController::checkDurationLimit() {
+    if (chaos.durationSeconds <= 0) return false;
+
+    unsigned long elapsed = (millis() - chaosState.startTime) / 1000;
+    if (elapsed < chaos.durationSeconds) return false;
+
+    engine->info("⏱️ Chaos duration complete: " + String(elapsed) + "s");
+    if (engine->isDebugEnabled()) {
+        engine->debug(String("processChaosExecution(): config.executionContext=") +
+              executionContextName(config.executionContext) + " seqState.isRunning=" + String(seqState.isRunning));
+    }
+
+    if (config.executionContext == CONTEXT_SEQUENCER) {
+        chaosState.isRunning = false;
+        SeqExecutor.onMovementComplete();
+    } else {
+        stop();
+    }
+    return true;
+}
+
+/** Handle continuous patterns (wave, calm). */
+void ChaosController::processContinuousPatterns(float effectiveMinLimit, float effectiveMaxLimit) {
     if (chaosState.currentPattern == CHAOS_WAVE) {
         processWave(effectiveMinLimit, effectiveMaxLimit);
     }
-
     if (chaosState.currentPattern == CHAOS_CALM) {
         processCalm(effectiveMinLimit, effectiveMaxLimit);
-        if (chaosState.isInPatternPause) return;
     }
+}
 
-    // Check if at target
-    if (auto isAtTarget = (abs(currentStep - targetStep) <= 2); isAtTarget) {
-        switch (chaosState.currentPattern) {
-            case CHAOS_PULSE:
-                handlePulseAtTarget(effectiveMinLimit, effectiveMaxLimit);
-                break;
-            case CHAOS_PENDULUM:
-                handlePendulumAtTarget(effectiveMinLimit, effectiveMaxLimit);
-                break;
-            case CHAOS_SPIRAL:
-                handleSpiralAtTarget(effectiveMinLimit, effectiveMaxLimit, maxPossibleAmplitude);
-                break;
-            case CHAOS_SWEEP:
-                handleSweepAtTarget(effectiveMinLimit, effectiveMaxLimit);
-                break;
-            case CHAOS_CALM:
-                // Handled in processCalm
-                break;
-            case CHAOS_BRUTE_FORCE:
-                handleBruteForceAtTarget(effectiveMinLimit, effectiveMaxLimit);
-                break;
-            case CHAOS_LIBERATOR:
-                handleLiberatorAtTarget(effectiveMinLimit, effectiveMaxLimit);
-                break;
-            default:
-                handleDiscreteAtTarget();
-                break;
-        }
+/** Dispatch at-target handling to per-pattern handler. */
+void ChaosController::processAtTarget(float effectiveMinLimit, float effectiveMaxLimit, float maxPossibleAmplitude) {
+    if (abs(currentStep - targetStep) > 2) return;
+
+    switch (chaosState.currentPattern) {
+        case CHAOS_PULSE:      handlePulseAtTarget(effectiveMinLimit, effectiveMaxLimit); break;
+        case CHAOS_PENDULUM:   handlePendulumAtTarget(effectiveMinLimit, effectiveMaxLimit); break;
+        case CHAOS_SPIRAL:     handleSpiralAtTarget(effectiveMinLimit, effectiveMaxLimit, maxPossibleAmplitude); break;
+        case CHAOS_SWEEP:      handleSweepAtTarget(effectiveMinLimit, effectiveMaxLimit); break;
+        case CHAOS_CALM:       break;  // Handled in processCalm
+        case CHAOS_BRUTE_FORCE: handleBruteForceAtTarget(effectiveMinLimit, effectiveMaxLimit); break;
+        case CHAOS_LIBERATOR:  handleLiberatorAtTarget(effectiveMinLimit, effectiveMaxLimit); break;
+        default:               handleDiscreteAtTarget(); break;
     }
+}
 
-    // Execute movement
-    if (currentStep != targetStep) [[likely]] {
-        unsigned long currentMicros = micros();
-        if (currentMicros - chaosState.lastStepMicros >= chaosState.stepDelay) [[unlikely]] {
-            chaosState.lastStepMicros = currentMicros;
-            doStep();
+/** Execute one movement step if due. */
+void ChaosController::executeMovementStep() {
+    if (currentStep == targetStep) return;
 
-            float currentPos = MovementMath::stepsToMM(currentStep);
-            if (currentPos < chaosState.minReachedMM) {
-                chaosState.minReachedMM = currentPos;
-            }
-            if (currentPos > chaosState.maxReachedMM) {
-                chaosState.maxReachedMM = currentPos;
-            }
-        }
-    }
+    unsigned long currentMicros = micros();
+    if (currentMicros - chaosState.lastStepMicros < chaosState.stepDelay) return;
+
+    chaosState.lastStepMicros = currentMicros;
+    doStep();
+
+    float currentPos = MovementMath::stepsToMM(currentStep);
+    if (currentPos < chaosState.minReachedMM) chaosState.minReachedMM = currentPos;
+    if (currentPos > chaosState.maxReachedMM) chaosState.maxReachedMM = currentPos;
 }
 
 // ============================================================================

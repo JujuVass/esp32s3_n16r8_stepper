@@ -109,7 +109,7 @@ function drawZoneEffectPreviewPure(canvas, config) {
   
   const {
     enableStart = true, enableEnd = true, zoneMM = 50,
-    speedEffect = 1, speedCurve = 1, speedIntensity = 75,
+    speedEffect = 1,
     randomTurnbackEnabled = false, turnbackChance = 30,
     endPauseEnabled = false, movementAmplitude = 150
   } = config;
@@ -167,16 +167,7 @@ function drawPreviewSpeedCurve(p, config) {
   
   for (let x = 0; x <= p.plotWidth; x++) {
     const positionMM = (x / p.plotWidth) * movementAmplitude;
-    let speedFactor = 1;
-    
-    if (enableStart && positionMM <= zoneMM) {
-      speedFactor = calculateSlowdownFactorPure(positionMM / zoneMM, maxFactor, speedCurve);
-      if (isAccel) speedFactor = 1 / speedFactor;
-    }
-    if (enableEnd && positionMM >= (movementAmplitude - zoneMM)) {
-      speedFactor = calculateSlowdownFactorPure((movementAmplitude - positionMM) / zoneMM, maxFactor, speedCurve);
-      if (isAccel) speedFactor = 1 / speedFactor;
-    }
+    const speedFactor = computeZoneSpeedFactor(positionMM, enableStart, enableEnd, zoneMM, movementAmplitude, maxFactor, speedCurve, isAccel);
     
     const normalizedSpeed = isAccel
       ? 0.5 + (1 - speedFactor) * 0.5
@@ -187,6 +178,20 @@ function drawPreviewSpeedCurve(p, config) {
     else p.ctx.lineTo(p.padding + x, y);
   }
   p.ctx.stroke();
+}
+
+/** Compute speed factor at a given position considering start/end zones */
+function computeZoneSpeedFactor(positionMM, enableStart, enableEnd, zoneMM, movementAmplitude, maxFactor, speedCurve, isAccel) {
+  let factor = 1;
+  if (enableStart && positionMM <= zoneMM) {
+    factor = calculateSlowdownFactorPure(positionMM / zoneMM, maxFactor, speedCurve);
+    if (isAccel) factor = 1 / factor;
+  }
+  if (enableEnd && positionMM >= (movementAmplitude - zoneMM)) {
+    factor = calculateSlowdownFactorPure((movementAmplitude - positionMM) / zoneMM, maxFactor, speedCurve);
+    if (isAccel) factor = 1 / factor;
+  }
+  return factor;
 }
 
 /** Draw dashed zone boundary lines */

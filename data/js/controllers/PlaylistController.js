@@ -676,18 +676,11 @@ function loadOscCyclePausePreset(config) {
   const pauseEnabled = config.cyclePauseEnabled || false;
   const pauseIsRandom = config.cyclePauseIsRandom || false;
   
-  // Set radio buttons for pause mode
-  const pauseModeFixedOscEl = document.getElementById('pauseModeFixedOsc');
-  const pauseModeRandomOscEl = document.getElementById('pauseModeRandomOsc');
-  if (pauseModeFixedOscEl && pauseModeRandomOscEl) {
-    if (pauseIsRandom) {
-      pauseModeRandomOscEl.checked = true;
-      pauseModeFixedOscEl.checked = false;
-    } else {
-      pauseModeFixedOscEl.checked = true;
-      pauseModeRandomOscEl.checked = false;
-    }
-  }
+  setRadioPair(
+    document.getElementById('pauseModeFixedOsc'),
+    document.getElementById('pauseModeRandomOsc'),
+    pauseIsRandom
+  );
   
   // Set pause duration values
   const cyclePauseDurationOscEl = document.getElementById('cyclePauseDurationOsc');
@@ -698,31 +691,12 @@ function loadOscCyclePausePreset(config) {
   if (cyclePauseMinOscEl) cyclePauseMinOscEl.value = config.cyclePauseMinSec || 0.5;
   if (cyclePauseMaxOscEl) cyclePauseMaxOscEl.value = config.cyclePauseMaxSec || 3;
   
-  // Force toggle visibility (fixed/random)
-  const fixedDiv = document.getElementById('pauseFixedControlsOsc');
-  const randomDiv = document.getElementById('pauseRandomControlsOsc');
-  if (fixedDiv && randomDiv) {
-    if (pauseIsRandom) {
-      fixedDiv.style.display = 'none';
-      randomDiv.style.display = 'block';
-    } else {
-      fixedDiv.style.display = 'flex';
-      randomDiv.style.display = 'none';
-    }
-  }
+  toggleFixedRandomControls('pauseFixedControlsOsc', 'pauseRandomControlsOsc', pauseIsRandom);
   
-  // Auto-expand pause section if enabled
   if (pauseEnabled) {
-    const pauseSection = document.querySelector('.section-collapsible:has(#cyclePauseOscHeaderText)');
+    autoExpandSection(document.querySelector('.section-collapsible:has(#cyclePauseOscHeaderText)'));
     const pauseHeaderText = document.getElementById('cyclePauseOscHeaderText');
-    if (pauseSection && pauseHeaderText) {
-      if (pauseSection.classList.contains('collapsed')) {
-        pauseSection.classList.remove('collapsed');
-        const chevron = pauseSection.querySelector('.collapse-icon');
-        if (chevron) chevron.textContent = '▼';
-      }
-      pauseHeaderText.textContent = t('oscillation.cyclePauseEnabled');
-    }
+    if (pauseHeaderText) pauseHeaderText.textContent = t('oscillation.cyclePauseEnabled');
   }
   
   return { pauseEnabled, pauseIsRandom };

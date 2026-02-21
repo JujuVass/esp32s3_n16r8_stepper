@@ -861,11 +861,10 @@ bool CommandDispatcher::applyOscillationConfig(JsonDocument& doc) {
 
 void CommandDispatcher::applyOscillationLiveTransitions(float oldCenter, float oldAmplitude,
                                                          float oldFrequency, OscillationWaveform oldWaveform) {
-    bool paramsChanged = (oldCenter != oscillation.centerPositionMM ||
-                          oldAmplitude != oscillation.amplitudeMM ||
-                          oldFrequency != oscillation.frequencyHz ||
-                          oldWaveform != oscillation.waveform);
-    if (!paramsChanged) return;
+    if (bool paramsChanged = (oldCenter != oscillation.centerPositionMM ||
+                              oldAmplitude != oscillation.amplitudeMM ||
+                              oldFrequency != oscillation.frequencyHz ||
+                              oldWaveform != oscillation.waveform); !paramsChanged) return;
 
     bool isOscRunning = (currentMovement == MOVEMENT_OSC && config.currentState == STATE_RUNNING);
 
@@ -894,7 +893,7 @@ void CommandDispatcher::applyOscillationLiveTransitions(float oldCenter, float o
     oscillationState.isRampingOut = false;
 }
 
-bool CommandDispatcher::cmdAddSequenceLine(JsonDocument& doc) {
+bool CommandDispatcher::cmdAddSequenceLine(const JsonDocument& doc) {
     SequenceLine newLine = SeqTable.parseFromJson(doc);
 
     if (auto validationError = SeqTable.validatePhysics(newLine); !validationError.isEmpty()) {

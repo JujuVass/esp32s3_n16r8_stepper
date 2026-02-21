@@ -48,7 +48,7 @@ inline String format(const char* fmt) {                        // NOSONAR(cpp:S6
     struct tm timeinfo;
     localtime_r(&t, &timeinfo);
     std::array<char, 64> buffer{};
-    strftime(buffer.data(), buffer.size(), fmt, &timeinfo);
+    strftime(buffer.data(), buffer.size(), fmt, &timeinfo);    // NOSONAR(cpp:S6229)
     return String(buffer.data());
 }
 
@@ -62,7 +62,7 @@ inline String format(const char* fmt, time_t epochSec) {       // NOSONAR(cpp:S6
     struct tm timeinfo;
     localtime_r(&epochSec, &timeinfo);
     std::array<char, 64> buffer{};
-    strftime(buffer.data(), buffer.size(), fmt, &timeinfo);
+    strftime(buffer.data(), buffer.size(), fmt, &timeinfo);    // NOSONAR(cpp:S6229)
     return String(buffer.data());
 }
 

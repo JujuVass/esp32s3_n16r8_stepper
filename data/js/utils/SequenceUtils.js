@@ -436,22 +436,26 @@ function validateVaetLine(line, effectiveMax) {
     errors.push('⚠️ ' + t('sequencer.speedBwdOutOfRange', { min: L.MIN_SPEED_LEVEL, max: L.MAX_SPEED_LEVEL }));
   }
 
-  // Zone effect validation
-  if (line.vaetZoneEffect?.enabled) {
-    const ze = line.vaetZoneEffect;
-    if (ze.zoneMM <= 0) {
-      errors.push('⚠️ ' + t('sequencer.zoneMustBePositive'));
-    } else if (ze.zoneMM > line.distanceMM / 2) {
-      errors.push('⚠️ ' + t('sequencer.zoneTooLarge', { max: (line.distanceMM / 2).toFixed(1) }));
-    }
-    if (ze.speedIntensity < 0 || ze.speedIntensity > 100) {
-      errors.push('⚠️ ' + t('sequencer.intensityOutOfRange'));
-    }
-    if (ze.randomTurnbackEnabled && (ze.turnbackChance < 0 || ze.turnbackChance > 100)) {
-      errors.push('⚠️ ' + t('sequencer.turnbackChanceOutOfRange'));
-    }
-  }
+  errors.push(...validateVaetZoneEffect(line));
+  return errors;
+}
 
+/** @private Validate VA-ET-VIENT zone effect sub-fields */
+function validateVaetZoneEffect(line) {
+  if (!line.vaetZoneEffect?.enabled) return [];
+  const errors = [];
+  const ze = line.vaetZoneEffect;
+  if (ze.zoneMM <= 0) {
+    errors.push('⚠️ ' + t('sequencer.zoneMustBePositive'));
+  } else if (ze.zoneMM > line.distanceMM / 2) {
+    errors.push('⚠️ ' + t('sequencer.zoneTooLarge', { max: (line.distanceMM / 2).toFixed(1) }));
+  }
+  if (ze.speedIntensity < 0 || ze.speedIntensity > 100) {
+    errors.push('⚠️ ' + t('sequencer.intensityOutOfRange'));
+  }
+  if (ze.randomTurnbackEnabled && (ze.turnbackChance < 0 || ze.turnbackChance > 100)) {
+    errors.push('⚠️ ' + t('sequencer.turnbackChanceOutOfRange'));
+  }
   return errors;
 }
 

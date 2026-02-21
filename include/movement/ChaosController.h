@@ -42,7 +42,7 @@ extern const std::array<const char*, CHAOS_PATTERN_COUNT> CHAOS_PATTERN_NAMES;
 // CHAOS CONTROLLER CLASS
 // ============================================================================
 
-class ChaosController {
+class ChaosController {  // NOSONAR(cpp:S1448) — 11 chaos patterns require dedicated handlers
 public:
     /**
      * Get singleton instance
@@ -195,6 +195,16 @@ private:
                           float& speedMultiplier, unsigned long& patternDuration);
     void handleLiberator(float craziness, float effectiveMinLimit, float effectiveMaxLimit,
                          float& speedMultiplier, unsigned long& patternDuration);
+
+    // ========================================================================
+    // PROCESS SUB-HANDLERS (CC split)
+    // ========================================================================
+
+    bool handlePatternPause();
+    bool checkDurationLimit();
+    void processContinuousPatterns(float effectiveMinLimit, float effectiveMaxLimit);
+    void processAtTarget(float effectiveMinLimit, float effectiveMaxLimit, float maxPossibleAmplitude);
+    void executeMovementStep();
 
     // ========================================================================
     // CONTINUOUS PATTERN PROCESSING

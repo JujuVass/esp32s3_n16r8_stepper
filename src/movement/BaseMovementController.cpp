@@ -262,65 +262,53 @@ int BaseMovementControllerClass::calculateAdjustedDelay(float currentPositionMM,
 // ============================================================================
 
 void BaseMovementControllerClass::checkAndTriggerRandomTurnback(float distanceIntoZone, [[maybe_unused]] bool isEndZone) {
-    // Only process if random turnback is enabled
-    if (!zoneEffect.randomTurnbackEnabled) {
-        return;
-    }
+    if (!zoneEffect.randomTurnbackEnabled) return;
+    if (zoneEffectState.isPausing) return;
 
-    // Don't trigger turnback if we're currently pausing
-    if (zoneEffectState.isPausing) {
-        return;
-    }
-
-    // Check if we already have a pending turnback
     if (zoneEffectState.hasPendingTurnback) {
-        // Check if we've reached the turnback point
-        if (distanceIntoZone >= zoneEffectState.turnbackPointMM) {
-            // Execute turnback - first trigger pause if enabled
-            if (zoneEffect.endPauseEnabled) {
-                triggerEndPause();
-                if (engine->isDebugEnabled()) {
-                    engine->debug("🔄⏸️ Random turnback + pause at " + String(distanceIntoZone, 1) + "mm");
-                }
-            } else {
-                if (engine->isDebugEnabled()) {
-                    engine->debug("🔄 Random turnback executed at " + String(distanceIntoZone, 1) + "mm into zone");
-                }
-            }
-            movingForward = !movingForward;
-            zoneEffectState.hasPendingTurnback = false;
-            // Don't reset hasRolledForTurnback here - it will be reset when we exit the zone
-        }
+        executePendingTurnback(distanceIntoZone);
         return;
     }
 
-    // If we already rolled the dice for this zone entry, don't roll again
-    if (zoneEffectState.hasRolledForTurnback) {
-        return;
+    if (zoneEffectState.hasRolledForTurnback) return;
+
+    // Just entered the zone — roll the dice ONCE
+    if (distanceIntoZone < 2.0f) {
+        rollTurnbackDice(distanceIntoZone);
     }
+}
 
-    // We just entered the zone - roll the dice ONCE
-    if (distanceIntoZone < 2.0f) {  // Just entered (within first 2mm)
-        // Mark that we've rolled for this zone entry
-        zoneEffectState.hasRolledForTurnback = true;
+/** Execute a pending turnback if the turnback point has been reached. */
+void BaseMovementControllerClass::executePendingTurnback(float distanceIntoZone) {
+    if (distanceIntoZone < zoneEffectState.turnbackPointMM) return;
 
-        // Roll the dice
-        int roll = random(100);
-        if (roll < zoneEffect.turnbackChance) {
-            // Decide to turn back at a random point in the zone
-            // Don't turn back in the first 10% or last 10% of the zone
-            float minTurnback = zoneEffect.zoneMM * 0.1f;
-            float maxTurnback = zoneEffect.zoneMM * 0.9f;
-            zoneEffectState.turnbackPointMM = minTurnback + (static_cast<float>(random(0, 1000)) / 1000.0f) * (maxTurnback - minTurnback);
-            zoneEffectState.hasPendingTurnback = true;
-            if (engine->isDebugEnabled()) {
-                engine->debug("🔄 Random turnback planned at " + String(zoneEffectState.turnbackPointMM, 1) + "mm (roll=" + String(roll) + " < " + String(zoneEffect.turnbackChance) + "%)");
-            }
-        } else {
-            if (engine->isDebugEnabled()) {
-                engine->debug("🎲 No turnback (roll=" + String(roll) + " >= " + String(zoneEffect.turnbackChance) + "%)");
-            }
+    if (zoneEffect.endPauseEnabled) {
+        triggerEndPause();
+        if (engine->isDebugEnabled()) {
+            engine->debug("🔄⏸️ Random turnback + pause at " + String(distanceIntoZone, 1) + "mm");
         }
+    } else if (engine->isDebugEnabled()) {
+        engine->debug("🔄 Random turnback executed at " + String(distanceIntoZone, 1) + "mm into zone");
+    }
+    movingForward = !movingForward;
+    zoneEffectState.hasPendingTurnback = false;
+}
+
+/** Roll dice for random turnback on zone entry. */
+void BaseMovementControllerClass::rollTurnbackDice([[maybe_unused]] float distanceIntoZone) {
+    zoneEffectState.hasRolledForTurnback = true;
+
+    int roll = random(100);
+    if (roll < zoneEffect.turnbackChance) {
+        float minTurnback = zoneEffect.zoneMM * 0.1f;
+        float maxTurnback = zoneEffect.zoneMM * 0.9f;
+        zoneEffectState.turnbackPointMM = minTurnback + (static_cast<float>(random(0, 1000)) / 1000.0f) * (maxTurnback - minTurnback);
+        zoneEffectState.hasPendingTurnback = true;
+        if (engine->isDebugEnabled()) {
+            engine->debug("🔄 Random turnback planned at " + String(zoneEffectState.turnbackPointMM, 1) + "mm (roll=" + String(roll) + " < " + String(zoneEffect.turnbackChance) + "%)");
+        }
+    } else if (engine->isDebugEnabled()) {
+        engine->debug("🎲 No turnback (roll=" + String(roll) + " >= " + String(zoneEffect.turnbackChance) + "%)");
     }
 }
 
