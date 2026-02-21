@@ -26,7 +26,12 @@
  */
 
 // Day names for display - functions using i18n
-function getDayNames() { const names = t('stats.dayNames'); return Array.isArray(names) ? names : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; }
+const DEFAULT_DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+function getDayNames() {
+  const names = t('stats.dayNames');
+  if (!Array.isArray(names)) return DEFAULT_DAY_NAMES;
+  return names;
+}
 const dayIcons = ['🚴', '🏃', '🏁', '🏀', '🔴', '🏓', '⚪'];
 
 // ============================================================================

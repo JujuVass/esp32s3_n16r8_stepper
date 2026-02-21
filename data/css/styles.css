@@ -340,12 +340,12 @@ select.select-input:focus {
 
 .tab:hover {
   background: rgba(102, 126, 234, 0.08);
-  color: #4a5568;
+  color: #141b29;
 }
 
 .tab.active {
   background: white;
-  color: #667eea;
+  color: #232c55;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
   border-bottom: none;
 }
@@ -590,7 +590,7 @@ select.select-input:focus {
   text-align: center !important;
   line-height: 20px !important;
   font-size: 14px !important;
-  color: #667eea !important;
+  color: #3b2b5d !important;
   font-weight: 600 !important;
   box-sizing: border-box !important;
   animation: pulse-glow 1s ease-in-out infinite;
@@ -623,7 +623,7 @@ select.select-input:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #667eea;
+  color: #374998;
   font-size: 12px;
   font-weight: 600;
   animation: fade-in 0.2s;
@@ -704,7 +704,7 @@ select.select-input:focus {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: rgba(244, 67, 54, 0.8);
+  color: #c41c3c;
   font-weight: 600;
   transition: all 0.3s;
   min-width: 140px;

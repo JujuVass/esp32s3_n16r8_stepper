@@ -6,6 +6,11 @@
     ],
     "settings": {
         "sonarlint.pathToCompileCommands": "${workspaceFolder}/compile_commands.json",
+        "sonarlint.rules": {
+            "css:S7924": {
+                "level": "off"
+            }
+        },
         "files.exclude": {
             "**/.git": true,
             "**/.DS_Store": true
