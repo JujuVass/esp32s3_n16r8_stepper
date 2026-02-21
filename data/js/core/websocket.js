@@ -40,13 +40,13 @@ function connectWebSocket(useFallback) {
   let host;
   if (useFallback) {
     // Fallback mode: use hostname (mDNS), clear cached IP as it may be stale
-    host = window.location.hostname;
+    host = globalThis.location.hostname;
     AppState.espIpAddress = null;
     console.debug('🔄 Fallback: Using hostname (mDNS):', host);
   } else {
     // Only use cached IP if it's on the same subnet as our current connection
     // This prevents using STA IP (192.168.1.x) when connected via AP (192.168.4.x)
-    const currentHost = window.location.hostname;
+    const currentHost = globalThis.location.hostname;
     if (AppState.espIpAddress && isSameSubnet(AppState.espIpAddress, currentHost)) {
       host = AppState.espIpAddress;
     } else {
@@ -209,8 +209,8 @@ function handleWebSocketMessage(data) {
   
   // Cache ESP32 IP address for faster WS reconnection (avoids mDNS delay)
   // Only cache if on the same subnet as current connection (prevents STA IP cache when on AP)
-  if (data.ip && data.ip !== '0.0.0.0' && !AppState.espIpAddress) {
-    if (isSameSubnet(data.ip, window.location.hostname)) {
+  if (data.ip && data.ip !== '0.0' && !AppState.espIpAddress) {
+    if (isSameSubnet(data.ip, globalThis.location.hostname)) {
       AppState.espIpAddress = data.ip;
       console.debug('📡 Cached ESP32 IP:', data.ip);
     }
@@ -240,7 +240,7 @@ function handleExportData(exportData) {
   a.download = 'sequence_' + new Date().toISOString().slice(0,10) + '.json';
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
+  a.remove();
   
   URL.revokeObjectURL(url);
   console.debug('📥 Export downloaded');
@@ -285,7 +285,7 @@ function _flushLogBuffer() {
 
   // Trim to 500 lines
   while (logPanel.children.length > 500) {
-    logPanel.removeChild(logPanel.firstChild);
+    logPanel.firstChild.remove();
   }
 
   logPanel.scrollTop = logPanel.scrollHeight;

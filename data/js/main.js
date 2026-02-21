@@ -20,13 +20,13 @@
       const cpmSpan = speedElement ? speedElement.nextElementSibling : null;
       const currentMode = AppState.system.currentMode;
       
-      if (currentMode === 'oscillation' && data.oscillation && data.oscillation.frequencyHz !== undefined && data.oscillation.amplitudeMM !== undefined) {
+      if (currentMode === 'oscillation' && data.oscillation?.frequencyHz !== undefined && data.oscillation?.amplitudeMM !== undefined) {
         // OSCILLATION MODE: Show ACTUAL speed (backend calculates with hardware limits)
         let displaySpeed;
         let isLimited = false;
         
         if (data.oscillation.actualSpeedMMS !== undefined && data.oscillation.actualSpeedMMS > 0) {
-          displaySpeed = parseFloat(data.oscillation.actualSpeedMMS);
+          displaySpeed = Number.parseFloat(data.oscillation.actualSpeedMMS);
           const theoreticalSpeed = 2 * Math.PI * data.oscillation.frequencyHz * data.oscillation.amplitudeMM;
           isLimited = (displaySpeed < theoreticalSpeed - 1);
         } else {
@@ -37,7 +37,7 @@
         if (cpmSpan) {
           cpmSpan.textContent = '(pic, f=' + data.oscillation.frequencyHz.toFixed(2) + ' Hz' + (isLimited ? ', ' + t('status.speedLimited') : '') + ')';
         }
-      } else if (currentMode === 'chaos' && data.chaos && data.chaos.maxSpeedLevel !== undefined) {
+      } else if (currentMode === 'chaos' && data.chaos?.maxSpeedLevel !== undefined) {
         // CHAOS MODE: Show max speed level
         const speedMMPerSec = data.chaos.maxSpeedLevel * SPEED_LEVEL_TO_MM_S;
         speedElement.innerHTML = '⚡ ' + data.chaos.maxSpeedLevel.toFixed(1);
@@ -57,10 +57,10 @@
         if (cpmSpan) {
           cpmSpan.textContent = '';
         }
-      } else if (currentMode === 'simple' && data.motion && data.motion.cyclesPerMinForward !== undefined && data.motion.cyclesPerMinBackward !== undefined) {
+      } else if (currentMode === 'simple' && data.motion?.cyclesPerMinForward !== undefined && data.motion?.cyclesPerMinBackward !== undefined) {
         // SIMPLE MODE: Show forward/backward speeds with cycles/min
         if (data.motion.speedLevelForward !== undefined && data.motion.speedLevelBackward !== undefined) {
-          const avgCpm = ((parseFloat(data.motion.cyclesPerMinForward) + parseFloat(data.motion.cyclesPerMinBackward)) / 2).toFixed(0);
+          const avgCpm = ((Number.parseFloat(data.motion.cyclesPerMinForward) + Number.parseFloat(data.motion.cyclesPerMinBackward)) / 2).toFixed(0);
           speedElement.innerHTML = 
             '↗️ ' + data.motion.speedLevelForward.toFixed(1) + 
             '&nbsp;&nbsp;•&nbsp;&nbsp;' +
@@ -155,7 +155,7 @@
           DOM.startPosition.value = data.motion.startPositionMM.toFixed(1);
         }
         if (data.motion.targetDistanceMM !== undefined && AppState.editing.input !== 'distance' && document.activeElement !== DOM.distance) {
-          DOM.distance.value = parseFloat(data.motion.targetDistanceMM).toFixed(1);
+          DOM.distance.value = Number.parseFloat(data.motion.targetDistanceMM).toFixed(1);
         }
       }
       
@@ -172,10 +172,10 @@
             DOM.speedBackward.value = data.motion.speedLevelBackward.toFixed(1);
           }
           if (DOM.speedForwardInfo && data.motion.cyclesPerMinForward !== undefined) {
-            DOM.speedForwardInfo.textContent = '≈ ' + parseFloat(data.motion.cyclesPerMinForward).toFixed(0) + ' cycles/min';
+            DOM.speedForwardInfo.textContent = '≈ ' + Number.parseFloat(data.motion.cyclesPerMinForward).toFixed(0) + ' cycles/min';
           }
           if (DOM.speedBackwardInfo && data.motion.cyclesPerMinBackward !== undefined) {
-            DOM.speedBackwardInfo.textContent = '≈ ' + parseFloat(data.motion.cyclesPerMinBackward).toFixed(0) + ' cycles/min';
+            DOM.speedBackwardInfo.textContent = '≈ ' + Number.parseFloat(data.motion.cyclesPerMinBackward).toFixed(0) + ' cycles/min';
           }
         } else {
           // UNIFIED MODE: show current speed (should be same for both directions)
@@ -191,7 +191,7 @@
             }
           }
           if (DOM.speedUnifiedInfo && data.motion.cyclesPerMinForward !== undefined && data.motion.cyclesPerMinBackward !== undefined) {
-            const avgCyclesPerMin = (parseFloat(data.motion.cyclesPerMinForward) + parseFloat(data.motion.cyclesPerMinBackward)) / 2.0;
+            const avgCyclesPerMin = (Number.parseFloat(data.motion.cyclesPerMinForward) + Number.parseFloat(data.motion.cyclesPerMinBackward)) / 2;
             DOM.speedUnifiedInfo.textContent = '≈ ' + avgCyclesPerMin.toFixed(0) + ' cycles/min';
           }
         }
@@ -206,7 +206,7 @@
       // Update max values and presets
       if (data.totalDistMM !== undefined) {
         const effectiveMax = (data.effectiveMaxDistMM && data.effectiveMaxDistMM > 0) ? data.effectiveMaxDistMM : data.totalDistMM;
-        const startPos = (data.motion && data.motion.startPositionMM !== undefined) ? data.motion.startPositionMM : 0;
+        const startPos = (data.motion?.startPositionMM !== undefined) ? data.motion.startPositionMM : 0;
         const maxAvailable = effectiveMax - startPos;
         
         DOM.startPosition.max = effectiveMax;
@@ -240,14 +240,14 @@
       
       // Enable/disable calibrate button
       if (DOM.btnCalibrateCommon) {
-        if (!data.canCalibrate) {
-          DOM.btnCalibrateCommon.disabled = true;
-          DOM.btnCalibrateCommon.style.opacity = '0.5';
-          DOM.btnCalibrateCommon.style.cursor = 'not-allowed';
-        } else {
+        if (data.canCalibrate) {
           DOM.btnCalibrateCommon.disabled = false;
           DOM.btnCalibrateCommon.style.opacity = '1';
           DOM.btnCalibrateCommon.style.cursor = 'pointer';
+        } else {
+          DOM.btnCalibrateCommon.disabled = true;
+          DOM.btnCalibrateCommon.style.opacity = '0.5';
+          DOM.btnCalibrateCommon.style.cursor = 'not-allowed';
         }
       }
       
@@ -342,7 +342,7 @@
         }
         
         // Show tabs
-        if (tabsContainer && tabsContainer.classList.contains('hidden-until-calibrated')) {
+        if (tabsContainer?.classList.contains('hidden-until-calibrated')) {
           tabsContainer.classList.remove('hidden-until-calibrated');
         }
         
@@ -441,15 +441,15 @@
       if (pendingChanges) {
       if (data.hasPending && data.pendingMotion) {
         const pm = data.pendingMotion;
-        const startPos = parseFloat(pm.startPositionMM);
-        const dist = parseFloat(pm.distanceMM);
+        const startPos = Number.parseFloat(pm.startPositionMM);
+        const dist = Number.parseFloat(pm.distanceMM);
         pendingChanges.style.display = 'block';
         pendingChanges.textContent = '⏳ ' + t('status.pendingChanges') + ': ' + 
           startPos.toFixed(1) + ' mm → ' + 
           (startPos + dist).toFixed(1) + ' mm (' +
           dist.toFixed(1) + 'mm) @ ' + 
-          t('simple.forward') + ' ' + parseFloat(pm.speedLevelForward).toFixed(1) + '/20, ' +
-          t('simple.backward') + ' ' + parseFloat(pm.speedLevelBackward).toFixed(1) + '/20';
+          t('simple.forward') + ' ' + Number.parseFloat(pm.speedLevelForward).toFixed(1) + '/20, ' +
+          t('simple.backward') + ' ' + Number.parseFloat(pm.speedLevelBackward).toFixed(1) + '/20';
       } else {
         pendingChanges.style.display = 'none';
       }
@@ -475,7 +475,7 @@
           AppState.sequence.isTestingLine = false;
         }
         // Re-enable sequencer buttons
-        if (DOM.btnStartSequence && DOM.btnStartSequence.disabled) {
+        if (DOM.btnStartSequence?.disabled) {
           setButtonState(DOM.btnStartSequence, true);
           setButtonState(DOM.btnLoopSequence, true);
         }
@@ -567,19 +567,19 @@
         
         // Use IP resolved by the script loader (avoids mDNS for WebSocket port 81)
         // Only use if on same subnet as current page (prevents STA IP when on AP)
-        if (window.__espIp && typeof isSameSubnet === 'function' 
-            && isSameSubnet(window.__espIp, window.location.hostname)) {
-          AppState.espIpAddress = window.__espIp;
-          console.debug('📡 Using pre-resolved ESP32 IP:', window.__espIp);
-        } else if (window.__espIp) {
-          console.debug('⚠️ Pre-resolved IP', window.__espIp, 'not on same subnet - using', window.location.hostname);
+        if (globalThis.__espIp && typeof isSameSubnet === 'function' 
+            && isSameSubnet(globalThis.__espIp, globalThis.location.hostname)) {
+          AppState.espIpAddress = globalThis.__espIp;
+          console.debug('📡 Using pre-resolved ESP32 IP:', globalThis.__espIp);
+        } else if (globalThis.__espIp) {
+          console.debug('⚠️ Pre-resolved IP', globalThis.__espIp, 'not on same subnet - using', globalThis.location.hostname);
         }
         
         connectWebSocket();
         
         // Request sequence table on load (wait for WebSocket connection)
         function requestSequenceTableWhenReady() {
-          if (AppState.ws && AppState.ws.readyState === WebSocket.OPEN) {
+          if (AppState.ws?.readyState === WebSocket.OPEN) {
             sendCommand(WS_CMD.GET_SEQUENCE_TABLE, {});
           } else {
             setTimeout(requestSequenceTableWhenReady, 200);

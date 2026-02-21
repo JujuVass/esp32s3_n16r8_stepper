@@ -446,7 +446,7 @@ async function rebootESP32() {
       });
     
     // Close WebSocket properly
-    if (AppState.ws && AppState.ws.readyState === WebSocket.OPEN) {
+    if (AppState.ws?.readyState === WebSocket.OPEN) {
       AppState.ws.close();
     }
     
@@ -463,7 +463,6 @@ async function rebootESP32() {
 function reconnectAfterReboot() {
   let attempts = 0;
   const maxAttempts = 30; // Try for 30 seconds
-  let httpConnected = false;
   let wsConnected = false;
   
   const updateRebootStatus = function(message, subMessage) {
@@ -490,7 +489,6 @@ function reconnectAfterReboot() {
       })
       .then(data => {
         console.debug('✅ HTTP connection restored! Uptime:', data.uptime, 'ms');
-        httpConnected = true;
         updateRebootStatus(t('tools.httpOkWsConnecting'), '🌐 ...');
         
         // Now try WebSocket connection
@@ -503,7 +501,7 @@ function reconnectAfterReboot() {
             
             // Wait a bit to see if WebSocket connects
             setTimeout(function() {
-              if (AppState.ws && AppState.ws.readyState === WebSocket.OPEN) {
+              if (AppState.ws?.readyState === WebSocket.OPEN) {
                 wsConnected = true;
                 console.debug('✅ WebSocket reconnected!');
                 updateRebootStatus(t('tools.connectionRestored'), '✅ ' + t('tools.reloadingPage'));
@@ -575,10 +573,10 @@ function loadLoggingPreferences() {
       AppState.logging.debugEnabled = (data.logLevel === 3);
       
       // Hide/show Logs button based on logging enabled state
-      if (!data.loggingEnabled) {
-        btnShowLogs.style.display = 'none';
-      } else {
+      if (data.loggingEnabled) {
         btnShowLogs.style.display = '';
+      } else {
+        btnShowLogs.style.display = 'none';
       }
       
       // Debug log (only if enabled)
@@ -613,10 +611,10 @@ function saveLoggingPreferences() {
       
       // Update Logs button visibility
       const btnShowLogs = DOM.btnShowLogs;
-      if (!preferences.loggingEnabled) {
-        btnShowLogs.style.display = 'none';
-      } else {
+      if (preferences.loggingEnabled) {
         btnShowLogs.style.display = '';
+      } else {
+        btnShowLogs.style.display = 'none';
       }
     })
     .catch(error => {
@@ -647,7 +645,7 @@ function updateSystemStats(system) {
   
   // Temperature
   if (system.temperatureC !== undefined) {
-    const temp = parseFloat(system.temperatureC);
+    const temp = Number.parseFloat(system.temperatureC);
     DOM.sysTemp.textContent = temp.toFixed(1) + ' °C';
     // Color coding based on temperature
     if (temp > 80) {
@@ -663,7 +661,7 @@ function updateSystemStats(system) {
   if (system.heapFree !== undefined && system.heapTotal !== undefined && system.heapUsedPercent !== undefined) {
     const ramFreeKB = (system.heapFree / 1024).toFixed(1);
     const ramTotalKB = (system.heapTotal / 1024).toFixed(1);
-    const ramUsedPercent = parseFloat(system.heapUsedPercent);
+    const ramUsedPercent = Number.parseFloat(system.heapUsedPercent);
     DOM.sysRam.textContent = ramFreeKB + ' KB ' + t('tools.free') + ' / ' + ramTotalKB + ' KB';
     DOM.sysRamPercent.textContent = ramUsedPercent.toFixed(1) + '% ' + t('tools.used');
   }
@@ -672,7 +670,7 @@ function updateSystemStats(system) {
   if (system.psramFree !== undefined && system.psramTotal !== undefined && system.psramUsedPercent !== undefined) {
     const psramFreeMB = (system.psramFree / 1024 / 1024).toFixed(1);
     const psramTotalMB = (system.psramTotal / 1024 / 1024).toFixed(1);
-    const psramUsedPercent = parseFloat(system.psramUsedPercent);
+    const psramUsedPercent = Number.parseFloat(system.psramUsedPercent);
     DOM.sysPsram.textContent = psramFreeMB + ' MB ' + t('tools.free') + ' / ' + psramTotalMB + ' MB';
     DOM.sysPsramPercent.textContent = psramUsedPercent.toFixed(1) + '% ' + t('tools.used');
   }
@@ -710,13 +708,13 @@ function updateSystemStats(system) {
   // Network info (IP addresses, hostname)
   if (system.ipSta !== undefined) {
     DOM.sysIpSta.textContent = system.ipSta;
-    // Gray out if degraded mode (0.0.0.0)
-    DOM.sysIpSta.style.color = (system.ipSta === '0.0.0.0') ? '#999' : '#333';
+    // Gray out if degraded mode (0.0)
+    DOM.sysIpSta.style.color = (system.ipSta === '0.0') ? '#999' : '#333';
     
     // Cache IP for faster WebSocket reconnection (avoids mDNS resolution delay)
     // Only cache if on same subnet as current page (prevents STA IP on AP network)
-    if (system.ipSta !== '0.0.0.0' && !AppState.espIpAddress) {
-      if (typeof isSameSubnet === 'function' && isSameSubnet(system.ipSta, window.location.hostname)) {
+    if (system.ipSta !== '0.0' && !AppState.espIpAddress) {
+      if (typeof isSameSubnet === 'function' && isSameSubnet(system.ipSta, globalThis.location.hostname)) {
         AppState.espIpAddress = system.ipSta;
         console.debug('📍 Cached ESP32 IP for WS reconnection:', system.ipSta);
       }
@@ -773,8 +771,8 @@ const maxSpeedLevel = 35;
  * SPEED_LEVEL_TO_MM_S: speedLevel × factor = mm/s (simple, chaos, pursuit)
  * OSC_SPEED_MULTIPLIER: maxSpeedLevel × factor = oscillation max speed mm/s
  */
-const SPEED_LEVEL_TO_MM_S = 10.0;  // Config.h: SPEED_LEVEL_TO_MM_S
-const OSC_SPEED_MULTIPLIER = 20.0; // Config.h: OSC_MAX_SPEED_MM_S = MAX_SPEED_LEVEL * 20.0
+const SPEED_LEVEL_TO_MM_S = 10;  // Config.h: SPEED_LEVEL_TO_MM_S
+const OSC_SPEED_MULTIPLIER = 20; // Config.h: OSC_MAX_SPEED_MM_S = MAX_SPEED_LEVEL * 20
 
 /**
  * Initialize speed input max attributes based on maxSpeedLevel
@@ -848,10 +846,10 @@ function initToolsListeners() {
     // Disable DEBUG checkbox if logging is disabled
     DOM.chkDebugLevel.disabled = !this.checked;
     
-    if (!this.checked) {
-      console.debug('🔇 Logging disabled - all logs (console + files) stopped');
-    } else {
+    if (this.checked) {
       console.debug('🔊 Logging enabled');
+    } else {
+      console.debug('🔇 Logging disabled - all logs (console + files) stopped');
     }
   });
   

@@ -22,15 +22,15 @@
  * Start simple mode movement
  */
 function startSimpleMode() {
-  const distance = parseFloat(document.getElementById('distance').value);
+  const distance = Number.parseFloat(document.getElementById('distance').value);
   const isSeparateMode = document.getElementById('speedModeSeparate')?.checked || false;
   
   let speedForward, speedBackward;
   if (isSeparateMode) {
-    speedForward = parseFloat(document.getElementById('speedForward').value);
-    speedBackward = parseFloat(document.getElementById('speedBackward').value);
+    speedForward = Number.parseFloat(document.getElementById('speedForward').value);
+    speedBackward = Number.parseFloat(document.getElementById('speedBackward').value);
   } else {
-    const unifiedSpeed = parseFloat(document.getElementById('speedUnified').value);
+    const unifiedSpeed = Number.parseFloat(document.getElementById('speedUnified').value);
     speedForward = unifiedSpeed;
     speedBackward = unifiedSpeed;
   }
@@ -67,14 +67,14 @@ function stopSimpleMode() {
  * 🆕 Added for relative presets feature
  */
 function updateSimpleRelativePresets() {
-  const maxStart = parseFloat(document.getElementById('startPosition').max) || 999;
-  const maxDist = parseFloat(document.getElementById('distance').max) || 999;
-  const currentStart = parseFloat(document.getElementById('startPosition').value) || 0;
-  const currentDist = parseFloat(document.getElementById('distance').value) || 0;
+  const maxStart = Number.parseFloat(document.getElementById('startPosition').max) || 999;
+  const maxDist = Number.parseFloat(document.getElementById('distance').max) || 999;
+  const currentStart = Number.parseFloat(document.getElementById('startPosition').value) || 0;
+  const currentDist = Number.parseFloat(document.getElementById('distance').value) || 0;
   
   // Validate relative start position presets
   document.querySelectorAll('[data-start-rel]').forEach(btn => {
-    const relValue = parseInt(btn.getAttribute('data-start-rel'));
+    const relValue = Number.parseInt(btn.dataset.startRel);
     const newStart = currentStart + relValue;
     const isValid = newStart >= 0 && newStart <= maxStart;
     
@@ -85,7 +85,7 @@ function updateSimpleRelativePresets() {
   
   // Validate relative distance presets
   document.querySelectorAll('[data-distance-rel]').forEach(btn => {
-    const relValue = parseInt(btn.getAttribute('data-distance-rel'));
+    const relValue = Number.parseInt(btn.dataset.distanceRel);
     const newDist = currentDist + relValue;
     const isValid = newDist >= 1 && newDist <= maxDist;
     
@@ -128,7 +128,7 @@ function updateSimpleUI(data) {
   }
   
   // ===== CYCLE PAUSE DISPLAY =====
-  if (data.motion && data.motion.cyclePause) {
+  if (data.motion?.cyclePause) {
     syncCyclePauseUI(data.motion.cyclePause, '', getCyclePauseSection, 'simple');
   }
 }
@@ -150,7 +150,7 @@ function handleSpeedModeChange() {
     unifiedGroup.style.display = 'none';
     separateGroup.style.display = 'block';
     
-    const unifiedSpeed = parseFloat(document.getElementById('speedUnified').value);
+    const unifiedSpeed = Number.parseFloat(document.getElementById('speedUnified').value);
     document.getElementById('speedForward').value = unifiedSpeed;
     document.getElementById('speedBackward').value = unifiedSpeed;
     
@@ -160,14 +160,14 @@ function handleSpeedModeChange() {
     
     // Update preset button highlighting
     document.querySelectorAll('[data-speed-forward]').forEach(btn => {
-      if (parseFloat(btn.getAttribute('data-speed-forward')) === unifiedSpeed) {
+      if (Number.parseFloat(btn.dataset.speedForward) === unifiedSpeed) {
         btn.classList.add('active');
       } else {
         btn.classList.remove('active');
       }
     });
     document.querySelectorAll('[data-speed-backward]').forEach(btn => {
-      if (parseFloat(btn.getAttribute('data-speed-backward')) === unifiedSpeed) {
+      if (Number.parseFloat(btn.dataset.speedBackward) === unifiedSpeed) {
         btn.classList.add('active');
       } else {
         btn.classList.remove('active');
@@ -181,7 +181,7 @@ function handleSpeedModeChange() {
     unifiedGroup.style.display = 'flex';
     separateGroup.style.display = 'none';
     
-    const forwardSpeed = parseFloat(document.getElementById('speedForward').value);
+    const forwardSpeed = Number.parseFloat(document.getElementById('speedForward').value);
     
     // Use forward speed as the unified value
     document.getElementById('speedUnified').value = forwardSpeed;
@@ -195,7 +195,7 @@ function handleSpeedModeChange() {
     
     // Update preset button highlighting
     document.querySelectorAll('[data-speed-unified]').forEach(btn => {
-      if (parseFloat(btn.getAttribute('data-speed-unified')) === forwardSpeed) {
+      if (Number.parseFloat(btn.dataset.speedUnified) === forwardSpeed) {
         btn.classList.add('active');
       } else {
         btn.classList.remove('active');
@@ -224,17 +224,17 @@ function initSimpleListeners() {
   
   // ===== EDITABLE INPUTS (using setupEditableInput from utils.js) =====
   setupEditableInput('startPosition', 'startPosition', function(value) {
-    sendCommand(WS_CMD.SET_START_POSITION, {startPosition: parseFloat(value)});
+    sendCommand(WS_CMD.SET_START_POSITION, {startPosition: Number.parseFloat(value)});
     updateSimpleRelativePresets();
   });
   
   setupEditableInput('distance', 'distance', function(value) {
-    sendCommand(WS_CMD.SET_DISTANCE, {distance: parseFloat(value)});
+    sendCommand(WS_CMD.SET_DISTANCE, {distance: Number.parseFloat(value)});
     updateSimpleRelativePresets();
   });
   
   setupEditableInput('speedUnified', 'speedUnified', function(value) {
-    const speed = parseFloat(value);
+    const speed = Number.parseFloat(value);
     document.getElementById('speedForward').value = speed;
     document.getElementById('speedBackward').value = speed;
     sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: speed});
@@ -242,11 +242,11 @@ function initSimpleListeners() {
   });
   
   setupEditableInput('speedForward', 'speedForward', function(value) {
-    sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: parseFloat(value)});
+    sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: Number.parseFloat(value)});
   });
   
   setupEditableInput('speedBackward', 'speedBackward', function(value) {
-    sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: parseFloat(value)});
+    sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: Number.parseFloat(value)});
   });
   
   // Note: Cycle Pause listeners are handled by createCyclePauseHandlers() in initCyclePauseHandlers()
@@ -254,8 +254,8 @@ function initSimpleListeners() {
   // ===== START POSITION PRESETS =====
   document.querySelectorAll('[data-start]').forEach(btn => {
     btn.addEventListener('click', function() {
-      const startPos = parseFloat(this.getAttribute('data-start'));
-      const maxStart = parseFloat(document.getElementById('startPosition').max);
+      const startPos = Number.parseFloat(this.dataset.start);
+      const maxStart = Number.parseFloat(document.getElementById('startPosition').max);
       
       if (startPos <= maxStart) {
         document.getElementById('startPosition').value = startPos;
@@ -272,9 +272,9 @@ function initSimpleListeners() {
   document.querySelectorAll('[data-start-rel]').forEach(btn => {
     btn.addEventListener('click', function() {
       if (!this.disabled) {
-        const relValue = parseInt(this.getAttribute('data-start-rel'));
-        const currentStart = parseFloat(document.getElementById('startPosition').value) || 0;
-        const maxStart = parseFloat(document.getElementById('startPosition').max) || 999;
+        const relValue = Number.parseInt(this.dataset.startRel);
+        const currentStart = Number.parseFloat(document.getElementById('startPosition').value) || 0;
+        const maxStart = Number.parseFloat(document.getElementById('startPosition').max) || 999;
         const newStart = Math.max(0, Math.min(maxStart, currentStart + relValue));
         
         document.getElementById('startPosition').value = newStart;
@@ -289,8 +289,8 @@ function initSimpleListeners() {
   // ===== DISTANCE PRESETS =====
   document.querySelectorAll('[data-distance]').forEach(btn => {
     btn.addEventListener('click', function() {
-      const distance = parseFloat(this.getAttribute('data-distance'));
-      const maxDist = parseFloat(document.getElementById('distance').max);
+      const distance = Number.parseFloat(this.dataset.distance);
+      const maxDist = Number.parseFloat(document.getElementById('distance').max);
       
       if (distance <= maxDist) {
         document.getElementById('distance').value = distance;
@@ -307,9 +307,9 @@ function initSimpleListeners() {
   document.querySelectorAll('[data-distance-rel]').forEach(btn => {
     btn.addEventListener('click', function() {
       if (!this.disabled) {
-        const relValue = parseInt(this.getAttribute('data-distance-rel'));
-        const currentDist = parseFloat(document.getElementById('distance').value) || 0;
-        const maxDist = parseFloat(document.getElementById('distance').max) || 999;
+        const relValue = Number.parseInt(this.dataset.distanceRel);
+        const currentDist = Number.parseFloat(document.getElementById('distance').value) || 0;
+        const maxDist = Number.parseFloat(document.getElementById('distance').max) || 999;
         const newDist = Math.max(1, Math.min(maxDist, currentDist + relValue));
         
         document.getElementById('distance').value = newDist;
@@ -324,7 +324,7 @@ function initSimpleListeners() {
   // ===== UNIFIED SPEED PRESETS =====
   document.querySelectorAll('[data-speed-unified]').forEach(btn => {
     btn.addEventListener('click', function() {
-      const speed = parseFloat(this.getAttribute('data-speed-unified'));
+      const speed = Number.parseFloat(this.dataset.speedUnified);
       
       // Update visible unified field
       document.getElementById('speedUnified').value = speed;
@@ -346,7 +346,7 @@ function initSimpleListeners() {
   // ===== FORWARD SPEED PRESETS =====
   document.querySelectorAll('[data-speed-forward]').forEach(btn => {
     btn.addEventListener('click', function() {
-      const speed = parseFloat(this.getAttribute('data-speed-forward'));
+      const speed = Number.parseFloat(this.dataset.speedForward);
       document.getElementById('speedForward').value = speed;
       sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: speed});
       
@@ -358,7 +358,7 @@ function initSimpleListeners() {
   // ===== BACKWARD SPEED PRESETS =====
   document.querySelectorAll('[data-speed-backward]').forEach(btn => {
     btn.addEventListener('click', function() {
-      const speed = parseFloat(this.getAttribute('data-speed-backward'));
+      const speed = Number.parseFloat(this.dataset.speedBackward);
       document.getElementById('speedBackward').value = speed;
       sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: speed});
       
@@ -411,7 +411,7 @@ function updateZoneEffectHeaderText() {
   const headerText = document.getElementById('zoneEffectHeaderText');
   if (!headerText) return;
   
-  const speedEffect = parseInt(document.getElementById('speedEffectType')?.value || 0);
+  const speedEffect = Number.parseInt(document.getElementById('speedEffectType')?.value || 0);
   const randomTurnback = document.getElementById('randomTurnbackEnabled')?.checked;
   const endPause = document.getElementById('endPauseEnabled')?.checked;
   const mirrorOnReturn = document.getElementById('zoneEffectMirror')?.checked;
@@ -438,7 +438,7 @@ function sendZoneEffectConfig(isInitialOpen = false) {
   const section = document.getElementById('zoneEffectSection');
   const isEnabled = !section.classList.contains('collapsed');
   
-  const zoneMM = parseFloat(document.getElementById('zoneEffectMM')?.value) || 50;
+  const zoneMM = Number.parseFloat(document.getElementById('zoneEffectMM')?.value) || 50;
   
   // Parse values carefully - 0 is a valid value for speedEffect and speedCurve
   const speedEffectEl = document.getElementById('speedEffectType');
@@ -453,18 +453,18 @@ function sendZoneEffectConfig(isInitialOpen = false) {
     mirrorOnReturn: document.getElementById('zoneEffectMirror')?.checked ?? false,
     zoneMM: zoneMM,
     // Speed effect - use explicit check for null/undefined, 0 is valid
-    speedEffect: speedEffectEl ? parseInt(speedEffectEl.value) : 1,
-    speedCurve: speedCurveEl ? parseInt(speedCurveEl.value) : 1,
-    speedIntensity: speedIntensityEl ? parseFloat(speedIntensityEl.value) : 75,
+    speedEffect: speedEffectEl ? Number.parseInt(speedEffectEl.value) : 1,
+    speedCurve: speedCurveEl ? Number.parseInt(speedCurveEl.value) : 1,
+    speedIntensity: speedIntensityEl ? Number.parseFloat(speedIntensityEl.value) : 75,
     // Random turnback
     randomTurnbackEnabled: document.getElementById('randomTurnbackEnabled')?.checked ?? false,
-    turnbackChance: turnbackChanceEl ? parseInt(turnbackChanceEl.value) : 30,
+    turnbackChance: turnbackChanceEl ? Number.parseInt(turnbackChanceEl.value) : 30,
     // End pause
     endPauseEnabled: document.getElementById('endPauseEnabled')?.checked ?? false,
     endPauseIsRandom: document.getElementById('endPauseModeRandom')?.checked ?? false,
-    endPauseDurationSec: parseFloat(document.getElementById('endPauseDuration')?.value) || 1.0,
-    endPauseMinSec: parseFloat(document.getElementById('endPauseMin')?.value) || 0.5,
-    endPauseMaxSec: parseFloat(document.getElementById('endPauseMax')?.value) || 2.0
+    endPauseDurationSec: Number.parseFloat(document.getElementById('endPauseDuration')?.value) || 1,
+    endPauseMinSec: Number.parseFloat(document.getElementById('endPauseMin')?.value) || 0.5,
+    endPauseMaxSec: Number.parseFloat(document.getElementById('endPauseMax')?.value) || 2
   };
   
   // Store requested zone value for comparison - but NOT on initial open
@@ -589,7 +589,7 @@ function updateZoneEffectUI(zoneEffect) {
     
     // Update zone preset active state
     document.querySelectorAll('[data-zone-mm]').forEach(btn => {
-      const btnValue = parseInt(btn.getAttribute('data-zone-mm'));
+      const btnValue = Number.parseInt(btn.dataset.zoneMm);
       btn.classList.toggle('active', btnValue === Math.round(zoneEffect.zoneMM));
     });
     
@@ -600,12 +600,10 @@ function updateZoneEffectUI(zoneEffect) {
       updateZoneEffectHeaderText();
       drawZoneEffectPreview();
     }
-  } else {
+  } else if (section && headerText) {
     // Disabled state
-    if (section && headerText) {
-      section.classList.add('collapsed');
-      headerText.textContent = t('simple.zoneEffectsDisabled');
-    }
+    section.classList.add('collapsed');
+    headerText.textContent = t('simple.zoneEffectsDisabled');
   }
 }
 
@@ -631,15 +629,15 @@ function getZoneEffectConfigFromDOM() {
   const turnbackChanceEl = document.getElementById('turnbackChance');
   
   return {
-    zoneMM: parseFloat(document.getElementById('zoneEffectMM')?.value) || 50,
+    zoneMM: Number.parseFloat(document.getElementById('zoneEffectMM')?.value) || 50,
     enableStart: document.getElementById('zoneEffectStart')?.checked ?? true,
     enableEnd: document.getElementById('zoneEffectEnd')?.checked ?? true,
     mirrorOnReturn: document.getElementById('zoneEffectMirror')?.checked ?? false,
-    speedEffect: speedEffectEl ? parseInt(speedEffectEl.value) : 1,
-    speedCurve: speedCurveEl ? parseInt(speedCurveEl.value) : 1,
-    speedIntensity: speedIntensityEl ? parseFloat(speedIntensityEl.value) : 75,
+    speedEffect: speedEffectEl ? Number.parseInt(speedEffectEl.value) : 1,
+    speedCurve: speedCurveEl ? Number.parseInt(speedCurveEl.value) : 1,
+    speedIntensity: speedIntensityEl ? Number.parseFloat(speedIntensityEl.value) : 75,
     randomTurnbackEnabled: document.getElementById('randomTurnbackEnabled')?.checked ?? false,
-    turnbackChance: turnbackChanceEl ? parseInt(turnbackChanceEl.value) : 30,
+    turnbackChance: turnbackChanceEl ? Number.parseInt(turnbackChanceEl.value) : 30,
     endPauseEnabled: document.getElementById('endPauseEnabled')?.checked ?? false
   };
 }
@@ -651,7 +649,7 @@ function initZoneEffectListeners() {
   // Zone size presets
   document.querySelectorAll('[data-zone-mm]').forEach(btn => {
     btn.addEventListener('click', function() {
-      const value = this.getAttribute('data-zone-mm');
+      const value = this.dataset.zoneMm;
       const zoneInput = document.getElementById('zoneEffectMM');
       if (zoneInput) zoneInput.value = value;
       
@@ -746,7 +744,7 @@ function initZoneEffectListeners() {
   // End pause duration presets
   document.querySelectorAll('[data-end-pause]').forEach(btn => {
     btn.addEventListener('click', function() {
-      const value = this.getAttribute('data-end-pause');
+      const value = this.dataset.endPause;
       const durationInput = document.getElementById('endPauseDuration');
       if (durationInput) durationInput.value = value;
       
@@ -789,8 +787,8 @@ function createCyclePauseHandlers(cfg) {
     const section = cfg.getSectionFn();
     const enabled = !section.classList.contains('collapsed');
     const isRandom = document.getElementById('pauseModeRandom' + s).checked;
-    let minPauseSec = parseFloat(document.getElementById('cyclePauseMin' + s).value);
-    let maxPauseSec = parseFloat(document.getElementById('cyclePauseMax' + s).value);
+    let minPauseSec = Number.parseFloat(document.getElementById('cyclePauseMin' + s).value);
+    let maxPauseSec = Number.parseFloat(document.getElementById('cyclePauseMax' + s).value);
     
     // Validation: Min must be ≤ Max (only in random mode)
     if (isRandom && minPauseSec > maxPauseSec) {
@@ -803,7 +801,7 @@ function createCyclePauseHandlers(cfg) {
     sendCommand(cfg.wsCmd, {
       enabled: enabled,
       isRandom: isRandom,
-      pauseDurationSec: parseFloat(document.getElementById('cyclePauseDuration' + s).value),
+      pauseDurationSec: Number.parseFloat(document.getElementById('cyclePauseDuration' + s).value),
       minPauseSec: minPauseSec,
       maxPauseSec: maxPauseSec
     });
@@ -873,7 +871,7 @@ function createCyclePauseHandlers(cfg) {
  */
 function initCyclePauseHandlers() {
   // Initialize Simple mode Cycle Pause
-  const sendCyclePauseConfig = createCyclePauseHandlers({
+  createCyclePauseHandlers({
     suffix: '',
     getSectionFn: getCyclePauseSection,
     wsCmd: WS_CMD.UPDATE_CYCLE_PAUSE,
@@ -882,7 +880,7 @@ function initCyclePauseHandlers() {
   });
   
   // Initialize Oscillation mode Cycle Pause
-  const sendCyclePauseConfigOsc = createCyclePauseHandlers({
+  createCyclePauseHandlers({
     suffix: 'Osc',
     getSectionFn: getCyclePauseOscSection,
     wsCmd: WS_CMD.UPDATE_CYCLE_PAUSE_OSC,

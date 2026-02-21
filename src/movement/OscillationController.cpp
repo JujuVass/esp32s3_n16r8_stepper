@@ -40,7 +40,7 @@ static bool sineTableInitialized = false;
 static void initSineTable() {
     if (sineTableInitialized) return;
     for (int i = 0; i < SINE_TABLE_SIZE; i++) {
-        sineTable[i] = -cosf((i / (float)SINE_TABLE_SIZE) * 2.0f * PI_F);
+        sineTable[i] = -cosf((static_cast<float>(i) / static_cast<float>(SINE_TABLE_SIZE)) * 2.0f * PI_F);
     }
     sineTableInitialized = true;
 }

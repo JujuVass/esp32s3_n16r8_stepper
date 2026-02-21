@@ -392,7 +392,7 @@ void FilesystemManager::handleDeleteFile() {
 void FilesystemManager::handleClearAllFiles() {
   int deletedCount = 0;
 
-  // Recursive lambda using std::function
+  // Recursive lambda for directory traversal
   function<void(const char*)> clearDir = [&](const char* dirname) {
     File root = LittleFS.open(dirname);
     if (!root || !root.isDirectory()) return;

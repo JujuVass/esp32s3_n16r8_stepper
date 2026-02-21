@@ -175,7 +175,7 @@ void Logger::flushLogBuffer(bool forceFlush) {
 
   int validEntries = _logBufferCount;
 
-  float bufferUsagePercent = (validEntries * 100.0f) / LOG_BUFFER_SIZE;
+  float bufferUsagePercent = (static_cast<float>(validEntries) * 100.0f) / LOG_BUFFER_SIZE;
 
   // CRITICAL: Force flush if buffer is 80% full
   bool shouldForce = (bufferUsagePercent >= 80.0f);

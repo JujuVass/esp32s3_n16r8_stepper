@@ -60,9 +60,9 @@ function getZoneEffectConfig(obj) {
     turnbackChance: 30,
     endPauseEnabled: false,
     endPauseIsRandom: false,
-    endPauseDurationSec: 1.0,
+    endPauseDurationSec: 1,
     endPauseMinSec: 0.5,
-    endPauseMaxSec: 2.0
+    endPauseMaxSec: 2
   };
 }
 
@@ -137,9 +137,6 @@ function getDecelSummary(line, movementType) {
     return '<span style="color: #999; font-size: 10px;">--</span>';
   }
   
-  // Build summary parts
-  const parts = [];
-  
   // Position indicators (Start/End/Physical position)
   const posIndicator = [];
   if (ze.enableStart) posIndicator.push('D');
@@ -194,7 +191,7 @@ function getSpeedsDisplay(line, movementType) {
     const peakSpeedMMPerSec = 2 * Math.PI * line.oscFrequencyHz * line.oscAmplitudeMM;
     return `<div style="font-size: 11px; font-weight: bold; color: #9C27B0;">${peakSpeedMMPerSec.toFixed(0)} mm/s</div>`;
   } else if (movementType === MOVEMENT_TYPE.CHAOS) {
-    return `<div style="font-size: 11px; font-weight: bold; color: #E91E63;">${line.chaosMaxSpeedLevel ? line.chaosMaxSpeedLevel.toFixed(1) : '10.0'}</div>`;
+    return `<div style="font-size: 11px; font-weight: bold; color: #E91E63;">${line.chaosMaxSpeedLevel ? line.chaosMaxSpeedLevel.toFixed(1) : '10'}</div>`;
   }
   return '<span style="color: #999;">--</span>';
 }
@@ -232,7 +229,7 @@ function getCyclesPause(line, movementType) {
 function getSequenceTemplateDoc() {
   return {
     TEMPLATE: {
-      version: "2.0",
+      version: "2",
       lineCount: 1,
       lines: [{
         lineId: 1,
@@ -242,8 +239,8 @@ function getSequenceTemplateDoc() {
         pauseAfterMs: 1000,
         startPositionMM: 0,
         distanceMM: 100,
-        speedForward: 5.0,
-        speedBackward: 5.0,
+        speedForward: 5,
+        speedBackward: 5,
         vaetZoneEffect: {
           enabled: false,
           enableStart: true,
@@ -256,32 +253,32 @@ function getSequenceTemplateDoc() {
           turnbackChance: 30,
           endPauseEnabled: false,
           endPauseIsRandom: false,
-          endPauseDurationSec: 1.0,
+          endPauseDurationSec: 1,
           endPauseMinSec: 0.5,
-          endPauseMaxSec: 2.0
+          endPauseMaxSec: 2
         },
         vaetCyclePauseEnabled: false,
         vaetCyclePauseIsRandom: false,
-        vaetCyclePauseDurationSec: 0.0,
+        vaetCyclePauseDurationSec: 0,
         vaetCyclePauseMinSec: 0.5,
-        vaetCyclePauseMaxSec: 3.0,
-        oscCenterPositionMM: 100.0,
-        oscAmplitudeMM: 50.0,
+        vaetCyclePauseMaxSec: 3,
+        oscCenterPositionMM: 100,
+        oscAmplitudeMM: 50,
         oscWaveform: 0,
         oscFrequencyHz: 0.1,
         oscEnableRampIn: false,
         oscEnableRampOut: false,
-        oscRampInDurationMs: 1000.0,
-        oscRampOutDurationMs: 1000.0,
+        oscRampInDurationMs: 1000,
+        oscRampOutDurationMs: 1000,
         oscCyclePauseEnabled: false,
         oscCyclePauseIsRandom: false,
-        oscCyclePauseDurationSec: 0.0,
+        oscCyclePauseDurationSec: 0,
         oscCyclePauseMinSec: 0.5,
-        oscCyclePauseMaxSec: 3.0,
-        chaosCenterPositionMM: 110.0,
-        chaosAmplitudeMM: 50.0,
-        chaosMaxSpeedLevel: 10.0,
-        chaosCrazinessPercent: 50.0,
+        oscCyclePauseMaxSec: 3,
+        chaosCenterPositionMM: 110,
+        chaosAmplitudeMM: 50,
+        chaosMaxSpeedLevel: 10,
+        chaosCrazinessPercent: 50,
         chaosDurationSeconds: 30,
         chaosSeed: 0,
         chaosPatternsEnabled: [true,true,true,true,true,true,true,true,true,true,true]
@@ -299,9 +296,9 @@ function getSequenceTemplateDoc() {
 
 // Validation constants (mirror backend Config.h / Validators.h)
 const SEQ_LIMITS = Object.freeze({
-  MAX_SPEED_LEVEL: 35.0,
+  MAX_SPEED_LEVEL: 35,
   MIN_SPEED_LEVEL: 0.1,
-  MAX_FREQUENCY_HZ: 10.0,
+  MAX_FREQUENCY_HZ: 10,
   MIN_FREQUENCY_HZ: 0.001,
   MAX_CRAZINESS: 100,
   MIN_CRAZINESS: 0,
@@ -325,8 +322,8 @@ function buildSequenceLineDefaultsPure(effectiveMax) {
     movementType: 0,
     startPositionMM: 0,
     distanceMM: Math.min(100, effectiveMax),
-    speedForward: 5.0,
-    speedBackward: 5.0,
+    speedForward: 5,
+    speedBackward: 5,
     vaetZoneEffect: {
       enabled: false,
       enableStart: true,
@@ -340,35 +337,35 @@ function buildSequenceLineDefaultsPure(effectiveMax) {
       turnbackChance: 30,
       endPauseEnabled: false,
       endPauseIsRandom: false,
-      endPauseDurationSec: 1.0,
+      endPauseDurationSec: 1,
       endPauseMinSec: 0.5,
-      endPauseMaxSec: 2.0
+      endPauseMaxSec: 2
     },
     vaetCyclePauseEnabled: false,
     vaetCyclePauseIsRandom: false,
-    vaetCyclePauseDurationSec: 0.0,
+    vaetCyclePauseDurationSec: 0,
     vaetCyclePauseMinSec: 0.5,
-    vaetCyclePauseMaxSec: 3.0,
+    vaetCyclePauseMaxSec: 3,
     oscCenterPositionMM: center,
-    oscAmplitudeMM: Math.min(50.0, center),
+    oscAmplitudeMM: Math.min(50, center),
     oscWaveform: 0,
     oscFrequencyHz: 0.5,
     oscEnableRampIn: false,
     oscEnableRampOut: false,
-    oscRampInDurationMs: 1000.0,
-    oscRampOutDurationMs: 1000.0,
+    oscRampInDurationMs: 1000,
+    oscRampOutDurationMs: 1000,
     oscCyclePauseEnabled: false,
     oscCyclePauseIsRandom: false,
-    oscCyclePauseDurationSec: 0.0,
+    oscCyclePauseDurationSec: 0,
     oscCyclePauseMinSec: 0.5,
-    oscCyclePauseMaxSec: 3.0,
+    oscCyclePauseMaxSec: 3,
     chaosCenterPositionMM: center,
-    chaosAmplitudeMM: Math.min(50.0, center),
-    chaosMaxSpeedLevel: 10.0,
-    chaosCrazinessPercent: 50.0,
+    chaosAmplitudeMM: Math.min(50, center),
+    chaosMaxSpeedLevel: 10,
+    chaosCrazinessPercent: 50,
     chaosDurationSeconds: 30,
     chaosSeed: 0,
-    chaosPatternsEnabled: Array(SEQ_LIMITS.CHAOS_PATTERN_COUNT).fill(true),
+    chaosPatternsEnabled: new Array(SEQ_LIMITS.CHAOS_PATTERN_COUNT).fill(true),
     cycleCount: 1,
     pauseAfterMs: 0
   };
@@ -419,7 +416,7 @@ function validateSequencerLinePure(line, movementType, effectiveMax) {
     }
 
     // Zone effect validation
-    if (line.vaetZoneEffect && line.vaetZoneEffect.enabled) {
+    if (line.vaetZoneEffect?.enabled) {
       const ze = line.vaetZoneEffect;
       if (ze.zoneMM <= 0) {
         errors.push('⚠️ ' + t('sequencer.zoneMustBePositive'));

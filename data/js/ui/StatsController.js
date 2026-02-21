@@ -90,7 +90,6 @@ function displayStatsTable(stats) {
     const date = new Date(entry.date);
     const dayOfWeek = date.getDay();  // 0=Sunday, 1=Monday, ...
     const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;  // Convert to Monday=0
-    const dayIcon = dayIcons[dayIndex];
     
     const distanceKM = (distanceMM / 1000000).toFixed(3);
     const distanceM = (distanceMM / 1000).toFixed(1);
@@ -100,7 +99,6 @@ function displayStatsTable(stats) {
     const distanceMeters = distanceMM / 1000;
     const milestoneInfo = getMilestoneInfo(distanceMeters);
     const milestoneIcon = milestoneInfo.current ? milestoneInfo.current.emoji : '🏁';
-    const milestoneName = milestoneInfo.current ? milestoneInfo.current.name : t('stats.startup');
     
     // Build tooltip with milestone info
     let milestoneTooltip = milestoneInfo.current 
@@ -205,7 +203,7 @@ function displayStatsChart(stats) {
   const weeklyData = aggregateByWeek(filteredStats);
   
   // Find milestone for each week's distance
-  const sortedWeeks = Object.keys(weeklyData).sort();
+  const sortedWeeks = Object.keys(weeklyData).sort((a, b) => a.localeCompare(b));
   sortedWeeks.forEach(weekKey => {
     const week = weeklyData[weekKey];
     const weekMeters = week.totalMM / 1000;
@@ -323,7 +321,7 @@ function renderStatsChart(labels, distances, sortedWeeks, weeklyData) {
               return `${t('stats.week')} ${weekKey.split('-')[1]} (${labels[context[0].dataIndex]})`;
             },
             label: function(context) {
-              const value = parseFloat(context.parsed.y);
+              const value = Number.parseFloat(context.parsed.y);
               return value >= 1000 ? `${(value / 1000).toFixed(2)} km` : `${value.toFixed(1)} m`;
             },
             afterLabel: function(context) {
@@ -334,8 +332,7 @@ function renderStatsChart(labels, distances, sortedWeeks, weeklyData) {
               const lines = [`${week.days.length} ${t('stats.activeDays')}`];
               
               if (week.currentMilestone) {
-                lines.push('');
-                lines.push(`${week.currentMilestone.emoji} ${week.currentMilestone.name}`);
+                lines.push('', `${week.currentMilestone.emoji} ${week.currentMilestone.name}`);
               }
               
               return lines;
@@ -378,7 +375,9 @@ function toggleStatsPanel() {
   const btn = DOM.btnShowStats;
   const wasVisible = (panel.style.display !== 'none');
   
-  if (!wasVisible) {
+  if (wasVisible) {
+    closeStatsPanel();
+  } else {
     // Close other panels first (accordion behavior)
     if (typeof closeAllToolPanels === 'function') {
       closeAllToolPanels('stats');
@@ -400,8 +399,6 @@ function toggleStatsPanel() {
     
     // Load stats data
     loadStatsData();
-  } else {
-    closeStatsPanel();
   }
 }
 
@@ -475,7 +472,7 @@ function exportStats() {
       a.download = filename;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      a.remove();
       URL.revokeObjectURL(url);
       
       console.debug('📊 Stats exported to:', filename);
@@ -497,7 +494,7 @@ function triggerStatsImport() {
  * Handle stats file import
  * @param {Event} e - File input change event
  */
-function handleStatsFileImport(e) {
+async function handleStatsFileImport(e) {
   const file = e.target.files[0];
   if (!file) return;
   
@@ -507,64 +504,60 @@ function handleStatsFileImport(e) {
     return;
   }
   
-  const reader = new FileReader();
-  reader.onload = function(event) {
-    try {
-      const importData = JSON.parse(event.target.result);
-      
-      // Validate structure
-      if (!importData.stats || !Array.isArray(importData.stats)) {
-        throw new Error(t('stats.invalidJsonFormat'));
+  try {
+    const text = await file.text();
+    const importData = JSON.parse(text);
+    
+    // Validate structure
+    if (!importData.stats || !Array.isArray(importData.stats)) {
+      throw new Error(t('stats.invalidJsonFormat'));
+    }
+    
+    // Confirm import (show preview)
+    const entryCount = importData.stats.length;
+    const exportDate = importData.exportDate || t('stats.unknown');
+    const totalKm = importData.totalDistanceMM ? (importData.totalDistanceMM / 1000000).toFixed(3) : '?';
+    
+    const confirmMsg = t('stats.importConfirm') + `\n\n` +
+                     `📅 ${t('stats.exportDate')}: ${exportDate}\n` +
+                     `📊 ${t('stats.entries')}: ${entryCount}\n` +
+                     `📏 ${t('stats.totalDistance')}: ${totalKm} km\n\n` +
+                     `⚠️ ${t('stats.importWarning')}`;
+    
+    showConfirm(confirmMsg, {
+      title: '📤 ' + t('stats.importTitle'),
+      type: 'warning',
+      confirmText: t('stats.import'),
+      dangerous: true
+    }).then(confirmed => {
+      if (!confirmed) {
+        e.target.value = ''; // Reset file input
+        return;
       }
       
-      // Confirm import (show preview)
-      const entryCount = importData.stats.length;
-      const exportDate = importData.exportDate || t('stats.unknown');
-      const totalKm = importData.totalDistanceMM ? (importData.totalDistanceMM / 1000000).toFixed(3) : '?';
-      
-      const confirmMsg = t('stats.importConfirm') + `\n\n` +
-                       `📅 ${t('stats.exportDate')}: ${exportDate}\n` +
-                       `📊 ${t('stats.entries')}: ${entryCount}\n` +
-                       `📏 ${t('stats.totalDistance')}: ${totalKm} km\n\n` +
-                       `⚠️ ${t('stats.importWarning')}`;
-      
-      showConfirm(confirmMsg, {
-        title: '📤 ' + t('stats.importTitle'),
-        type: 'warning',
-        confirmText: t('stats.import'),
-        dangerous: true
-      }).then(confirmed => {
-        if (!confirmed) {
-          e.target.value = ''; // Reset file input
-          return;
+      // Send to backend
+      postWithRetry('/api/stats/import', importData)
+      .then(data => {
+        if (data.success) {
+          showAlert(t('stats.importSuccess', {count: data.entriesImported, total: (data.totalDistanceMM / 1000000).toFixed(3)}), { type: 'success', title: t('stats.importOk') });
+          loadStatsData();  // Refresh display
+        } else {
+          showAlert(t('stats.importError') + ': ' + (data.error || 'Unknown'), { type: 'error' });
         }
-        
-        // Send to backend
-        postWithRetry('/api/stats/import', importData)
-        .then(data => {
-          if (data.success) {
-            showAlert(t('stats.importSuccess', {count: data.entriesImported, total: (data.totalDistanceMM / 1000000).toFixed(3)}), { type: 'success', title: t('stats.importOk') });
-            loadStatsData();  // Refresh display
-          } else {
-            showAlert(t('stats.importError') + ': ' + (data.error || 'Unknown'), { type: 'error' });
-          }
-          e.target.value = ''; // Reset file input
-        })
-        .catch(error => {
-          showAlert(t('stats.networkError') + ': ' + error.message, { type: 'error' });
-          console.error('Import error:', error);
-          e.target.value = ''; // Reset file input
-        });
+        e.target.value = ''; // Reset file input
+      })
+      .catch(error => {
+        showAlert(t('stats.networkError') + ': ' + error.message, { type: 'error' });
+        console.error('Import error:', error);
+        e.target.value = ''; // Reset file input
       });
-      
-    } catch (error) {
-      showAlert(t('stats.jsonParseError') + ': ' + error.message, { type: 'error' });
-      console.error('JSON parse error:', error);
-      e.target.value = ''; // Reset file input
-    }
-  };
-  
-  reader.readAsText(file);
+    });
+    
+  } catch (error) {
+    showAlert(t('stats.jsonParseError') + ': ' + error.message, { type: 'error' });
+    console.error('JSON parse error:', error);
+    e.target.value = ''; // Reset file input
+  }
 }
 
 // ============================================================================
@@ -576,9 +569,9 @@ function handleStatsFileImport(e) {
  * @param {number} totalTraveledMM - Total traveled distance in mm
  */
 function updateMilestones(totalTraveledMM) {
-  DOM.totalTraveled.textContent = (totalTraveledMM / 1000.0).toFixed(3) + " m";
+  DOM.totalTraveled.textContent = (totalTraveledMM / 1000).toFixed(3) + " m";
   
-  const milestoneInfo = getMilestoneInfo(totalTraveledMM / 1000.0); // Convert mm to m
+  const milestoneInfo = getMilestoneInfo(totalTraveledMM / 1000); // Convert mm to m
   
   if (milestoneInfo.current) {
     // Build tooltip with progress info
@@ -599,7 +592,7 @@ function updateMilestones(totalTraveledMM) {
     
     // Milestone tracking logic
     const newThreshold = milestoneInfo.current.threshold;
-    const totalTraveledM = totalTraveledMM / 1000.0;
+    const totalTraveledM = totalTraveledMM / 1000;
     
     // Handle distance reset (user cleared stats) - reset tracking if distance dropped significantly
     if (totalTraveledM < AppState.milestone.lastThreshold * 0.9) {
@@ -609,11 +602,7 @@ function updateMilestones(totalTraveledMM) {
     
     // Check for milestone change
     if (newThreshold > AppState.milestone.lastThreshold) {
-      if (!AppState.milestone.initialized) {
-        // First load - sync without notification
-        AppState.milestone.initialized = true;
-        AppState.milestone.lastThreshold = newThreshold;
-      } else {
+      if (AppState.milestone.initialized) {
         // New milestone achieved during session!
         AppState.milestone.lastThreshold = newThreshold;
         
@@ -628,6 +617,10 @@ function updateMilestones(totalTraveledMM) {
           message += `\n⏭️ ${t('stats.next')}: ${milestoneInfo.next.emoji} (${milestoneInfo.next.threshold}m) - ${milestoneInfo.progress.toFixed(0)}%`;
         }
         showNotification(message, 'milestone');
+      } else {
+        // First load - sync without notification
+        AppState.milestone.initialized = true;
+        AppState.milestone.lastThreshold = newThreshold;
       }
     } else if (!AppState.milestone.initialized) {
       // First load, same milestone - just mark initialized

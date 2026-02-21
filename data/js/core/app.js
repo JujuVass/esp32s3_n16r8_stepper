@@ -259,7 +259,7 @@ console.info = function(...args) {
 // Note: This is loaded from external file MILESTONES_SORTED.js if available
 // Fallback: Define here if not loaded externally
 if (typeof MILESTONES === 'undefined') {
-  window.MILESTONES = [];
+  globalThis.MILESTONES = [];
 }
 
 // ============================================================================

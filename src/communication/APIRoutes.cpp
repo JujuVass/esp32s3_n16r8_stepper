@@ -245,7 +245,7 @@ void setupAPIRoutes() {
   // ============================================================================
   // CORS PREFLIGHT HANDLER - Must be first!
   // ============================================================================
-  // Handle OPTIONS preflight for all /api/* routes
+  // Handle OPTIONS preflight for all /api/ routes
   server.on("/api/stats/import", HTTP_OPTIONS, handleCORSPreflight);
   server.on("/api/playlists", HTTP_OPTIONS, handleCORSPreflight);
   server.on("/api/command", HTTP_OPTIONS, handleCORSPreflight);
@@ -257,7 +257,7 @@ void setupAPIRoutes() {
   // automatically serve any file from LittleFS. This means:
   // - Add/remove/rename JS files freely - no code changes needed
   // - Subdirectories (js/core/, js/modules/) work automatically
-  // - Only API routes (/api/*) need explicit handlers below
+  // - Only API routes (/api/) need explicit handlers below
   // ============================================================================
 
   // Root route explicitly for faster response
@@ -609,7 +609,7 @@ void setupAPIRoutes() {
     }
 
     // Debug: Check what's in the loaded document
-    auto jsonTypeOf = [](JsonVariant v) -> const char* {
+    auto jsonTypeOf = [](JsonVariant v) {
       if (v.isNull()) return "null";
       if (v.is<JsonArray>()) return "array";
       return "other";
@@ -917,7 +917,7 @@ void setupAPIRoutes() {
       engine->info(enabled ? "✅ Logging ENABLED" : "❌ Logging DISABLED");
     }
 
-    // Update log level (0=ERROR, 1=WARN, 2=INFO, 3=DEBUG)
+    // Update log level: 0=ERROR, 1=WARN, 2=INFO, 3=DEBUG
     if (doc["logLevel"].is<int>()) {
       int level = doc["logLevel"];
       if (level >= 0 && level <= 3) {
@@ -1295,7 +1295,7 @@ void setupAPIRoutes() {
     else method = "OTHER";
     engine->debug("📥 Request: " + method + " " + uri);
 
-    // In AP_SETUP mode, redirect everything except /setup.html and /api/wifi/* to /setup.html
+    // In AP_SETUP mode, redirect everything except /setup.html and /api/wifi/ to /setup.html
     if (StepperNetwork.isAPSetupMode()) {
       if (uri != "/setup.html" && !uri.startsWith("/api/wifi")) {
         server.sendHeader("Location", "http://192.168.4.1/setup.html", true);

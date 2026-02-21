@@ -288,19 +288,19 @@ function initMaxDistLimitListeners() {
     const isVisible = DOM.maxDistConfigPanel.style.display !== 'none';
     DOM.maxDistConfigPanel.style.display = isVisible ? 'none' : 'block';
     
-    if (!isVisible) {
+    if (isVisible) {
+      // Panel closed - stop blocking updates
+      AppState.pursuit.isEditingMaxDistLimit = false;
+    } else {
       // Panel just opened - load current value and START blocking updates
       AppState.pursuit.isEditingMaxDistLimit = true;
       updateMaxDistLimitUI();
-    } else {
-      // Panel closed - stop blocking updates
-      AppState.pursuit.isEditingMaxDistLimit = false;
     }
   });
   
   // Update slider display while dragging
   DOM.maxDistLimitSlider.addEventListener('input', function() {
-    const percent = parseFloat(this.value);
+    const percent = Number.parseFloat(this.value);
     const totalMM = AppState.pursuit.totalDistanceMM || 0;
     const effectiveMM = (totalMM * percent / 100).toFixed(1);
     
@@ -310,7 +310,7 @@ function initMaxDistLimitListeners() {
   
   // Apply limit
   DOM.btnApplyMaxDistLimit.addEventListener('click', function() {
-    const percent = parseFloat(DOM.maxDistLimitSlider.value);
+    const percent = Number.parseFloat(DOM.maxDistLimitSlider.value);
     
     // Reset input fields to safe defaults when applying limit
     document.getElementById('startPosition').value = 0;
@@ -326,9 +326,9 @@ function initMaxDistLimitListeners() {
       // Send to backend to update oscillation config
       sendCommand(WS_CMD.SET_OSCILLATION_CONFIG, {
         centerPositionMM: effectiveMax / 2,
-        amplitudeMM: parseFloat(document.getElementById('oscAmplitude').value) || 50,
-        frequencyHz: parseFloat(document.getElementById('oscFrequency').value) || 1,
-        waveform: parseInt(document.getElementById('oscWaveform').value) || 0
+        amplitudeMM: Number.parseFloat(document.getElementById('oscAmplitude').value) || 50,
+        frequencyHz: Number.parseFloat(document.getElementById('oscFrequency').value) || 1,
+        waveform: Number.parseInt(document.getElementById('oscWaveform').value) || 0
       });
     }
     
@@ -389,7 +389,7 @@ function initPursuitListeners() {
   }
   
   // --- Pointer Events (primary) ---
-  if (window.PointerEvent) {
+  if (globalThis.PointerEvent) {
     DOM.gaugeContainer.addEventListener('pointerdown', function(e) {
       e.preventDefault();
       startDrag(e.clientY);
@@ -412,43 +412,43 @@ function initPursuitListeners() {
   
   // --- Touch Events fallback ---
   DOM.gaugeContainer.addEventListener('touchstart', function(e) {
-    if (window.PointerEvent) return;
+    if (globalThis.PointerEvent) return;
     e.preventDefault();
     startDrag(e.touches[0].clientY);
   }, { passive: false });
   
   document.addEventListener('touchmove', function(e) {
-    if (window.PointerEvent) return;
+    if (globalThis.PointerEvent) return;
     if (!AppState.pursuit.isDragging) return;
     e.preventDefault();
     moveDrag(e.touches[0].clientY);
   }, { passive: false });
   
   document.addEventListener('touchend', function() {
-    if (window.PointerEvent) return;
+    if (globalThis.PointerEvent) return;
     endDrag();
   });
   
   document.addEventListener('touchcancel', function() {
-    if (window.PointerEvent) return;
+    if (globalThis.PointerEvent) return;
     endDrag();
   });
   
   // --- Mouse Events fallback (desktop without pointer events) ---
   DOM.gaugeContainer.addEventListener('mousedown', function(e) {
-    if (window.PointerEvent) return;
+    if (globalThis.PointerEvent) return;
     e.preventDefault();
     startDrag(e.clientY);
   });
   
   document.addEventListener('mousemove', function(e) {
-    if (window.PointerEvent) return;
+    if (globalThis.PointerEvent) return;
     if (!AppState.pursuit.isDragging) return;
     moveDrag(e.clientY);
   });
   
   document.addEventListener('mouseup', function() {
-    if (window.PointerEvent) return;
+    if (globalThis.PointerEvent) return;
     endDrag();
   });
   
@@ -470,14 +470,14 @@ function initPursuitListeners() {
   // Max speed input
   if (DOM.pursuitMaxSpeed) {
     DOM.pursuitMaxSpeed.addEventListener('change', function() {
-      AppState.pursuit.maxSpeedLevel = parseFloat(this.value);
+      AppState.pursuit.maxSpeedLevel = Number.parseFloat(this.value);
     });
   }
   
   // Speed presets
   DOM.presetPursuitSpeedButtons.forEach(btn => {
     btn.addEventListener('click', function() {
-      const speed = parseFloat(this.getAttribute('data-pursuit-speed'));
+      const speed = Number.parseFloat(this.dataset.pursuitSpeed);
       if (DOM.pursuitMaxSpeed) {
         DOM.pursuitMaxSpeed.value = speed;
       }

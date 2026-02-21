@@ -76,7 +76,7 @@ const NotificationManager = {
   removeOldest() {
     if (this.activeNotifications.length >= this.MAX_NOTIFICATIONS) {
       const oldest = this.activeNotifications.shift();
-      if (oldest && oldest.element.parentNode) {
+      if (oldest?.element.parentNode) {
         oldest.element.remove();
       }
     }
@@ -100,7 +100,7 @@ function showNotification(message, type = 'info', duration = null) {
   };
 
   // Use provided duration or default based on type
-  const actualDuration = duration !== null ? duration : (defaultDurations[type] || 3500);
+  const actualDuration = duration === null ? (defaultDurations[type] || 3500) : duration;
 
   // If same message is already displayed, just extend its duration
   if (NotificationManager.extendIfDuplicate(message, actualDuration)) {
@@ -178,7 +178,7 @@ function showNotification(message, type = 'info', duration = null) {
 function validateNumericInput(value, options = {}) {
   const { min = 0, max = Infinity, defaultValue = 0, step = null, showNotification: notify = false, fieldName = 'Valeur' } = options;
   
-  let numValue = parseFloat(value);
+  let numValue = Number.parseFloat(value);
   let wasAdjusted = false;
   
   // Handle NaN
@@ -218,8 +218,8 @@ function validateNumericInput(value, options = {}) {
 function validateMinMaxPair(minValue, maxValue, options = {}) {
   const { minFieldName = 'Min', maxFieldName = 'Max' } = options;
   
-  let min = parseFloat(minValue) || 0;
-  let max = parseFloat(maxValue) || 0;
+  let min = Number.parseFloat(minValue) || 0;
+  let max = Number.parseFloat(maxValue) || 0;
   let wasAdjusted = false;
   
   if (min > max) {
@@ -271,14 +271,14 @@ function updateCenterAmplitudePresets(cfg) {
   const effectiveMax = AppState.pursuit.effectiveMaxDistMM || AppState.pursuit.totalDistanceMM || 0;
   if (effectiveMax === 0) return;
   
-  const currentCenter = parseFloat(document.getElementById(cfg.centerInputId).value) || 0;
-  const currentAmplitude = parseFloat(document.getElementById(cfg.amplitudeInputId).value) || 0;
+  const currentCenter = Number.parseFloat(document.getElementById(cfg.centerInputId).value) || 0;
+  const currentAmplitude = Number.parseFloat(document.getElementById(cfg.amplitudeInputId).value) || 0;
   const isLinked = document.getElementById(cfg.linkedCheckboxId)?.checked || false;
   const dp = cfg.dataPrefix; // shorthand
   
   // Validate center presets (must allow current amplitude)
   document.querySelectorAll('[data-' + dp + '-center]').forEach(btn => {
-    const centerValue = parseFloat(btn.getAttribute('data-' + dp + '-center'));
+    const centerValue = Number.parseFloat(btn.getAttribute('data-' + dp + '-center'));
     const minPos = centerValue - currentAmplitude;
     const maxPos = centerValue + currentAmplitude;
     const isValid = minPos >= 0 && maxPos <= effectiveMax;
@@ -289,7 +289,7 @@ function updateCenterAmplitudePresets(cfg) {
   
   // Validate amplitude presets (must respect current center)
   document.querySelectorAll('[data-' + dp + '-amplitude]').forEach(btn => {
-    const amplitudeValue = parseFloat(btn.getAttribute('data-' + dp + '-amplitude'));
+    const amplitudeValue = Number.parseFloat(btn.getAttribute('data-' + dp + '-amplitude'));
     const minPos = currentCenter - amplitudeValue;
     const maxPos = currentCenter + amplitudeValue;
     const isValid = minPos >= 0 && maxPos <= effectiveMax;
@@ -300,7 +300,7 @@ function updateCenterAmplitudePresets(cfg) {
   
   // Validate relative center presets
   document.querySelectorAll('[data-' + dp + '-center-rel]').forEach(btn => {
-    const relValue = parseInt(btn.getAttribute('data-' + dp + '-center-rel'));
+    const relValue = Number.parseInt(btn.getAttribute('data-' + dp + '-center-rel'));
     const newCenter = currentCenter + relValue;
     const minPos = newCenter - currentAmplitude;
     const maxPos = newCenter + currentAmplitude;
@@ -312,7 +312,7 @@ function updateCenterAmplitudePresets(cfg) {
   
   // Validate relative amplitude presets
   document.querySelectorAll('[data-' + dp + '-amplitude-rel]').forEach(btn => {
-    const relValue = parseInt(btn.getAttribute('data-' + dp + '-amplitude-rel'));
+    const relValue = Number.parseInt(btn.getAttribute('data-' + dp + '-amplitude-rel'));
     const newAmplitude = currentAmplitude + relValue;
     const minPos = currentCenter - newAmplitude;
     const maxPos = currentCenter + newAmplitude;
@@ -533,7 +533,7 @@ function setupEditableOscInput(elementId, options = {}) {
 function setupPresetButtons(dataAttribute, onClickCallback) {
   document.querySelectorAll(`[${dataAttribute}]`).forEach(btn => {
     btn.addEventListener('click', function() {
-      const value = parseFloat(this.getAttribute(dataAttribute));
+      const value = Number.parseFloat(this.getAttribute(dataAttribute));
       if (onClickCallback && !isNaN(value)) {
         onClickCallback(value, this);
       }
@@ -551,7 +551,7 @@ function setupPresetButtons(dataAttribute, onClickCallback) {
  * @param {Object} params - Additional parameters to send with the command
  */
 function sendCommand(cmd, params = {}) {
-  if (AppState.ws && AppState.ws.readyState === WebSocket.OPEN) {
+  if (AppState.ws?.readyState === WebSocket.OPEN) {
     const message = JSON.stringify({cmd: cmd, ...params});
     AppState.ws.send(message);
   } else {
@@ -577,7 +577,7 @@ function enforceNumericConstraints(input) {
     const oldValue = this.value;
     // Allow: digits, decimal point, minus sign
     // Remove all non-numeric characters except . and -
-    let newValue = this.value.replace(/[^\d.-]/g, '');
+    let newValue = this.value.replaceAll(/[^\d.-]/, '');
     
     // Ensure only one decimal point
     const parts = newValue.split('.');
@@ -587,7 +587,7 @@ function enforceNumericConstraints(input) {
     
     // Ensure minus only at start
     if (newValue.indexOf('-') > 0) {
-      newValue = newValue.replace(/-/g, '');
+      newValue = newValue.replaceAll('-', '');
     }
     
     // Update value if changed
@@ -606,9 +606,9 @@ function enforceNumericConstraints(input) {
   
   // Enforce min/max on blur
   input.addEventListener('blur', function() {
-    const min = parseFloat(this.getAttribute('min'));
-    const max = parseFloat(this.getAttribute('max'));
-    const val = parseFloat(this.value);
+    const min = Number.parseFloat(this.getAttribute('min'));
+    const max = Number.parseFloat(this.getAttribute('max'));
+    const val = Number.parseFloat(this.value);
     
     if (!isNaN(min) && val < min) {
       this.value = min;
@@ -662,11 +662,11 @@ function initMainNumericConstraints() {
 function escapeHtml(str) {
   if (typeof str !== 'string') return '';
   return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 // ============================================================================

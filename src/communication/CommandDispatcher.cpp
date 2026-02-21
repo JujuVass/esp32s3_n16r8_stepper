@@ -389,9 +389,9 @@ bool CommandDispatcher::handleDecelZoneCommands(const char* cmd, JsonDocument& d
         if (doc["randomTurnbackEnabled"].is<bool>()) {
             zoneEffect.randomTurnbackEnabled = doc["randomTurnbackEnabled"].as<bool>();
         }
-        int turnbackChance = doc["turnbackChance"] | zoneEffect.turnbackChance;
+        int turnbackChance = doc["turnbackChance"] | static_cast<int>(zoneEffect.turnbackChance);
         if (turnbackChance >= 0 && turnbackChance <= 100) {
-            zoneEffect.turnbackChance = turnbackChance;
+            zoneEffect.turnbackChance = static_cast<uint8_t>(turnbackChance);
         }
 
         // === End Pause ===

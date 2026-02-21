@@ -28,8 +28,8 @@ function toggleOscHelp() {
  * @returns {boolean} true if limits are valid
  */
 function validateOscillationLimits() {
-  const center = parseFloat(DOM.oscCenter.value) || 0;
-  const amplitude = parseFloat(DOM.oscAmplitude.value) || 0;
+  const center = Number.parseFloat(DOM.oscCenter.value) || 0;
+  const amplitude = Number.parseFloat(DOM.oscAmplitude.value) || 0;
   const totalDistMM = AppState.pursuit.totalDistanceMM || 0;
   
   const warning = document.getElementById('oscLimitWarning');
@@ -53,15 +53,7 @@ function validateOscillationLimits() {
   const maxPos = center + amplitude;
   isValid = minPos >= 0 && maxPos <= totalDistMM;
   
-  if (!isValid) {
-    warning.style.display = 'block';
-    statusSpan.textContent = t('oscillation.invalid');
-    statusSpan.style.color = '#e74c3c';
-    btnStart.disabled = true;
-    btnStart.style.opacity = '0.5';
-    btnStart.style.cursor = 'not-allowed';
-    return false;
-  } else {
+  if (isValid) {
     warning.style.display = 'none';
     statusSpan.textContent = t('oscillation.valid');
     statusSpan.style.color = '#27ae60';
@@ -70,6 +62,14 @@ function validateOscillationLimits() {
     btnStart.style.cursor = 'pointer';
     updateOscillationPresets();  // Update preset buttons state
     return true;
+  } else {
+    warning.style.display = 'block';
+    statusSpan.textContent = t('oscillation.invalid');
+    statusSpan.style.color = '#e74c3c';
+    btnStart.disabled = true;
+    btnStart.style.opacity = '0.5';
+    btnStart.style.cursor = 'not-allowed';
+    return false;
   }
 }
 
@@ -77,15 +77,15 @@ function validateOscillationLimits() {
  * Send oscillation configuration to backend
  */
 function sendOscillationConfig() {
-  const amplitude = parseFloat(document.getElementById('oscAmplitude').value) || 0;
-  const frequency = parseFloat(document.getElementById('oscFrequency').value) || 0.5;
+  const amplitude = Number.parseFloat(document.getElementById('oscAmplitude').value) || 0;
+  const frequency = Number.parseFloat(document.getElementById('oscFrequency').value) || 0.5;
   
   // 🚀 SAFETY: Check if frequency would exceed speed limit
   const MAX_SPEED_MM_S = maxSpeedLevel * OSC_SPEED_MULTIPLIER;
-  const theoreticalSpeed = 2.0 * Math.PI * frequency * amplitude;
+  const theoreticalSpeed = 2 * Math.PI * frequency * amplitude;
   
   if (amplitude > 0 && theoreticalSpeed > MAX_SPEED_MM_S) {
-    const maxAllowedFreq = MAX_SPEED_MM_S / (2.0 * Math.PI * amplitude);
+    const maxAllowedFreq = MAX_SPEED_MM_S / (2 * Math.PI * amplitude);
     showNotification(
       '⚠️ ' + t('oscillation.freqLimited', {freq: frequency.toFixed(2), max: maxAllowedFreq.toFixed(2), speed: MAX_SPEED_MM_S.toFixed(0)}),
       'error',
@@ -108,14 +108,14 @@ function sendOscillationConfig() {
   };
   
   // Build config from form values
-  const rampIn = parseFloat(formValues.rampInDuration);
-  const rampOut = parseFloat(formValues.rampOutDuration);
+  const rampIn = Number.parseFloat(formValues.rampInDuration);
+  const rampOut = Number.parseFloat(formValues.rampOutDuration);
   const config = {
-    centerPositionMM: parseFloat(formValues.centerPos) || 0,
-    amplitudeMM: parseFloat(formValues.amplitude) || 0,
-    waveform: parseInt(formValues.waveform) || 0,
-    frequencyHz: parseFloat(formValues.frequency) || 0.5,
-    cycleCount: parseInt(formValues.cycleCount) || 0,
+    centerPositionMM: Number.parseFloat(formValues.centerPos) || 0,
+    amplitudeMM: Number.parseFloat(formValues.amplitude) || 0,
+    waveform: Number.parseInt(formValues.waveform) || 0,
+    frequencyHz: Number.parseFloat(formValues.frequency) || 0.5,
+    cycleCount: Number.parseInt(formValues.cycleCount) || 0,
     enableRampIn: formValues.enableRampIn,
     rampInDurationMs: isNaN(rampIn) ? 2000 : rampIn,
     enableRampOut: formValues.enableRampOut,
@@ -143,11 +143,11 @@ function updateOscillationPresets() {
   const effectiveMax = AppState.pursuit.effectiveMaxDistMM || AppState.pursuit.totalDistanceMM || 0;
   if (effectiveMax === 0) return;
   
-  const currentAmplitude = parseFloat(document.getElementById('oscAmplitude').value) || 0;
+  const currentAmplitude = Number.parseFloat(document.getElementById('oscAmplitude').value) || 0;
   const MAX_SPEED_MM_S = maxSpeedLevel * OSC_SPEED_MULTIPLIER;
   
   document.querySelectorAll('[data-osc-frequency]').forEach(btn => {
-    const frequencyValue = parseFloat(btn.getAttribute('data-osc-frequency'));
+    const frequencyValue = Number.parseFloat(btn.dataset.oscFrequency);
     
     // Calculate theoretical speed for this frequency
     if (currentAmplitude > 0) {
@@ -319,7 +319,7 @@ function updateOscillationUI(data) {
   }
   
   // ===== CYCLE PAUSE DISPLAY (MODE OSCILLATION) =====
-  if (data.oscillation && data.oscillation.cyclePause) {
+  if (data.oscillation?.cyclePause) {
     syncCyclePauseUI(data.oscillation.cyclePause, 'Osc', getCyclePauseOscSection, 'oscillation');
   }
   
@@ -409,7 +409,7 @@ function initOscillationListeners() {
   document.querySelectorAll('[data-osc-center]').forEach(btn => {
     btn.addEventListener('click', function() {
       if (!this.disabled) {
-        document.getElementById('oscCenter').value = this.getAttribute('data-osc-center');
+        document.getElementById('oscCenter').value = this.dataset.oscCenter;
         sendOscillationConfig();
         validateOscillationLimits();
         updateOscillationPresets();
@@ -421,7 +421,7 @@ function initOscillationListeners() {
   document.querySelectorAll('[data-osc-amplitude]').forEach(btn => {
     btn.addEventListener('click', function() {
       if (!this.disabled) {
-        const newAmplitude = this.getAttribute('data-osc-amplitude');
+        const newAmplitude = this.dataset.oscAmplitude;
         console.debug('🎯 Preset amplitude clicked: ' + newAmplitude + 'mm');
         document.getElementById('oscAmplitude').value = newAmplitude;
         console.debug('📤 Sending oscillation config with amplitude=' + newAmplitude);
@@ -436,7 +436,7 @@ function initOscillationListeners() {
   document.querySelectorAll('[data-osc-frequency]').forEach(btn => {
     btn.addEventListener('click', function() {
       if (!this.disabled) {
-        document.getElementById('oscFrequency').value = this.getAttribute('data-osc-frequency');
+        document.getElementById('oscFrequency').value = this.dataset.oscFrequency;
         sendOscillationConfig();
       }
     });
@@ -446,8 +446,8 @@ function initOscillationListeners() {
   document.querySelectorAll('[data-osc-center-rel]').forEach(btn => {
     btn.addEventListener('click', function() {
       if (!this.disabled) {
-        const relValue = parseInt(this.getAttribute('data-osc-center-rel'));
-        const currentCenter = parseFloat(document.getElementById('oscCenter').value) || 0;
+        const relValue = Number.parseInt(this.dataset.oscCenterRel);
+        const currentCenter = Number.parseFloat(document.getElementById('oscCenter').value) || 0;
         const newCenter = Math.max(0, currentCenter + relValue);
         document.getElementById('oscCenter').value = newCenter;
         
@@ -467,8 +467,8 @@ function initOscillationListeners() {
   document.querySelectorAll('[data-osc-amplitude-rel]').forEach(btn => {
     btn.addEventListener('click', function() {
       if (!this.disabled) {
-        const relValue = parseInt(this.getAttribute('data-osc-amplitude-rel'));
-        const currentAmplitude = parseFloat(document.getElementById('oscAmplitude').value) || 0;
+        const relValue = Number.parseInt(this.dataset.oscAmplitudeRel);
+        const currentAmplitude = Number.parseFloat(document.getElementById('oscAmplitude').value) || 0;
         const newAmplitude = Math.max(1, currentAmplitude + relValue);
         document.getElementById('oscAmplitude').value = newAmplitude;
         sendOscillationConfig();
@@ -484,7 +484,7 @@ function initOscillationListeners() {
     oscAmplitudeLinked.addEventListener('change', function() {
       if (this.checked) {
         // Link: set amplitude = center
-        const center = parseFloat(document.getElementById('oscCenter').value) || 0;
+        const center = Number.parseFloat(document.getElementById('oscCenter').value) || 0;
         document.getElementById('oscAmplitude').value = center;
         sendOscillationConfig();
         validateOscillationLimits();

@@ -88,7 +88,7 @@ void CrashDiagnostics::handlePanicCrash(UtilityEngine* eng) {
 
     eng->error("💥 Full decode: pio run -t coredump-info");
 
-    // Save dump file to LittleFS (accessible via /api/system/dumps/*)
+    // Save dump file to LittleFS (accessible via /api/system/dumps/)
     saveDumpFile(eng, summary.exc_task, summary.exc_pc,
                  summary.exc_bt_info.bt, summary.exc_bt_info.depth,
                  summary.exc_bt_info.corrupted);

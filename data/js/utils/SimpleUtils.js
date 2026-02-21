@@ -18,10 +18,10 @@
  * Pure JavaScript implementation EXACTLY matching C++ calculateSlowdownFactor()
  * in BaseMovementController.cpp
  * 
- * @param {number} zoneProgress - Progress through zone (0.0 = at boundary/contact, 1.0 = exiting zone)
- * @param {number} maxSlowdown - Maximum slowdown factor (e.g., 10.0 = 10× slower)
+ * @param {number} zoneProgress - Progress through zone (0 = at boundary/contact, 1 = exiting zone)
+ * @param {number} maxSlowdown - Maximum slowdown factor (e.g., 10 = 10× slower)
  * @param {number} mode - Deceleration curve mode (0=linear, 1=sine, 2=triangle_inv, 3=sine_inv)
- * @returns {number} Slowdown factor (1.0 = normal speed, >1.0 = slower)
+ * @returns {number} Slowdown factor (1 = normal speed, >1 = slower)
  */
 function calculateSlowdownFactorPure(zoneProgress, maxSlowdown, mode) {
   // Clamp progress to [0, 1]
@@ -31,43 +31,43 @@ function calculateSlowdownFactorPure(zoneProgress, maxSlowdown, mode) {
   
   switch (mode) {
     case 0: // DECEL_LINEAR - constant deceleration rate
-      // C++: factor = 1.0 + (1.0 - zoneProgress) * (maxSlowdown - 1.0)
-      factor = 1.0 + (1.0 - progress) * (maxSlowdown - 1.0);
+      // C++: factor = 1 + (1 - zoneProgress) * (maxSlowdown - 1)
+      factor = 1 + (1 - progress) * (maxSlowdown - 1);
       break;
       
     case 1: // DECEL_SINE - sinusoidal curve (smooth, max slowdown at contact)
-      // C++: smoothProgress = (1.0 - cos(zoneProgress * PI)) / 2.0
-      //      factor = 1.0 + (1.0 - smoothProgress) * (maxSlowdown - 1.0)
+      // C++: smoothProgress = (1 - cos(zoneProgress * PI)) / 2
+      //      factor = 1 + (1 - smoothProgress) * (maxSlowdown - 1)
       {
-        const smoothProgress = (1.0 - Math.cos(progress * Math.PI)) / 2.0;
-        factor = 1.0 + (1.0 - smoothProgress) * (maxSlowdown - 1.0);
+        const smoothProgress = (1 - Math.cos(progress * Math.PI)) / 2;
+        factor = 1 + (1 - smoothProgress) * (maxSlowdown - 1);
       }
       break;
       
     case 2: // DECEL_TRIANGLE_INV - weak at start, strong at end (quadratic)
-      // C++: invProgress = 1.0 - zoneProgress
+      // C++: invProgress = 1 - zoneProgress
       //      curved = invProgress * invProgress
-      //      factor = 1.0 + curved * (maxSlowdown - 1.0)
+      //      factor = 1 + curved * (maxSlowdown - 1)
       {
-        const invProgress = 1.0 - progress;
+        const invProgress = 1 - progress;
         const curved = invProgress * invProgress;
-        factor = 1.0 + curved * (maxSlowdown - 1.0);
+        factor = 1 + curved * (maxSlowdown - 1);
       }
       break;
       
     case 3: // DECEL_SINE_INV - weak at start, strong at end (sine curve)
-      // C++: invProgress = 1.0 - zoneProgress
-      //      curved = sin(invProgress * PI / 2.0)
-      //      factor = 1.0 + curved * (maxSlowdown - 1.0)
+      // C++: invProgress = 1 - zoneProgress
+      //      curved = sin(invProgress * PI / 2)
+      //      factor = 1 + curved * (maxSlowdown - 1)
       {
-        const invProgress = 1.0 - progress;
-        const curved = Math.sin(invProgress * Math.PI / 2.0);
-        factor = 1.0 + curved * (maxSlowdown - 1.0);
+        const invProgress = 1 - progress;
+        const curved = Math.sin(invProgress * Math.PI / 2);
+        factor = 1 + curved * (maxSlowdown - 1);
       }
       break;
       
     default:
-      factor = 1.0;
+      factor = 1;
       break;
   }
   
@@ -136,7 +136,7 @@ function drawZoneEffectPreviewPure(canvas, config) {
   }
   
   // Calculate max slowdown/speedup from intensity
-  const maxFactor = 1.0 + (speedIntensity / 100.0) * 9.0;  // 1× to 10×
+  const maxFactor = 1 + (speedIntensity / 100) * 9;  // 1× to 10×
   
   // Draw axes
   ctx.strokeStyle = '#ccc';
@@ -166,7 +166,7 @@ function drawZoneEffectPreviewPure(canvas, config) {
     
     for (let x = 0; x <= plotWidth; x++) {
       const positionMM = (x / plotWidth) * movementAmplitude;
-      let speedFactor = 1.0;  // Normal speed
+      let speedFactor = 1;  // Normal speed
       
       // Check START zone
       if (enableStart && positionMM <= zoneMM) {
@@ -174,7 +174,7 @@ function drawZoneEffectPreviewPure(canvas, config) {
         speedFactor = calculateSlowdownFactorPure(zoneProgress, maxFactor, speedCurve);
         if (isAccel) {
           // For acceleration: invert the slowdown to speedup
-          speedFactor = 1.0 / speedFactor;
+          speedFactor = 1 / speedFactor;
         }
       }
       // Check END zone
@@ -183,7 +183,7 @@ function drawZoneEffectPreviewPure(canvas, config) {
         const zoneProgress = distanceFromEnd / zoneMM;
         speedFactor = calculateSlowdownFactorPure(zoneProgress, maxFactor, speedCurve);
         if (isAccel) {
-          speedFactor = 1.0 / speedFactor;
+          speedFactor = 1 / speedFactor;
         }
       }
       
@@ -193,8 +193,8 @@ function drawZoneEffectPreviewPure(canvas, config) {
       let normalizedSpeed;
       if (isAccel) {
         // Accel: values range from 1 (normal) to < 1 (faster)
-        // Map to 0.5 (normal) to 1.0 (fast) for display
-        normalizedSpeed = 0.5 + (1.0 - speedFactor) * 0.5;
+        // Map to 0.5 (normal) to 1 (fast) for display
+        normalizedSpeed = 0.5 + (1 - speedFactor) * 0.5;
       } else {
         // Decel: values range from 1 (normal) to > 1 (slower)
         // Map to 0.5 (normal) to 0 (slow) for display

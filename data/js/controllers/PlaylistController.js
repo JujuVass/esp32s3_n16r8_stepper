@@ -124,10 +124,10 @@ function getCurrentModeConfig(mode) {
     const endPauseIsRandom = document.getElementById('endPauseModeRandom')?.checked || false;
     
     return {
-      startPositionMM: parseFloat(document.getElementById('startPosition').value) || 0,
-      distanceMM: parseFloat(document.getElementById('distance').value) || 50,
-      speedLevelForward: parseFloat(document.getElementById('speedForward')?.value || document.getElementById('speedUnified').value) || 5,
-      speedLevelBackward: parseFloat(document.getElementById('speedBackward')?.value || document.getElementById('speedUnified').value) || 5,
+      startPositionMM: Number.parseFloat(document.getElementById('startPosition').value) || 0,
+      distanceMM: Number.parseFloat(document.getElementById('distance').value) || 50,
+      speedLevelForward: Number.parseFloat(document.getElementById('speedForward')?.value || document.getElementById('speedUnified').value) || 5,
+      speedLevelBackward: Number.parseFloat(document.getElementById('speedBackward')?.value || document.getElementById('speedUnified').value) || 5,
       
       // Zone Effects (new unified structure)
       vaetZoneEffect: {
@@ -135,25 +135,25 @@ function getCurrentModeConfig(mode) {
         enableStart: document.getElementById('zoneEffectStart')?.checked ?? true,
         enableEnd: document.getElementById('zoneEffectEnd')?.checked ?? true,
         mirrorOnReturn: document.getElementById('zoneEffectMirror')?.checked ?? false,
-        zoneMM: parseFloat(document.getElementById('zoneEffectMM')?.value) || 50,
-        speedEffect: parseInt(document.getElementById('speedEffectType')?.value) || 1,
-        speedCurve: parseInt(document.getElementById('speedCurveSelect')?.value) || 1,
-        speedIntensity: parseFloat(document.getElementById('speedIntensity')?.value) || 75,
+        zoneMM: Number.parseFloat(document.getElementById('zoneEffectMM')?.value) || 50,
+        speedEffect: Number.parseInt(document.getElementById('speedEffectType')?.value) || 1,
+        speedCurve: Number.parseInt(document.getElementById('speedCurveSelect')?.value) || 1,
+        speedIntensity: Number.parseFloat(document.getElementById('speedIntensity')?.value) || 75,
         randomTurnbackEnabled: document.getElementById('randomTurnbackEnabled')?.checked || false,
-        turnbackChance: parseInt(document.getElementById('turnbackChance')?.value) || 30,
+        turnbackChance: Number.parseInt(document.getElementById('turnbackChance')?.value) || 30,
         endPauseEnabled: document.getElementById('endPauseEnabled')?.checked || false,
         endPauseIsRandom: endPauseIsRandom,
-        endPauseDurationSec: parseFloat(document.getElementById('endPauseDuration')?.value) || 1.0,
-        endPauseMinSec: parseFloat(document.getElementById('endPauseMin')?.value) || 0.5,
-        endPauseMaxSec: parseFloat(document.getElementById('endPauseMax')?.value) || 2.0
+        endPauseDurationSec: Number.parseFloat(document.getElementById('endPauseDuration')?.value) || 1,
+        endPauseMinSec: Number.parseFloat(document.getElementById('endPauseMin')?.value) || 0.5,
+        endPauseMaxSec: Number.parseFloat(document.getElementById('endPauseMax')?.value) || 2
       },
       
       // Cycle pause parameters
       cyclePauseEnabled: cyclePauseEnabled,
       cyclePauseIsRandom: isRandom,
-      cyclePauseDurationSec: parseFloat(document.getElementById('cyclePauseDuration')?.value) || 0.0,
-      cyclePauseMinSec: parseFloat(document.getElementById('cyclePauseMin')?.value) || 0.5,
-      cyclePauseMaxSec: parseFloat(document.getElementById('cyclePauseMax')?.value) || 3.0
+      cyclePauseDurationSec: Number.parseFloat(document.getElementById('cyclePauseDuration')?.value) || 0,
+      cyclePauseMinSec: Number.parseFloat(document.getElementById('cyclePauseMin')?.value) || 0.5,
+      cyclePauseMaxSec: Number.parseFloat(document.getElementById('cyclePauseMax')?.value) || 3
     };
   } else if (mode === 'oscillation') {
     // Check if cycle pause section is expanded (enabled)
@@ -164,30 +164,30 @@ function getCurrentModeConfig(mode) {
     const isRandom = document.getElementById('pauseModeRandomOsc')?.checked || false;
     
     return {
-      centerPositionMM: parseFloat(document.getElementById('oscCenter').value) || 100,
-      amplitudeMM: parseFloat(document.getElementById('oscAmplitude').value) || 20,
-      waveform: parseInt(document.getElementById('oscWaveform').value) || 0,
-      frequencyHz: parseFloat(document.getElementById('oscFrequency').value) || 1.0,
-      cycleCount: parseInt(document.getElementById('oscCycleCount').value) || 10,
+      centerPositionMM: Number.parseFloat(document.getElementById('oscCenter').value) || 100,
+      amplitudeMM: Number.parseFloat(document.getElementById('oscAmplitude').value) || 20,
+      waveform: Number.parseInt(document.getElementById('oscWaveform').value) || 0,
+      frequencyHz: Number.parseFloat(document.getElementById('oscFrequency').value) || 1,
+      cycleCount: Number.parseInt(document.getElementById('oscCycleCount').value) || 10,
       enableRampIn: document.getElementById('oscRampInEnable').checked,
-      rampInDurationMs: parseInt(document.getElementById('oscRampInDuration').value) || 2000,
+      rampInDurationMs: Number.parseInt(document.getElementById('oscRampInDuration').value) || 2000,
       enableRampOut: document.getElementById('oscRampOutEnable').checked,
-      rampOutDurationMs: parseInt(document.getElementById('oscRampOutDuration').value) || 2000,
+      rampOutDurationMs: Number.parseInt(document.getElementById('oscRampOutDuration').value) || 2000,
       returnToCenter: document.getElementById('oscReturnCenter').checked,
       // Cycle pause parameters
       cyclePauseEnabled: cyclePauseEnabled,
       cyclePauseIsRandom: isRandom,
-      cyclePauseDurationSec: parseFloat(document.getElementById('cyclePauseDurationOsc')?.value) || 0.0,
-      cyclePauseMinSec: parseFloat(document.getElementById('cyclePauseMinOsc')?.value) || 0.5,
-      cyclePauseMaxSec: parseFloat(document.getElementById('cyclePauseMaxOsc')?.value) || 3.0
+      cyclePauseDurationSec: Number.parseFloat(document.getElementById('cyclePauseDurationOsc')?.value) || 0,
+      cyclePauseMinSec: Number.parseFloat(document.getElementById('cyclePauseMinOsc')?.value) || 0.5,
+      cyclePauseMaxSec: Number.parseFloat(document.getElementById('cyclePauseMaxOsc')?.value) || 3
     };
   } else if (mode === 'chaos') {
     return {
-      centerPositionMM: parseFloat(document.getElementById('chaosCenterPos').value) || 100,
-      amplitudeMM: parseFloat(document.getElementById('chaosAmplitude').value) || 40,
-      maxSpeedLevel: parseFloat(document.getElementById('chaosMaxSpeed').value) || 15,
-      crazinessPercent: parseInt(document.getElementById('chaosCraziness').value) || 50,
-      durationSeconds: parseInt(document.getElementById('chaosDuration').value) || 30,
+      centerPositionMM: Number.parseFloat(document.getElementById('chaosCenterPos').value) || 100,
+      amplitudeMM: Number.parseFloat(document.getElementById('chaosAmplitude').value) || 40,
+      maxSpeedLevel: Number.parseFloat(document.getElementById('chaosMaxSpeed').value) || 15,
+      crazinessPercent: Number.parseInt(document.getElementById('chaosCraziness').value) || 50,
+      durationSeconds: Number.parseInt(document.getElementById('chaosDuration').value) || 30,
       patternsEnabled: getPatternStates()
     };
   }
@@ -212,7 +212,6 @@ function openPlaylistModal(mode) {
   titleEl.textContent = getPlaylistModalTitlePure(mode);
   
   // Display current config
-  const config = getCurrentModeConfig(mode);
   configEl.innerHTML = `Mode: ${mode}`;
   
   // Refresh presets list
@@ -266,7 +265,7 @@ function refreshPlaylistPresets(mode) {
     const tooltipContent = generatePresetTooltip(mode, preset.config);
     html += `
       <div class="preset-item preset-item-box" 
-           data-tooltip="${tooltipContent.replace(/"/g, '&quot;')}">
+           data-tooltip="${tooltipContent.replaceAll('"', '&quot;')}">
         <div class="flex-between" style="gap: 6px;">
           <div style="flex: 1; min-width: 0;">
             <div class="text-500 text-md mb-4" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(preset.name)}</div>
@@ -570,9 +569,9 @@ function loadSimplePreset(config) {
       endPauseModeRandomEl.checked = false;
     }
   }
-  if (endPauseDurationEl) endPauseDurationEl.value = ze.endPauseDurationSec || 1.0;
+  if (endPauseDurationEl) endPauseDurationEl.value = ze.endPauseDurationSec || 1;
   if (endPauseMinEl) endPauseMinEl.value = ze.endPauseMinSec || 0.5;
-  if (endPauseMaxEl) endPauseMaxEl.value = ze.endPauseMaxSec || 2.0;
+  if (endPauseMaxEl) endPauseMaxEl.value = ze.endPauseMaxSec || 2;
   
   // Toggle end pause fixed/random visibility
   const endPauseFixedControls = document.getElementById('endPauseFixedControls');
@@ -619,9 +618,9 @@ function loadSimplePreset(config) {
   const cyclePauseMinEl = document.getElementById('cyclePauseMin');
   const cyclePauseMaxEl = document.getElementById('cyclePauseMax');
   
-  if (cyclePauseDurationEl) cyclePauseDurationEl.value = config.cyclePauseDurationSec || 0.0;
+  if (cyclePauseDurationEl) cyclePauseDurationEl.value = config.cyclePauseDurationSec || 0;
   if (cyclePauseMinEl) cyclePauseMinEl.value = config.cyclePauseMinSec || 0.5;
-  if (cyclePauseMaxEl) cyclePauseMaxEl.value = config.cyclePauseMaxSec || 3.0;
+  if (cyclePauseMaxEl) cyclePauseMaxEl.value = config.cyclePauseMaxSec || 3;
   
   // Force toggle visibility (fixed/random)
   const fixedDiv = document.getElementById('pauseFixedControls');
@@ -665,9 +664,9 @@ function loadSimplePreset(config) {
   const pauseCmd = {
     enabled: pauseEnabled,
     isRandom: pauseIsRandom,
-    pauseDurationSec: config.cyclePauseDurationSec || 0.0,
+    pauseDurationSec: config.cyclePauseDurationSec || 0,
     minPauseSec: config.cyclePauseMinSec || 0.5,
-    maxPauseSec: config.cyclePauseMaxSec || 3.0
+    maxPauseSec: config.cyclePauseMaxSec || 3
   };
   console.debug('🔧 Sending updateCyclePause:', pauseCmd);
   sendCommand(WS_CMD.UPDATE_CYCLE_PAUSE, pauseCmd);
@@ -682,7 +681,7 @@ function loadOscillationPreset(config) {
   document.getElementById('oscCenter').value = config.centerPositionMM || 100;
   document.getElementById('oscAmplitude').value = config.amplitudeMM || 20;
   document.getElementById('oscWaveform').value = config.waveform || 0;
-  document.getElementById('oscFrequency').value = config.frequencyHz || 1.0;
+  document.getElementById('oscFrequency').value = config.frequencyHz || 1;
   document.getElementById('oscCycleCount').value = config.cycleCount || 10;
   document.getElementById('oscRampInEnable').checked = config.enableRampIn || false;
   document.getElementById('oscRampInDuration').value = config.rampInDurationMs || 2000;
@@ -712,9 +711,9 @@ function loadOscillationPreset(config) {
   const cyclePauseMinOscEl = document.getElementById('cyclePauseMinOsc');
   const cyclePauseMaxOscEl = document.getElementById('cyclePauseMaxOsc');
   
-  if (cyclePauseDurationOscEl) cyclePauseDurationOscEl.value = config.cyclePauseDurationSec || 0.0;
+  if (cyclePauseDurationOscEl) cyclePauseDurationOscEl.value = config.cyclePauseDurationSec || 0;
   if (cyclePauseMinOscEl) cyclePauseMinOscEl.value = config.cyclePauseMinSec || 0.5;
-  if (cyclePauseMaxOscEl) cyclePauseMaxOscEl.value = config.cyclePauseMaxSec || 3.0;
+  if (cyclePauseMaxOscEl) cyclePauseMaxOscEl.value = config.cyclePauseMaxSec || 3;
   
   // Force toggle visibility (fixed/random)
   const fixedDiv = document.getElementById('pauseFixedControlsOsc');
@@ -748,7 +747,7 @@ function loadOscillationPreset(config) {
     centerPositionMM: config.centerPositionMM || 100,
     amplitudeMM: config.amplitudeMM || 20,
     waveform: config.waveform || 0,
-    frequencyHz: config.frequencyHz || 1.0,
+    frequencyHz: config.frequencyHz || 1,
     cycleCount: config.cycleCount || 10,
     enableRampIn: config.enableRampIn || false,
     rampInDurationMs: config.rampInDurationMs || 2000,
@@ -758,9 +757,9 @@ function loadOscillationPreset(config) {
     // Cycle pause parameters
     cyclePauseEnabled: pauseEnabled,
     cyclePauseIsRandom: pauseIsRandom,
-    cyclePauseDurationSec: config.cyclePauseDurationSec || 0.0,
+    cyclePauseDurationSec: config.cyclePauseDurationSec || 0,
     cyclePauseMinSec: config.cyclePauseMinSec || 0.5,
-    cyclePauseMaxSec: config.cyclePauseMaxSec || 3.0
+    cyclePauseMaxSec: config.cyclePauseMaxSec || 3
   });
   
   console.debug('✅ OSC preset loaded | Pause enabled:', pauseEnabled, '| Random:', pauseIsRandom);
@@ -846,14 +845,14 @@ function quickAddToSequencer(mode, presetId) {
     chaosPatternsEnabled: config.patternsEnabled || [true, true, true, true, true, true, true, true, true, true, true],
     vaetCyclePauseEnabled: config.cyclePauseEnabled || false,
     vaetCyclePauseIsRandom: config.cyclePauseIsRandom || false,
-    vaetCyclePauseDurationSec: config.cyclePauseDurationSec || 0.0,
+    vaetCyclePauseDurationSec: config.cyclePauseDurationSec || 0,
     vaetCyclePauseMinSec: config.cyclePauseMinSec || 0.5,
-    vaetCyclePauseMaxSec: config.cyclePauseMaxSec || 3.0,
+    vaetCyclePauseMaxSec: config.cyclePauseMaxSec || 3,
     oscCyclePauseEnabled: config.cyclePauseEnabled || false,
     oscCyclePauseIsRandom: config.cyclePauseIsRandom || false,
-    oscCyclePauseDurationSec: config.cyclePauseDurationSec || 0.0,
+    oscCyclePauseDurationSec: config.cyclePauseDurationSec || 0,
     oscCyclePauseMinSec: config.cyclePauseMinSec || 0.5,
-    oscCyclePauseMaxSec: config.cyclePauseMaxSec || 3.0
+    oscCyclePauseMaxSec: config.cyclePauseMaxSec || 3
   };
   
   // Validate before sending (validateSequencerLine from main.js)
@@ -878,7 +877,7 @@ function quickAddToSequencer(mode, presetId) {
 function loadPresetIntoSequencerModal(mode) {
   const selectId = 'edit' + mode.charAt(0).toUpperCase() + mode.slice(1) + 'PresetSelect';
   const select = document.getElementById(selectId);
-  const presetId = parseInt(select.value);
+  const presetId = Number.parseInt(select.value);
   
   if (!presetId) {
     showNotification('⚠️ ' + t('playlist.selectPreset'), 'error', 2000);
@@ -923,15 +922,15 @@ function loadPresetIntoSequencerModal(mode) {
         endPauseFixedEl.checked = !ze.endPauseIsRandom;
         endPauseRandomEl.checked = ze.endPauseIsRandom || false;
       }
-      document.getElementById('editEndPauseDuration').value = ze.endPauseDurationSec || 1.0;
+      document.getElementById('editEndPauseDuration').value = ze.endPauseDurationSec || 1;
       document.getElementById('editEndPauseMin').value = ze.endPauseMinSec || 0.5;
-      document.getElementById('editEndPauseMax').value = ze.endPauseMaxSec || 2.0;
+      document.getElementById('editEndPauseMax').value = ze.endPauseMaxSec || 2;
     }
   } else if (mode === 'oscillation') {
     document.getElementById('editOscCenter').value = config.centerPositionMM || 100;
     document.getElementById('editOscAmplitude').value = config.amplitudeMM || 20;
     document.getElementById('editOscWaveform').value = config.waveform || 0;
-    document.getElementById('editOscFrequency').value = config.frequencyHz || 1.0;
+    document.getElementById('editOscFrequency').value = config.frequencyHz || 1;
     document.getElementById('editOscRampIn').checked = config.enableRampIn || false;
     document.getElementById('editOscRampInDur').value = config.rampInDurationMs || 2000;
     document.getElementById('editOscRampOut').checked = config.enableRampOut || false;

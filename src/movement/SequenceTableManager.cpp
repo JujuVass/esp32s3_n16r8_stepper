@@ -282,8 +282,8 @@ SequenceLine SequenceTableManager::parseFromJson(JsonVariantConst obj) {
     line.vaetZoneEffect.enableEnd = ze["enableEnd"] | true;
     line.vaetZoneEffect.mirrorOnReturn = ze["mirrorOnReturn"] | false;
     line.vaetZoneEffect.zoneMM = ze["zoneMM"] | 50.0f;
-    line.vaetZoneEffect.speedEffect = (SpeedEffect)(ze["speedEffect"] | 1);
-    line.vaetZoneEffect.speedCurve = (SpeedCurve)(ze["speedCurve"] | 0);
+    line.vaetZoneEffect.speedEffect = static_cast<SpeedEffect>(ze["speedEffect"] | 1);
+    line.vaetZoneEffect.speedCurve = static_cast<SpeedCurve>(ze["speedCurve"] | 0);
     line.vaetZoneEffect.speedIntensity = ze["speedIntensity"] | 75.0f;
     line.vaetZoneEffect.randomTurnbackEnabled = ze["randomTurnbackEnabled"] | false;
     line.vaetZoneEffect.turnbackChance = ze["turnbackChance"] | 30;
@@ -376,7 +376,7 @@ String SequenceTableManager::exportToJson() {
   JsonArray linesArray = doc["lines"].to<JsonArray>();
 
   for (int i = 0; i < sequenceLineCount; i++) {
-    SequenceLine* line = &sequenceTable[i];
+    const SequenceLine* line = &sequenceTable[i];
 
     JsonObject lineObj = linesArray.add<JsonObject>();
 

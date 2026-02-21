@@ -7,7 +7,7 @@
  *  3. Saves crash dump file to /dumps/ (addr2line-ready)
  *  4. Logs diagnostics via UtilityEngine
  *
- * Crash dumps are accessible over OTA via /api/system/dumps/* (APIRoutes.cpp)
+ * Crash dumps are accessible over OTA via /api/system/dumps/ (APIRoutes.cpp)
  */
 
 #pragma once

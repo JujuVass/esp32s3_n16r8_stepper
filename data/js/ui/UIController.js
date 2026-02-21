@@ -357,7 +357,7 @@ function initUIListeners() {
   // Tab click handlers
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', function() {
-      const targetMode = this.getAttribute('data-tab');
+      const targetMode = this.dataset.tab;
       
       // Don't do anything if clicking on already active tab
       if (targetMode === AppState.system.currentMode) {
@@ -462,7 +462,7 @@ function showAlert(message, options = {}) {
     DOM.unifiedAlertIcon.textContent = config.icon;
     DOM.unifiedAlertTitle.textContent = modalTitle;
     DOM.unifiedAlertTitle.style.color = config.color;
-    DOM.unifiedAlertMessage.innerHTML = escapeHtml(message).replace(/\n/g, '<br>');
+    DOM.unifiedAlertMessage.innerHTML = escapeHtml(message).replaceAll('\n', '<br>');
     DOM.unifiedAlertOkBtn.textContent = buttonText;
     
     // Set callback
@@ -517,7 +517,7 @@ function showConfirm(message, options = {}) {
     DOM.unifiedConfirmIcon.textContent = config.icon;
     DOM.unifiedConfirmTitle.textContent = title;
     DOM.unifiedConfirmTitle.style.color = config.color;
-    DOM.unifiedConfirmMessage.innerHTML = escapeHtml(message).replace(/\n/g, '<br>');
+    DOM.unifiedConfirmMessage.innerHTML = escapeHtml(message).replaceAll('\n', '<br>');
     DOM.unifiedConfirmCancelBtn.textContent = cancelText;
     
     const confirmBtn = DOM.unifiedConfirmOkBtn;

@@ -71,7 +71,7 @@ function generatePresetTooltipPure(mode, config) {
     }
     // Zone Effects info (new format or legacy)
     const ze = config.vaetZoneEffect;
-    if (ze && ze.enabled) {
+    if (ze?.enabled) {
       const pos = [];
       if (ze.enableStart) pos.push('D');
       if (ze.enableEnd) pos.push('F');
@@ -182,7 +182,7 @@ function generateSequenceLineTooltipPure(line) {
  * @param {HTMLElement} element - Element with data-tooltip attribute
  */
 function showPlaylistTooltip(element) {
-  const tooltipContent = element.getAttribute('data-tooltip');
+  const tooltipContent = element.dataset.tooltip;
   const overlay = document.getElementById('playlistTooltipOverlay');
   if (overlay && tooltipContent) {
     overlay.innerHTML = tooltipContent;
@@ -205,9 +205,9 @@ function hidePlaylistTooltip() {
  * @param {HTMLElement} element - Element with tooltip data
  */
 function showSequenceTooltip(element) {
-  const tooltipContent = element.getAttribute('data-tooltip');
-  const lineNumber = element.getAttribute('data-line-number');
-  const lineType = element.getAttribute('data-line-type');
+  const tooltipContent = element.dataset.tooltip;
+  const lineNumber = element.dataset.lineNumber;
+  const lineType = element.dataset.lineType;
   
   const overlay = document.getElementById('playlistTooltipOverlay');
   if (overlay && tooltipContent) {
@@ -229,7 +229,7 @@ function updateStartPresets(maxDist) {
   // Use cached NodeList for performance (called ~50 times/second via updateUI)
   if (typeof DOM !== 'undefined' && DOM.presetStartButtons) {
     DOM.presetStartButtons.forEach(btn => {
-      const startPos = parseFloat(btn.getAttribute('data-start'));
+      const startPos = Number.parseFloat(btn.dataset.start);
       const isValid = startPos <= maxDist;
       btn.disabled = !isValid;
       btn.style.opacity = isValid ? '1' : '0.3';
@@ -246,7 +246,7 @@ function updateDistancePresets(maxAvailable) {
   // Use cached NodeList for performance (called ~50 times/second via updateUI)
   if (typeof DOM !== 'undefined' && DOM.presetDistanceButtons) {
     DOM.presetDistanceButtons.forEach(btn => {
-      const distance = parseFloat(btn.getAttribute('data-distance'));
+      const distance = Number.parseFloat(btn.dataset.distance);
       const isValid = distance <= maxAvailable;
       btn.disabled = !isValid;
       btn.style.opacity = isValid ? '1' : '0.3';

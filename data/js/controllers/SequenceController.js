@@ -181,42 +181,38 @@ function importSequence() {
   input.type = 'file';
   input.accept = '.json';
   
-  input.onchange = function(e) {
+  input.onchange = async function(e) {
     const file = e.target.files[0];
     if (!file) return;
     
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      try {
-        let jsonText = event.target.result;
-        jsonText = jsonText.replace(/\/\*[\s\S]*?\*\//g, '');
-        jsonText = jsonText.replace(/\/\/.*/g, '');
-        const parsed = JSON.parse(jsonText);
-        
-        console.debug('📤 Sending import via HTTP:', parsed.lineCount, 'lines,', jsonText.length, 'bytes');
-        
-        postWithRetry('/api/sequence/import', parsed)
-        .then(data => {
-          if (data.success) {
-            console.debug('✅ Import successful:', data.message);
-            showAlert(t('sequencer.importSuccess'), { type: 'success' });
-            sendCommand(WS_CMD.GET_SEQUENCE_TABLE, {});
-          } else {
-            console.error('❌ Import failed:', data.error);
-            showAlert(t('common.error') + ' import: ' + (data.error || 'Unknown error'), { type: 'error' });
-          }
-        })
-        .catch(error => {
-          console.error('❌ HTTP request failed:', error);
-          showAlert(t('sequencer.networkError', {msg: error.message}), { type: 'error' });
-        });
-        
-      } catch (error) {
-        console.error('❌ JSON parse error:', error);
-        showAlert(t('common.error') + ' JSON: ' + error.message, { type: 'error' });
-      }
-    };
-    reader.readAsText(file);
+    try {
+      let jsonText = await file.text();
+      jsonText = jsonText.replaceAll(/\/\*[\s\S]*?\*\//, '');
+      jsonText = jsonText.replaceAll(/\/\/.*/, '');
+      const parsed = JSON.parse(jsonText);
+      
+      console.debug('📤 Sending import via HTTP:', parsed.lineCount, 'lines,', jsonText.length, 'bytes');
+      
+      postWithRetry('/api/sequence/import', parsed)
+      .then(data => {
+        if (data.success) {
+          console.debug('✅ Import successful:', data.message);
+          showAlert(t('sequencer.importSuccess'), { type: 'success' });
+          sendCommand(WS_CMD.GET_SEQUENCE_TABLE, {});
+        } else {
+          console.error('❌ Import failed:', data.error);
+          showAlert(t('common.error') + ' import: ' + (data.error || 'Unknown error'), { type: 'error' });
+        }
+      })
+      .catch(error => {
+        console.error('❌ HTTP request failed:', error);
+        showAlert(t('sequencer.networkError', {msg: error.message}), { type: 'error' });
+      });
+      
+    } catch (error) {
+      console.error('❌ JSON parse error:', error);
+      showAlert(t('common.error') + ' JSON: ' + error.message, { type: 'error' });
+    }
   };
   
   input.click();
@@ -234,7 +230,7 @@ function downloadTemplate() {
   a.download = 'sequence_template.json';
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
+  a.remove();
   URL.revokeObjectURL(url);
   
   showNotification('📄 ' + t('sequencer.templateDownloaded'), 'success', 3000);
@@ -251,7 +247,7 @@ function testSequenceLine(lineId) {
     return;
   }
   
-  if (AppState.sequencer && AppState.sequencer.isRunning) {
+  if (AppState.sequencer?.isRunning) {
     showNotification('⚠️ ' + t('sequencer.stopSequenceFirst'), 'error', 3000);
     return;
   }
@@ -270,11 +266,9 @@ function testSequenceLine(lineId) {
         sendCommand(WS_CMD.TOGGLE_SEQUENCE_LINE, { lineId: l.lineId, enabled: true });
         l.enabled = true;
       }
-    } else {
-      if (l.enabled) {
-        sendCommand(WS_CMD.TOGGLE_SEQUENCE_LINE, { lineId: l.lineId, enabled: false });
-        l.enabled = false;
-      }
+    } else if (l.enabled) {
+      sendCommand(WS_CMD.TOGGLE_SEQUENCE_LINE, { lineId: l.lineId, enabled: false });
+      l.enabled = false;
     }
   });
   
@@ -379,7 +373,7 @@ function editSequenceLine(lineId) {
   
   ed.lineNumber.textContent = sequenceLines.indexOf(line) + 1;
   
-  const movementType = line.movementType !== undefined ? line.movementType : 0;
+  const movementType = line.movementType === undefined ? 0 : line.movementType;
   if (movementType === 0) ed.typeVaet.checked = true;
   else if (movementType === 1) ed.typeOsc.checked = true;
   else if (movementType === 2) ed.typeChaos.checked = true;
@@ -389,8 +383,8 @@ function editSequenceLine(lineId) {
   // VA-ET-VIENT fields
   ed.startPos.value = line.startPositionMM || 0;
   ed.distance.value = line.distanceMM || 100;
-  ed.speedFwd.value = line.speedForward || 5.0;
-  ed.speedBack.value = line.speedBackward || 5.0;
+  ed.speedFwd.value = line.speedForward || 5;
+  ed.speedBack.value = line.speedBackward || 5;
   
   // Zone Effects - Map from vaetZoneEffect or legacy fields
   const ze = getZoneEffectConfig(line);
@@ -410,9 +404,9 @@ function editSequenceLine(lineId) {
   ed.endPauseEnabled.checked = ze.endPauseEnabled || false;
   ed.endPauseModeFixed.checked = !ze.endPauseIsRandom;
   ed.endPauseModeRandom.checked = ze.endPauseIsRandom || false;
-  ed.endPauseDuration.value = ze.endPauseDurationSec || 1.0;
+  ed.endPauseDuration.value = ze.endPauseDurationSec || 1;
   ed.endPauseMin.value = ze.endPauseMinSec || 0.5;
-  ed.endPauseMax.value = ze.endPauseMaxSec || 2.0;
+  ed.endPauseMax.value = ze.endPauseMaxSec || 2;
   // Toggle visibility of fixed/random pause divs
   ed.endPauseFixedDiv.style.display = ze.endPauseIsRandom ? 'none' : 'flex';
   ed.endPauseRandomDiv.style.display = ze.endPauseIsRandom ? 'flex' : 'none';
@@ -420,7 +414,7 @@ function editSequenceLine(lineId) {
   // OSCILLATION fields
   ed.oscCenter.value = line.oscCenterPositionMM || 100;
   ed.oscAmplitude.value = line.oscAmplitudeMM || 50;
-  ed.oscWaveform.value = line.oscWaveform !== undefined ? line.oscWaveform : 0;
+  ed.oscWaveform.value = line.oscWaveform === undefined ? 0 : line.oscWaveform;
   ed.oscFrequency.value = line.oscFrequencyHz || 0.5;
   ed.oscRampIn.checked = line.oscEnableRampIn || false;
   ed.oscRampOut.checked = line.oscEnableRampOut || false;
@@ -430,16 +424,16 @@ function editSequenceLine(lineId) {
   // VA-ET-VIENT Cycle Pause
   ed.vaetPauseEnabled.checked = line.vaetCyclePauseEnabled || false;
   ed.vaetPauseRandom.checked = line.vaetCyclePauseIsRandom || false;
-  ed.vaetPauseDuration.value = line.vaetCyclePauseDurationSec || 0.0;
+  ed.vaetPauseDuration.value = line.vaetCyclePauseDurationSec || 0;
   ed.vaetPauseMin.value = line.vaetCyclePauseMinSec || 0.5;
-  ed.vaetPauseMax.value = line.vaetCyclePauseMaxSec || 3.0;
+  ed.vaetPauseMax.value = line.vaetCyclePauseMaxSec || 3;
   
   // OSCILLATION Cycle Pause
   ed.oscPauseEnabled.checked = line.oscCyclePauseEnabled || false;
   ed.oscPauseRandom.checked = line.oscCyclePauseIsRandom || false;
-  ed.oscPauseDuration.value = line.oscCyclePauseDurationSec || 0.0;
+  ed.oscPauseDuration.value = line.oscCyclePauseDurationSec || 0;
   ed.oscPauseMin.value = line.oscCyclePauseMinSec || 0.5;
-  ed.oscPauseMax.value = line.oscCyclePauseMaxSec || 3.0;
+  ed.oscPauseMax.value = line.oscCyclePauseMaxSec || 3;
   
   ed.vaetPauseEnabled.dispatchEvent(new Event('change'));
   ed.oscPauseEnabled.dispatchEvent(new Event('change'));
@@ -452,7 +446,7 @@ function editSequenceLine(lineId) {
   ed.chaosDuration.value = line.chaosDurationSeconds || 30;
   ed.chaosSeed.value = line.chaosSeed || 0;
   
-  if (line.chaosPatternsEnabled && line.chaosPatternsEnabled.length === 11) {
+  if (line.chaosPatternsEnabled?.length === 11) {
     for (let i = 0; i < 11; i++) {
       const checkbox = document.querySelector(`input[name="chaosPattern${i}"]`);
       if (checkbox) checkbox.checked = line.chaosPatternsEnabled[i];
@@ -477,7 +471,7 @@ function saveLineEdit(event) {
   event.preventDefault();
   
   const form = getEditDOM().form;
-  const movementType = parseInt(form.movementType.value);
+  const movementType = Number.parseInt(form.movementType.value);
   
   // Build FULL vaetZoneEffect from modal fields
   const vaetZoneEffect = {
@@ -485,60 +479,60 @@ function saveLineEdit(event) {
     enableStart: form.zoneEnableStart.checked,
     enableEnd: form.zoneEnableEnd.checked,
     mirrorOnReturn: form.zoneMirrorOnReturn.checked,
-    zoneMM: parseFloat(form.zoneMM.value),
-    speedEffect: parseInt(form.speedEffect.value),
-    speedCurve: parseInt(form.speedCurve.value),
-    speedIntensity: parseFloat(form.speedIntensity.value),
+    zoneMM: Number.parseFloat(form.zoneMM.value),
+    speedEffect: Number.parseInt(form.speedEffect.value),
+    speedCurve: Number.parseInt(form.speedCurve.value),
+    speedIntensity: Number.parseFloat(form.speedIntensity.value),
     randomTurnbackEnabled: form.randomTurnbackEnabled.checked,
-    turnbackChance: parseInt(form.turnbackChance.value),
+    turnbackChance: Number.parseInt(form.turnbackChance.value),
     endPauseEnabled: form.endPauseEnabled.checked,
     endPauseIsRandom: form.elements['editEndPauseMode'].value === 'random',
-    endPauseDurationSec: parseFloat(form.endPauseDurationSec.value),
-    endPauseMinSec: parseFloat(form.endPauseMinSec.value),
-    endPauseMaxSec: parseFloat(form.endPauseMaxSec.value)
+    endPauseDurationSec: Number.parseFloat(form.endPauseDurationSec.value),
+    endPauseMinSec: Number.parseFloat(form.endPauseMinSec.value),
+    endPauseMaxSec: Number.parseFloat(form.endPauseMaxSec.value)
   };
   
   const updatedLine = {
     lineId: seqState.editingLineId,
     enabled: true,
     movementType: movementType,
-    startPositionMM: parseFloat(form.startPositionMM.value),
-    distanceMM: parseFloat(form.distanceMM.value),
-    speedForward: parseFloat(form.speedForward.value),
-    speedBackward: parseFloat(form.speedBackward.value),
+    startPositionMM: Number.parseFloat(form.startPositionMM.value),
+    distanceMM: Number.parseFloat(form.distanceMM.value),
+    speedForward: Number.parseFloat(form.speedForward.value),
+    speedBackward: Number.parseFloat(form.speedBackward.value),
     vaetZoneEffect: vaetZoneEffect,
-    oscCenterPositionMM: parseFloat(form.oscCenterPositionMM.value),
-    oscAmplitudeMM: parseFloat(form.oscAmplitudeMM.value),
-    oscWaveform: parseInt(form.oscWaveform.value),
-    oscFrequencyHz: parseFloat(form.oscFrequencyHz.value),
+    oscCenterPositionMM: Number.parseFloat(form.oscCenterPositionMM.value),
+    oscAmplitudeMM: Number.parseFloat(form.oscAmplitudeMM.value),
+    oscWaveform: Number.parseInt(form.oscWaveform.value),
+    oscFrequencyHz: Number.parseFloat(form.oscFrequencyHz.value),
     oscEnableRampIn: form.oscEnableRampIn.checked,
     oscEnableRampOut: form.oscEnableRampOut.checked,
-    oscRampInDurationMs: parseFloat(form.oscRampInDurationMs.value),
-    oscRampOutDurationMs: parseFloat(form.oscRampOutDurationMs.value),
+    oscRampInDurationMs: Number.parseFloat(form.oscRampInDurationMs.value),
+    oscRampOutDurationMs: Number.parseFloat(form.oscRampOutDurationMs.value),
     vaetCyclePauseEnabled: form.vaetCyclePauseEnabled.checked,
     vaetCyclePauseIsRandom: form.vaetCyclePauseIsRandom.checked,
-    vaetCyclePauseDurationSec: parseFloat(form.vaetCyclePauseDurationSec.value),
-    vaetCyclePauseMinSec: parseFloat(form.vaetCyclePauseMinSec.value),
-    vaetCyclePauseMaxSec: parseFloat(form.vaetCyclePauseMaxSec.value),
+    vaetCyclePauseDurationSec: Number.parseFloat(form.vaetCyclePauseDurationSec.value),
+    vaetCyclePauseMinSec: Number.parseFloat(form.vaetCyclePauseMinSec.value),
+    vaetCyclePauseMaxSec: Number.parseFloat(form.vaetCyclePauseMaxSec.value),
     oscCyclePauseEnabled: form.oscCyclePauseEnabled.checked,
     oscCyclePauseIsRandom: form.oscCyclePauseIsRandom.checked,
-    oscCyclePauseDurationSec: parseFloat(form.oscCyclePauseDurationSec.value),
-    oscCyclePauseMinSec: parseFloat(form.oscCyclePauseMinSec.value),
-    oscCyclePauseMaxSec: parseFloat(form.oscCyclePauseMaxSec.value),
-    chaosCenterPositionMM: parseFloat(form.chaosCenterPositionMM.value),
-    chaosAmplitudeMM: parseFloat(form.chaosAmplitudeMM.value),
-    chaosMaxSpeedLevel: parseFloat(form.chaosMaxSpeedLevel.value),
-    chaosCrazinessPercent: parseFloat(form.chaosCrazinessPercent.value),
-    chaosDurationSeconds: parseInt(form.chaosDurationSeconds.value),
-    chaosSeed: parseInt(form.chaosSeed.value),
+    oscCyclePauseDurationSec: Number.parseFloat(form.oscCyclePauseDurationSec.value),
+    oscCyclePauseMinSec: Number.parseFloat(form.oscCyclePauseMinSec.value),
+    oscCyclePauseMaxSec: Number.parseFloat(form.oscCyclePauseMaxSec.value),
+    chaosCenterPositionMM: Number.parseFloat(form.chaosCenterPositionMM.value),
+    chaosAmplitudeMM: Number.parseFloat(form.chaosAmplitudeMM.value),
+    chaosMaxSpeedLevel: Number.parseFloat(form.chaosMaxSpeedLevel.value),
+    chaosCrazinessPercent: Number.parseFloat(form.chaosCrazinessPercent.value),
+    chaosDurationSeconds: Number.parseInt(form.chaosDurationSeconds.value),
+    chaosSeed: Number.parseInt(form.chaosSeed.value),
     chaosPatternsEnabled: [
       form.chaosPattern0.checked, form.chaosPattern1.checked, form.chaosPattern2.checked,
       form.chaosPattern3.checked, form.chaosPattern4.checked, form.chaosPattern5.checked,
       form.chaosPattern6.checked, form.chaosPattern7.checked, form.chaosPattern8.checked,
       form.chaosPattern9.checked, form.chaosPattern10.checked
     ],
-    cycleCount: parseInt(form.cycleCount.value),
-    pauseAfterMs: Math.round(parseFloat(form.pauseAfterSec.value) * 1000)
+    cycleCount: Number.parseInt(form.cycleCount.value),
+    pauseAfterMs: Math.round(Number.parseFloat(form.pauseAfterSec.value) * 1000)
   };
   
   const errors = validateSequencerLine(updatedLine, movementType);
@@ -556,7 +550,7 @@ function validateEditForm() {
   if (seqState.isLoadingEditForm) return;
   
   const form = getEditDOM().form;
-  const movementType = parseInt(form.movementType.value);
+  const movementType = Number.parseInt(form.movementType.value);
   const emptyFieldErrors = [];
   
   if (movementType === 0) {
@@ -591,24 +585,24 @@ function validateEditForm() {
   
   const line = {
     movementType: movementType,
-    startPositionMM: parseFloat(form.startPositionMM.value) || 0,
-    distanceMM: parseFloat(form.distanceMM.value) || 0,
-    speedForward: parseFloat(form.speedForward.value) || 0,
-    speedBackward: parseFloat(form.speedBackward.value) || 0,
-    zoneMM: parseFloat(form.zoneMM.value) || 50,
-    oscCenterPositionMM: parseFloat(form.oscCenterPositionMM.value) || 0,
-    oscAmplitudeMM: parseFloat(form.oscAmplitudeMM.value) || 0,
-    oscFrequencyHz: parseFloat(form.oscFrequencyHz.value) || 0,
-    oscRampInDurationMs: parseFloat(form.oscRampInDurationMs.value) || 0,
-    oscRampOutDurationMs: parseFloat(form.oscRampOutDurationMs.value) || 0,
-    chaosCenterPositionMM: parseFloat(form.chaosCenterPositionMM.value) || 0,
-    chaosAmplitudeMM: parseFloat(form.chaosAmplitudeMM.value) || 0,
-    chaosMaxSpeedLevel: parseFloat(form.chaosMaxSpeedLevel.value) || 0,
-    chaosCrazinessPercent: parseFloat(form.chaosCrazinessPercent.value) || 0,
-    chaosDurationSeconds: parseInt(form.chaosDurationSeconds.value) || 0,
-    chaosSeed: parseInt(form.chaosSeed.value) || 0,
-    cycleCount: parseInt(form.cycleCount.value) || 0,
-    pauseAfterMs: Math.round(parseFloat(form.pauseAfterSec.value) * 1000) || 0
+    startPositionMM: Number.parseFloat(form.startPositionMM.value) || 0,
+    distanceMM: Number.parseFloat(form.distanceMM.value) || 0,
+    speedForward: Number.parseFloat(form.speedForward.value) || 0,
+    speedBackward: Number.parseFloat(form.speedBackward.value) || 0,
+    zoneMM: Number.parseFloat(form.zoneMM.value) || 50,
+    oscCenterPositionMM: Number.parseFloat(form.oscCenterPositionMM.value) || 0,
+    oscAmplitudeMM: Number.parseFloat(form.oscAmplitudeMM.value) || 0,
+    oscFrequencyHz: Number.parseFloat(form.oscFrequencyHz.value) || 0,
+    oscRampInDurationMs: Number.parseFloat(form.oscRampInDurationMs.value) || 0,
+    oscRampOutDurationMs: Number.parseFloat(form.oscRampOutDurationMs.value) || 0,
+    chaosCenterPositionMM: Number.parseFloat(form.chaosCenterPositionMM.value) || 0,
+    chaosAmplitudeMM: Number.parseFloat(form.chaosAmplitudeMM.value) || 0,
+    chaosMaxSpeedLevel: Number.parseFloat(form.chaosMaxSpeedLevel.value) || 0,
+    chaosCrazinessPercent: Number.parseFloat(form.chaosCrazinessPercent.value) || 0,
+    chaosDurationSeconds: Number.parseInt(form.chaosDurationSeconds.value) || 0,
+    chaosSeed: Number.parseInt(form.chaosSeed.value) || 0,
+    cycleCount: Number.parseInt(form.cycleCount.value) || 0,
+    pauseAfterMs: Math.round(Number.parseFloat(form.pauseAfterSec.value) * 1000) || 0
   };
   
   const validationErrors = validateSequencerLine(line, movementType);
@@ -650,12 +644,12 @@ function highlightErrorFields(movementType, line, emptyFieldErrors) {
 }
 
 function clearErrorFields() {
-  const fields = (typeof ALL_EDIT_FIELDS !== 'undefined') ? ALL_EDIT_FIELDS : [
+  const fields = (typeof ALL_EDIT_FIELDS === 'undefined') ? [
     'editStartPos', 'editDistance', 'editSpeedFwd', 'editSpeedBack', 'editZoneMM',
     'editOscCenter', 'editOscAmplitude', 'editOscFrequency', 'editOscRampInDur', 'editOscRampOutDur',
     'editChaosCenter', 'editChaosAmplitude', 'editChaosSpeed', 'editChaosCraziness',
     'editChaosDuration', 'editChaosSeed', 'editCycles', 'editPause'
-  ];
+  ] : ALL_EDIT_FIELDS;
   fields.forEach(fieldId => {
     const field = document.getElementById(fieldId);
     if (field) field.style.border = '2px solid #ddd';
@@ -730,7 +724,7 @@ function previewSequencerPreset(mode, presetId) {
     return;
   }
   
-  const id = parseInt(presetId);
+  const id = Number.parseInt(presetId);
   const preset = PlaylistState[mode].find(p => p.id === id);
   
   if (!preset) {
@@ -839,8 +833,8 @@ function handleTrashDrop(e) {
     if (!confirmed) return;
     
     console.debug(`🗑️ Trash zone drop: deleting ${count} line(s)`);
-    const sortedIds = linesToDelete.sort((a, b) => b - a);
-    sortedIds.forEach(lineId => sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: lineId }));
+    linesToDelete.sort((a, b) => b - a);
+    linesToDelete.forEach(lineId => sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: lineId }));
     
     showNotification('✅ ' + t('sequencer.linesDeleted', {count: count}), 'success', 2000);
     clearSelection();
@@ -960,7 +954,7 @@ function updateSequenceStatus(status) {
 // ========================================================================
 
 function renderSequenceTable(data) {
-  if (data && data.lines) {
+  if (data?.lines) {
     setSequenceLines(data.lines);
   } else if (!sequenceLines || sequenceLines.length === 0) {
     console.error('Invalid sequence data');
@@ -1035,10 +1029,10 @@ function createSequenceRow(line, index) {
   }
   
   const tooltipContent = generateSequenceLineTooltip(line);
-  row.setAttribute('data-tooltip', tooltipContent.replace(/"/g, '&quot;'));
+  row.setAttribute('data-tooltip', tooltipContent.replaceAll('"', '&quot;'));
   row.setAttribute('data-line-number', index + 1);
   
-  const movementType = line.movementType !== undefined ? line.movementType : 0;
+  const movementType = line.movementType === undefined ? 0 : line.movementType;
   const typeDisplay = getTypeDisplay(movementType, line);
   const decelSummary = getDecelSummary(line, movementType);
   const speedsDisplay = getSpeedsDisplay(line, movementType);
@@ -1174,7 +1168,7 @@ function initSequenceSortable() {
     preventOnFilter: false,   // Allow click events on filtered elements
     onStart: function(evt) {
       // Store dragged line ID for trash zone detection
-      draggedLineId = parseInt(evt.item.dataset.lineId);
+      draggedLineId = Number.parseInt(evt.item.dataset.lineId);
       
       // Track last known pointer position (dragend may report 0,0 on some browsers)
       seqState.drag.lastPointerX = 0;
@@ -1212,7 +1206,7 @@ function initSequenceSortable() {
       if (origEvt && (origEvt.clientX || origEvt.clientY)) {
         dropX = origEvt.clientX;
         dropY = origEvt.clientY;
-      } else if (origEvt && origEvt.changedTouches && origEvt.changedTouches.length) {
+      } else if (origEvt?.changedTouches?.length) {
         dropX = origEvt.changedTouches[0].clientX;
         dropY = origEvt.changedTouches[0].clientY;
       } else {
@@ -1224,12 +1218,12 @@ function initSequenceSortable() {
       
       const trashDrop = document.getElementById('sequenceTrashDropZone');
       const trashBatch = document.getElementById('sequenceTrashZone');
-      const isOnTrash = (trashDrop && trashDrop.contains(dropTarget)) || 
-                        (trashBatch && trashBatch.contains(dropTarget));
+      const isOnTrash = (trashDrop?.contains(dropTarget)) || 
+                        (trashBatch?.contains(dropTarget));
       
       if (isOnTrash) {
         // Dropped on trash → delete the line(s)
-        const lineId = parseInt(evt.item.dataset.lineId);
+        const lineId = Number.parseInt(evt.item.dataset.lineId);
         const linesToDelete = selectedLineIds.size > 0 ? Array.from(selectedLineIds) : [lineId];
         const count = linesToDelete.length;
         const message = count === 1 ? 
@@ -1245,15 +1239,15 @@ function initSequenceSortable() {
           if (!confirmed) return;
           
           console.debug(`🗑️ SortableJS trash drop: deleting ${count} line(s)`);
-          const sortedIds = linesToDelete.sort((a, b) => b - a);
-          sortedIds.forEach(id => sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: id }));
+          linesToDelete.sort((a, b) => b - a);
+          linesToDelete.forEach(id => sendCommand(WS_CMD.DELETE_SEQUENCE_LINE, { lineId: id }));
           
           showNotification('✅ ' + t('sequencer.linesDeleted', {count: count}), 'success', 2000);
           clearSelection();
         });
       } else if (evt.oldIndex !== evt.newIndex) {
         // Normal reorder within table
-        const lineId = parseInt(evt.item.dataset.lineId);
+        const lineId = Number.parseInt(evt.item.dataset.lineId);
         console.debug(`🔄 SortableJS: line ${lineId} moved from ${evt.oldIndex} to ${evt.newIndex}`);
         reorderSequenceLine(lineId, evt.newIndex);
       }
@@ -1272,7 +1266,7 @@ function initSequenceSortable() {
 
 /**
  * Initialize all sequencer-related event listeners
- * Called from main.js on window.load
+ * Called from main.js on globalThis.load
  */
 function initSequenceListeners() {
   console.debug('📋 Initializing Sequence listeners...');

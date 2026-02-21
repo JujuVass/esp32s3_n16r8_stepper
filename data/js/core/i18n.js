@@ -106,8 +106,8 @@ const I18n = (() => {
     
     // Replace parameters: {{paramName}}
     if (params) {
-      return value.replace(/\{\{(\w+)\}\}/g, (match, name) => {
-        return params[name] !== undefined ? params[name] : match;
+      return value.replaceAll(/\{\{(\w+)\}\}/, (match, name) => {
+        return params[name] === undefined ? match : params[name];
       });
     }
     
@@ -146,7 +146,7 @@ const I18n = (() => {
   function applyTranslations() {
     // Translate text content
     document.querySelectorAll('[data-i18n]').forEach(el => {
-      const key = el.getAttribute('data-i18n');
+      const key = el.dataset.i18n;
       const translated = t(key);
       if (translated !== key) {
         el.textContent = translated;
@@ -155,7 +155,7 @@ const I18n = (() => {
 
     // Translate innerHTML (for elements with HTML content)
     document.querySelectorAll('[data-i18n-html]').forEach(el => {
-      const key = el.getAttribute('data-i18n-html');
+      const key = el.dataset.i18nHtml;
       const translated = t(key);
       if (translated !== key) {
         el.innerHTML = translated;
@@ -164,7 +164,7 @@ const I18n = (() => {
 
     // Translate title/tooltip attributes
     document.querySelectorAll('[data-i18n-title]').forEach(el => {
-      const key = el.getAttribute('data-i18n-title');
+      const key = el.dataset.i18nTitle;
       const translated = t(key);
       if (translated !== key) {
         el.title = translated;
@@ -173,7 +173,7 @@ const I18n = (() => {
 
     // Translate placeholders
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-      const key = el.getAttribute('data-i18n-placeholder');
+      const key = el.dataset.i18nPlaceholder;
       const translated = t(key);
       if (translated !== key) {
         el.placeholder = translated;

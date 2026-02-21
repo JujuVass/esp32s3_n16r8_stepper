@@ -78,14 +78,14 @@ function sendChaosConfig() {
   };
   
   // Build config from form values
-  const duration = parseInt(formValues.duration);
+  const duration = Number.parseInt(formValues.duration);
   const config = {
-    centerPositionMM: parseFloat(formValues.centerPos) || 0,
-    amplitudeMM: parseFloat(formValues.amplitude) || 0,
-    maxSpeedLevel: parseFloat(formValues.maxSpeed) || 10,
-    crazinessPercent: parseInt(formValues.craziness) || 50,
+    centerPositionMM: Number.parseFloat(formValues.centerPos) || 0,
+    amplitudeMM: Number.parseFloat(formValues.amplitude) || 0,
+    maxSpeedLevel: Number.parseFloat(formValues.maxSpeed) || 10,
+    crazinessPercent: Number.parseInt(formValues.craziness) || 50,
     durationSeconds: isNaN(duration) ? 30 : duration,  // 0 = infinite, don't default to 30
-    seed: parseInt(formValues.seed) || 0,
+    seed: Number.parseInt(formValues.seed) || 0,
     patternsEnabled: formValues.patternsEnabled
   };
   
@@ -97,15 +97,12 @@ function sendChaosConfig() {
  * @returns {boolean} true if limits are valid
  */
 function validateChaosLimits() {
-  const centerPos = parseFloat(document.getElementById('chaosCenterPos').value);
-  const amplitude = parseFloat(document.getElementById('chaosAmplitude').value);
+  const centerPos = Number.parseFloat(document.getElementById('chaosCenterPos').value);
+  const amplitude = Number.parseFloat(document.getElementById('chaosAmplitude').value);
   const totalDistMM = AppState.pursuit.totalDistanceMM || 0;
   
   // Validate limits
-  if (centerPos - amplitude < 0 || centerPos + amplitude > totalDistMM) {
-    return false;
-  }
-  return true;
+  return centerPos - amplitude >= 0 && centerPos + amplitude <= totalDistMM;
 }
 
 /**
@@ -206,7 +203,7 @@ function updateChaosUI(data) {
   
   // Restore pattern states from backend ONLY on first load (not on every status update)
   // This prevents user's checkbox changes from being overwritten during runtime config changes
-  if (!AppState.flags.patternsInitialized && !isRunning && data.chaos && data.chaos.patternsEnabled) {
+  if (!AppState.flags.patternsInitialized && !isRunning && data.chaos?.patternsEnabled) {
     CHAOS_PATTERNS.forEach((patternId, index) => {
       const el = document.getElementById(patternId);
       if (el && data.chaos.patternsEnabled[index] !== undefined) {
@@ -234,11 +231,11 @@ function updateChaosUI(data) {
       document.getElementById('statTimer').style.display = 'block';
       document.getElementById('statElapsed').textContent = 
         chaosState.elapsedSeconds + ' / ' + data.chaos.durationSeconds;
-    } else if (chaosState.elapsedSeconds !== undefined) {
+    } else if (chaosState.elapsedSeconds === undefined) {
+      document.getElementById('statTimer').style.display = 'none';
+    } else {
       document.getElementById('statTimer').style.display = 'block';
       document.getElementById('statElapsed').textContent = chaosState.elapsedSeconds;
-    } else {
-      document.getElementById('statTimer').style.display = 'none';
     }
   }
   
@@ -255,18 +252,18 @@ function startChaos() {
     return;
   }
   
-  const centerPos = parseFloat(document.getElementById('chaosCenterPos').value);
-  const amplitude = parseFloat(document.getElementById('chaosAmplitude').value);
-  const maxSpeed = parseFloat(document.getElementById('chaosMaxSpeed').value);
-  const craziness = parseFloat(document.getElementById('chaosCraziness').value);
-  const duration = parseInt(document.getElementById('chaosDuration').value);
-  const seed = parseInt(document.getElementById('chaosSeed').value);
+  const centerPos = Number.parseFloat(document.getElementById('chaosCenterPos').value);
+  const amplitude = Number.parseFloat(document.getElementById('chaosAmplitude').value);
+  const maxSpeed = Number.parseFloat(document.getElementById('chaosMaxSpeed').value);
+  const craziness = Number.parseFloat(document.getElementById('chaosCraziness').value);
+  const duration = Number.parseInt(document.getElementById('chaosDuration').value);
+  const seed = Number.parseInt(document.getElementById('chaosSeed').value);
   
   // Collect pattern selections using shared helper
   const patternsEnabled = getPatternStates();
   
   // Validate at least one pattern selected
-  if (!patternsEnabled.some(p => p)) {
+  if (!patternsEnabled.some(Boolean)) {
     showNotification('⚠️ ' + t('chaos.atLeastOnePattern'), 'error');
     return;
   }
@@ -446,8 +443,8 @@ function initChaosListeners() {
   document.querySelectorAll('[data-chaos-center-rel]').forEach(btn => {
     btn.addEventListener('click', function() {
       if (!this.disabled) {
-        const relValue = parseInt(this.getAttribute('data-chaos-center-rel'));
-        const currentCenter = parseFloat(document.getElementById('chaosCenterPos').value) || 0;
+        const relValue = Number.parseInt(this.dataset.chaosCenterRel);
+        const currentCenter = Number.parseFloat(document.getElementById('chaosCenterPos').value) || 0;
         const newCenter = Math.max(0, currentCenter + relValue);
         document.getElementById('chaosCenterPos').value = newCenter;
         
@@ -466,8 +463,8 @@ function initChaosListeners() {
   document.querySelectorAll('[data-chaos-amplitude-rel]').forEach(btn => {
     btn.addEventListener('click', function() {
       if (!this.disabled) {
-        const relValue = parseInt(this.getAttribute('data-chaos-amplitude-rel'));
-        const currentAmplitude = parseFloat(document.getElementById('chaosAmplitude').value) || 0;
+        const relValue = Number.parseInt(this.dataset.chaosAmplitudeRel);
+        const currentAmplitude = Number.parseFloat(document.getElementById('chaosAmplitude').value) || 0;
         const newAmplitude = Math.max(1, currentAmplitude + relValue);
         document.getElementById('chaosAmplitude').value = newAmplitude;
         sendChaosConfig();
@@ -482,7 +479,7 @@ function initChaosListeners() {
     chaosAmplitudeLinked.addEventListener('change', function() {
       if (this.checked) {
         // Link: set amplitude = center
-        const center = parseFloat(document.getElementById('chaosCenterPos').value) || 0;
+        const center = Number.parseFloat(document.getElementById('chaosCenterPos').value) || 0;
         document.getElementById('chaosAmplitude').value = center;
         sendChaosConfig();
       }
