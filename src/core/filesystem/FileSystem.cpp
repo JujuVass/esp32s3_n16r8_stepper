@@ -123,7 +123,7 @@ String FileSystem::readFileAsString(const String& path, size_t maxSize) {
   std::string buf;
   try {
     buf.resize(readSize);
-  } catch (...) {
+  } catch (const std::bad_alloc&) {
     file.close();
     return "";
   }

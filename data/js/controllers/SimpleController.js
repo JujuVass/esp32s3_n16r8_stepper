@@ -769,6 +769,23 @@ function initZoneEffectListeners() {
 // ============================================================================
 
 /**
+ * Setup preset buttons for cycle pause controls (extracted to reduce nesting)
+ * @param {string} attr - Data attribute name
+ * @param {string} inputId - Target input element ID
+ * @param {Function} sendConfigFn - Config sender callback
+ */
+function setupPausePresets(attr, inputId, sendConfigFn) {
+  document.querySelectorAll(`[${attr}]`).forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.getElementById(inputId).value = this.getAttribute(attr);
+      document.querySelectorAll(`[${attr}]`).forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      sendConfigFn();
+    });
+  });
+}
+
+/**
  * Factory function to create Cycle Pause handlers for a mode (Simple or Oscillation)
  * @param {Object} cfg - Configuration object
  * @param {string} cfg.suffix - Suffix for element IDs ('' for Simple, 'Osc' for Oscillation)
@@ -835,21 +852,10 @@ function createCyclePauseHandlers(cfg) {
     });
   });
   
-  // Preset buttons helper
-  const setupPresets = (attr, inputId) => {
-    document.querySelectorAll(`[${attr}]`).forEach(btn => {
-      btn.addEventListener('click', function() {
-        document.getElementById(inputId).value = this.getAttribute(attr);
-        document.querySelectorAll(`[${attr}]`).forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        sendConfig();
-      });
-    });
-  };
-  
-  setupPresets('data-pause-duration' + dataS, 'cyclePauseDuration' + s);
-  setupPresets('data-pause-min' + dataS, 'cyclePauseMin' + s);
-  setupPresets('data-pause-max' + dataS, 'cyclePauseMax' + s);
+  // Preset buttons
+  setupPausePresets('data-pause-duration' + dataS, 'cyclePauseDuration' + s, sendConfig);
+  setupPausePresets('data-pause-min' + dataS, 'cyclePauseMin' + s, sendConfig);
+  setupPausePresets('data-pause-max' + dataS, 'cyclePauseMax' + s, sendConfig);
   
   // Input change listeners
   ['cyclePauseDuration' + s, 'cyclePauseMin' + s, 'cyclePauseMax' + s].forEach(id => {

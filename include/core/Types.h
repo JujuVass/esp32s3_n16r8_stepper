@@ -36,6 +36,7 @@
 #define TYPES_H
 
 #include <array>
+#include <cmath>    // For std::lerp
 #include <cstdint>  // For uint8_t
 
 // ============================================================================
@@ -88,7 +89,7 @@ struct CyclePauseConfig {
       float minVal = min(minPauseSec, maxPauseSec);
       float maxVal = max(minPauseSec, maxPauseSec);
       float randomOffset = (float)random(0, 10000) / 10000.0f;
-      return (unsigned long)((minVal + randomOffset * (maxVal - minVal)) * 1000);
+      return (unsigned long)(std::lerp(minVal, maxVal, randomOffset) * 1000);
     }
     return (unsigned long)(pauseDurationSec * 1000);
   }

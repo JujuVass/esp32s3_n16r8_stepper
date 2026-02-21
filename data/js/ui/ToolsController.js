@@ -469,6 +469,20 @@ function updateRebootStatus(message, subMessage) {
 }
 
 /**
+ * Finalize reboot: WebSocket is connected, wait for stability then reload
+ */
+function finalizeReboot() {
+  console.debug('✅ WebSocket reconnected!');
+  updateRebootStatus(t('tools.connectionRestored'), '✅ ' + t('tools.reloadingPage'));
+  console.debug('⏳ Waiting for system stability...');
+  setTimeout(function() {
+    console.debug('✅ System stable - reloading page...');
+    DOM.rebootOverlay.style.display = 'none';
+    location.reload(true); // Force reload from server
+  }, 2000);
+}
+
+/**
  * Reconnect after reboot with retry logic
  */
 function reconnectAfterReboot() {
@@ -507,16 +521,7 @@ function reconnectAfterReboot() {
             setTimeout(function() {
               if (AppState.ws?.readyState === WebSocket.OPEN) {
                 wsConnected = true;
-                console.debug('✅ WebSocket reconnected!');
-                updateRebootStatus(t('tools.connectionRestored'), '✅ ' + t('tools.reloadingPage'));
-                
-                // Both HTTP and WS are connected - wait 2 more seconds for stability
-                console.debug('⏳ Waiting for system stability...');
-                setTimeout(function() {
-                  console.debug('✅ System stable - reloading page...');
-                  DOM.rebootOverlay.style.display = 'none';
-                  location.reload(true); // Force reload from server
-                }, 2000);
+                finalizeReboot();
               } else {
                 // WebSocket not ready yet, keep trying
                 console.debug('⚠️ WebSocket not ready, retrying...');
