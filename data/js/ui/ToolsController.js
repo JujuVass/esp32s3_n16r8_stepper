@@ -489,8 +489,11 @@ function reconnectAfterReboot() {
   let attempts = 0;
   const maxAttempts = 30; // Try for 30 seconds
   let wsConnected = false;
+  let reconnectPending = false;  // 🔧 FIX #26: Prevent overlapping attempts
   
   const tryReconnect = function() {
+    if (reconnectPending) return;  // Already waiting for WS check
+    reconnectPending = true;
     attempts++;
     console.debug('🔄 Reconnection attempt ' + attempts + '/' + maxAttempts);
     updateRebootStatus(t('tools.reconnectAttempt'), t('tools.reconnectAttemptSub', {attempts: attempts, max: maxAttempts}));
@@ -519,6 +522,7 @@ function reconnectAfterReboot() {
             
             // Wait a bit to see if WebSocket connects
             setTimeout(function() {
+              reconnectPending = false;  // Allow next attempt
               if (AppState.ws?.readyState === WebSocket.OPEN) {
                 wsConnected = true;
                 finalizeReboot();
@@ -536,6 +540,7 @@ function reconnectAfterReboot() {
             
           } catch (err) {
             console.error('❌ WebSocket connection error:', err);
+            reconnectPending = false;  // Allow retry
             if (attempts < maxAttempts) {
               setTimeout(tryReconnect, 1000);
             } else {
@@ -547,6 +552,7 @@ function reconnectAfterReboot() {
       })
       .catch(error => {
         console.debug('⚠️ ESP32 not ready yet:', error.message);
+        reconnectPending = false;  // Allow retry
         if (attempts < maxAttempts) {
           setTimeout(tryReconnect, 1000);
         } else {

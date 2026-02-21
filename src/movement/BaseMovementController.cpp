@@ -88,15 +88,16 @@ void BaseMovementControllerClass::setStartPosition(float startMM) {
         engine->warn(String("⚠️ Start position limited to ") + String(startMM, 1) + " mm (maximum)");
     }
 
+    bool wasRunning = (config.currentState == STATE_RUNNING);
+
     // Validate start position + distance don't exceed maximum
     bool distanceWasAdjusted = false;
-    if (startMM + motion.targetDistanceMM > config.totalDistanceMM) {
-        motion.targetDistanceMM = config.totalDistanceMM - startMM;
+    float effectiveDistance = motion.targetDistanceMM;
+    if (startMM + effectiveDistance > config.totalDistanceMM) {
+        effectiveDistance = config.totalDistanceMM - startMM;
         distanceWasAdjusted = true;
-        engine->warn(String("⚠️ Distance auto-adjusted to ") + String(motion.targetDistanceMM, 1) + " mm to fit within maximum");
+        engine->warn(String("⚠️ Distance auto-adjusted to ") + String(effectiveDistance, 1) + " mm to fit within maximum");
     }
-
-    bool wasRunning = (config.currentState == STATE_RUNNING);
 
     if (wasRunning) {
         // Queue change for end of cycle
@@ -104,12 +105,15 @@ void BaseMovementControllerClass::setStartPosition(float startMM) {
             initPendingFromCurrent();
         }
         pendingMotion.startPositionMM = startMM;
-        pendingMotion.distanceMM = motion.targetDistanceMM;
+        pendingMotion.distanceMM = effectiveDistance;
         pendingMotion.hasChanges = true;
 
         engine->debug(String("⏳ Start position queued: ") + String(startMM) + " mm (will apply at end of cycle)");
     } else {
-        // Apply immediately
+        // Apply immediately (distance only written here, not while running)
+        if (distanceWasAdjusted) {
+            motion.targetDistanceMM = effectiveDistance;
+        }
         motion.startPositionMM = startMM;
         recalcStepPositions();
         calculateStepDelay();
@@ -759,6 +763,8 @@ void BaseMovementControllerClass::initPendingFromCurrent() {
 // ============================================================================
 
 void BaseMovementControllerClass::doStep() {
+    // Set direction once before stepping (not redundantly inside each step function)
+    Motor.setDirection(movingForward);
     if (movingForward) {
         doStepForward();
     } else {
@@ -799,8 +805,7 @@ void BaseMovementControllerClass::doStepForward() {
         hasReachedStartStep = true;
     }
 
-    // Execute step
-    Motor.setDirection(true);
+    // Execute step (direction set once, not on every step)
     Motor.step();
     currentStep = currentStep + 1;
     stats.trackDelta(currentStep);
@@ -822,8 +827,7 @@ void BaseMovementControllerClass::doStepBackward() {
         wasAtStart = false;
     }
 
-    // Execute step
-    Motor.setDirection(false);
+    // Execute step (direction set once, not on every step)
     Motor.step();
     currentStep = currentStep - 1;
     stats.trackDelta(currentStep);

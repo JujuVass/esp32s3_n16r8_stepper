@@ -72,7 +72,8 @@ inline float ChaosController::calculateMaxAmplitude(float minLimit, float maxLim
     );
 }
 
-// DRY helper: set target position based on movingForward direction
+// DRY helper: set target position based on chaosState.movingForward (pattern-level direction)
+// Note: chaosState.movingForward = pattern intent, global movingForward = physical step direction in doStep()
 inline void ChaosController::setDirectionalTarget(float amplitude, float minLimit, float maxLimit) {
     if (chaosState.movingForward) {
         chaosState.targetPositionMM = constrain(chaos.centerPositionMM + amplitude, minLimit, maxLimit);
@@ -395,10 +396,10 @@ void ChaosController::handleCalm(float craziness, float effectiveMinLimit, float
 }
 
 // DRY helper for multi-phase patterns (BruteForce and Liberator share identical logic)
-void ChaosController::handleMultiPhase(const ChaosBaseConfig& cfg, const ChaosMultiPhaseExt& multi_cfg,
+void ChaosController::handleMultiPhase(const ChaosBaseConfig& cfg, const ChaosMultiPhaseExt& multi_cfg,  // NOSONAR(cpp:S107)
                                         const ChaosDirectionExt& dir_cfg, float craziness,
                                         float effectiveMinLimit, float effectiveMaxLimit,
-                                        float& speedMultiplier, unsigned long& patternDuration) {  // NOSONAR(cpp:S107)
+                                        float& speedMultiplier, unsigned long& patternDuration) {
     calcSpeedAndDuration(cfg, craziness, 0.75f, speedMultiplier, patternDuration);
 
     float maxPossibleAmplitude = calculateMaxAmplitude(effectiveMinLimit, effectiveMaxLimit);
@@ -643,10 +644,10 @@ void ChaosController::handleSweepAtTarget(float effectiveMinLimit, float effecti
 
 // DRY helper for multi-phase AtTarget logic (BruteForce and Liberator)
 // speedCoeffPhase0/Phase2 = {base, scale} for speed = (base + scale*craziness) * maxSpeed
-void ChaosController::handleMultiPhaseAtTarget(float effectiveMinLimit, float effectiveMaxLimit,
+void ChaosController::handleMultiPhaseAtTarget(float effectiveMinLimit, float effectiveMaxLimit, // NOSONAR(cpp:S107)
                                                 uint8_t& phase, float speedBase0, float speedScale0,
                                                 float speedBase2, float speedScale2,
-                                                const char* emoji, const char* name) {  // NOSONAR(cpp:S107)
+                                                const char* emoji, const char* name) {  
     float craziness = chaos.crazinessPercent / 100.0f;
     float amplitude = chaosState.waveAmplitude;
 
@@ -729,8 +730,9 @@ void ChaosController::handleDiscreteAtTarget() {
 void ChaosController::process() {
     if (!chaosState.isRunning) [[unlikely]] return;
 
-    if (handlePatternPause()) return;
+    // 🔧 FIX #18: Check duration limit BEFORE pattern pause (pause shouldn't extend past duration)
     if (checkDurationLimit()) return;
+    if (handlePatternPause()) return;
 
     // Check for new pattern
     if (millis() >= chaosState.nextPatternChangeTime) [[unlikely]] {

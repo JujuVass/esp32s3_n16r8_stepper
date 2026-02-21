@@ -35,11 +35,7 @@ function startSimpleMode() {
     speedBackward = unifiedSpeed;
   }
   
-  sendCommand(WS_CMD.START, {distance: distance, speed: speedForward});
-  // Set backward speed separately after start
-  setTimeout(() => {
-    sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: speedBackward});
-  }, 100);
+  sendCommand(WS_CMD.START, {distance: distance, speed: speedForward, speedBackward: speedBackward});
 }
 
 /**

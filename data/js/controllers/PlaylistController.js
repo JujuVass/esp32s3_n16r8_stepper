@@ -74,29 +74,10 @@ function updatePlaylistButtonCounters() {
 // PRESET NAME & TOOLTIP GENERATION (delegates to PlaylistUtils.js)
 // ============================================================================
 
-/**
- * Generate default preset name based on mode and config
- * Delegates to PlaylistUtils.js pure function
- */
-function generatePresetName(mode, config) {
-  return generatePresetNamePure(mode, config);
-}
-
-/**
- * Generate tooltip content for a preset
- * Delegates to PlaylistUtils.js pure function
- */
-function generatePresetTooltip(mode, config) {
-  return generatePresetTooltipPure(mode, config);
-}
-
-/**
- * Generate tooltip content for sequence line
- * Delegates to PlaylistUtils.js pure function
- */
-function generateSequenceLineTooltip(line) {
-  return generateSequenceLineTooltipPure(line);
-}
+// Direct aliases to PlaylistUtils.js pure functions (no wrapper needed)
+const generatePresetName = generatePresetNamePure;
+const generatePresetTooltip = generatePresetTooltipPure;
+const generateSequenceLineTooltip = generateSequenceLineTooltipPure;
 
 // ============================================================================
 // GET CURRENT MODE CONFIGURATION

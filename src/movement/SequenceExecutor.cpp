@@ -141,6 +141,7 @@ void SequenceExecutor::togglePause() {
 
 void SequenceExecutor::skipToNextLine() {
     if (!seqState.isRunning) return;
+    if (seqState.currentLineIndex >= sequenceLineCount) return;  // 🔧 FIX #17: Bounds check
 
     // Force current line to complete
     seqState.currentCycleInLine = sequenceTable[seqState.currentLineIndex].cycleCount;

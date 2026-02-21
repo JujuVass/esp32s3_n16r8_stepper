@@ -217,8 +217,13 @@ static void initDualCoreTasks() {
     return;
   }
 
-  xTaskCreatePinnedToCore(motorTask,   "MotorTask",   6144,  NULL, 10, &motorTaskHandle,   1);
-  xTaskCreatePinnedToCore(networkTask, "NetworkTask", 12288, NULL,  1, &networkTaskHandle, 0);
+  BaseType_t motorResult = xTaskCreatePinnedToCore(motorTask,   "MotorTask",   6144,  NULL, 10, &motorTaskHandle,   1);
+  BaseType_t networkResult = xTaskCreatePinnedToCore(networkTask, "NetworkTask", 12288, NULL,  1, &networkTaskHandle, 0);
+
+  if (motorResult != pdPASS || networkResult != pdPASS) {
+    engine->error("❌ Failed to create FreeRTOS tasks! Motor=" + String(motorResult) + " Network=" + String(networkResult));
+    return;
+  }
   engine->info("✅ DUAL-CORE initialized: Motor=Core1(P10), StepperNetwork=Core0(P1)");
 }
 
@@ -379,6 +384,7 @@ void motorTask(void* param) { // NOSONAR(cpp:S5008) FreeRTOS task signature requ
         break;
 
       case MOVEMENT_PURSUIT: {
+        if (config.currentState != SystemState::STATE_RUNNING && !pursuit.isMoving) break;  // 🔧 FIX #22: Guard pursuit like other modes
         unsigned long currentMicros = micros();
         if (pursuit.isMoving && currentMicros - lastStepMicros >= pursuit.stepDelay) {
           lastStepMicros = currentMicros;

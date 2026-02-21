@@ -427,12 +427,18 @@ void CommandDispatcher::applyZoneEffectConfig(JsonDocument& doc) {
 
 bool CommandDispatcher::handleCyclePauseCommands(const char* cmd, JsonDocument& doc) {
     if (strcmp(cmd, "updateCyclePause") == 0) {
+        // motionMutex: motion.cyclePause is read by Core 1 (BaseMovement.process())
+        MutexGuard guard(motionMutex);
+        if (!guard) { engine->warn("handleCyclePauseCommands: motionMutex timeout"); return true; }
         applyCyclePauseConfig(motion.cyclePause, doc, "VAET");
         sendStatus();
         return true;
     }
 
     if (strcmp(cmd, "updateCyclePauseOsc") == 0) {
+        // stateMutex: oscillation.cyclePause is read by Core 1 (Osc.process())
+        MutexGuard guard(stateMutex);
+        if (!guard) { engine->warn("handleCyclePauseCommands: stateMutex timeout"); return true; }
         applyCyclePauseConfig(oscillation.cyclePause, doc, "OSC");
         sendStatus();
         return true;
@@ -810,6 +816,10 @@ bool CommandDispatcher::cmdStart(JsonDocument& doc) {
 }
 
 bool CommandDispatcher::applyOscillationConfig(JsonDocument& doc) {
+    // stateMutex: oscillation/oscillationState are read by Core 1 (Osc.process())
+    MutexGuard guard(stateMutex);
+    if (!guard) { engine->warn("applyOscillationConfig: stateMutex timeout"); return true; }
+
     float oldCenter = oscillation.centerPositionMM;
     float oldAmplitude = oscillation.amplitudeMM;
     float oldFrequency = oscillation.frequencyHz;

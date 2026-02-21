@@ -10,6 +10,7 @@
  * Oscillation state is centralized in AppState.oscillation:
  * - validationTimer: debounce timer for form validation
  */
+let _oscIsTransitioning = false;  // Tracks transitioning state from last status update
 
 // ============================================================================
 // OSCILLATION MODE - HELPER FUNCTIONS
@@ -149,6 +150,15 @@ function updateOscillationPresets() {
   document.querySelectorAll('[data-osc-frequency]').forEach(btn => {
     const frequencyValue = Number.parseFloat(btn.dataset.oscFrequency);
     
+    // 🔧 FIX #24: Don't re-enable buttons during transitions
+    const isTransitioning = _oscIsTransitioning;
+    if (isTransitioning) {
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      btn.style.cursor = 'not-allowed';
+      return;
+    }
+    
     // Calculate theoretical speed for this frequency
     if (currentAmplitude > 0) {
       const theoreticalSpeed = 2 * Math.PI * frequencyValue * currentAmplitude;
@@ -249,6 +259,7 @@ function updateOscillationStateDisplay(data) {
   DOM.oscRampStatus.textContent = rampStatus;
   
   const isTransitioning = data.oscillationState.isTransitioning || false;
+  _oscIsTransitioning = isTransitioning;  // Cache for updateOscillationPresets()
   DOM.oscFrequency.disabled = isTransitioning;
   DOM.oscFrequency.style.backgroundColor = isTransitioning ? '#fff3cd' : '';
   DOM.oscFrequency.style.cursor = isTransitioning ? 'not-allowed' : '';

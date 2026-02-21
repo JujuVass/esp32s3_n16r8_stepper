@@ -188,7 +188,8 @@ function importSequence() {
     try {
       let jsonText = await file.text();
       jsonText = jsonText.replace(/\/\*[\s\S]*?\*\//g, '');
-      jsonText = jsonText.replace(/\/\/.*$/gm, '');
+      // Remove single-line comments (only outside strings - match lines starting with //)
+      jsonText = jsonText.replace(/^\s*\/\/.*$/gm, '');
       const parsed = JSON.parse(jsonText);
       
       console.debug('📤 Sending import via HTTP:', parsed.lineCount, 'lines,', jsonText.length, 'bytes');

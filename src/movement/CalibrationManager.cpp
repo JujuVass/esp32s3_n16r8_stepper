@@ -66,7 +66,13 @@ void CalibrationManager::serviceWebSocketIfDue(unsigned long stepCount) {
 
 void CalibrationManager::positionAtOffset(long targetSteps) {
     Motor.setDirection(true);  // Forward
+    const unsigned long startMs = millis();
+    constexpr unsigned long POSITION_TIMEOUT_MS = 30000;  // 30s safety timeout
     while (currentStep < targetSteps) {
+        if (millis() - startMs > POSITION_TIMEOUT_MS) [[unlikely]] {
+            engine->error("❌ positionAtOffset timeout after " + String(POSITION_TIMEOUT_MS / 1000) + "s");
+            break;
+        }
         Motor.step();
         currentStep = currentStep + 1;
         delayMicroseconds(CALIB_DELAY);
@@ -90,8 +96,12 @@ bool CalibrationManager::emergencyDecontactEnd() {
 
         if (emergencySteps % 50 == 0) {
             yield();
-            if (m_webSocket) m_webSocket->loop();
-            if (m_server) m_server->handleClient();
+            // 🔧 FIX #13: Use wsMutex for thread-safe WebSocket access
+            if (wsMutex && xSemaphoreTakeRecursive(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+                if (m_webSocket) m_webSocket->loop();
+                if (m_server) m_server->handleClient();
+                xSemaphoreGiveRecursive(wsMutex);
+            }
         }
     }
 

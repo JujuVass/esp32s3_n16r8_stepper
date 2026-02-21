@@ -371,13 +371,14 @@ float OscillationControllerClass::getEffectiveAmplitude(unsigned long currentMs)
             // Ramp out complete, stop oscillation
             effectiveAmplitude = 0;
             oscillationState.isRampingOut = false;
-            config.currentState = STATE_PAUSED;  // Stop movement (single source of truth)
 
-            // ✅ SEQUENCE MODE: Set state to READY and notify sequencer
+            // 🔧 FIX #14: Set final state based on execution context
             if (seqState.isRunning) {
                 config.currentState = STATE_READY;
                 currentMovement = MOVEMENT_VAET;  // Reset to VA-ET-VIENT for sequencer
                 SeqExecutor.onMovementComplete();  // CRITICAL: Notify sequencer that oscillation is complete
+            } else {
+                config.currentState = STATE_PAUSED;  // Standalone: stop movement
             }
         }
     }

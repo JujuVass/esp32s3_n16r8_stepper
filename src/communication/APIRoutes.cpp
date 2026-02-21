@@ -910,22 +910,16 @@ static void handleWifiConnect() {
 
   engine->info("🔌 Testing WiFi: " + wifiSsid);
 
-  // Save credentials FIRST, then test (recommended for AP mode)
-  // Even if test fails, credentials are saved for retry on reboot
-  bool saveFirst = true;  // AP mode behavior: always save first
+  // Save credentials to NVS before testing
+  engine->info("💾 Saving WiFi credentials...");
+  bool saved = WiFiConfig.saveConfig(wifiSsid, wifiPassword);
 
-  if (saveFirst) {
-    // Save to NVS before testing
-    engine->info("💾 Saving WiFi credentials...");
-    bool saved = WiFiConfig.saveConfig(wifiSsid, wifiPassword);
-
-    if (!saved) {
-      sendJsonError(500, "Failed to save WiFi config");
-      return;
-    }
-
-    engine->info("✅ WiFi credentials saved - now testing connection...");
+  if (!saved) {
+    sendJsonError(500, "Failed to save WiFi config");
+    return;
   }
+
+  engine->info("✅ WiFi credentials saved - now testing connection...");
 
   // Test connection (we're in AP_STA mode so AP stays stable)
   bool connected = WiFiConfig.testConnection(wifiSsid, wifiPassword, 15000);
@@ -934,11 +928,6 @@ static void handleWifiConnect() {
     // LED GREEN = Success! Stop blinking
     StepperNetwork.apLedBlinkEnabled = false;
     setRgbLed(0, 50, 0);
-
-    // Already saved above (if saveFirst=true)
-    if (!saveFirst) {
-      WiFiConfig.saveConfig(wifiSsid, wifiPassword);
-    }
 
     JsonDocument respDoc;
     respDoc["success"] = true;

@@ -306,6 +306,7 @@ bool StepperNetworkManager::setupMDNS(bool includeOtaService) {
 // ============================================================================
 
 void StepperNetworkManager::setupNTP() {
+    // TODO: Make timezone configurable (currently hardcoded to GMT+1/CET)
     configTime(3600, 0, "pool.ntp.org", "time.nist.gov");  // GMT+1
     engine->info("⏰ NTP configured (GMT+1)");
 
@@ -390,9 +391,10 @@ void StepperNetworkManager::safeShutdown() {
     Motor.disable();
 
     // Flush logs to filesystem (blocks until done)
-    if (engine) engine->flushLogBuffer(true);
-
-    engine->info("✅ Safe shutdown complete");
+    if (engine) {
+        engine->flushLogBuffer(true);
+        engine->info("✅ Safe shutdown complete");
+    }
 }
 
 // ============================================================================
