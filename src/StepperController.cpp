@@ -151,7 +151,7 @@ void logStackHighWaterMark(const char* taskName, uint32_t stackSize, unsigned lo
  * Only active when log level is DEBUG and motor is running.
  */
 void logDebugDiagnostics() {
-  if (engine->getLogLevel() != LOG_DEBUG || config.currentState != SystemState::STATE_RUNNING) return;
+  if (engine->getLogLevel() != LogLevel::LOG_DEBUG || config.currentState != SystemState::STATE_RUNNING) return;
 
   Motor.updatePendTracking();
 
@@ -413,12 +413,13 @@ void motorTask(void* param) {
     // ═══════════════════════════════════════════════════════════════════════
     // MOVEMENT EXECUTION (timing-critical, runs on dedicated core)
     // ═══════════════════════════════════════════════════════════════════════
+    using enum MovementType;
     switch (currentMovement) {
-      case MovementType::MOVEMENT_VAET:
+      case MOVEMENT_VAET:
         BaseMovement.process();
         break;
 
-      case MovementType::MOVEMENT_PURSUIT:
+      case MOVEMENT_PURSUIT:
         if (pursuit.isMoving) {
           unsigned long currentMicros = micros();
           if (currentMicros - lastStepMicros >= pursuit.stepDelay) {
@@ -428,19 +429,19 @@ void motorTask(void* param) {
         }
         break;
 
-      case MovementType::MOVEMENT_OSC:
+      case MOVEMENT_OSC:
         if (config.currentState == SystemState::STATE_RUNNING) {
           Osc.process();
         }
         break;
 
-      case MovementType::MOVEMENT_CHAOS:
+      case MOVEMENT_CHAOS:
         if (config.currentState == SystemState::STATE_RUNNING) {
           Chaos.process();
         }
         break;
 
-      case MovementType::MOVEMENT_CALIBRATION:
+      case MOVEMENT_CALIBRATION:
         break;  // Calibration handled via requestCalibration flag
     }
 

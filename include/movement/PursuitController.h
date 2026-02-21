@@ -71,7 +71,7 @@ public:
      * Called from main loop when MovementType::MOVEMENT_PURSUIT is active and pursuit.isMoving
      * Handles step execution, safety checks, distance tracking
      */
-    void process();
+    void process() const;
 
     /**
      * Stop pursuit movement

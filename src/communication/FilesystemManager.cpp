@@ -7,6 +7,7 @@
 #include "communication/FilesystemManager.h"
 #include "communication/APIRoutes.h"
 #include "core/UtilityEngine.h"
+#include <algorithm>
 
 extern UtilityEngine* engine;
 
@@ -29,12 +30,9 @@ FilesystemManager::FilesystemManager(WebServer& webServer) : server(webServer) {
 // ============================================================================
 
 bool FilesystemManager::isBinaryFile(const String& path) {
-  for (const auto& ext : binaryExtensions) {
-    if (path.endsWith(ext)) {
-      return true;
-    }
-  }
-  return false;
+  return std::ranges::any_of(binaryExtensions, [&path](const char* ext) {
+    return path.endsWith(ext);
+  });
 }
 
 String FilesystemManager::getContentType(const String& path) {

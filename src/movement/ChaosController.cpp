@@ -34,9 +34,6 @@ ChaosController& ChaosController::getInstance() {
     return instance;
 }
 
-// Global accessor
-ChaosController& Chaos = ChaosController::getInstance();
-
 // ============================================================================
 // CONSTANTS (from Config.h, not redefined here)
 // ============================================================================

@@ -40,6 +40,6 @@ private:
 };
 
 // Global accessor (singleton reference)
-extern ContactSensors& Contacts;
+inline ContactSensors& Contacts = ContactSensors::getInstance();
 
 #endif // CONTACT_SENSORS_H

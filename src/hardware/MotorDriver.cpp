@@ -24,9 +24,6 @@ MotorDriver& MotorDriver::getInstance() {
     return instance;
 }
 
-// Global accessor
-MotorDriver& Motor = MotorDriver::getInstance();
-
 // ============================================================================
 // INITIALIZATION
 // ============================================================================

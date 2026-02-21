@@ -84,23 +84,24 @@ float zoneSpeedFactor(SpeedEffect effect, SpeedCurve curve,
     float maxIntensity = 1.0f + (intensity / 100.0f) * 9.0f;
     float curveValue;
 
+    using enum SpeedCurve;
     switch (curve) {
-        case SpeedCurve::CURVE_LINEAR:
+        case CURVE_LINEAR:
             curveValue = 1.0f - zoneProgress;
             break;
-        case SpeedCurve::CURVE_SINE: {
-            float sp   = (1.0f - cosf(zoneProgress * (float)PI)) / 2.0f;
+        case CURVE_SINE: {
+            float sp   = (1.0f - cosf(zoneProgress * PI_F)) / 2.0f;
             curveValue = 1.0f - sp;
             break;
         }
-        case SpeedCurve::CURVE_TRIANGLE_INV: {
+        case CURVE_TRIANGLE_INV: {
             float inv  = 1.0f - zoneProgress;
             curveValue = inv * inv;
             break;
         }
-        case SpeedCurve::CURVE_SINE_INV: {
+        case CURVE_SINE_INV: {
             float inv  = 1.0f - zoneProgress;
-            curveValue = sinf(inv * (float)PI / 2.0f);
+            curveValue = sinf(inv * PI_F / 2.0f);
             break;
         }
         default:
@@ -139,18 +140,19 @@ void safeDurationCalc(const ChaosBaseConfig& cfg, float craziness, float maxFact
 // ============================================================================
 
 float waveformValue(OscillationWaveform waveform, float phase) {
+    using enum OscillationWaveform;
     switch (waveform) {
-        case OscillationWaveform::OSC_SINE:
-            return -cosf(phase * 2.0f * (float)PI);
+        case OSC_SINE:
+            return -cosf(phase * 2.0f * PI_F);
 
-        case OscillationWaveform::OSC_TRIANGLE:
+        case OSC_TRIANGLE:
             if (phase < 0.5f) {
                 return 1.0f - (phase * 4.0f);   // +1 → −1
             } else {
                 return -3.0f + (phase * 4.0f);   // −1 → +1
             }
 
-        case OscillationWaveform::OSC_SQUARE:
+        case OSC_SQUARE:
             return (phase < 0.5f) ? 1.0f : -1.0f;
 
         default:

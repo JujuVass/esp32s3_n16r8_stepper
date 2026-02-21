@@ -170,6 +170,6 @@ private:
 };
 
 // Global accessor (singleton)
-extern SequenceExecutor& SeqExecutor;
+inline SequenceExecutor& SeqExecutor = SequenceExecutor::getInstance();
 
 #endif // SEQUENCE_EXECUTOR_H

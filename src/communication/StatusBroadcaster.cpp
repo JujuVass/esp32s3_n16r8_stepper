@@ -29,9 +29,6 @@ StatusBroadcaster& StatusBroadcaster::getInstance() {
     return instance;
 }
 
-// Global accessor
-StatusBroadcaster& Status = StatusBroadcaster::getInstance();
-
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
@@ -346,8 +343,8 @@ void StatusBroadcaster::addChaosFields(JsonDocument& doc) {
     chaosObj["seed"] = chaos.seed;
 
     JsonArray patternsArray = chaosObj["patternsEnabled"].to<JsonArray>();
-    for (int i = 0; i < CHAOS_PATTERN_COUNT; i++) {
-        patternsArray.add(chaos.patternsEnabled[i]);
+    for (bool enabled : chaos.patternsEnabled) {
+        patternsArray.add(enabled);
     }
 
     // Chaos state

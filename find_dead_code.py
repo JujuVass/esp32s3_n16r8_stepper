@@ -36,7 +36,7 @@ FRAMEWORK_SYMBOLS = {
 # Function definitions:  ReturnType ClassName::funcName(  OR  ReturnType funcName(
 RE_FUNC_DEF = re.compile(
     r'^\s*(?:static\s+)?(?:inline\s+)?(?:virtual\s+)?(?:const\s+)?'
-    r'(?:[\w:<>*&]+\s+)+?'          # return type (1+ words)
+    r'(?:[\w:<>*&]+\s+)+?'          # matches return type tokens
     r'((?:\w+::)?\w+)'              # capture: optional Class:: + funcName
     r'\s*\([^;]*\)\s*(?:const\s*)?(?:override\s*)?\{'  # ( params ) {
     , re.MULTILINE
@@ -142,19 +142,19 @@ def extract_symbols(filepath: Path, content: str) -> dict:
     return symbols
 
 
-def find_unused_includes(filepath: Path, content: str, all_files: list[Path]) -> list[dict]:
-    """Find #include directives for project headers that might be unused."""
+def find_unused_includes(filepath: Path, content: str, _all_files: list[Path]) -> list[dict]:
+    """Find #include directives for project headers that might be unused.
+    
+    Note: filepath and _all_files reserved for future full-preprocessor analysis.
+    """
     issues = []
     clean = strip_comments(content)
     
     for m in RE_INCLUDE.finditer(clean):
         included = m.group(1)
-        # Only check project-local includes (not system headers)
         if included.startswith("core/") or included.startswith("hardware/") or \
            included.startswith("communication/") or included.startswith("movement/"):
-            # Check if any symbol from that header is actually used in this file
-            # (This is a simplified check — we just flag it for manual review)
-            pass  # Skip for now, too many false positives without a real preprocessor
+            pass  # Too many false positives without a real preprocessor
     
     return issues
 

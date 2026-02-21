@@ -21,7 +21,7 @@
 
 // Forward declaration
 class FileSystem;
-enum LogLevel : int;
+enum class LogLevel : int;
 
 // ============================================================================
 // LOG BUFFER CONFIGURATION

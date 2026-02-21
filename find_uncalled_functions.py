@@ -81,7 +81,7 @@ for fpath, content in all_clean.items():
 # Sort by count ascending
 results.sort()
 
-print(f"Count | Function | File | Tag")
+print("Count | Function | File | Tag")
 print("-" * 100)
 dead_count = 0
 check_count = 0

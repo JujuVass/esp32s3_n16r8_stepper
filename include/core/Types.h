@@ -122,7 +122,7 @@ struct StatsTracking {
 
   // Add distance traveled (in steps)
   void addDistance(long delta) {
-    if (delta > 0) totalDistanceTraveled += delta;
+    if (delta > 0) totalDistanceTraveled = totalDistanceTraveled + delta;
   }
 
   // Get increment since last save (in steps) — CALLER MUST HOLD statsMutex

@@ -173,7 +173,7 @@ private:
 };
 
 // Global singleton instance
-extern SequenceTableManager& SeqTable;
+inline SequenceTableManager& SeqTable = SequenceTableManager::getInstance();
 
 // ============================================================================
 // SEQUENCE DATA - Owned by SequenceTableManager

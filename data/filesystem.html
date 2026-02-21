@@ -457,9 +457,9 @@
         
         // Build actions for files only (not folders)
         const actions = file.isDir ? '' : `
-          <button class="btn-info" onclick="downloadFile('${file.path.replaceAll("'", "\\'")}')"
+          <button class="btn-info" onclick="downloadFile('${file.path.replaceAll("'", String.raw`\'`)}')"
             title="Download">⬇️</button>
-          <button class="btn-danger" onclick="deleteFile('${file.path.replaceAll("'", "\\'")}')"
+          <button class="btn-danger" onclick="deleteFile('${file.path.replaceAll("'", String.raw`\'`)}')"
             title="Delete">🗑️</button>
         `;
         
@@ -478,8 +478,8 @@
         } else if (isBinaryFile(file.name)) {
           fileNameHtml = `<span>${safeFileName}</span>`;
         } else {
-          fileNameHtml = `<span class="file-name-link" onclick="editFile('${file.path.replaceAll("'", "\\'")}'` +
-                `, '${file.name.replaceAll("'", "\\'")}')" title="Click to edit">${safeFileName}</span>`;
+          fileNameHtml = `<span class="file-name-link" onclick="editFile('${file.path.replaceAll("'", String.raw`\'`)}'` +
+                `, '${file.name.replaceAll("'", String.raw`\'`)}')" title="Click to edit">${safeFileName}</span>`;
         }
         
         // For folders, show file count instead of date

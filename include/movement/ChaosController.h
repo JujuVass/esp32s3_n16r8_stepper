@@ -217,4 +217,4 @@ private:
 };
 
 // Global accessor
-extern ChaosController& Chaos;
+inline ChaosController& Chaos = ChaosController::getInstance();

@@ -16,7 +16,7 @@
 #include <Preferences.h>
 
 // Forward declaration to avoid circular include
-enum LogLevel : int;
+enum class LogLevel : int;
 
 class EepromManager {
 public:

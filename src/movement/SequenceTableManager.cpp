@@ -21,12 +21,6 @@ constinit SequenceLine sequenceTable[MAX_SEQUENCE_LINES];
 int sequenceLineCount = 0;
 
 // ============================================================================
-// SINGLETON INSTANCE
-// ============================================================================
-
-SequenceTableManager& SeqTable = SequenceTableManager::getInstance();
-
-// ============================================================================
 // CONSTRUCTOR
 // ============================================================================
 

@@ -163,4 +163,4 @@ private:
 // GLOBAL ACCESSOR
 // ============================================================================
 
-extern CommandDispatcher& Dispatcher;
+inline CommandDispatcher& Dispatcher = CommandDispatcher::getInstance();

@@ -18,7 +18,7 @@ extern SemaphoreHandle_t wsMutex;
 Logger::Logger(WebSocketsServer& ws, FileSystem& fs)
   : _ws(ws),
     _fs(fs),
-    _currentLogLevel(LOG_INFO),
+    _currentLogLevel(LogLevel::LOG_INFO),
     _loggingEnabled(true),
     _logBufferHead(0),
     _logBufferCount(0),
@@ -122,7 +122,8 @@ void Logger::log(LogLevel level, const String& message) {
   if (_ws.connectedClients() > 0 && wsMutex != nullptr) {
     if (xSemaphoreTakeRecursive(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
       static const char* levelNames[] = {"ERROR", "WARN", "INFO", "DEBUG"};
-      const char* levelName = (level >= 0 && level <= 3) ? levelNames[level] : "INFO";
+      int levelIdx = static_cast<int>(level);
+      const char* levelName = (levelIdx >= 0 && levelIdx <= 3) ? levelNames[levelIdx] : "INFO";
 
       JsonDocument doc;
       doc["type"] = "log";
@@ -156,10 +157,10 @@ void Logger::log(LogLevel level, const String& message) {
   }
 }
 
-void Logger::error(const String& message) { log(LOG_ERROR, message); }
-void Logger::warn(const String& message)  { log(LOG_WARNING, message); }
-void Logger::info(const String& message)  { log(LOG_INFO, message); }
-void Logger::debug(const String& message) { log(LOG_DEBUG, message); }
+void Logger::error(const String& message) { log(LogLevel::LOG_ERROR, message); }
+void Logger::warn(const String& message)  { log(LogLevel::LOG_WARNING, message); }
+void Logger::info(const String& message)  { log(LogLevel::LOG_INFO, message); }
+void Logger::debug(const String& message) { log(LogLevel::LOG_DEBUG, message); }
 
 // ============================================================================
 // FLUSH BUFFER
@@ -286,10 +287,10 @@ String Logger::generateLogFilename() {
 
 const char* Logger::getLevelPrefix(LogLevel level) const {
   switch (level) {
-    case LOG_ERROR:   return "[ERROR] ";
-    case LOG_WARNING: return "[WARN]  ";
-    case LOG_INFO:    return "[INFO]  ";
-    case LOG_DEBUG:   return "[DEBUG] ";
+    case LogLevel::LOG_ERROR:   return "[ERROR] ";
+    case LogLevel::LOG_WARNING: return "[WARN]  ";
+    case LogLevel::LOG_INFO:    return "[INFO]  ";
+    case LogLevel::LOG_DEBUG:   return "[DEBUG] ";
     default:          return "[LOG]   ";
   }
 }

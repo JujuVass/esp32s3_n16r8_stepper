@@ -102,6 +102,6 @@ private:
 };
 
 // Global accessor (singleton)
-extern StatusBroadcaster& Status;
+inline StatusBroadcaster& Status = StatusBroadcaster::getInstance();
 
 #endif // STATUS_BROADCASTER_H

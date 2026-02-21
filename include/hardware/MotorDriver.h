@@ -127,6 +127,6 @@ private:
 // ============================================================================
 // Usage: Motor.step() instead of MotorDriver::getInstance().step()
 
-extern MotorDriver& Motor;
+inline MotorDriver& Motor = MotorDriver::getInstance();
 
 #endif // MOTOR_DRIVER_H

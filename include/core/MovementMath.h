@@ -15,15 +15,12 @@
 #pragma once
 
 #include <cmath>
+#include <numbers>
 #include "Config.h"
 #include "Types.h"
 #include "movement/ChaosPatterns.h"
 
-#ifndef PI
-#define PI 3.14159265358979323846
-#endif
-
-constexpr float PI_F = 3.14159265f;  // Float-precision PI (avoids double promotion)
+constexpr float PI_F = std::numbers::pi_v<float>;
 
 namespace MovementMath {
 

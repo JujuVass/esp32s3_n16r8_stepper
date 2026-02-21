@@ -29,9 +29,6 @@ CommandDispatcher& CommandDispatcher::getInstance() {
     return instance;
 }
 
-// Global accessor
-CommandDispatcher& Dispatcher = CommandDispatcher::getInstance();
-
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
@@ -261,9 +258,9 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
     if (strcmp(cmd, "toggleDebug") == 0) {
         if (engine) {
             LogLevel current = engine->getLogLevel();
-            LogLevel next = (current == LOG_DEBUG) ? LOG_INFO : LOG_DEBUG;
+            LogLevel next = (current == LogLevel::LOG_DEBUG) ? LogLevel::LOG_INFO : LogLevel::LOG_DEBUG;
             engine->setLogLevel(next);
-            engine->info(String("Log level set to: ") + (next == LOG_DEBUG ? "DEBUG" : "INFO"));
+            engine->info(String("Log level set to: ") + (next == LogLevel::LOG_DEBUG ? "DEBUG" : "INFO"));
         }
         return true;
     }

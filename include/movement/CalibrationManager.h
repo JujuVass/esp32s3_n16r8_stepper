@@ -179,6 +179,6 @@ private:
 // ============================================================================
 // Usage: Calibration.startCalibration() instead of CalibrationManager::getInstance().startCalibration()
 
-extern CalibrationManager& Calibration;
+inline CalibrationManager& Calibration = CalibrationManager::getInstance();
 
 #endif // CALIBRATION_MANAGER_H

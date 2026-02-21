@@ -39,9 +39,6 @@ SequenceExecutor& SequenceExecutor::getInstance() {
     return instance;
 }
 
-// Global accessor
-SequenceExecutor& SeqExecutor = SequenceExecutor::getInstance();
-
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
@@ -671,7 +668,7 @@ void SequenceExecutor::process() {
     // Check if current movement is complete and we can start next action
     if (config.currentState == STATE_READY && !seqState.isWaitingPause) {
 
-        SequenceLine* currentLine = &sequenceTable[seqState.currentLineIndex];
+        const SequenceLine* currentLine = &sequenceTable[seqState.currentLineIndex];
 
         // Determine effective cycle count for sequencer
         // OSC and CHAOS manage their own internal cycles, so sequencer sees them as 1 cycle

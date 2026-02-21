@@ -181,4 +181,4 @@ private:
 };
 
 // Global accessor (singleton reference)
-extern StepperNetworkManager& StepperNetwork;
+inline StepperNetworkManager& StepperNetwork = StepperNetworkManager::getInstance();

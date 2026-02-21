@@ -188,7 +188,7 @@ def print_summary(results):
     print(f"  Other (IDE):     {results['other_count']}")
     
     if results["other_issues"]:
-        print(f"\n  Non-SonarLint issues:")
+        print("\n  Non-SonarLint issues:")
         for issue in results["other_issues"]:
             filepath = Path(issue.get("resource", "")).name
             line = issue.get("startLineNumber", "?")

@@ -105,4 +105,4 @@ private:
 };
 
 // Global accessor (singleton reference)
-extern WiFiConfigManager& WiFiConfig;
+inline WiFiConfigManager& WiFiConfig = WiFiConfigManager::getInstance();

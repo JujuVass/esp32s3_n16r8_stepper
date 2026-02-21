@@ -66,7 +66,7 @@ const NotificationManager = {
     if (now - (entry.lastBumpTime || 0) >= this.BUMP_COOLDOWN_MS) {
       entry.lastBumpTime = now;
       entry.element.classList.remove('notif-bump');
-      entry.element.offsetWidth; // Force reflow for animation restart
+      entry.element.getBoundingClientRect(); // Force reflow for animation restart
       entry.element.classList.add('notif-bump');
     }
 

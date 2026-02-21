@@ -24,9 +24,6 @@ CalibrationManager& CalibrationManager::getInstance() {
     return instance;
 }
 
-// Global accessor
-CalibrationManager& Calibration = CalibrationManager::getInstance();
-
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
@@ -107,7 +104,7 @@ bool CalibrationManager::findContact(bool moveForward, uint8_t contactPin, const
     // Search for contact: move while opto is LOW (clear), stop when HIGH (blocked)
     while (Contacts.isClear(contactPin)) {
         Motor.step();
-        currentStep += moveForward ? 1 : -1;
+        currentStep = currentStep + (moveForward ? 1 : -1);
         delayMicroseconds(CALIB_DELAY);
         stepCount++;
 

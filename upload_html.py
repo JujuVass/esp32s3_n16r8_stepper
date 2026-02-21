@@ -95,7 +95,7 @@ def upload_file(file_path, esp32_ip=ESP32_IP, target_path=None):
             return False
             
     except requests.exceptions.ConnectionError:
-        print(f"❌ Connection error")
+        print("❌ Connection error")
         return False
     except Exception as e:
         print(f"❌ {e}")
@@ -156,7 +156,7 @@ def backup_critical_files(esp32_ip=ESP32_IP, silent=False):
         if backed_up > 0:
             print(f"   ✅ {backed_up} file(s) backed up to .history/")
         else:
-            print(f"   ℹ️  No critical files found on ESP32 (or all empty)")
+            print("   ℹ️  No critical files found on ESP32 (or all empty)")
         print()
     
     return backed_up
@@ -449,7 +449,7 @@ def sync_files(esp32_ip=ESP32_IP, delete_orphans=True):
 def watch_file(file_path, esp32_ip=ESP32_IP):
     """Watch file for changes and auto-upload"""
     print(f"👀 Watching {file_path} for changes...")
-    print(f"   Press Ctrl+C to stop")
+    print("   Press Ctrl+C to stop")
     print()
     
     last_mtime = 0
@@ -468,12 +468,12 @@ def watch_file(file_path, esp32_ip=ESP32_IP):
                 time.sleep(0.5)
                 
             except FileNotFoundError:
-                print(f"⚠️  File deleted, waiting...")
+                print("⚠️  File deleted, waiting...")
                 time.sleep(1)
                 last_mtime = 0
                 
     except KeyboardInterrupt:
-        print(f"\n\n👋 Stopped watching")
+        print("\n\n👋 Stopped watching")
 
 
 # ============================================================================

@@ -94,7 +94,7 @@ void PursuitControllerClass::move(float targetPositionMM, float maxSpeedLevel) c
     pursuit.isMoving = true;
 }
 
-void PursuitControllerClass::process() {
+void PursuitControllerClass::process() const {
     long errorSteps = pursuit.targetStep - currentStep;
 
     // If at target, stop moving but keep motor enabled
