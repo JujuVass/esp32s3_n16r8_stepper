@@ -637,6 +637,7 @@ function toggleFixedRandomControls(fixedId, randomId, isRandom, useFlex = false)
 
 /** Expand a collapsed section */
 function autoExpandSection(section) {
+  if (!section) return;
   if (section.classList.contains('collapsed')) {
     section.classList.remove('collapsed');
     const chevron = section.querySelector('.collapse-icon');
@@ -694,9 +695,12 @@ function loadOscCyclePausePreset(config) {
   toggleFixedRandomControls('pauseFixedControlsOsc', 'pauseRandomControlsOsc', pauseIsRandom);
   
   if (pauseEnabled) {
-    autoExpandSection(document.querySelector('.section-collapsible:has(#cyclePauseOscHeaderText)'));
+    const pauseSection = document.querySelector('.section-collapsible:has(#cyclePauseOscHeaderText)');
     const pauseHeaderText = document.getElementById('cyclePauseOscHeaderText');
-    if (pauseHeaderText) pauseHeaderText.textContent = t('oscillation.cyclePauseEnabled');
+    if (pauseSection && pauseHeaderText) {
+      autoExpandSection(pauseSection);
+      pauseHeaderText.textContent = t('oscillation.cyclePauseEnabled');
+    }
   }
   
   return { pauseEnabled, pauseIsRandom };
