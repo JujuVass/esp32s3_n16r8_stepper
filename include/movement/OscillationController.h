@@ -151,6 +151,28 @@ private:
     // ========================================================================
 
     /**
+     * Advance oscillation phase and handle frequency transitions
+     * @param currentMs Current timestamp in ms
+     * @return Normalized phase (0.0 to 1.0)
+     */
+    float advancePhase(unsigned long currentMs);
+
+    /**
+     * Calculate effective amplitude with transitions and ramping
+     * Handles amplitude transition, ramp in/out, debug logging
+     * @param currentMs Current timestamp in ms
+     * @return Effective amplitude in mm
+     */
+    float getEffectiveAmplitude(unsigned long currentMs);
+
+    /**
+     * Calculate effective center position with smooth transitions
+     * @param currentMs Current timestamp in ms
+     * @return Effective center position in mm
+     */
+    float getEffectiveCenter(unsigned long currentMs);
+
+    /**
      * Handle initial positioning phase (move to center before starting)
      * @return true if still positioning, false if complete
      */

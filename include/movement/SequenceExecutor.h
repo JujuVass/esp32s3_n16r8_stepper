@@ -167,6 +167,12 @@ private:
      * Start CALIBRATION for current line
      */
     void startCalibrationLine(const SequenceLine* line);
+
+    /** Handle completion of current line (pause or advance) — returns false if sequence ended */
+    bool handleLineCompletion(const SequenceLine* line);
+
+    /** Start the next cycle for the current line */
+    void startNextCycle();
 };
 
 // Global accessor (singleton)

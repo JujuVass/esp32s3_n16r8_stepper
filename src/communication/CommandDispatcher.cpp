@@ -25,7 +25,7 @@ using enum ExecutionContext;
 // ============================================================================
 
 CommandDispatcher& CommandDispatcher::getInstance() {
-    static CommandDispatcher instance;
+    static CommandDispatcher instance; // NOSONAR(cpp:S6018)
     return instance;
 }
 
@@ -133,22 +133,7 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
     }
 
     if (strcmp(cmd, "start") == 0) {
-        // Guard: reject if calibration is pending or in progress
-        if (requestCalibration || calibrationInProgress) {
-            Status.sendError("⚠️ Calibration pending - cannot start movement");
-            return true;
-        }
-
-        float dist = doc["distance"] | motion.targetDistanceMM;
-        float spd = doc["speed"] | motion.speedLevelForward;
-
-        String errorMsg;
-        if (!validateAndReport(Validators::motionRange(motion.startPositionMM, dist, errorMsg), errorMsg)) return true;
-        if (!validateAndReport(Validators::speed(spd, errorMsg), errorMsg)) return true;
-
-        engine->info("Command: Start movement (" + String(dist, 1) + "mm @ speed " + String(spd, 1) + ")");
-        BaseMovement.start(dist, spd);  // Direct call to BaseMovement singleton
-        return true;
+        return cmdStart(doc);
     }
 
     if (strcmp(cmd, "pause") == 0) {
@@ -344,101 +329,104 @@ bool CommandDispatcher::handleDecelZoneCommands(const char* cmd, JsonDocument& d
             return true;
         }
 
-        // === Zone Settings ===
-        zoneEffect.enabled = doc["enabled"] | false;
-        zoneEffect.enableStart = doc["enableStart"] | zoneEffect.enableStart;
-        zoneEffect.enableEnd = doc["enableEnd"] | zoneEffect.enableEnd;
-        if (doc["mirrorOnReturn"].is<bool>()) {
-            zoneEffect.mirrorOnReturn = doc["mirrorOnReturn"].as<bool>();
-        }
-
-        float zoneMM = doc["zoneMM"] | zoneEffect.zoneMM;
-        if (zoneMM > 0) zoneEffect.zoneMM = zoneMM;
-
-        // === Speed Effect ===
-        // Use is<T>() to handle value 0 correctly (containsKey is deprecated)
-        if (doc["speedEffect"].is<int>()) {
-            int speedEffectValue = doc["speedEffect"].as<int>();
-            if (speedEffectValue >= 0 && speedEffectValue <= 2) {
-                zoneEffect.speedEffect = (SpeedEffect)speedEffectValue;
-            }
-        }
-
-        // Legacy: "mode" maps to speedCurve, "effectPercent" maps to speedIntensity
-        // Use is<T>() to handle value 0 correctly (containsKey is deprecated)
-        if (doc["speedCurve"].is<int>()) {
-            int curveValue = doc["speedCurve"].as<int>();
-            if (curveValue >= 0 && curveValue <= 3) {
-                zoneEffect.speedCurve = (SpeedCurve)curveValue;
-            }
-        } else if (doc["mode"].is<int>()) {
-            int curveValue = doc["mode"].as<int>();
-            if (curveValue >= 0 && curveValue <= 3) {
-                zoneEffect.speedCurve = (SpeedCurve)curveValue;
-            }
-        }
-
-        float intensity = doc["speedIntensity"] | doc["effectPercent"] | zoneEffect.speedIntensity;
-        if (intensity >= 0 && intensity <= 100) {
-            zoneEffect.speedIntensity = intensity;
-        }
-
-        // === Random Turnback ===
-        if (doc["randomTurnbackEnabled"].is<bool>()) {
-            zoneEffect.randomTurnbackEnabled = doc["randomTurnbackEnabled"].as<bool>();
-        }
-        int turnbackChance = doc["turnbackChance"] | static_cast<int>(zoneEffect.turnbackChance);
-        if (turnbackChance >= 0 && turnbackChance <= 100) {
-            zoneEffect.turnbackChance = static_cast<uint8_t>(turnbackChance);
-        }
-
-        // === End Pause ===
-        if (doc["endPauseEnabled"].is<bool>()) {
-            zoneEffect.endPauseEnabled = doc["endPauseEnabled"].as<bool>();
-        }
-        if (doc["endPauseIsRandom"].is<bool>()) {
-            zoneEffect.endPauseIsRandom = doc["endPauseIsRandom"].as<bool>();
-        }
-        float endPauseDuration = doc["endPauseDurationSec"] | zoneEffect.endPauseDurationSec;
-        if (endPauseDuration >= 0.1f) zoneEffect.endPauseDurationSec = endPauseDuration;
-
-        float endPauseMin = doc["endPauseMinSec"] | zoneEffect.endPauseMinSec;
-        float endPauseMax = doc["endPauseMaxSec"] | zoneEffect.endPauseMaxSec;
-        if (endPauseMin >= 0.1f) zoneEffect.endPauseMinSec = endPauseMin;
-        if (endPauseMax >= endPauseMin) zoneEffect.endPauseMaxSec = endPauseMax;
-
-        // Validate zone
-        BaseMovement.validateZoneEffect();
-
-        // Build debug log
-        constexpr std::array speedEffectNames = {"NONE", "DECEL", "ACCEL"};
-        constexpr std::array curveNames = {"LINEAR", "SINE", "TRI_INV", "SINE_INV"};
-
-        String zones = "";
-        if (zoneEffect.enableStart) zones += "START ";
-        if (zoneEffect.enableEnd) zones += "END";
-        if (zoneEffect.mirrorOnReturn) zones += " PHYS_POS";
-
-        String zoneDebug = "✅ Zone Effect: " + String(zoneEffect.enabled ? "ON" : "OFF");
-        if (zoneEffect.enabled) {
-            zoneDebug += " | zones=" + zones +
-                " | speed=" + speedEffectNames[static_cast<int>(zoneEffect.speedEffect)] +
-                " " + curveNames[static_cast<int>(zoneEffect.speedCurve)] + " " + String(zoneEffect.speedIntensity, 0) + "%" +
-                " | zone=" + String(zoneEffect.zoneMM, 1) + "mm";
-            if (zoneEffect.randomTurnbackEnabled) {
-                zoneDebug += " | turnback=" + String(zoneEffect.turnbackChance) + "%";
-            }
-            if (zoneEffect.endPauseEnabled) {
-                zoneDebug += " | pause=" + String(zoneEffect.endPauseDurationSec, 1) + "s";
-            }
-        }
-        engine->debug(zoneDebug);
-
+        applyZoneEffectConfig(doc);
         sendStatus();
         return true;
     }
 
     return false;
+}
+
+void CommandDispatcher::applyZoneEffectConfig(JsonDocument& doc) {
+    // === Zone Settings ===
+    zoneEffect.enabled = doc["enabled"] | false;
+    zoneEffect.enableStart = doc["enableStart"] | zoneEffect.enableStart;
+    zoneEffect.enableEnd = doc["enableEnd"] | zoneEffect.enableEnd;
+    if (doc["mirrorOnReturn"].is<bool>()) {
+        zoneEffect.mirrorOnReturn = doc["mirrorOnReturn"].as<bool>();
+    }
+
+    float zoneMM = doc["zoneMM"] | zoneEffect.zoneMM;
+    if (zoneMM > 0) zoneEffect.zoneMM = zoneMM;
+
+    // === Speed Effect ===
+    // Use is<T>() to handle value 0 correctly (containsKey is deprecated)
+    if (doc["speedEffect"].is<int>()) {
+        int speedEffectValue = doc["speedEffect"].as<int>();
+        if (speedEffectValue >= 0 && speedEffectValue <= 2) {
+            zoneEffect.speedEffect = (SpeedEffect)speedEffectValue;
+        }
+    }
+
+    // Legacy: "mode" maps to speedCurve, "effectPercent" maps to speedIntensity
+    // Use is<T>() to handle value 0 correctly (containsKey is deprecated)
+    if (doc["speedCurve"].is<int>()) {
+        int curveValue = doc["speedCurve"].as<int>();
+        if (curveValue >= 0 && curveValue <= 3) {
+            zoneEffect.speedCurve = (SpeedCurve)curveValue;
+        }
+    } else if (doc["mode"].is<int>()) {
+        int curveValue = doc["mode"].as<int>();
+        if (curveValue >= 0 && curveValue <= 3) {
+            zoneEffect.speedCurve = (SpeedCurve)curveValue;
+        }
+    }
+
+    float intensity = doc["speedIntensity"] | doc["effectPercent"] | zoneEffect.speedIntensity;
+    if (intensity >= 0 && intensity <= 100) {
+        zoneEffect.speedIntensity = intensity;
+    }
+
+    // === Random Turnback ===
+    if (doc["randomTurnbackEnabled"].is<bool>()) {
+        zoneEffect.randomTurnbackEnabled = doc["randomTurnbackEnabled"].as<bool>();
+    }
+    int turnbackChance = doc["turnbackChance"] | static_cast<int>(zoneEffect.turnbackChance);
+    if (turnbackChance >= 0 && turnbackChance <= 100) {
+        zoneEffect.turnbackChance = static_cast<uint8_t>(turnbackChance);
+    }
+
+    // === End Pause ===
+    if (doc["endPauseEnabled"].is<bool>()) {
+        zoneEffect.endPauseEnabled = doc["endPauseEnabled"].as<bool>();
+    }
+    if (doc["endPauseIsRandom"].is<bool>()) {
+        zoneEffect.endPauseIsRandom = doc["endPauseIsRandom"].as<bool>();
+    }
+    float endPauseDuration = doc["endPauseDurationSec"] | zoneEffect.endPauseDurationSec;
+    if (endPauseDuration >= 0.1f) zoneEffect.endPauseDurationSec = endPauseDuration;
+
+    float endPauseMin = doc["endPauseMinSec"] | zoneEffect.endPauseMinSec;
+    float endPauseMax = doc["endPauseMaxSec"] | zoneEffect.endPauseMaxSec;
+    if (endPauseMin >= 0.1f) zoneEffect.endPauseMinSec = endPauseMin;
+    if (endPauseMax >= endPauseMin) zoneEffect.endPauseMaxSec = endPauseMax;
+
+    // Validate zone
+    BaseMovement.validateZoneEffect();
+
+    // Build debug log
+    constexpr std::array speedEffectNames = {"NONE", "DECEL", "ACCEL"};
+    constexpr std::array curveNames = {"LINEAR", "SINE", "TRI_INV", "SINE_INV"};
+
+    String zones = "";
+    if (zoneEffect.enableStart) zones += "START ";
+    if (zoneEffect.enableEnd) zones += "END";
+    if (zoneEffect.mirrorOnReturn) zones += " PHYS_POS";
+
+    String zoneDebug = "✅ Zone Effect: " + String(zoneEffect.enabled ? "ON" : "OFF");
+    if (zoneEffect.enabled) {
+        zoneDebug += " | zones=" + zones +
+            " | speed=" + speedEffectNames[static_cast<int>(zoneEffect.speedEffect)] +
+            " " + curveNames[static_cast<int>(zoneEffect.speedCurve)] + " " + String(zoneEffect.speedIntensity, 0) + "%" +
+            " | zone=" + String(zoneEffect.zoneMM, 1) + "mm";
+        if (zoneEffect.randomTurnbackEnabled) {
+            zoneDebug += " | turnback=" + String(zoneEffect.turnbackChance) + "%";
+        }
+        if (zoneEffect.endPauseEnabled) {
+            zoneDebug += " | pause=" + String(zoneEffect.endPauseDurationSec, 1) + "s";
+        }
+    }
+    engine->debug(zoneDebug);
 }
 
 // ============================================================================
@@ -578,39 +566,7 @@ bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, 
             Status.sendError("⚠️ Cannot start Chaos mode: system in error state");
             return true;
         }
-
-        float effectiveMax = Validators::getMaxAllowedMM();
-        chaos.centerPositionMM = doc["centerPositionMM"] | (effectiveMax / 2.0f);
-        chaos.amplitudeMM = doc["amplitudeMM"] | 50.0f;
-        chaos.maxSpeedLevel = doc["maxSpeedLevel"] | 10.0f;
-        chaos.crazinessPercent = doc["crazinessPercent"] | 50.0f;
-        // Don't use | operator for durationSeconds as 0 means infinite (falsy but valid)
-        if (!doc["durationSeconds"].isNull()) {
-            chaos.durationSeconds = doc["durationSeconds"].as<unsigned long>();
-        } else {
-            chaos.durationSeconds = 60;  // Default: 60 seconds
-        }
-        chaos.seed = doc["seed"] | (int)millis();
-
-        if (String errorMsg; !validateAndReport(Validators::chaosParams(chaos.centerPositionMM, chaos.amplitudeMM,
-            chaos.maxSpeedLevel, chaos.crazinessPercent, errorMsg), errorMsg)) {
-            return true;
-        }
-
-        // Parse patterns array
-        if (JsonArray patternsArray = doc["patternsEnabled"]; patternsArray) {
-            const size_t count = min(patternsArray.size(), static_cast<size_t>(CHAOS_PATTERN_COUNT));
-            for (size_t idx = 0; idx < count; idx++) {
-                chaos.patternsEnabled[idx] = patternsArray[idx].as<bool>();
-            }
-        }
-
-        engine->info("🌪️ Starting Chaos mode: center=" + String(chaos.centerPositionMM, 1) +
-              "mm, amplitude=±" + String(chaos.amplitudeMM, 1) + "mm, speed=" +
-              String(chaos.maxSpeedLevel, 1) + ", craziness=" + String(chaos.crazinessPercent, 0) + "%");
-
-        Chaos.start();
-        return true;
+        return cmdStartChaos(doc);
     }
 
     if (strcmp(cmd, "stopChaos") == 0) {
@@ -619,48 +575,87 @@ bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, 
     }
 
     if (strcmp(cmd, "setChaosConfig") == 0) {
-        chaos.centerPositionMM = doc["centerPositionMM"] | chaos.centerPositionMM;
-        chaos.amplitudeMM = doc["amplitudeMM"] | chaos.amplitudeMM;
-        chaos.maxSpeedLevel = doc["maxSpeedLevel"] | chaos.maxSpeedLevel;
-        chaos.crazinessPercent = doc["crazinessPercent"] | chaos.crazinessPercent;
-        // Don't use | operator for durationSeconds as 0 means infinite (falsy but valid)
-        if (!doc["durationSeconds"].isNull()) {
-            chaos.durationSeconds = doc["durationSeconds"].as<unsigned long>();
-        }
-
-        if (String errorMsg; !validateAndReport(Validators::chaosParams(chaos.centerPositionMM, chaos.amplitudeMM,
-            chaos.maxSpeedLevel, chaos.crazinessPercent, errorMsg), errorMsg)) {
-            return true;
-        }
-
-        if (!chaosState.isRunning) {
-            chaos.seed = doc["seed"] | chaos.seed;
-        }
-
-        if (JsonArray patternsArray = doc["patternsEnabled"]; patternsArray) {
-            const size_t count = min(patternsArray.size(), static_cast<size_t>(CHAOS_PATTERN_COUNT));
-            for (size_t idx = 0; idx < count; idx++) {
-                chaos.patternsEnabled[idx] = patternsArray[idx].as<bool>();
-            }
-        }
-
-        engine->debug("✅ Chaos config: center=" + String(chaos.centerPositionMM, 1) + "mm | amp=±" +
-              String(chaos.amplitudeMM, 1) + "mm | speed=" + String(chaos.maxSpeedLevel, 1) +
-              "/" + String(MAX_SPEED_LEVEL, 0) + " | craziness=" + String(chaos.crazinessPercent, 0) +
-              "% | duration=" + String(chaos.durationSeconds) + "s" +
-              (chaosState.isRunning ? " | ✓ Applied live" : " | seed=" + String(chaos.seed)));
-
-        if (chaosState.isRunning) {
-            // Reset duration timer when applying config live (avoid immediate stop if new duration < elapsed)
-            chaosState.startTime = millis();
-            chaosState.nextPatternChangeTime = millis();
-        }
-
-        sendStatus();
-        return true;
+        return cmdSetChaosConfig(doc);
     }
 
     return false;
+}
+
+bool CommandDispatcher::cmdStartChaos(JsonDocument& doc) {
+    float effectiveMax = Validators::getMaxAllowedMM();
+    chaos.centerPositionMM = doc["centerPositionMM"] | (effectiveMax / 2.0f);
+    chaos.amplitudeMM = doc["amplitudeMM"] | 50.0f;
+    chaos.maxSpeedLevel = doc["maxSpeedLevel"] | 10.0f;
+    chaos.crazinessPercent = doc["crazinessPercent"] | 50.0f;
+    // Don't use | operator for durationSeconds as 0 means infinite (falsy but valid)
+    if (!doc["durationSeconds"].isNull()) {
+        chaos.durationSeconds = doc["durationSeconds"].as<unsigned long>();
+    } else {
+        chaos.durationSeconds = 60;  // Default: 60 seconds
+    }
+    chaos.seed = doc["seed"] | (int)millis();
+
+    if (String errorMsg; !validateAndReport(Validators::chaosParams(chaos.centerPositionMM, chaos.amplitudeMM,
+        chaos.maxSpeedLevel, chaos.crazinessPercent, errorMsg), errorMsg)) {
+        return true;
+    }
+
+    // Parse patterns array
+    if (JsonArray patternsArray = doc["patternsEnabled"]; patternsArray) {
+        const size_t count = min(patternsArray.size(), static_cast<size_t>(CHAOS_PATTERN_COUNT));
+        for (size_t idx = 0; idx < count; idx++) {
+            chaos.patternsEnabled[idx] = patternsArray[idx].as<bool>();
+        }
+    }
+
+    engine->info("🌪️ Starting Chaos mode: center=" + String(chaos.centerPositionMM, 1) +
+          "mm, amplitude=±" + String(chaos.amplitudeMM, 1) + "mm, speed=" +
+          String(chaos.maxSpeedLevel, 1) + ", craziness=" + String(chaos.crazinessPercent, 0) + "%");
+
+    Chaos.start();
+    return true;
+}
+
+bool CommandDispatcher::cmdSetChaosConfig(JsonDocument& doc) {
+    chaos.centerPositionMM = doc["centerPositionMM"] | chaos.centerPositionMM;
+    chaos.amplitudeMM = doc["amplitudeMM"] | chaos.amplitudeMM;
+    chaos.maxSpeedLevel = doc["maxSpeedLevel"] | chaos.maxSpeedLevel;
+    chaos.crazinessPercent = doc["crazinessPercent"] | chaos.crazinessPercent;
+    // Don't use | operator for durationSeconds as 0 means infinite (falsy but valid)
+    if (!doc["durationSeconds"].isNull()) {
+        chaos.durationSeconds = doc["durationSeconds"].as<unsigned long>();
+    }
+
+    if (String errorMsg; !validateAndReport(Validators::chaosParams(chaos.centerPositionMM, chaos.amplitudeMM,
+        chaos.maxSpeedLevel, chaos.crazinessPercent, errorMsg), errorMsg)) {
+        return true;
+    }
+
+    if (!chaosState.isRunning) {
+        chaos.seed = doc["seed"] | chaos.seed;
+    }
+
+    if (JsonArray patternsArray = doc["patternsEnabled"]; patternsArray) {
+        const size_t count = min(patternsArray.size(), static_cast<size_t>(CHAOS_PATTERN_COUNT));
+        for (size_t idx = 0; idx < count; idx++) {
+            chaos.patternsEnabled[idx] = patternsArray[idx].as<bool>();
+        }
+    }
+
+    engine->debug("✅ Chaos config: center=" + String(chaos.centerPositionMM, 1) + "mm | amp=±" +
+          String(chaos.amplitudeMM, 1) + "mm | speed=" + String(chaos.maxSpeedLevel, 1) +
+          "/" + String(MAX_SPEED_LEVEL, 0) + " | craziness=" + String(chaos.crazinessPercent, 0) +
+          "% | duration=" + String(chaos.durationSeconds) + "s" +
+          (chaosState.isRunning ? " | ✓ Applied live" : " | seed=" + String(chaos.seed)));
+
+    if (chaosState.isRunning) {
+        // Reset duration timer when applying config live (avoid immediate stop if new duration < elapsed)
+        chaosState.startTime = millis();
+        chaosState.nextPatternChangeTime = millis();
+    }
+
+    sendStatus();
+    return true;
 }
 
 // ============================================================================
@@ -669,90 +664,7 @@ bool CommandDispatcher::handleChaosCommands(const char* cmd, JsonDocument& doc, 
 
 bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument& doc, [[maybe_unused]] const String& message) {
     if (strcmp(cmd, "setOscillation") == 0) {
-        float oldCenter = oscillation.centerPositionMM;
-        float oldAmplitude = oscillation.amplitudeMM;
-        float oldFrequency = oscillation.frequencyHz;
-        OscillationWaveform oldWaveform = oscillation.waveform;
-
-        oscillation.centerPositionMM = doc["centerPositionMM"] | oscillation.centerPositionMM;
-        oscillation.amplitudeMM = doc["amplitudeMM"] | oscillation.amplitudeMM;
-        oscillation.waveform = (OscillationWaveform)(doc["waveform"] | (int)oscillation.waveform);
-        oscillation.frequencyHz = doc["frequencyHz"] | oscillation.frequencyHz;
-
-        oscillation.enableRampIn = doc["enableRampIn"] | oscillation.enableRampIn;
-        // Don't use | for rampDurationMs as 0 means disabled (falsy but valid)
-        if (!doc["rampInDurationMs"].isNull()) {
-            oscillation.rampInDurationMs = doc["rampInDurationMs"].as<float>();
-        }
-        oscillation.enableRampOut = doc["enableRampOut"] | oscillation.enableRampOut;
-        if (!doc["rampOutDurationMs"].isNull()) {
-            oscillation.rampOutDurationMs = doc["rampOutDurationMs"].as<float>();
-        }
-
-        // Don't use | for cycleCount as 0 means infinite (falsy but valid)
-        if (!doc["cycleCount"].isNull()) {
-            oscillation.cycleCount = doc["cycleCount"].as<int>();
-        }
-        oscillation.returnToCenter = doc["returnToCenter"] | oscillation.returnToCenter;
-
-        // Cycle pause parameters
-        if (doc["cyclePauseEnabled"].is<bool>()) {
-            oscillation.cyclePause.enabled = doc["cyclePauseEnabled"];
-            oscillation.cyclePause.isRandom = doc["cyclePauseIsRandom"] | false;
-            oscillation.cyclePause.pauseDurationSec = doc["cyclePauseDurationSec"] | 0.0f;
-            oscillation.cyclePause.minPauseSec = doc["cyclePauseMinSec"] | 0.5f;
-            oscillation.cyclePause.maxPauseSec = doc["cyclePauseMaxSec"] | 3.0f;
-        }
-
-        // Validate BEFORE applying transitions (rollback on failure)
-        if (String errorMsg; !validateAndReport(Validators::oscillationParams(oscillation.centerPositionMM,
-            oscillation.amplitudeMM, oscillation.frequencyHz, errorMsg), errorMsg)) {
-            // Rollback to previous values
-            oscillation.centerPositionMM = oldCenter;
-            oscillation.amplitudeMM = oldAmplitude;
-            oscillation.frequencyHz = oldFrequency;
-            oscillation.waveform = oldWaveform;
-            return true;
-        }
-
-        bool paramsChanged = (oldCenter != oscillation.centerPositionMM ||
-                              oldAmplitude != oscillation.amplitudeMM ||
-                              oldFrequency != oscillation.frequencyHz ||
-                              oldWaveform != oscillation.waveform);
-
-        bool isOscRunning = (currentMovement == MOVEMENT_OSC && config.currentState == STATE_RUNNING);
-
-        if (paramsChanged) {
-            engine->debug("📝 OSC config: center=" + String(oscillation.centerPositionMM, 1) +
-                  "mm | amp=" + String(oscillation.amplitudeMM, 1) +
-                  "mm | freq=" + String(oscillation.frequencyHz, 3) + "Hz" +
-                  (isOscRunning ? " | ⚡ Live update" : ""));
-
-            // Smooth center transition during active oscillation
-            if (isOscRunning && oldCenter != oscillation.centerPositionMM) {
-                oscillationState.isCenterTransitioning = true;
-                oscillationState.centerTransitionStartMs = millis();
-                oscillationState.oldCenterMM = oldCenter;
-                oscillationState.targetCenterMM = oscillation.centerPositionMM;
-            }
-
-            // Smooth amplitude transition
-            if (isOscRunning && oldAmplitude != oscillation.amplitudeMM) {
-                oscillationState.isAmplitudeTransitioning = true;
-                oscillationState.amplitudeTransitionStartMs = millis();
-                oscillationState.oldAmplitudeMM = oldAmplitude;
-                oscillationState.targetAmplitudeMM = oscillation.amplitudeMM;
-            }
-
-            // Disable ramps for immediate effect
-            if (isOscRunning) {
-                oscillationState.isRampingIn = false;
-                oscillationState.isRampingOut = false;
-            }
-        }
-
-        sendStatus();
-        return true;
+        return applyOscillationConfig(doc);
     }
 
     if (strcmp(cmd, "startOscillation") == 0) {
@@ -802,38 +714,7 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     // ========================================================================
 
     if (strcmp(cmd, "addSequenceLine") == 0) {
-        SequenceLine newLine = SeqTable.parseFromJson(doc);
-
-        if (auto validationError = SeqTable.validatePhysics(newLine); !validationError.isEmpty()) {
-            Status.sendError("❌ Invalid line: " + validationError);
-            return true;
-        }
-
-        String errorMsg;
-        if (newLine.movementType == MOVEMENT_VAET) {
-            if (!validateAndReport(Validators::speed(newLine.speedForward, errorMsg), errorMsg)) return true;
-            if (!validateAndReport(Validators::speed(newLine.speedBackward, errorMsg), errorMsg)) return true;
-        } else if (newLine.movementType == MOVEMENT_OSC) {
-            if (newLine.oscFrequencyHz <= 0 || newLine.oscFrequencyHz > 10.0f) {
-                Status.sendError("❌ Frequency must be 0.01-10 Hz");
-                return true;
-            }
-        } else if (newLine.movementType == MOVEMENT_CHAOS) {
-            if (!validateAndReport(Validators::speed(newLine.chaosMaxSpeedLevel, errorMsg), errorMsg)) return true;
-            if (newLine.chaosDurationSeconds < 1 || newLine.chaosDurationSeconds > 3600) {
-                Status.sendError("❌ Duration must be 1-3600 seconds");
-                return true;
-            }
-        }
-
-        if (newLine.cycleCount < 1 || newLine.cycleCount > 9999) {
-            Status.sendError("❌ Cycle count must be 1-9999 (received: " + String(newLine.cycleCount) + ")");
-            return true;
-        }
-
-        SeqTable.addLine(newLine);
-        SeqTable.broadcast();
-        return true;
+        return cmdAddSequenceLine(doc);
     }
 
     if (strcmp(cmd, "deleteSequenceLine") == 0) {
@@ -957,4 +838,143 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     }
 
     return false;
+}
+
+// ============================================================================
+// EXTRACTED COMMAND BODIES (reduce cognitive complexity of handlers)
+// ============================================================================
+
+bool CommandDispatcher::cmdStart(JsonDocument& doc) {
+    // Guard: reject if calibration is pending or in progress
+    if (requestCalibration || calibrationInProgress) {
+        Status.sendError("⚠️ Calibration pending - cannot start movement");
+        return true;
+    }
+
+    float dist = doc["distance"] | motion.targetDistanceMM;
+    float spd = doc["speed"] | motion.speedLevelForward;
+
+    String errorMsg;
+    if (!validateAndReport(Validators::motionRange(motion.startPositionMM, dist, errorMsg), errorMsg)) return true;
+    if (!validateAndReport(Validators::speed(spd, errorMsg), errorMsg)) return true;
+
+    engine->info("Command: Start movement (" + String(dist, 1) + "mm @ speed " + String(spd, 1) + ")");
+    BaseMovement.start(dist, spd);
+    return true;
+}
+
+bool CommandDispatcher::applyOscillationConfig(JsonDocument& doc) {
+    float oldCenter = oscillation.centerPositionMM;
+    float oldAmplitude = oscillation.amplitudeMM;
+    float oldFrequency = oscillation.frequencyHz;
+    OscillationWaveform oldWaveform = oscillation.waveform;
+
+    oscillation.centerPositionMM = doc["centerPositionMM"] | oscillation.centerPositionMM;
+    oscillation.amplitudeMM = doc["amplitudeMM"] | oscillation.amplitudeMM;
+    oscillation.waveform = (OscillationWaveform)(doc["waveform"] | (int)oscillation.waveform);
+    oscillation.frequencyHz = doc["frequencyHz"] | oscillation.frequencyHz;
+
+    oscillation.enableRampIn = doc["enableRampIn"] | oscillation.enableRampIn;
+    if (!doc["rampInDurationMs"].isNull()) {
+        oscillation.rampInDurationMs = doc["rampInDurationMs"].as<float>();
+    }
+    oscillation.enableRampOut = doc["enableRampOut"] | oscillation.enableRampOut;
+    if (!doc["rampOutDurationMs"].isNull()) {
+        oscillation.rampOutDurationMs = doc["rampOutDurationMs"].as<float>();
+    }
+
+    if (!doc["cycleCount"].isNull()) {
+        oscillation.cycleCount = doc["cycleCount"].as<int>();
+    }
+    oscillation.returnToCenter = doc["returnToCenter"] | oscillation.returnToCenter;
+
+    // Cycle pause parameters
+    if (doc["cyclePauseEnabled"].is<bool>()) {
+        oscillation.cyclePause.enabled = doc["cyclePauseEnabled"];
+        oscillation.cyclePause.isRandom = doc["cyclePauseIsRandom"] | false;
+        oscillation.cyclePause.pauseDurationSec = doc["cyclePauseDurationSec"] | 0.0f;
+        oscillation.cyclePause.minPauseSec = doc["cyclePauseMinSec"] | 0.5f;
+        oscillation.cyclePause.maxPauseSec = doc["cyclePauseMaxSec"] | 3.0f;
+    }
+
+    // Validate BEFORE applying transitions (rollback on failure)
+    if (String errorMsg; !validateAndReport(Validators::oscillationParams(oscillation.centerPositionMM,
+        oscillation.amplitudeMM, oscillation.frequencyHz, errorMsg), errorMsg)) {
+        oscillation.centerPositionMM = oldCenter;
+        oscillation.amplitudeMM = oldAmplitude;
+        oscillation.frequencyHz = oldFrequency;
+        oscillation.waveform = oldWaveform;
+        return true;
+    }
+
+    bool paramsChanged = (oldCenter != oscillation.centerPositionMM ||
+                          oldAmplitude != oscillation.amplitudeMM ||
+                          oldFrequency != oscillation.frequencyHz ||
+                          oldWaveform != oscillation.waveform);
+
+    bool isOscRunning = (currentMovement == MOVEMENT_OSC && config.currentState == STATE_RUNNING);
+
+    if (paramsChanged) {
+        engine->debug("📝 OSC config: center=" + String(oscillation.centerPositionMM, 1) +
+              "mm | amp=" + String(oscillation.amplitudeMM, 1) +
+              "mm | freq=" + String(oscillation.frequencyHz, 3) + "Hz" +
+              (isOscRunning ? " | ⚡ Live update" : ""));
+
+        if (isOscRunning && oldCenter != oscillation.centerPositionMM) {
+            oscillationState.isCenterTransitioning = true;
+            oscillationState.centerTransitionStartMs = millis();
+            oscillationState.oldCenterMM = oldCenter;
+            oscillationState.targetCenterMM = oscillation.centerPositionMM;
+        }
+
+        if (isOscRunning && oldAmplitude != oscillation.amplitudeMM) {
+            oscillationState.isAmplitudeTransitioning = true;
+            oscillationState.amplitudeTransitionStartMs = millis();
+            oscillationState.oldAmplitudeMM = oldAmplitude;
+            oscillationState.targetAmplitudeMM = oscillation.amplitudeMM;
+        }
+
+        if (isOscRunning) {
+            oscillationState.isRampingIn = false;
+            oscillationState.isRampingOut = false;
+        }
+    }
+
+    sendStatus();
+    return true;
+}
+
+bool CommandDispatcher::cmdAddSequenceLine(JsonDocument& doc) {
+    SequenceLine newLine = SeqTable.parseFromJson(doc);
+
+    if (auto validationError = SeqTable.validatePhysics(newLine); !validationError.isEmpty()) {
+        Status.sendError("❌ Invalid line: " + validationError);
+        return true;
+    }
+
+    String errorMsg;
+    if (newLine.movementType == MOVEMENT_VAET) {
+        if (!validateAndReport(Validators::speed(newLine.speedForward, errorMsg), errorMsg)) return true;
+        if (!validateAndReport(Validators::speed(newLine.speedBackward, errorMsg), errorMsg)) return true;
+    } else if (newLine.movementType == MOVEMENT_OSC) {
+        if (newLine.oscFrequencyHz <= 0 || newLine.oscFrequencyHz > 10.0f) {
+            Status.sendError("❌ Frequency must be 0.01-10 Hz");
+            return true;
+        }
+    } else if (newLine.movementType == MOVEMENT_CHAOS) {
+        if (!validateAndReport(Validators::speed(newLine.chaosMaxSpeedLevel, errorMsg), errorMsg)) return true;
+        if (newLine.chaosDurationSeconds < 1 || newLine.chaosDurationSeconds > 3600) {
+            Status.sendError("❌ Duration must be 1-3600 seconds");
+            return true;
+        }
+    }
+
+    if (newLine.cycleCount < 1 || newLine.cycleCount > 9999) {
+        Status.sendError("❌ Cycle count must be 1-9999 (received: " + String(newLine.cycleCount) + ")");
+        return true;
+    }
+
+    SeqTable.addLine(newLine);
+    SeqTable.broadcast();
+    return true;
 }

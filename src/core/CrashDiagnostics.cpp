@@ -4,6 +4,7 @@
 
 #include "core/CrashDiagnostics.h"
 #include "core/UtilityEngine.h"
+#include "core/TimeUtils.h"
 #include <esp_core_dump.h>
 
 // ============================================================================
@@ -136,13 +137,8 @@ bool CrashDiagnostics::saveDumpFile(UtilityEngine* eng, const char* taskName,
 
     // Generate filename: timestamp if NTP synced, else millis()
     String filename;
-    time_t now = time(nullptr);
-    struct tm t;
-    localtime_r(&now, &t);
-    if (t.tm_year > (2020 - 1900)) {
-        std::array<char, 20> ts{};
-        strftime(ts.data(), ts.size(), "%Y%m%d_%H%M%S", &t);
-        filename = "/dumps/crash_" + String(ts.data()) + ".txt";
+    if (TimeUtils::isSynchronized()) {
+        filename = "/dumps/crash_" + TimeUtils::format("%Y%m%d_%H%M%S") + ".txt";
     } else {
         filename = "/dumps/crash_" + String(millis()) + ".txt";
     }

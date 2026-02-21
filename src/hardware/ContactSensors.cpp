@@ -18,7 +18,7 @@
 // ============================================================================
 
 ContactSensors& ContactSensors::getInstance() {
-    static ContactSensors instance;
+    static ContactSensors instance; // NOSONAR(cpp:S6018)
     return instance;
 }
 

@@ -249,13 +249,10 @@ void OscillationControllerClass::process() {
 }
 
 // ============================================================================
-// POSITION CALCULATION
+// POSITION CALCULATION - Sub-methods
 // ============================================================================
 
-float OscillationControllerClass::calculatePosition() {
-    unsigned long currentMs = millis();
-
-    // 🎯 SMOOTH FREQUENCY TRANSITION: Use accumulated phase for perfect continuity
+float OscillationControllerClass::advancePhase(unsigned long currentMs) {
     float effectiveFrequency = MovementMath::effectiveFrequency(oscillation.frequencyHz, oscillation.amplitudeMM);
 
     // 🚀 SPEED LIMIT: Log if frequency was capped (throttled to avoid spam)
@@ -311,48 +308,10 @@ float OscillationControllerClass::calculatePosition() {
     float phaseIncrement = effectiveFrequency * (static_cast<float>(deltaMs) / 1000.0f);
     oscillationState.accumulatedPhase += phaseIncrement;
 
-    // Calculate phase (0.0 to 1.0 per cycle) using modulo
-    float phase = fmodf(oscillationState.accumulatedPhase, 1.0f);
+    return fmodf(oscillationState.accumulatedPhase, 1.0f);
+}
 
-    // Calculate waveform value (-1.0 to +1.0) — delegates to MovementMath for testability
-    #ifdef USE_SINE_LOOKUP_TABLE
-    float waveValue = fastSine(phase);  // Lookup table (2µs) — only for SINE on ESP32
-    if (oscillation.waveform != OSC_SINE) {
-        waveValue = MovementMath::waveformValue(oscillation.waveform, phase);
-    }
-    #else
-    float waveValue = MovementMath::waveformValue(oscillation.waveform, phase);
-    #endif
-
-    // Track completed cycles
-    // ⚠️ Don't increment during ramp out - we've already reached target cycle count
-    if (!oscillationState.isRampingOut && phase < oscillationState.lastPhase) [[unlikely]] {  // Cycle wrap-around detected
-        oscillationState.completedCycles++;
-        if (engine->isDebugEnabled()) {
-            engine->debug("🔄 Cycle " + String(oscillationState.completedCycles) + "/" + String(oscillation.cycleCount));
-        }
-
-        // Check if inter-cycle pause is enabled
-        if (oscillation.cyclePause.enabled) {
-            oscPauseState.currentPauseDuration = oscillation.cyclePause.calculateDurationMs();
-
-            oscPauseState.isPausing = true;
-            oscPauseState.pauseStartMs = millis();
-
-            if (engine->isDebugEnabled()) {
-                engine->debug("⏸️ Pause cycle OSC: " + String(oscPauseState.currentPauseDuration) + "ms");
-            }
-        }
-
-        // Send status update to frontend when cycle completes
-        if (config.executionContext == CONTEXT_SEQUENCER) {
-            SeqExecutor.sendStatus();
-        }
-    }
-    oscillationState.lastPhase = phase;
-
-    // Calculate current amplitude with ramping
-    // Ramps apply only at start/end of the entire line (not between cycles)
+float OscillationControllerClass::getEffectiveAmplitude(unsigned long currentMs) {
     float effectiveAmplitude = oscillation.amplitudeMM;
 
     // 🎯 SMOOTH AMPLITUDE TRANSITION: Interpolate amplitude when changed during oscillation
@@ -424,8 +383,10 @@ float OscillationControllerClass::calculatePosition() {
     }
 
     oscillationState.currentAmplitude = effectiveAmplitude;
+    return effectiveAmplitude;
+}
 
-    // 🎯 SMOOTH CENTER TRANSITION: Interpolate center position when changed
+float OscillationControllerClass::getEffectiveCenter(unsigned long currentMs) {
     float effectiveCenterMM = oscillation.centerPositionMM;
 
     if (oscillationState.isCenterTransitioning) [[unlikely]] {
@@ -449,6 +410,62 @@ float OscillationControllerClass::calculatePosition() {
             engine->info("✅ Center transition complete: " + String(effectiveCenterMM, 1) + " mm");
         }
     }
+
+    return effectiveCenterMM;
+}
+
+// ============================================================================
+// POSITION CALCULATION - Main orchestrator
+// ============================================================================
+
+float OscillationControllerClass::calculatePosition() {
+    unsigned long currentMs = millis();
+
+    // Phase tracking with smooth frequency transitions
+    float phase = advancePhase(currentMs);
+
+    // Calculate waveform value (-1.0 to +1.0) — delegates to MovementMath for testability
+    #ifdef USE_SINE_LOOKUP_TABLE
+    float waveValue = fastSine(phase);  // Lookup table (2µs) — only for SINE on ESP32
+    if (oscillation.waveform != OSC_SINE) {
+        waveValue = MovementMath::waveformValue(oscillation.waveform, phase);
+    }
+    #else
+    float waveValue = MovementMath::waveformValue(oscillation.waveform, phase);
+    #endif
+
+    // Track completed cycles
+    // ⚠️ Don't increment during ramp out - we've already reached target cycle count
+    if (!oscillationState.isRampingOut && phase < oscillationState.lastPhase) [[unlikely]] {  // Cycle wrap-around detected
+        oscillationState.completedCycles++;
+        if (engine->isDebugEnabled()) {
+            engine->debug("🔄 Cycle " + String(oscillationState.completedCycles) + "/" + String(oscillation.cycleCount));
+        }
+
+        // Check if inter-cycle pause is enabled
+        if (oscillation.cyclePause.enabled) {
+            oscPauseState.currentPauseDuration = oscillation.cyclePause.calculateDurationMs();
+
+            oscPauseState.isPausing = true;
+            oscPauseState.pauseStartMs = millis();
+
+            if (engine->isDebugEnabled()) {
+                engine->debug("⏸️ Pause cycle OSC: " + String(oscPauseState.currentPauseDuration) + "ms");
+            }
+        }
+
+        // Send status update to frontend when cycle completes
+        if (config.executionContext == CONTEXT_SEQUENCER) {
+            SeqExecutor.sendStatus();
+        }
+    }
+    oscillationState.lastPhase = phase;
+
+    // Amplitude with transitions and ramping
+    float effectiveAmplitude = getEffectiveAmplitude(currentMs);
+
+    // Center position with smooth transitions
+    float effectiveCenterMM = getEffectiveCenter(currentMs);
 
     // Calculate final position
     float targetPositionMM = effectiveCenterMM + (waveValue * effectiveAmplitude);

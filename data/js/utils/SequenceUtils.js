@@ -385,146 +385,181 @@ function buildSequenceLineDefaultsPure(effectiveMax) {
  */
 function validateSequencerLinePure(line, movementType, effectiveMax) {
   const errors = [];
+
+  if (movementType === MOVEMENT_TYPE.VA_ET_VIENT) {
+    errors.push(...validateVaetLine(line, effectiveMax));
+  }
+
+  if (movementType === MOVEMENT_TYPE.OSCILLATION) {
+    errors.push(...validateOscillationLine(line, effectiveMax));
+  }
+
+  if (movementType === MOVEMENT_TYPE.CHAOS) {
+    errors.push(...validateChaosLine(line, effectiveMax));
+  }
+
+  if (movementType !== MOVEMENT_TYPE.CALIBRATION) {
+    errors.push(...validateCommonFields(line, movementType));
+  }
+
+  return errors;
+}
+
+/** @private Validate VA-ET-VIENT specific fields */
+function validateVaetLine(line, effectiveMax) {
+  const errors = [];
   const L = SEQ_LIMITS;
 
-  // === VA-ET-VIENT (type 0) ===
-  if (movementType === MOVEMENT_TYPE.VA_ET_VIENT) {
-    // Position range (mirrors Validators::position + Validators::motionRange)
-    if (line.startPositionMM < 0) {
-      errors.push('⚠️ ' + t('sequencer.startPosNegative'));
-    } else if (effectiveMax > 0 && line.startPositionMM > effectiveMax) {
-      errors.push('⚠️ ' + t('sequencer.startPosExceedsMax', { max: effectiveMax.toFixed(1) }));
-    }
+  // Position range (mirrors Validators::position + Validators::motionRange)
+  if (line.startPositionMM < 0) {
+    errors.push('⚠️ ' + t('sequencer.startPosNegative'));
+  } else if (effectiveMax > 0 && line.startPositionMM > effectiveMax) {
+    errors.push('⚠️ ' + t('sequencer.startPosExceedsMax', { max: effectiveMax.toFixed(1) }));
+  }
 
-    if (line.distanceMM <= 0) {
-      errors.push('⚠️ ' + t('sequencer.distanceMustBePositive'));
-    } else if (effectiveMax > 0 && line.distanceMM > effectiveMax) {
-      errors.push('⚠️ ' + t('sequencer.distanceExceedsMax', { max: effectiveMax.toFixed(1) }));
-    }
+  if (line.distanceMM <= 0) {
+    errors.push('⚠️ ' + t('sequencer.distanceMustBePositive'));
+  } else if (effectiveMax > 0 && line.distanceMM > effectiveMax) {
+    errors.push('⚠️ ' + t('sequencer.distanceExceedsMax', { max: effectiveMax.toFixed(1) }));
+  }
 
-    // Combined range check
-    if (effectiveMax > 0 && (line.startPositionMM + line.distanceMM) > effectiveMax) {
-      errors.push('⚠️ ' + t('sequencer.endPosExceedsMax', { end: (line.startPositionMM + line.distanceMM).toFixed(1), max: effectiveMax.toFixed(1) }));
-    }
+  // Combined range check
+  if (effectiveMax > 0 && (line.startPositionMM + line.distanceMM) > effectiveMax) {
+    errors.push('⚠️ ' + t('sequencer.endPosExceedsMax', { end: (line.startPositionMM + line.distanceMM).toFixed(1), max: effectiveMax.toFixed(1) }));
+  }
 
-    // Speed validation (mirrors Validators::speed)
-    if (line.speedForward < L.MIN_SPEED_LEVEL || line.speedForward > L.MAX_SPEED_LEVEL) {
-      errors.push('⚠️ ' + t('sequencer.speedFwdOutOfRange', { min: L.MIN_SPEED_LEVEL, max: L.MAX_SPEED_LEVEL }));
-    }
-    if (line.speedBackward < L.MIN_SPEED_LEVEL || line.speedBackward > L.MAX_SPEED_LEVEL) {
-      errors.push('⚠️ ' + t('sequencer.speedBwdOutOfRange', { min: L.MIN_SPEED_LEVEL, max: L.MAX_SPEED_LEVEL }));
-    }
+  // Speed validation (mirrors Validators::speed)
+  if (line.speedForward < L.MIN_SPEED_LEVEL || line.speedForward > L.MAX_SPEED_LEVEL) {
+    errors.push('⚠️ ' + t('sequencer.speedFwdOutOfRange', { min: L.MIN_SPEED_LEVEL, max: L.MAX_SPEED_LEVEL }));
+  }
+  if (line.speedBackward < L.MIN_SPEED_LEVEL || line.speedBackward > L.MAX_SPEED_LEVEL) {
+    errors.push('⚠️ ' + t('sequencer.speedBwdOutOfRange', { min: L.MIN_SPEED_LEVEL, max: L.MAX_SPEED_LEVEL }));
+  }
 
-    // Zone effect validation
-    if (line.vaetZoneEffect?.enabled) {
-      const ze = line.vaetZoneEffect;
-      if (ze.zoneMM <= 0) {
-        errors.push('⚠️ ' + t('sequencer.zoneMustBePositive'));
-      } else if (ze.zoneMM > line.distanceMM / 2) {
-        errors.push('⚠️ ' + t('sequencer.zoneTooLarge', { max: (line.distanceMM / 2).toFixed(1) }));
-      }
-      if (ze.speedIntensity < 0 || ze.speedIntensity > 100) {
-        errors.push('⚠️ ' + t('sequencer.intensityOutOfRange'));
-      }
-      if (ze.randomTurnbackEnabled && (ze.turnbackChance < 0 || ze.turnbackChance > 100)) {
-        errors.push('⚠️ ' + t('sequencer.turnbackChanceOutOfRange'));
-      }
+  // Zone effect validation
+  if (line.vaetZoneEffect?.enabled) {
+    const ze = line.vaetZoneEffect;
+    if (ze.zoneMM <= 0) {
+      errors.push('⚠️ ' + t('sequencer.zoneMustBePositive'));
+    } else if (ze.zoneMM > line.distanceMM / 2) {
+      errors.push('⚠️ ' + t('sequencer.zoneTooLarge', { max: (line.distanceMM / 2).toFixed(1) }));
+    }
+    if (ze.speedIntensity < 0 || ze.speedIntensity > 100) {
+      errors.push('⚠️ ' + t('sequencer.intensityOutOfRange'));
+    }
+    if (ze.randomTurnbackEnabled && (ze.turnbackChance < 0 || ze.turnbackChance > 100)) {
+      errors.push('⚠️ ' + t('sequencer.turnbackChanceOutOfRange'));
     }
   }
 
-  // === OSCILLATION (type 1) ===
-  if (movementType === MOVEMENT_TYPE.OSCILLATION) {
-    // Center position (mirrors Validators::oscillationParams)
-    if (line.oscCenterPositionMM < 0) {
-      errors.push('⚠️ ' + t('sequencer.oscCenterNegative'));
-    } else if (effectiveMax > 0 && line.oscCenterPositionMM > effectiveMax) {
-      errors.push('⚠️ ' + t('sequencer.oscCenterExceedsMax', { max: effectiveMax.toFixed(1) }));
-    }
+  return errors;
+}
 
-    // Amplitude
-    if (line.oscAmplitudeMM <= 0) {
-      errors.push('⚠️ ' + t('sequencer.oscAmplitudeMustBePositive'));
-    }
+/** @private Validate Oscillation specific fields */
+function validateOscillationLine(line, effectiveMax) {
+  const errors = [];
+  const L = SEQ_LIMITS;
 
-    // Bounds: center ± amplitude within limits
-    if (line.oscCenterPositionMM - line.oscAmplitudeMM < 0) {
-      errors.push('⚠️ ' + t('sequencer.oscBoundsNegative'));
-    }
-    if (effectiveMax > 0 && (line.oscCenterPositionMM + line.oscAmplitudeMM) > effectiveMax) {
-      errors.push('⚠️ ' + t('sequencer.oscBoundsExceedsMax', { max: effectiveMax.toFixed(1) }));
-    }
+  // Center position (mirrors Validators::oscillationParams)
+  if (line.oscCenterPositionMM < 0) {
+    errors.push('⚠️ ' + t('sequencer.oscCenterNegative'));
+  } else if (effectiveMax > 0 && line.oscCenterPositionMM > effectiveMax) {
+    errors.push('⚠️ ' + t('sequencer.oscCenterExceedsMax', { max: effectiveMax.toFixed(1) }));
+  }
 
-    // Frequency
-    if (line.oscFrequencyHz <= 0) {
-      errors.push('⚠️ ' + t('sequencer.freqMustBePositive'));
-    } else if (line.oscFrequencyHz > L.MAX_FREQUENCY_HZ) {
-      errors.push('⚠️ ' + t('sequencer.freqTooHigh', { max: L.MAX_FREQUENCY_HZ }));
-    }
+  // Amplitude
+  if (line.oscAmplitudeMM <= 0) {
+    errors.push('⚠️ ' + t('sequencer.oscAmplitudeMustBePositive'));
+  }
 
-    // Ramp durations (sanity check)
-    if (line.oscEnableRampIn && (line.oscRampInDurationMs < 0 || line.oscRampInDurationMs > L.MAX_RAMP_MS)) {
-      errors.push('⚠️ ' + t('sequencer.rampInOutOfRange'));
-    }
-    if (line.oscEnableRampOut && (line.oscRampOutDurationMs < 0 || line.oscRampOutDurationMs > L.MAX_RAMP_MS)) {
-      errors.push('⚠️ ' + t('sequencer.rampOutOutOfRange'));
+  // Bounds: center ± amplitude within limits
+  if (line.oscCenterPositionMM - line.oscAmplitudeMM < 0) {
+    errors.push('⚠️ ' + t('sequencer.oscBoundsNegative'));
+  }
+  if (effectiveMax > 0 && (line.oscCenterPositionMM + line.oscAmplitudeMM) > effectiveMax) {
+    errors.push('⚠️ ' + t('sequencer.oscBoundsExceedsMax', { max: effectiveMax.toFixed(1) }));
+  }
+
+  // Frequency
+  if (line.oscFrequencyHz <= 0) {
+    errors.push('⚠️ ' + t('sequencer.freqMustBePositive'));
+  } else if (line.oscFrequencyHz > L.MAX_FREQUENCY_HZ) {
+    errors.push('⚠️ ' + t('sequencer.freqTooHigh', { max: L.MAX_FREQUENCY_HZ }));
+  }
+
+  // Ramp durations (sanity check)
+  if (line.oscEnableRampIn && (line.oscRampInDurationMs < 0 || line.oscRampInDurationMs > L.MAX_RAMP_MS)) {
+    errors.push('⚠️ ' + t('sequencer.rampInOutOfRange'));
+  }
+  if (line.oscEnableRampOut && (line.oscRampOutDurationMs < 0 || line.oscRampOutDurationMs > L.MAX_RAMP_MS)) {
+    errors.push('⚠️ ' + t('sequencer.rampOutOutOfRange'));
+  }
+
+  return errors;
+}
+
+/** @private Validate Chaos specific fields */
+function validateChaosLine(line, effectiveMax) {
+  const errors = [];
+  const L = SEQ_LIMITS;
+
+  // Center position (mirrors Validators::chaosParams)
+  if (line.chaosCenterPositionMM < 0) {
+    errors.push('⚠️ ' + t('sequencer.chaosCenterNegative'));
+  } else if (effectiveMax > 0 && line.chaosCenterPositionMM > effectiveMax) {
+    errors.push('⚠️ ' + t('sequencer.chaosCenterExceedsMax', { max: effectiveMax.toFixed(1) }));
+  }
+
+  // Amplitude
+  if (line.chaosAmplitudeMM <= 0) {
+    errors.push('⚠️ ' + t('sequencer.chaosAmplitudeMustBePositive'));
+  }
+
+  // Bounds: center ± amplitude within limits
+  if (line.chaosCenterPositionMM - line.chaosAmplitudeMM < 0) {
+    errors.push('⚠️ ' + t('sequencer.chaosBoundsNegative'));
+  }
+  if (effectiveMax > 0 && (line.chaosCenterPositionMM + line.chaosAmplitudeMM) > effectiveMax) {
+    errors.push('⚠️ ' + t('sequencer.chaosBoundsExceedsMax', { max: effectiveMax.toFixed(1) }));
+  }
+
+  // Speed
+  if (line.chaosMaxSpeedLevel < L.MIN_SPEED_LEVEL || line.chaosMaxSpeedLevel > L.MAX_SPEED_LEVEL) {
+    errors.push('⚠️ ' + t('sequencer.chaosSpeedOutOfRange', { min: L.MIN_SPEED_LEVEL, max: L.MAX_SPEED_LEVEL }));
+  }
+
+  // Craziness
+  if (line.chaosCrazinessPercent < L.MIN_CRAZINESS || line.chaosCrazinessPercent > L.MAX_CRAZINESS) {
+    errors.push('⚠️ ' + t('sequencer.crazinessOutOfRange'));
+  }
+
+  // Duration
+  if (line.chaosDurationSeconds <= 0) {
+    errors.push('⚠️ ' + t('sequencer.durationMustBePositive'));
+  } else if (line.chaosDurationSeconds > L.MAX_CHAOS_DURATION_SEC) {
+    errors.push('⚠️ ' + t('sequencer.durationTooLong', { max: L.MAX_CHAOS_DURATION_SEC }));
+  }
+
+  return errors;
+}
+
+/** @private Validate common fields (cycle count, pause) */
+function validateCommonFields(line, movementType) {
+  const errors = [];
+  const L = SEQ_LIMITS;
+
+  // Cycle count (not for chaos)
+  if (movementType !== MOVEMENT_TYPE.CHAOS) {
+    if (!Number.isInteger(line.cycleCount) || line.cycleCount < 1) {
+      errors.push('⚠️ ' + t('sequencer.cyclesMustBePositiveInt'));
+    } else if (line.cycleCount > L.MAX_CYCLE_COUNT) {
+      errors.push('⚠️ ' + t('sequencer.cyclesTooMany', { max: L.MAX_CYCLE_COUNT }));
     }
   }
 
-  // === CHAOS (type 2) ===
-  if (movementType === MOVEMENT_TYPE.CHAOS) {
-    // Center position (mirrors Validators::chaosParams)
-    if (line.chaosCenterPositionMM < 0) {
-      errors.push('⚠️ ' + t('sequencer.chaosCenterNegative'));
-    } else if (effectiveMax > 0 && line.chaosCenterPositionMM > effectiveMax) {
-      errors.push('⚠️ ' + t('sequencer.chaosCenterExceedsMax', { max: effectiveMax.toFixed(1) }));
-    }
-
-    // Amplitude
-    if (line.chaosAmplitudeMM <= 0) {
-      errors.push('⚠️ ' + t('sequencer.chaosAmplitudeMustBePositive'));
-    }
-
-    // Bounds: center ± amplitude within limits
-    if (line.chaosCenterPositionMM - line.chaosAmplitudeMM < 0) {
-      errors.push('⚠️ ' + t('sequencer.chaosBoundsNegative'));
-    }
-    if (effectiveMax > 0 && (line.chaosCenterPositionMM + line.chaosAmplitudeMM) > effectiveMax) {
-      errors.push('⚠️ ' + t('sequencer.chaosBoundsExceedsMax', { max: effectiveMax.toFixed(1) }));
-    }
-
-    // Speed
-    if (line.chaosMaxSpeedLevel < L.MIN_SPEED_LEVEL || line.chaosMaxSpeedLevel > L.MAX_SPEED_LEVEL) {
-      errors.push('⚠️ ' + t('sequencer.chaosSpeedOutOfRange', { min: L.MIN_SPEED_LEVEL, max: L.MAX_SPEED_LEVEL }));
-    }
-
-    // Craziness
-    if (line.chaosCrazinessPercent < L.MIN_CRAZINESS || line.chaosCrazinessPercent > L.MAX_CRAZINESS) {
-      errors.push('⚠️ ' + t('sequencer.crazinessOutOfRange'));
-    }
-
-    // Duration
-    if (line.chaosDurationSeconds <= 0) {
-      errors.push('⚠️ ' + t('sequencer.durationMustBePositive'));
-    } else if (line.chaosDurationSeconds > L.MAX_CHAOS_DURATION_SEC) {
-      errors.push('⚠️ ' + t('sequencer.durationTooLong', { max: L.MAX_CHAOS_DURATION_SEC }));
-    }
-  }
-
-  // === COMMON FIELDS (all types except calibration) ===
-  if (movementType !== MOVEMENT_TYPE.CALIBRATION) {
-    // Cycle count (not for chaos)
-    if (movementType !== MOVEMENT_TYPE.CHAOS) {
-      if (!Number.isInteger(line.cycleCount) || line.cycleCount < 1) {
-        errors.push('⚠️ ' + t('sequencer.cyclesMustBePositiveInt'));
-      } else if (line.cycleCount > L.MAX_CYCLE_COUNT) {
-        errors.push('⚠️ ' + t('sequencer.cyclesTooMany', { max: L.MAX_CYCLE_COUNT }));
-      }
-    }
-
-    // Pause after (must be >= 0)
-    if (line.pauseAfterMs < 0) {
-      errors.push('⚠️ ' + t('sequencer.pauseMustBePositive'));
-    }
+  // Pause after (must be >= 0)
+  if (line.pauseAfterMs < 0) {
+    errors.push('⚠️ ' + t('sequencer.pauseMustBePositive'));
   }
 
   return errors;
@@ -553,7 +588,32 @@ const ALL_EDIT_FIELDS = [
 function getAllInvalidFieldsPure(line, movementType, effectiveMax, emptyFieldErrors) {
   const fields = new Set();
 
-  // Map empty field errors (from validateEditForm's text matching)
+  // Map empty field errors
+  mapEmptyFieldErrors(fields, emptyFieldErrors);
+
+  // Map validation errors per movement type
+  if (movementType === MOVEMENT_TYPE.VA_ET_VIENT) {
+    getInvalidVaetFields(fields, line, effectiveMax);
+  }
+
+  if (movementType === MOVEMENT_TYPE.OSCILLATION) {
+    getInvalidOscFields(fields, line, effectiveMax);
+  }
+
+  if (movementType === MOVEMENT_TYPE.CHAOS) {
+    getInvalidChaosFields(fields, line, effectiveMax);
+  }
+
+  if (movementType !== MOVEMENT_TYPE.CALIBRATION && movementType !== MOVEMENT_TYPE.CHAOS) {
+    if (!Number.isInteger(line.cycleCount) || line.cycleCount < 1) fields.add('editCycles');
+  }
+  if (line.pauseAfterMs < 0) fields.add('editPause');
+
+  return Array.from(fields);
+}
+
+/** @private Map empty field error text to field IDs */
+function mapEmptyFieldErrors(fields, emptyFieldErrors) {
   const emptyText = emptyFieldErrors.join(' ');
   const emptyMap = {
     'startPos': 'editStartPos', 'distance': 'editDistance',
@@ -571,43 +631,38 @@ function getAllInvalidFieldsPure(line, movementType, effectiveMax, emptyFieldErr
       fields.add(fieldId);
     }
   }
+}
 
-  // Map validation errors from validateSequencerLinePure
-  if (movementType === MOVEMENT_TYPE.VA_ET_VIENT) {
-    if (line.startPositionMM < 0 || (effectiveMax > 0 && line.startPositionMM > effectiveMax)) fields.add('editStartPos');
-    if (line.distanceMM <= 0 || (effectiveMax > 0 && line.distanceMM > effectiveMax)) fields.add('editDistance');
-    if (effectiveMax > 0 && (line.startPositionMM + line.distanceMM) > effectiveMax) { fields.add('editStartPos'); fields.add('editDistance'); }
-    if (line.speedForward < SEQ_LIMITS.MIN_SPEED_LEVEL || line.speedForward > SEQ_LIMITS.MAX_SPEED_LEVEL) fields.add('editSpeedFwd');
-    if (line.speedBackward < SEQ_LIMITS.MIN_SPEED_LEVEL || line.speedBackward > SEQ_LIMITS.MAX_SPEED_LEVEL) fields.add('editSpeedBack');
-    if (line.zoneMM !== undefined && line.zoneMM <= 0) fields.add('editZoneMM');
+/** @private Map VA-ET-VIENT validation errors to field IDs */
+function getInvalidVaetFields(fields, line, effectiveMax) {
+  if (line.startPositionMM < 0 || (effectiveMax > 0 && line.startPositionMM > effectiveMax)) fields.add('editStartPos');
+  if (line.distanceMM <= 0 || (effectiveMax > 0 && line.distanceMM > effectiveMax)) fields.add('editDistance');
+  if (effectiveMax > 0 && (line.startPositionMM + line.distanceMM) > effectiveMax) { fields.add('editStartPos'); fields.add('editDistance'); }
+  if (line.speedForward < SEQ_LIMITS.MIN_SPEED_LEVEL || line.speedForward > SEQ_LIMITS.MAX_SPEED_LEVEL) fields.add('editSpeedFwd');
+  if (line.speedBackward < SEQ_LIMITS.MIN_SPEED_LEVEL || line.speedBackward > SEQ_LIMITS.MAX_SPEED_LEVEL) fields.add('editSpeedBack');
+  if (line.zoneMM !== undefined && line.zoneMM <= 0) fields.add('editZoneMM');
+}
+
+/** @private Map Oscillation validation errors to field IDs */
+function getInvalidOscFields(fields, line, effectiveMax) {
+  if (line.oscCenterPositionMM < 0 || (effectiveMax > 0 && line.oscCenterPositionMM > effectiveMax)) fields.add('editOscCenter');
+  if (line.oscAmplitudeMM <= 0) fields.add('editOscAmplitude');
+  if (line.oscCenterPositionMM - line.oscAmplitudeMM < 0 || (effectiveMax > 0 && (line.oscCenterPositionMM + line.oscAmplitudeMM) > effectiveMax)) {
+    fields.add('editOscCenter'); fields.add('editOscAmplitude');
   }
+  if (line.oscFrequencyHz <= 0 || line.oscFrequencyHz > SEQ_LIMITS.MAX_FREQUENCY_HZ) fields.add('editOscFrequency');
+}
 
-  if (movementType === MOVEMENT_TYPE.OSCILLATION) {
-    if (line.oscCenterPositionMM < 0 || (effectiveMax > 0 && line.oscCenterPositionMM > effectiveMax)) fields.add('editOscCenter');
-    if (line.oscAmplitudeMM <= 0) fields.add('editOscAmplitude');
-    if (line.oscCenterPositionMM - line.oscAmplitudeMM < 0 || (effectiveMax > 0 && (line.oscCenterPositionMM + line.oscAmplitudeMM) > effectiveMax)) {
-      fields.add('editOscCenter'); fields.add('editOscAmplitude');
-    }
-    if (line.oscFrequencyHz <= 0 || line.oscFrequencyHz > SEQ_LIMITS.MAX_FREQUENCY_HZ) fields.add('editOscFrequency');
+/** @private Map Chaos validation errors to field IDs */
+function getInvalidChaosFields(fields, line, effectiveMax) {
+  if (line.chaosCenterPositionMM < 0 || (effectiveMax > 0 && line.chaosCenterPositionMM > effectiveMax)) fields.add('editChaosCenter');
+  if (line.chaosAmplitudeMM <= 0) fields.add('editChaosAmplitude');
+  if (line.chaosCenterPositionMM - line.chaosAmplitudeMM < 0 || (effectiveMax > 0 && (line.chaosCenterPositionMM + line.chaosAmplitudeMM) > effectiveMax)) {
+    fields.add('editChaosCenter'); fields.add('editChaosAmplitude');
   }
-
-  if (movementType === MOVEMENT_TYPE.CHAOS) {
-    if (line.chaosCenterPositionMM < 0 || (effectiveMax > 0 && line.chaosCenterPositionMM > effectiveMax)) fields.add('editChaosCenter');
-    if (line.chaosAmplitudeMM <= 0) fields.add('editChaosAmplitude');
-    if (line.chaosCenterPositionMM - line.chaosAmplitudeMM < 0 || (effectiveMax > 0 && (line.chaosCenterPositionMM + line.chaosAmplitudeMM) > effectiveMax)) {
-      fields.add('editChaosCenter'); fields.add('editChaosAmplitude');
-    }
-    if (line.chaosMaxSpeedLevel < SEQ_LIMITS.MIN_SPEED_LEVEL || line.chaosMaxSpeedLevel > SEQ_LIMITS.MAX_SPEED_LEVEL) fields.add('editChaosSpeed');
-    if (line.chaosCrazinessPercent < 0 || line.chaosCrazinessPercent > 100) fields.add('editChaosCraziness');
-    if (line.chaosDurationSeconds <= 0) fields.add('editChaosDuration');
-  }
-
-  if (movementType !== MOVEMENT_TYPE.CALIBRATION && movementType !== MOVEMENT_TYPE.CHAOS) {
-    if (!Number.isInteger(line.cycleCount) || line.cycleCount < 1) fields.add('editCycles');
-  }
-  if (line.pauseAfterMs < 0) fields.add('editPause');
-
-  return Array.from(fields);
+  if (line.chaosMaxSpeedLevel < SEQ_LIMITS.MIN_SPEED_LEVEL || line.chaosMaxSpeedLevel > SEQ_LIMITS.MAX_SPEED_LEVEL) fields.add('editChaosSpeed');
+  if (line.chaosCrazinessPercent < 0 || line.chaosCrazinessPercent > 100) fields.add('editChaosCraziness');
+  if (line.chaosDurationSeconds <= 0) fields.add('editChaosDuration');
 }
 
 console.debug('✅ SequenceUtils.js loaded - Sequence display, validation & defaults ready');

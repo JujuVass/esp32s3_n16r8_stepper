@@ -10,6 +10,7 @@
 #include "communication/NetworkManager.h"
 #include "communication/WiFiConfigManager.h"
 #include "core/UtilityEngine.h"
+#include "core/TimeUtils.h"
 #include "hardware/MotorDriver.h"
 #include "movement/SequenceExecutor.h"
 #include <sys/time.h>
@@ -22,7 +23,7 @@
 // ============================================================================
 
 StepperNetworkManager& StepperNetworkManager::getInstance() {
-    static StepperNetworkManager instance;
+    static StepperNetworkManager instance; // NOSONAR(cpp:S6018)
     return instance;
 }
 
@@ -309,13 +310,8 @@ void StepperNetworkManager::setupNTP() {
     engine->info("⏰ NTP configured (GMT+1)");
 
     delay(1000);
-    time_t now = time(nullptr);
-    struct tm timeinfo;
-    localtime_r(&now, &timeinfo);
-    if (timeinfo.tm_year > (2020 - 1900)) {
-        std::array<char, 64> timeStr{};
-        strftime(timeStr.data(), timeStr.size(), "%Y-%m-%d %H:%M:%S", &timeinfo);
-        engine->info("✓ Time: " + String(timeStr.data()));
+    if (TimeUtils::isSynchronized()) {
+        engine->info("\u2713 Time: " + TimeUtils::format("%Y-%m-%d %H:%M:%S"));
     }
 }
 
@@ -422,7 +418,7 @@ static bool pingGateway() {
     std::atomic<bool> got_reply{false};
     esp_ping_callbacks_t cbs = {};
     cbs.cb_args = &got_reply;
-    cbs.on_ping_success = [](esp_ping_handle_t h, void* arg) {
+    cbs.on_ping_success = [](esp_ping_handle_t h, void* arg) { // NOSONAR(cpp:S5008) ESP-IDF ping API requires void*
         static_cast<std::atomic<bool>*>(arg)->store(true);
     };
 
@@ -441,185 +437,86 @@ static bool pingGateway() {
     return got_reply;
 }
 
-void StepperNetworkManager::checkConnectionHealth() {
-    // Only in STA+AP mode (AP_DIRECT and AP_SETUP don't need health checks)
-    if (_mode != NetworkMode::NET_STA_AP) return;
+// ============================================================================
+// HEALTH CHECK SUB-ROUTINES
+// ============================================================================
 
-    unsigned long now = millis();
-
-    // One-shot delayed mDNS re-announce after boot
-    // The initial MDNS.begin() fires before WiFi IGMP joins propagate,
-    // so the first multicast announcement is often lost. Re-announce once
-    // after the network stack has had time to settle.
-    if (!_mdnsBootReannounced && now >= MDNS_BOOT_REANNOUNCE_DELAY_MS) {
-        _mdnsBootReannounced = true;
-        MDNS.end();
-        delay(100);
-        setupMDNS(true);
-        _lastMdnsRefresh = now;
-        engine->info("\xF0\x9F\x94\x84 mDNS: Delayed re-announce (boot +" + String(now / 1000) + "s)");
-    }
-
-    // Rate limit: faster during recovery OR when ping failures are accumulating, slower when healthy
-    uint32_t checkInterval;
+void StepperNetworkManager::handleHealthyConnection() {
     if (_wdState != WatchdogState::WD_HEALTHY) {
-        checkInterval = WATCHDOG_RECOVERY_INTERVAL_MS;  // 20s during active recovery
-    } else if (_pingFailCount > 0) {
-        checkInterval = WATCHDOG_RECOVERY_INTERVAL_MS;  // 20s when verifying ping failures
+        engine->info("✅ Watchdog: Connection fully restored (WiFi + gateway OK) after " +
+                     String(_wdSoftRetries) + " soft + " + String(_wdHardRetries) + " hard retries");
+        setupNTP();
+    }
+    _wdState  = WatchdogState::WD_HEALTHY;
+    _wdSoftRetries = 0;
+    _wdHardRetries = 0;
+    _pingFailCount = 0;
+    _wasConnected  = true;
+    _cachedIP = WiFi.localIP().toString();
+}
+
+void StepperNetworkManager::handleRecoveryTier1() {
+    _wdState = WatchdogState::WD_RECOVERING_SOFT;
+    _wdSoftRetries++;
+    engine->info("🔄 Watchdog [Tier 1]: Soft reconnect " + String(_wdSoftRetries) + "/" + String(WATCHDOG_SOFT_MAX_RETRIES));
+    WiFi.reconnect();
+}
+
+bool StepperNetworkManager::handleRecoveryTier2() {
+    _wdState = WatchdogState::WD_RECOVERING_HARD;
+    _wdHardRetries++;
+    engine->warn("🔧 Watchdog [Tier 2]: Hard reconnect " + String(_wdHardRetries) + "/" + String(WATCHDOG_HARD_MAX_RETRIES));
+
+    WiFi.disconnect(true);
+    delay(1000);
+
+    String targetSSID;
+    String targetPassword;
+    if (WiFiConfig.isConfigured() && WiFiConfig.loadConfig(targetSSID, targetPassword)) {
+        engine->info("🔑 Hard reconnect using NVS credentials");
     } else {
-        checkInterval = WATCHDOG_CHECK_INTERVAL_MS;     // 60s when fully healthy
-    }
-    if (now - _lastHealthCheck < checkInterval) return;
-    _lastHealthCheck = now;
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // STEP 1: WiFi L2 link check
-    // ═══════════════════════════════════════════════════════════════════════
-    bool wifiConnected = (WiFi.status() == WL_CONNECTED);
-
-    if (wifiConnected) {
-        // ═══════════════════════════════════════════════════════════════════
-        // STEP 2: Gateway ping (L3 — tests local network reachability)
-        // More reliable than DNS: doesn't depend on external services
-        // WiFi.status() can return WL_CONNECTED even when IP stack is dead
-        // ═══════════════════════════════════════════════════════════════════
-        bool networkOk = pingGateway();
-
-        if (!networkOk) {
-            _pingFailCount++;
-            if (_pingFailCount < WATCHDOG_PING_FAIL_THRESHOLD) {
-                engine->debug("⚠️ Watchdog: Gateway ping failed (" + String(_pingFailCount) + "/" + String(WATCHDOG_PING_FAIL_THRESHOLD) + ") — retrying next cycle");
-                return;  // Don't escalate yet, wait for consecutive failures
-            }
-            // Threshold reached — fall through to recovery
-        } else {
-            _pingFailCount = 0;  // Reset on success
-        }
-
-        // ═══════════════════════════════════════════════════════════════════
-        // STEP 3: Proactive mDNS refresh (ESP32 can't self-query .local)
-        // MDNS.queryHost(self) always returns 0.0.0.0 on ESP32 — the mDNS
-        // responder answers OTHER devices but doesn't loop back to itself.
-        // Instead: periodic silent re-announce to prevent stale mDNS.
-        // ═══════════════════════════════════════════════════════════════════
-        if (now - _lastMdnsRefresh >= WATCHDOG_MDNS_REFRESH_MS) {
-            MDNS.end();
-            delay(50);
-            setupMDNS(true);  // Full re-registration including OTA service
-            _lastMdnsRefresh = now;
-            engine->debug("🔄 Watchdog: Proactive mDNS refresh");
-        }
-
-        if (networkOk) {
-            // ═══════════════════════════════════════════════════════════════
-            // HEALTHY — WiFi up + gateway reachable + mDNS maintained
-            // ═══════════════════════════════════════════════════════════════
-            if (_wdState != WatchdogState::WD_HEALTHY) {
-                engine->info("✅ Watchdog: Connection fully restored (WiFi + gateway OK) after " +
-                             String(_wdSoftRetries) + " soft + " + String(_wdHardRetries) + " hard retries");
-
-                // Re-sync NTP after recovery
-                setupNTP();
-            }
-            _wdState = WatchdogState::WD_HEALTHY;
-            _wdSoftRetries = 0;
-            _wdHardRetries = 0;
-            _pingFailCount = 0;
-            _wasConnected = true;
-            _cachedIP = WiFi.localIP().toString();
-            return;
-        }
-
-        // WiFi says connected but gateway unreachable (3 consecutive fails) → half-dead connection
-        engine->warn("⚠️ Watchdog: WiFi connected but gateway ping FAILED " + String(WATCHDOG_PING_FAIL_THRESHOLD) + "x → treating as disconnected");
-        _pingFailCount = 0;  // Reset for next recovery cycle
-        wifiConnected = false;  // Force into recovery path
+        targetSSID = ssid;
+        targetPassword = password;
+        engine->info("🔑 Hard reconnect using Config.h credentials");
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // RECOVERY PATH (WiFi down OR DNS failed)
-    // ═══════════════════════════════════════════════════════════════════════
+    WiFi.mode(ENABLE_PARALLEL_AP ? WIFI_AP_STA : WIFI_STA);
+    WiFi.setHostname(otaHostname);
+    WiFi.setSleep(WIFI_PS_NONE);
+    WiFi.begin(targetSSID.c_str(), targetPassword.c_str());
 
-    // Log initial disconnect (once)
-    if (_wasConnected && _wdState == WatchdogState::WD_HEALTHY) {
-        engine->warn("⚠️ Watchdog: Connection lost! Starting 3-tier recovery...");
-        if (ENABLE_PARALLEL_AP) {
-            engine->info("📡 AP still active at " + WiFi.softAPIP().toString());
-        }
-    }
-    _wasConnected = false;
-
-    // ── TIER 1: Soft recovery (WiFi.reconnect) ─────────────────────────
-    if (_wdSoftRetries < WATCHDOG_SOFT_MAX_RETRIES) {
-        _wdState = WatchdogState::WD_RECOVERING_SOFT;
-        _wdSoftRetries++;
-        engine->info("🔄 Watchdog [Tier 1]: Soft reconnect " + String(_wdSoftRetries) + "/" + String(WATCHDOG_SOFT_MAX_RETRIES));
-        WiFi.reconnect();
-        return;
+    unsigned long start = millis();
+    while (WiFi.status() != WL_CONNECTED && (millis() - start) < WATCHDOG_HARD_RECONNECT_TIMEOUT_MS) {
+        delay(500);
     }
 
-    // ── TIER 2: Hard recovery (full disconnect + re-associate) ──────────
-    if (_wdHardRetries < WATCHDOG_HARD_MAX_RETRIES) {
-        _wdState = WatchdogState::WD_RECOVERING_HARD;
-        _wdHardRetries++;
-        engine->warn("🔧 Watchdog [Tier 2]: Hard reconnect " + String(_wdHardRetries) + "/" + String(WATCHDOG_HARD_MAX_RETRIES));
-
-        // Full disconnect (true = erase AP credentials from WiFi driver RAM)
-        WiFi.disconnect(true);
-        delay(1000);
-
-        // Reload credentials from NVS or Config.h
-        String targetSSID;
-        String targetPassword;
-        if (WiFiConfig.isConfigured() && WiFiConfig.loadConfig(targetSSID, targetPassword)) {
-            engine->info("🔑 Hard reconnect using NVS credentials");
-        } else {
-            targetSSID = ssid;
-            targetPassword = password;
-            engine->info("🔑 Hard reconnect using Config.h credentials");
-        }
-
-        // Full re-association
-        WiFi.mode(ENABLE_PARALLEL_AP ? WIFI_AP_STA : WIFI_STA);
-        WiFi.setHostname(otaHostname);
-        WiFi.setSleep(WIFI_PS_NONE);
-        WiFi.begin(targetSSID.c_str(), targetPassword.c_str());
-
-        // Blocking wait for connection
-        unsigned long start = millis();
-        while (WiFi.status() != WL_CONNECTED && (millis() - start) < WATCHDOG_HARD_RECONNECT_TIMEOUT_MS) {
-            delay(500);
-        }
-
-        if (WiFi.status() == WL_CONNECTED) {
-            _cachedIP = WiFi.localIP().toString();
-            engine->info("✅ Watchdog [Tier 2]: Hard reconnect succeeded! IP: " + _cachedIP);
-
-            // Restore all services
-            MDNS.end();
-            delay(50);
-            setupMDNS();
-            _lastMdnsRefresh = millis();
-            setupNTP();
-
-            // Restore parallel AP if enabled
-            if (ENABLE_PARALLEL_AP) {
-                startParallelAP();
-            }
-
-            _wdState = WatchdogState::WD_HEALTHY;
-            _wdSoftRetries = 0;
-            _wdHardRetries = 0;
-            _pingFailCount = 0;
-            _wasConnected = true;
-            return;
-        }
-
+    if (WiFi.status() != WL_CONNECTED) {
         engine->error("❌ Watchdog [Tier 2]: Hard reconnect " + String(_wdHardRetries) + "/" + String(WATCHDOG_HARD_MAX_RETRIES) + " failed");
-        return;
+        return false;
     }
 
-    // ── TIER 3: Emergency reboot ────────────────────────────────────────
+    _cachedIP = WiFi.localIP().toString();
+    engine->info("✅ Watchdog [Tier 2]: Hard reconnect succeeded! IP: " + _cachedIP);
+
+    MDNS.end();
+    delay(50);
+    setupMDNS();
+    _lastMdnsRefresh = millis();
+    setupNTP();
+
+    if (ENABLE_PARALLEL_AP) {
+        startParallelAP();
+    }
+
+    _wdState  = WatchdogState::WD_HEALTHY;
+    _wdSoftRetries = 0;
+    _wdHardRetries = 0;
+    _pingFailCount = 0;
+    _wasConnected  = true;
+    return true;
+}
+
+void StepperNetworkManager::handleRecoveryTier3() {
     if (!WATCHDOG_AUTO_REBOOT_ENABLED) {
         engine->error("❌ Watchdog: All recovery exhausted. Auto-reboot DISABLED → cycling back to Tier 1");
         _wdSoftRetries = 0;
@@ -638,6 +535,90 @@ void StepperNetworkManager::checkConnectionHealth() {
 }
 
 // ============================================================================
+// CONNECTION HEALTH CHECK (orchestrator)
+// ============================================================================
+
+void StepperNetworkManager::checkConnectionHealth() {
+    if (_mode != NetworkMode::NET_STA_AP) return;
+
+    unsigned long now = millis();
+
+    // One-shot delayed mDNS re-announce after boot
+    if (!_mdnsBootReannounced && now >= MDNS_BOOT_REANNOUNCE_DELAY_MS) {
+        _mdnsBootReannounced = true;
+        MDNS.end();
+        delay(100);
+        setupMDNS(true);
+        _lastMdnsRefresh = now;
+        engine->info("\xF0\x9F\x94\x84 mDNS: Delayed re-announce (boot +" + String(now / 1000) + "s)");
+    }
+
+    // Rate limit: faster during recovery or accumulating ping failures
+    uint32_t checkInterval;
+    if (_wdState != WatchdogState::WD_HEALTHY || _pingFailCount > 0) {
+        checkInterval = WATCHDOG_RECOVERY_INTERVAL_MS;
+    } else {
+        checkInterval = WATCHDOG_CHECK_INTERVAL_MS;
+    }
+    if (now - _lastHealthCheck < checkInterval) return;
+    _lastHealthCheck = now;
+
+    // ── STEP 1: WiFi L2 link ──
+    bool wifiConnected = (WiFi.status() == WL_CONNECTED);
+
+    if (wifiConnected) {
+        // ── STEP 2: Gateway ping (L3) ──
+        bool networkOk = pingGateway();
+
+        if (!networkOk) {
+            _pingFailCount++;
+            if (_pingFailCount < WATCHDOG_PING_FAIL_THRESHOLD) {
+                engine->debug("⚠️ Watchdog: Gateway ping failed (" + String(_pingFailCount) + "/" + String(WATCHDOG_PING_FAIL_THRESHOLD) + ") — retrying next cycle");
+                return;
+            }
+        } else {
+            _pingFailCount = 0;
+        }
+
+        // ── STEP 3: Proactive mDNS refresh ──
+        if (now - _lastMdnsRefresh >= WATCHDOG_MDNS_REFRESH_MS) {
+            MDNS.end();
+            delay(50);
+            setupMDNS(true);
+            _lastMdnsRefresh = now;
+            engine->debug("🔄 Watchdog: Proactive mDNS refresh");
+        }
+
+        if (networkOk) {
+            handleHealthyConnection();
+            return;
+        }
+
+        // WiFi says connected but gateway unreachable → half-dead
+        engine->warn("⚠️ Watchdog: WiFi connected but gateway ping FAILED " + String(WATCHDOG_PING_FAIL_THRESHOLD) + "x → treating as disconnected");
+        _pingFailCount = 0;
+        wifiConnected = false;
+    }
+
+    // ── RECOVERY PATH ──
+    if (_wasConnected && _wdState == WatchdogState::WD_HEALTHY) {
+        engine->warn("⚠️ Watchdog: Connection lost! Starting 3-tier recovery...");
+        if (ENABLE_PARALLEL_AP) {
+            engine->info("📡 AP still active at " + WiFi.softAPIP().toString());
+        }
+    }
+    _wasConnected = false;
+
+    if (_wdSoftRetries < WATCHDOG_SOFT_MAX_RETRIES) {
+        handleRecoveryTier1();
+    } else if (_wdHardRetries < WATCHDOG_HARD_MAX_RETRIES) {
+        handleRecoveryTier2();
+    } else {
+        handleRecoveryTier3();
+    }
+}
+
+// ============================================================================
 // CLIENT TIME SYNC (for AP_DIRECT mode without NTP)
 // ============================================================================
 
@@ -652,10 +633,5 @@ void StepperNetworkManager::syncTimeFromClient(uint64_t epochMs) {
     settimeofday(&tv, nullptr);
     _timeSynced = true;
 
-    time_t now = epochMs / 1000;
-    struct tm timeinfo;
-    localtime_r(&now, &timeinfo);
-    std::array<char, 64> timeStr{};
-    strftime(timeStr.data(), timeStr.size(), "%Y-%m-%d %H:%M:%S", &timeinfo);
-    engine->info("⏰ Time synced from client: " + String(timeStr.data()));
+    engine->info("⏰ Time synced from client: " + TimeUtils::format("%Y-%m-%d %H:%M:%S", static_cast<time_t>(epochMs / 1000)));
 }

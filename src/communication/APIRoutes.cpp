@@ -13,6 +13,7 @@
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include "core/UtilityEngine.h"
+#include "core/TimeUtils.h"
 #include "movement/SequenceTableManager.h"
 #include "communication/WiFiConfigManager.h"
 #include "communication/NetworkManager.h"
@@ -572,7 +573,7 @@ static void handleAddPreset() {
   JsonObject newPreset = modeArray.add<JsonObject>();
   newPreset["id"] = nextId;
   newPreset["name"] = name;
-  newPreset["timestamp"] = (unsigned long)time(nullptr);
+  newPreset["timestamp"] = static_cast<unsigned long>(TimeUtils::epochSeconds());
   newPreset["config"] = configData;
 
   engine->debug("📋 Adding preset: mode=" + String(mode) + ", id=" + String(nextId) + ", name=" + String(name));

@@ -20,7 +20,7 @@ using enum SystemState;
 // ============================================================================
 
 CalibrationManager& CalibrationManager::getInstance() {
-    static CalibrationManager instance;
+    static CalibrationManager instance; // NOSONAR(cpp:S6018)
     return instance;
 }
 
@@ -52,6 +52,61 @@ void CalibrationManager::serviceWebSocket(unsigned long durationMs) {
         yield();
         delay(1);
     }
+}
+
+void CalibrationManager::serviceWebSocketIfDue(unsigned long stepCount) {
+    if (stepCount % WEBSOCKET_SERVICE_INTERVAL_STEPS != 0) return;
+    yield();
+    if (wsMutex && xSemaphoreTakeRecursive(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+        if (m_webSocket) m_webSocket->loop();
+        if (m_server) m_server->handleClient();
+        xSemaphoreGiveRecursive(wsMutex);
+    }
+}
+
+void CalibrationManager::positionAtOffset(long targetSteps) {
+    Motor.setDirection(true);  // Forward
+    while (currentStep < targetSteps) {
+        Motor.step();
+        currentStep = currentStep + 1;
+        delayMicroseconds(CALIB_DELAY);
+        serviceWebSocketIfDue(static_cast<unsigned long>(currentStep));
+    }
+}
+
+bool CalibrationManager::emergencyDecontactEnd() {
+    engine->warn("⚠️ Stuck at END - emergency decontact...");
+    Motor.setDirection(false);  // Backward
+
+    int emergencySteps = 0;
+    const int MAX_EMERGENCY = 300;
+
+    // Move until opto clears (goes LOW)
+    while (Contacts.isEndActive() && emergencySteps < MAX_EMERGENCY) {
+        Motor.step();
+        currentStep = currentStep - 1;
+        emergencySteps++;
+        delayMicroseconds(CALIB_DELAY);
+
+        if (emergencySteps % 50 == 0) {
+            yield();
+            if (m_webSocket) m_webSocket->loop();
+            if (m_server) m_server->handleClient();
+        }
+    }
+
+    if (emergencySteps >= MAX_EMERGENCY) {
+        if (m_errorCallback) {
+            m_errorCallback("❌ Cannot release from END contact");
+        }
+        Motor.disable();
+        config.currentState = STATE_ERROR;
+        return false;
+    }
+
+    engine->info("✓ Release successful (" + String(emergencySteps) + " steps)");
+    delay(200);
+    return true;
 }
 
 bool CalibrationManager::handleFailure() {
@@ -108,15 +163,7 @@ bool CalibrationManager::findContact(bool moveForward, uint8_t contactPin, const
         delayMicroseconds(CALIB_DELAY);
         stepCount++;
 
-        // Service WebSocket periodically
-        if (stepCount % WEBSOCKET_SERVICE_INTERVAL_STEPS == 0) {
-            yield();
-            if (wsMutex && xSemaphoreTakeRecursive(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
-                if (m_webSocket) m_webSocket->loop();
-                if (m_server) m_server->handleClient();
-                xSemaphoreGiveRecursive(wsMutex);
-            }
-        }
+        serviceWebSocketIfDue(stepCount);
 
         // Timeout protection
         if (stepCount > CALIBRATION_MAX_STEPS) {
@@ -323,23 +370,7 @@ bool CalibrationManager::startCalibration() {
     long targetSteps = MovementMath::mmToSteps(tenPercentMM);
 
     engine->info("📍 Positioning at 10% (" + String(tenPercentMM, 0) + " mm)...");
-
-    Motor.setDirection(true);  // Forward
-    while (currentStep < targetSteps) {
-        Motor.step();
-        currentStep = currentStep + 1;
-        delayMicroseconds(CALIB_DELAY);
-
-        // Service WebSocket periodically
-        if (currentStep % WEBSOCKET_SERVICE_INTERVAL_STEPS == 0) {
-            yield();
-            if (wsMutex && xSemaphoreTakeRecursive(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
-                if (m_webSocket) m_webSocket->loop();
-                if (m_server) m_server->handleClient();
-                xSemaphoreGiveRecursive(wsMutex);
-            }
-        }
-    }
+    positionAtOffset(targetSteps);
 
     // Update start position (single source of truth)
     motion.startPositionMM = tenPercentMM;
@@ -365,37 +396,7 @@ bool CalibrationManager::returnToStart() {
 
     // Check if stuck at END contact (HIGH = opto blocked = still on contact)
     if (Contacts.isEndActive()) {
-        engine->warn("⚠️ Stuck at END - emergency decontact...");
-        Motor.setDirection(false);  // Backward
-
-        int emergencySteps = 0;
-        const int MAX_EMERGENCY = 300;
-
-        // Move until opto clears (goes LOW)
-        while (Contacts.isEndActive() && emergencySteps < MAX_EMERGENCY) {
-            Motor.step();
-            currentStep = currentStep - 1;
-            emergencySteps++;
-            delayMicroseconds(CALIB_DELAY);
-
-            if (emergencySteps % 50 == 0) {
-                yield();
-                if (m_webSocket) m_webSocket->loop();
-                if (m_server) m_server->handleClient();
-            }
-        }
-
-        if (emergencySteps >= MAX_EMERGENCY) {
-            if (m_errorCallback) {
-                m_errorCallback("❌ Cannot release from END contact");
-            }
-            Motor.disable();
-            config.currentState = STATE_ERROR;
-            return false;
-        }
-
-        engine->info("✓ Release successful (" + String(emergencySteps) + " steps)");
-        delay(200);
+        if (!emergencyDecontactEnd()) return false;
     }
 
     // Search for START contact: move backward while opto is LOW (clear), stop when HIGH (blocked)
@@ -406,14 +407,7 @@ bool CalibrationManager::returnToStart() {
         currentStep = currentStep - 1;
         delayMicroseconds(CALIB_DELAY);
 
-        if (currentStep % WEBSOCKET_SERVICE_INTERVAL_STEPS == 0) {
-            yield();
-            if (wsMutex && xSemaphoreTakeRecursive(wsMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
-                if (m_webSocket) m_webSocket->loop();
-                if (m_server) m_server->handleClient();
-                xSemaphoreGiveRecursive(wsMutex);
-            }
-        }
+        serviceWebSocketIfDue(static_cast<unsigned long>(abs(currentStep)));
 
         if (currentStep < -CALIBRATION_ERROR_MARGIN_STEPS) {
             if (m_errorCallback) {

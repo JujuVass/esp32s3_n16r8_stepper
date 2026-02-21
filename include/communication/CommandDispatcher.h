@@ -157,6 +157,28 @@ private:
      * @param label Log label (e.g., "VAET" or "OSC")
      */
     void applyCyclePauseConfig(CyclePauseConfig& target, JsonDocument& doc, const char* label);
+
+    // ========================================================================
+    // EXTRACTED COMMAND BODIES (reduce cognitive complexity of handlers)
+    // ========================================================================
+
+    /** Start command logic (validation + movement start) */
+    bool cmdStart(JsonDocument& doc);
+
+    /** addSequenceLine command logic (parse + validate + add) */
+    bool cmdAddSequenceLine(JsonDocument& doc);
+
+    /** Zone effect configuration parsing from JSON */
+    void applyZoneEffectConfig(JsonDocument& doc);
+
+    /** Oscillation config from setOscillation command */
+    bool applyOscillationConfig(JsonDocument& doc);
+
+    /** startChaos command body */
+    bool cmdStartChaos(JsonDocument& doc);
+
+    /** setChaosConfig command body */
+    bool cmdSetChaosConfig(JsonDocument& doc);
 };
 
 // ============================================================================

@@ -1,370 +1,822 @@
 ================================================================================
- SONARQUBE COMPLEXITY ASSESSMENT — S3776 / S134 / S1188
- Updated: 2026-02-21 (post-Batch 15)
- Original: 90 issues | B13: 17 | B14: 10 | B15: 16 (S1188 APIRoutes) | Remaining: 47
+ SONARQUBE FULL REFACTOR ASSESSMENT — All "Refactor" Issues
+ Updated: 2025-02-21 (post-Batch 15, commit b8f9337)
+ Scan total: 120 issues | Fixed: 15 (S1188 Batch 15) | Remaining: 105
+ Skip candidates: ~34 | Actionable: ~71
 ================================================================================
 
-Legend:
-  ★☆☆☆ EASY      — Mechanical refactor, low risk, <30min
-  ★★☆☆ MEDIUM    — Moderate effort, testable, 30min-2h
-  ★★★☆ HARD      — Significant refactor, some regression risk, 2-4h
-  ★★★★ VERY HARD — Major restructuring, high regression risk, skip recommended
-  ✅ FIXED        — Resolved in a previous batch
+LEGEND
+══════
+Difficulty:   ★☆☆☆ EASY       — Simple extraction/rename, <30 min
+              ★★☆☆ MODERATE   — Structural changes, 30-90 min, needs testing
+              ★★★☆ HARD       — Deep refactoring, 1-4 hours, risk of regression
+              ★★★★ VERY HARD  — Architectural change, half-day+, high risk
+
+Opportunity:  🔴 HIGH   — Major gain: testability, maintainability, reliability
+              🟡 MEDIUM — Nice improvement, moderate real-world benefit
+              🟢 LOW    — Cosmetic or minimal practical impact
+              ⛔ SKIP   — False positive, framework constraint, counterproductive
+
+Format: Line Function                          CC/Count  Difficulty  Opportunity
+
+
+################################################################################
+#  C++ ISSUES (86 entries)                                                     #
+################################################################################
+
+════════════════════════════════════════════════════════════════════════════════
+ cpp:S3776 — Cognitive Complexity (limit: 25) — 19 issues
+════════════════════════════════════════════════════════════════════════════════
+Highest-value rule. Each function exceeds the CC threshold, meaning it has
+too many branching paths to reason about safely. Splitting reduces bugs.
+
+--- APIRoutes.cpp ---
+ L244  setupAPIRoutes()                   CC=249 (25)  ★★★☆  ⚠️ STALE
+   ⚠️ SCAN PREDATES BATCH 15. After lambda extraction (b8f9337), CC should
+   have dropped dramatically (~60-80). Rescan will likely still show S3776
+   but at a much lower CC. Remaining CC comes from inline route registrations,
+   JSON parsing, and validation inside each server.on() call.
+   → NEXT STEP: Rescan. If CC still >25, extract validation logic from
+     remaining inline lambdas into helper functions.
+   OPPORTUNITY: 🟡 MEDIUM — Most body was already extracted in Batch 15.
+   Remaining work is incremental cleanup.
+
+--- StepperController.cpp ---
+ L363  motorTask()                        CC=34 (25)   ★★☆☆  🟡 MEDIUM
+   FreeRTOS task function. Main control loop with mode switch (idle/simple/
+   oscillation/chaos/sequence/calibration) + emergency stop checks.
+   → Extract mode-specific blocks into processModeXxx() helpers.
+   OPPORTUNITY: 🟡 MEDIUM — Improves readability of the main loop.
+   Not a frequent change-site, so moderate payoff.
+
+--- CommandDispatcher.cpp (5 functions, all high-value) ---
+ L126  handleBasicCommands()              CC=47 (25)   ★★★☆  🔴 HIGH
+   Large switch-like dispatcher for basic commands (start/stop/speed/position
+   /direction/accel/decel/pause). Each command arm does validation + action.
+   → Strategy pattern: command map → handler functions, or extract each
+     command arm into handleStartCmd(), handleSpeedCmd(), etc.
+   OPPORTUNITY: 🔴 HIGH — Most-modified file after feature additions.
+   New commands always added here. Table-driven dispatch would make it
+   trivially extensible and testable.
+
+ L338  handleDecelZoneCommands()          CC=59 (25)   ★★★☆  🔴 HIGH
+   Highest CC in CommandDispatcher. Handles zone-related commands with
+   complex validation (zone size, effect type, intensity, speed limits).
+   → Extract per-zone-parameter handlers. Many validation blocks are
+     structurally identical — templatizable.
+   OPPORTUNITY: 🔴 HIGH — CC=59 is the highest in the file. Zone logic
+   is error-prone and growing. Breaking it down prevents zone-related bugs.
+
+ L571  handleChaosCommands()              CC=32 (25)   ★★☆☆  🟡 MEDIUM
+   Chaos mode command dispatch. Moderate CC, similar pattern to above.
+   → Same strategy: command map or per-command helpers.
+   OPPORTUNITY: 🟡 MEDIUM — Less frequently modified than basic/zone.
+
+ L670  handleOscillationCommands()        CC=42 (25)   ★★★☆  🔴 HIGH
+   Oscillation parameter commands. Complex because oscillation has many
+   parameters (amplitude, period, waveform, phase, modulation, etc.).
+   → Group related params, extract handlers per parameter group.
+   OPPORTUNITY: 🔴 HIGH — Oscillation is the most complex movement mode
+   with the most user-facing parameters. Reducing CC here prevents
+   subtle parameter interaction bugs.
+
+ L798  handleSequencerCommands()          CC=49 (25)   ★★★☆  🔴 HIGH
+   Sequencer command dispatch. Line editing, playlist control, mode changes.
+   → Per-command handler extraction (same pattern as others).
+   OPPORTUNITY: 🔴 HIGH — Sequencer is critical and complex.
+
+ ⬆️ BATCH OPPORTUNITY: All 5 CommandDispatcher functions follow the SAME
+ pattern (dispatch + validate + act). A single refactoring approach
+ (command table or handler map) would fix ALL 5 at once: CC reduction
+ from ~229 total to ~60-80. Fixes 5 S3776 issues in one batch.
+
+--- NetworkManager.cpp ---
+ L444  checkConnectionHealth()            CC=42 (25)   ★★★☆  🔴 HIGH
+   Connection monitoring: WiFi state machine + SNTP sync + ping logic +
+   reconnection + AP fallback. Many interleaved conditions.
+   → Extract: checkWiFiState(), checkSntpSync(), tryReconnect(),
+     fallbackToAP() — each is an independent concern.
+   OPPORTUNITY: 🔴 HIGH — Network reliability is critical on ESP32.
+   This function is called periodically and handles ALL recovery logic.
+   Splitting makes each recovery path independently testable and debuggable.
+
+--- WiFiConfigManager.cpp ---
+ L137  scanNetworks()                     CC=30 (25)   ★★☆☆  🟡 MEDIUM
+   WiFi scan with duplicate removal, signal strength sorting, hidden
+   network filtering. Straightforward but branchy.
+   → Extract filterDuplicates() and sortBySignal() helpers.
+   OPPORTUNITY: 🟡 MEDIUM — Touched infrequently, works reliably.
+
+--- FileSystem.cpp ---
+ L23   mount()                            CC=39 (25)   ★★☆☆  🟡 MEDIUM
+   LittleFS mount with format-on-fail + partition validation + space logging.
+   → Extract validatePartition(), formatAndRetry() helpers.
+   OPPORTUNITY: 🟡 MEDIUM — Run-once at boot, rarely modified.
+
+--- BaseMovementController.cpp (3 functions) ---
+ L264  checkAndTriggerRandomTurnback()    CC=28 (25)   ★★☆☆  🟡 MEDIUM
+   Random reversal logic with zone awareness and probability calculation.
+   → Extract shouldTrigger() predicate + zone boundary check.
+   OPPORTUNITY: 🟡 MEDIUM — Barely over threshold (28/25).
+
+ L698  process()                          CC=27 (25)   ★★☆☆  🟡 MEDIUM
+   Main movement processing loop. Mode dispatching + step timing.
+   → Extract mode handlers into separate methods.
+   OPPORTUNITY: 🟡 MEDIUM — Barely over threshold (27/25).
+
+ L802  doStep()                           CC=34 (25)   ★★★☆  🔴 HIGH
+   Core stepping function: direction logic + acceleration + deceleration
+   zone handling + contact sensor checks + position tracking.
+   → Extract applyAcceleration(), checkDecelZone(), handleContactSensor().
+   OPPORTUNITY: 🔴 HIGH — This is the innermost hot loop. Every motor
+   step passes through here. Clean separation of concerns aids debugging
+   stepper issues (acceleration glitches, zone overshoot, etc.).
+
+--- CalibrationManager.cpp (3 functions, all CASCADE) ---
+ L77   findContact()                      CC=31 (25)   ★★★☆  🔴 HIGH
+   Blocking function that moves until contact sensor triggers. Has
+   WebSocket service calls interleaved (to keep UI responsive during
+   long moves). Deep nesting from polling loops.
+   → Extract: moveUntilContact() core loop + wsServiceGuard() RAII wrapper.
+   OPPORTUNITY: 🔴 HIGH — Calibration accuracy depends on this.
+   The WebSocket service calls add nesting that obscures the core logic.
+   Refactoring makes the motion logic clear and the WS servicing automatic.
+
+ L200  startCalibration()                 CC=57 (25)   ★★★★  🔴 HIGH
+   HIGHEST CC in movement code. Full calibration sequence: forward contact,
+   measure distance, check error, retry if needed, reverse contact, compute
+   range. Multiple retry loops with nested WebSocket service.
+   → Split into calibration phases: measureForward(), validateMeasurement(),
+     measureReverse(), computeRange(). Each phase is independently testable.
+   OPPORTUNITY: 🔴 HIGH — Calibration is the most failure-prone operation.
+   Users report occasional bad calibrations. Splitting into phases makes it
+   possible to test and debug each phase independently. Very high value.
+
+ L363  returnToStart()                    CC=44 (25)   ★★★☆  🔴 HIGH
+   Post-calibration return movement. Polling loop with nested conditions
+   for contact avoidance + WebSocket servicing.
+   → Same RAII-guard approach as findContact.
+   OPPORTUNITY: 🔴 HIGH — Cascades with findContact() and startCalibration().
+   All 3 share the same nesting pattern (blocking loop + WS service).
+   A shared utility pattern fixes all 3.
+
+ ⬆️ CASCADE: All 3 CalibrationManager S3776 + 9 S134 share the SAME root
+ cause (blocking loops with interleaved WebSocket service). A single RAII
+ WS service guard or coroutine-like approach fixes 12 issues at once.
+
+--- ChaosController.cpp ---
+ L729  process()                          CC=47 (25)   ★★★☆  🔴 HIGH
+   Chaos mode main loop: state machine (setup → running → at_target →
+   deciding_next) with pattern-specific branching.
+   → Extract per-state handlers: processSetup(), processRunning(),
+     processAtTarget(), processDecision().
+   OPPORTUNITY: 🔴 HIGH — Chaos mode is the most complex movement mode
+   with 11 different patterns. The state machine is hard to debug when
+   patterns misbehave. Per-state extraction makes pattern issues traceable.
+
+--- OscillationController.cpp ---
+ L255  calculatePosition()                CC=52 (25)   ★★★☆  🔴 HIGH
+   HIGHEST CC in a single-purpose function. Calculates oscillation position
+   based on waveform type (sine/triangle/square/sawtooth) + modulation +
+   boundary clamping + direction reversal. Deeply nested math branches.
+   → Extract per-waveform calculators: calcSine(), calcTriangle(), etc.
+     Modulation is orthogonal → separate applyModulation() helper.
+   OPPORTUNITY: 🔴 HIGH — This is pure math logic that's PERFECTLY suited
+   for unit testing via extracting into pure functions. Each waveform
+   should be independently testable. Very high refactoring value.
+
+--- SequenceExecutor.cpp ---
+ L642  process()                          CC=32 (25)   ★★☆☆  🟡 MEDIUM
+   Sequence execution state machine: similar to chaos process().
+   → Extract per-state handlers.
+   OPPORTUNITY: 🟡 MEDIUM — Simpler than chaos, less frequently modified.
+
+
+════════════════════════════════════════════════════════════════════════════════
+ cpp:S134 — Nesting Depth >3 — 12 issues
+════════════════════════════════════════════════════════════════════════════════
+Deep nesting makes code hard to read. Often fixed as a side effect of
+S3776 refactoring (same root causes).
+
+--- BaseMovementController.cpp (2 issues) ---
+ L282  inside checkAndTriggerRandomTurnback()           ★★☆☆  🟡 MEDIUM
+ L286  inside checkAndTriggerRandomTurnback()           ★★☆☆  🟡 MEDIUM
+   Pending turnback check nested inside zone boundary check.
+   → Early return pattern: invert outer conditions, return early.
+   OPPORTUNITY: 🟡 MEDIUM — Automatically fixed if S3776 L264 is addressed.
+
+--- CalibrationManager.cpp (9 issues — ALL cascade) ---
+ L115  inside findContact()                             ★★★☆  🔴 HIGH
+ L116  inside findContact()                             ★★★☆  🔴 HIGH
+   WebSocket service call nested inside polling loop inside sensor check.
+ L258  inside startCalibration()                        ★★★☆  🔴 HIGH
+ L298  inside startCalibration()                        ★★★☆  🔴 HIGH
+ L336  inside startCalibration()                        ★★★☆  🔴 HIGH
+   Retry loops with nested validation and WS service.
+ L383  inside returnToStart()                           ★★★☆  🔴 HIGH
+ L384  inside returnToStart()                           ★★★☆  🔴 HIGH
+ L412  inside returnToStart()                           ★★★☆  🔴 HIGH
+ L413  inside returnToStart()                           ★★★☆  🔴 HIGH
+   Contact avoidance loops with interleaved WS service.
+
+ ⬆️ ALL 9 share the SAME root cause: blocking loops + WebSocket service
+ nesting. The RAII WS service guard proposed for S3776 CalibrationManager
+ would automatically eliminate all 9 nesting violations.
+ OPPORTUNITY: 🔴 HIGH — 9 issues fixed by one structural pattern.
+
+--- SequenceExecutor.cpp ---
+ L333  inside blockingMoveToStep()                      ★★☆☆  🟡 MEDIUM
+   WebSocket service inside blocking movement loop (same pattern as
+   CalibrationManager). Same RAII guard applies here too.
+   OPPORTUNITY: 🟡 MEDIUM — Single instance, less impactful alone.
+
+
+════════════════════════════════════════════════════════════════════════════════
+ cpp:S1188 — Lambda Too Long (limit: 20 lines) — 15 issues
+════════════════════════════════════════════════════════════════════════════════
+  ✅ ALL FIXED — Batch 15 (commit b8f9337)
+  All 15 oversized lambdas in APIRoutes.cpp::setupAPIRoutes() were
+  extracted into named static void handleXxx() functions.
+
+  ⚠️ NOTE: This scan PREDATES Batch 15 (line numbers reference the
+  pre-extraction code layout). A rescan will confirm these are resolved.
+
+ L303, L336, L378, L426, L505, L559, L670, L714, L803, L890,
+ L932, L984, L1035, L1081, L1278
+ → All extracted to: handleGetStats, handleGetCalibrationState,
+   handlePostCalibrate, handlePostCalibrateAction, handleGetSequencer,
+   handlePutSequencer, handlePostSequencerControl, handlePostSequencerAction,
+   handleGetLogs, handleDeleteLogs, handleGetSystemDiagnostics,
+   handlePostReboot, handlePostFactoryReset, handlePostFirmwareUpload,
+   handleGetFilesystem.
+
+
+════════════════════════════════════════════════════════════════════════════════
+ cpp:S1820 — Too Many Fields (limit: 20) — 3 issues
+════════════════════════════════════════════════════════════════════════════════
+SonarQube wants max 20 fields per struct. All 3 structs in Types.h
+are data-carrying value types (not classes with behavior).
+
+--- Types.h ---
+ L290  OscillationState                   23 fields     ★★★☆  🟡 MEDIUM
+   Oscillation runtime state: position, direction, timing, modulation,
+   boundary tracking, transition state, waveform parameters.
+   Fields group into: core (pos/dir/timing), modulation (3-4 fields),
+   transition (4-5 fields), boundaries (3-4 fields).
+   → Could nest: OscModulation, OscTransition, OscBoundaries sub-structs.
+   OPPORTUNITY: 🟡 MEDIUM — Would improve readability of oscillation code
+   but requires updating all access sites (state.transition.phase instead
+   of state.transitionPhase). Moderate churn for moderate gain.
+
+ L354  ChaosExecutionState                24 fields     ★★★☆  🟢 LOW
+   Chaos pattern runtime state: current pattern, step tracking, phase
+   info, timing, speed tracking, repeat counts. Many fields are
+   union-like (only used by specific patterns).
+   → Sub-structs by pattern family, or use std::variant per pattern.
+   OPPORTUNITY: 🟢 LOW — This struct is inherently complex because chaos
+   patterns are diverse. Splitting would add access verbosity without
+   improving the inherent complexity. The variant approach adds overhead
+   inappropriate for ESP32 hot-path.
+
+ L403  SequenceLine                       27 fields     ★★★☆  🟡 MEDIUM
+   Sequence line definition: target position, speed, timing, oscillation
+   params, chaos params, mode settings. Multi-mode flat struct.
+   → Could group: SequenceLineBase (pos/speed/timing), OscParams, ChaosParams.
+   OPPORTUNITY: 🟡 MEDIUM — 27 fields IS a lot. Grouping by movement mode
+   would make the JSON serialization clearer and reduce the risk of
+   accidentally setting chaos params in oscillation mode. Moderate value.
+
+
+════════════════════════════════════════════════════════════════════════════════
+ cpp:S1448 — Too Many Methods (limit: 35) — 2 issues
+════════════════════════════════════════════════════════════════════════════════
+
+--- UtilityEngine.h ---
+ L82   UtilityEngine                      43 methods    ★☆☆☆  ⛔ SKIP
+   FACADE PATTERN — All 43 methods are one-line inline forwarders:
+     String getFormattedTime() { return _logger.getFormattedTime(); }
+     void saveStats() { _stats.saveStats(); }
+   Delegates to 4 subsystems: _logger, _fs, _stats, _eeprom.
+   SonarQube doesn't understand facades. Splitting this class would
+   REMOVE the facade benefit (single access point for utility services).
+   → RECOMMENDATION: ⛔ SKIP. Add to SonarLint exclusions for this file,
+   or add // NOSONAR comment on the class declaration.
+   OPPORTUNITY: ⛔ SKIP — Splitting would be counterproductive.
+
+--- ChaosController.h ---
+ L45   ChaosController                    41 methods    ★★★☆  🟡 MEDIUM
+   11 pattern handlers (handleLinear, handleZigzag, handleSpiral, etc.)
+   + 6 at-target handlers + 8 helper methods + public API.
+   All methods are cohesive (all operate on chaos state).
+   → Could extract a ChaosPatternStrategy per pattern family, but this
+     adds vtable overhead in a hot path.
+   OPPORTUNITY: 🟡 MEDIUM — The class IS large but cohesive. Extracting
+   pattern handlers into a strategy pattern would improve modularity at
+   the cost of indirection. Worth considering if more patterns are added.
+
+
+════════════════════════════════════════════════════════════════════════════════
+ cpp:S6018 — Use Inline Variables — 10 issues
+════════════════════════════════════════════════════════════════════════════════
+SonarQube wants C++17 `inline static` member variables instead of
+Meyer's Singleton pattern (static local in getInstance()).
+
+  ⛔ ALL 10: SKIP — Meyer's Singleton is INTENTIONAL for ESP32
+
+  Reason: Meyer's Singleton (`static Foo& getInstance() { static Foo inst; ... }`)
+  guarantees lazy initialization and thread-safe construction (C++11+).
+  Switching to `inline static Foo instance;` would:
+  1. Change initialization ORDER — instance created at static init time
+     instead of first use. On ESP32, hardware peripherals may not be ready
+     at static init time (before setup() runs).
+  2. REMOVE lazy initialization — all singletons constructed at boot,
+     increasing boot time and memory usage even if never used.
+  3. Break the init dependency chain — singletons currently init in the
+     order they're first accessed, which matches the dependency graph.
+
+  Affected singletons (all follow identical pattern):
+  L40   SequenceTableManager.h  getInstance()   ⛔ SKIP
+  L28   CommandDispatcher.cpp   getInstance()   ⛔ SKIP
+  L25   NetworkManager.cpp      getInstance()   ⛔ SKIP
+  L28   StatusBroadcaster.cpp   getInstance()   ⛔ SKIP
+  L38   WiFiConfigManager.cpp   getInstance()   ⛔ SKIP
+  L21   ContactSensors.cpp      getInstance()   ⛔ SKIP
+  L23   MotorDriver.cpp         getInstance()   ⛔ SKIP
+  L23   CalibrationManager.cpp  getInstance()   ⛔ SKIP
+  L33   ChaosController.cpp     getInstance()   ⛔ SKIP
+  L38   SequenceExecutor.cpp    getInstance()   ⛔ SKIP
+
+  → RECOMMENDATION: Disable cpp:S6018 in SonarLint workspace settings
+    or add // NOSONAR to each getInstance() method.
+
+
+════════════════════════════════════════════════════════════════════════════════
+ cpp:S6229 — Replace time()/strftime() with std::chrono — 20 issues
+════════════════════════════════════════════════════════════════════════════════
+SonarQube wants modern C++ <chrono> instead of C-style time functions.
+On ESP32, time() reads from SNTP-synchronized RTC. std::chrono::system_clock
+reads from the same source but adds abstraction.
+
+  ALL 20: ★★☆☆ MODERATE difficulty, 🟡 MEDIUM opportunity
+
+  The change is safe but requires creating a shared time utility:
+  → Create TimeUtils::now() and TimeUtils::formatTime() wrappers that
+    use std::chrono internally and replace all 20 call sites.
+
+  Risk: std::chrono::format() (C++20) may not be fully supported on
+  ESP32 GCC 14.2.0 toolchain. May need to keep strftime() internally.
+
+  Grouped by file:
+  APIRoutes.cpp       (1)  L652  — time() in handleGetStats response
+  NetworkManager.cpp  (3)  L312,L317  — setupNTP time check
+                           L659       — syncTimeFromClient formatting
+  CrashDiagnostics.cpp(2)  L139,L144  — saveDumpFile timestamp filename
+  UtilityEngine.cpp   (3)  L111,L115  — getFormattedTime()
+                           L120       — isTimeSynchronized()
+  Logger.cpp          (7)  L76,L79    — initializeLogFile header
+                           L207,L219  — flushLogBuffer timestamps
+                           L249,L254  — generateLogFilename
+                           L288       — isTimeSynchronized check
+  StatsManager.cpp    (4)  L109,L117  — incrementDailyStats
+                           L156,L160  — getTodayDistance
+
+  OPPORTUNITY: 🟡 MEDIUM — All 20 instances are the same pattern. A single
+  TimeUtils wrapper class fixes all at once. Pure mechanical replacement,
+  no logic changes. Good "code hygiene" but no behavioral benefit.
+
+  BATCH STRATEGY: Create TimeUtils.h/.cpp → replace all 20 call sites
+  in one batch. ~2 hours, low risk, eliminates 20 issues.
+
+
+════════════════════════════════════════════════════════════════════════════════
+ cpp:S5008 — Replace void* — 3 issues
+════════════════════════════════════════════════════════════════════════════════
+  ⛔ ALL 3: SKIP — FreeRTOS API REQUIREMENT
+
+  FreeRTOS xTaskCreatePinnedToCore() REQUIRES a `void*` parameter for
+  the task function signature. This is a C API — cannot be changed.
+
+  L363  StepperController.cpp  motorTask(void*)     ⛔ SKIP
+  L484  StepperController.cpp  networkTask(void*)   ⛔ SKIP
+  L425  NetworkManager.cpp     ping callback void*  ⛔ SKIP
+
+  → RECOMMENDATION: Disable cpp:S5008 in SonarLint workspace settings
+    for .cpp files, or add // NOSONAR to the 3 function signatures.
+
+
+════════════════════════════════════════════════════════════════════════════════
+ cpp:S5205 — Replace Function Pointer with std::function — 3 issues
+════════════════════════════════════════════════════════════════════════════════
+
+--- CalibrationManager.cpp ---
+ L463  setStatusCallback(void(*)(const char*))         ★★☆☆  🟡 MEDIUM
+ L467  setErrorCallback(void(*)(const char*, const char*))  ★★☆☆  🟡 MEDIUM
+ L471  setCompletionCallback(void(*)(bool))            ★★☆☆  🟡 MEDIUM
+
+   Raw function pointers used for calibration status/error/completion
+   callbacks. SonarQube wants std::function or templates.
+   → std::function<void(const char*)> etc. — BUT std::function causes
+     heap allocation on ESP32, which is undesirable in motor control code.
+   → Template approach: template<typename F> void setStatusCallback(F&& f)
+     — avoids heap allocation but makes CalibrationManager a template,
+     complicating the header.
+   → Best approach: Keep raw function pointers but typedef them:
+       using StatusCallback = void(*)(const char*);
+       void setStatusCallback(StatusCallback cb);
+     This doesn't fix S5205 but improves readability.
+
+   OPPORTUNITY: 🟡 MEDIUM — std::function would be cleaner but adds heap
+   allocation risk. Template approach is cleanest but most invasive.
+   Function pointer typedef is practical but doesn't satisfy SonarQube.
+   Weigh heap safety vs. code style.
+
+
+════════════════════════════════════════════════════════════════════════════════
+ cpp:S107 — Too Many Parameters (limit: 7) — 2 issues
+════════════════════════════════════════════════════════════════════════════════
+
+--- ChaosController.cpp ---
+ L398  handleMultiPhase(8 params)                      ★★☆☆  🟡 MEDIUM
+   Parameters: state, pattern-specific config (speed ranges, step counts,
+   timing values). All are chaos pattern configuration.
+   → Group into a ChaosPhaseConfig struct.
+
+ L646  handleMultiPhaseAtTarget(9 params)              ★★☆☆  🟡 MEDIUM
+   Same pattern as above, for at-target behavior.
+   → Same ChaosPhaseConfig struct, possibly extended.
+
+   OPPORTUNITY: 🟡 MEDIUM — These are internal helper functions called
+   from a few places. Struct grouping is clean and a good practice, but
+   the callers already pass structured data from ChaosPatterns.h.
+   The real question is whether ChaosPatterns.h already has a suitable
+   struct that could be passed directly.
+
+
+################################################################################
+#  JAVASCRIPT ISSUES (26 entries)                                              #
+################################################################################
+
+════════════════════════════════════════════════════════════════════════════════
+ javascript:S3776 — Cognitive Complexity (limit: 15) — 24 issues
+════════════════════════════════════════════════════════════════════════════════
+
+--- controllers/SimpleController.js ---
+ L487  updateZoneEffectUI()               CC=87 (15)   ★★★★  🔴 HIGH
+   🏆 HIGHEST CC IN ENTIRE JS CODEBASE. Manages zone effect UI: show/hide
+   controls based on effect type + slider ranges + linked checkbox state
+   + preview canvas + tooltip updates. Massive branching on effect type.
+   → Extract per-effect-type UI handler: updateLinearZoneUI(),
+     updateExpZoneUI(), etc. Each effect type's UI logic is independent.
+   OPPORTUNITY: 🔴 HIGH — This function is the primary maintainability
+   bottleneck in the UI. Every new zone effect requires modifying this
+   monster. Per-effect extraction makes adding new effects trivial.
+
+--- controllers/OscillationController.js ---
+ L213  updateOscillationUI()              CC=47 (15)   ★★★☆  🔴 HIGH
+   Oscillation UI state management: enable/disable controls based on
+   mode + waveform + modulation + boundary settings.
+   → Extract per-section updaters: updateWaveformControls(),
+     updateModulationControls(), updateBoundaryControls().
+   OPPORTUNITY: 🔴 HIGH — Same pattern as SimpleController. Complex UI
+   state logic that should be decomposed by concern.
+
+--- controllers/PlaylistController.js ---
+ L505  loadSimplePreset()                 CC=58 (15)   ★★★☆  🔴 HIGH
+   Creates a full preset from current simple mode settings. Collects
+   data from many UI fields + validates + transforms.
+   → Extract: collectSimpleFields(), validatePreset(), transformPreset().
+   OPPORTUNITY: 🔴 HIGH — Long function with many field accesses.
+   Splitting improves testability of preset logic.
+
+ L680  loadOscCyclePausePreset()          CC=24 (15)   ★★☆☆  🟡 MEDIUM
+   Similar pattern for oscillation presets but smaller.
+   → Same approach: collect + validate + transform.
+   OPPORTUNITY: 🟡 MEDIUM — Manageable CC (24), lower priority.
+
+ L877  quickAddToSequencer()              CC=31 (15)   ★★☆☆  🟡 MEDIUM
+   Validate sequence line + send to backend.
+   → Extract validation into a pure function (reusable).
+   OPPORTUNITY: 🟡 MEDIUM — Moderate complexity, moderate payoff.
+
+--- controllers/SequenceController.js ---
+ L358  editSequenceLine()                 CC=17 (15)   ★☆☆☆  🟢 LOW
+   Only 2 over threshold. Minor branching complexity.
+   → Small extraction would fix.
+   OPPORTUNITY: 🟢 LOW — Barely over threshold, low priority.
+
+ L549  validateEditForm()                 CC=44 (15)   ★★★☆  🔴 HIGH
+   Sequence line edit form validation. Many field-level validations
+   with mode-specific rules.
+   → Extract per-field validators: validateSpeed(), validatePosition(),
+     validateOscParams(), validateChaosParams().
+   OPPORTUNITY: 🔴 HIGH — Validation logic should be pure and testable.
+   Currently tangled with DOM access. Separating validation from DOM
+   enables pure function testing.
+
+ L885  updateSequenceButtons()            CC=24 (15)   ★★☆☆  🟡 MEDIUM
+   Button state management based on sequence state.
+   → State table approach or per-state button configs.
+   OPPORTUNITY: 🟡 MEDIUM — UI state logic, moderate complexity.
+
+--- controllers/ChaosController.js ---
+ L145  updateChaosUI()                    CC=17 (15)   ★☆☆☆  🟢 LOW
+   Barely over threshold. Minor UI state adjustments.
+   OPPORTUNITY: 🟢 LOW — Near-threshold, not worth immediate attention.
+
+--- main.js (4 functions) ---
+ L18   updateSpeedDisplay()               CC=33 (15)   ★★☆☆  🟡 MEDIUM
+   Speed display formatting with unit conversion and milestone checks.
+   → Extract unit conversion + milestone logic.
+   OPPORTUNITY: 🟡 MEDIUM — Frequently called but stable logic.
+
+ L151  syncInputsFromBackend()            CC=47 (15)   ★★★☆  🔴 HIGH
+   Syncs ALL UI inputs from backend state. Massive field-by-field sync.
+   → Group by section: syncSpeedInputs(), syncOscInputs(), etc.
+   OPPORTUNITY: 🔴 HIGH — This is the primary UI synchronization point.
+   Every new control added requires modifying this function. Per-section
+   extraction makes the sync logic composable and maintainable.
+
+ L205  updateControlsState()              CC=21 (15)   ★★☆☆  🟡 MEDIUM
+   Enable/disable controls based on movement mode.
+   → Mode-specific control state maps.
+   OPPORTUNITY: 🟡 MEDIUM — Moderate CC, touched occasionally.
+
+ L273  updateUI()                         CC=75 (15)   ★★★★  🔴 HIGH
+   🏆 SECOND HIGHEST JS CC. Main UI update function called on every
+   WebSocket message. Dispatches to all sub-updaters + handles state
+   transitions + applies visual effects.
+   → This is already a composed function but still has too much inline
+     logic. Extract state transition handling and visual effects.
+   OPPORTUNITY: 🔴 HIGH — Core UI update path. Called on every WS message.
+   Keeping this clean is critical for UI responsiveness and correctness.
+
+--- ui/StatsController.js ---
+ L576  buildMilestoneTooltip()            CC=23 (15)   ★★☆☆  🟡 MEDIUM
+   Builds HTML tooltip for milestones with conditional sections.
+   → Extract per-section builders.
+   OPPORTUNITY: 🟡 MEDIUM — Display-only logic, moderate complexity.
+
+--- ui/ToolsController.js ---
+ L643  updateSystemStats()                CC=46 (15)   ★★★☆  🔴 HIGH
+   System status display: memory, WiFi, uptime, firmware info. Many
+   conditional formatting and threshold checks.
+   → Per-metric renderers: renderMemoryStats(), renderWiFiStats(), etc.
+   OPPORTUNITY: 🔴 HIGH — Frequently updated, grows with new metrics.
+   Per-metric extraction makes it trivially extensible.
+
+--- ui/UIController.js ---
+ L26   switchTab()                        CC=22 (15)   ★★☆☆  🟡 MEDIUM
+   Tab switching with state persistence and lazy loading.
+   → Extract tab-specific init into a tab handler map.
+   OPPORTUNITY: 🟡 MEDIUM — Moderate complexity, moderate payoff.
+
+--- utils/PlaylistUtils.js ---
+ L62   zoneEffectPresetTooltip()          CC=19 (15)   ★☆☆☆  🟢 LOW
+   Tooltip text generation per effect type. Simple switch.
+   → Already a simple dispatch, barely over threshold.
+   OPPORTUNITY: 🟢 LOW — Near-threshold, minimal gain from refactoring.
+
+ L119  presetTooltip()                    CC=21 (15)   ★☆☆☆  🟡 MEDIUM
+   Dispatches tooltip generation by preset mode.
+   → Extract per-mode tooltip builders.
+   OPPORTUNITY: 🟡 MEDIUM — Small function, dispatch pattern.
+
+--- utils/SequenceUtils.js ---
+ L386  validateSequencerLinePure()         CC=78 (15)   ★★★★  🔴 HIGH
+   🏆 THIRD HIGHEST JS CC. Pure validation function for sequence lines.
+   Multi-field validation with mode-specific rules and cross-field deps.
+   → Already "pure" (no DOM). Split into per-field validators and
+     a cross-field constraint checker.
+   OPPORTUNITY: 🔴 HIGH — Already a pure function = PERFECT candidate
+   for splitting. Each sub-validator becomes independently unit-testable.
+   This is the ideal refactoring target.
+
+ L553  getAllInvalidFieldsPure()           CC=51 (15)   ★★★☆  🔴 HIGH
+   Collects all invalid fields for a sequence line. Related to above.
+   → Same decomposition: per-field validity checks.
+   OPPORTUNITY: 🔴 HIGH — Pure function, highly decomposable.
+
+--- utils/SimpleUtils.js ---
+ L98   drawZoneEffectPreviewPure()        CC=55 (15)   ★★★☆  🔴 HIGH
+   Canvas drawing for zone effect preview. Per-effect-type rendering
+   with coordinate math.
+   → Per-effect-type draw functions: drawLinearEffect(), drawExpEffect().
+   OPPORTUNITY: 🔴 HIGH — Pure canvas drawing, perfectly decomposable.
+   Each effect's visual is independent. Extraction enables visual testing.
+
+--- utils/utils.js ---
+ L270  updateLinkedCheckboxState()        CC=18 (15)   ★☆☆☆  🟢 LOW
+   Linked checkbox disabled state logic. Near threshold.
+   OPPORTUNITY: 🟢 LOW — Near-threshold, utility function.
+
+ L367  syncPauseControlsToBackend()       CC=19 (15)   ★☆☆☆  🟢 LOW
+   Pause control sync. Near threshold.
+   OPPORTUNITY: 🟢 LOW — Almost at threshold, minimal gain.
+
+ L689  isRetryableError()                 CC=21 (15)   ★☆☆☆  🟢 LOW
+   Error classification for retry logic. Simple conditions.
+   OPPORTUNITY: 🟢 LOW — Simple classifier, near threshold.
+
+
+════════════════════════════════════════════════════════════════════════════════
+ javascript:S3800 — Return Same Type — 1 issue
+════════════════════════════════════════════════════════════════════════════════
+
+--- ui/StatsController.js ---
+ L30   getDayNames()                                   ★☆☆☆  🟢 LOW
+   Returns localized day name array. May return undefined/null in some
+   edge case (missing locale data).
+   → Add explicit empty array fallback: return dayNames || [];
+   OPPORTUNITY: 🟢 LOW — Simple fix, defensive coding.
+
+
+════════════════════════════════════════════════════════════════════════════════
+ javascript:S7785 — Top-Level Await — 1 issue
+════════════════════════════════════════════════════════════════════════════════
+
+--- main.js ---
+ L519  boot() async IIFE                               ★☆☆☆  ⛔ SKIP
+   `(async function boot() { ... })();` — SonarQube wants top-level await.
+   This requires ES modules (`<script type="module">`), which would change
+   the script loading model for the entire ESP32 web interface.
+   → SKIP: The async IIFE pattern is intentional and standard for
+     classic script loading. Converting to ES modules is a large change
+     with no behavioral benefit for an embedded web UI.
+   OPPORTUNITY: ⛔ SKIP — Framework constraint. ESP32 serves classic
+   scripts, not ES modules.
+
+
+################################################################################
+#  PYTHON ISSUES (5 entries)                                                   #
+################################################################################
+
+════════════════════════════════════════════════════════════════════════════════
+ python:S3776 — Cognitive Complexity (limit: 15) — 5 issues
+════════════════════════════════════════════════════════════════════════════════
+All Python files are DEVELOPMENT TOOLS, not production code.
+They run on the developer's machine, not on the ESP32.
+
+ L275  analyze_sonarqube.py  (?)          CC=21 (15)   ★☆☆☆  🟢 LOW
+ L110  find_dead_code.py  parse()         CC=18 (15)   ★☆☆☆  🟢 LOW
+ L181  find_dead_code.py  analyze()       CC=47 (15)   ★★☆☆  🟢 LOW
+ L249  find_dead_code.py  main()          CC=71 (15)   ★★☆☆  🟢 LOW
+ L483  upload_html.py     main()          CC=42 (15)   ★★☆☆  🟢 LOW
+
+ OPPORTUNITY: ALL 🟢 LOW — These are dev scripts, not production code.
+ Refactoring has zero impact on the deployed firmware. Fix only if the
+ scripts themselves become hard to maintain.
+
+
+################################################################################
+#  SUMMARY TABLES                                                              #
+################################################################################
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ ISSUE COUNT BY OPPORTUNITY VALUE                                    │
+├──────────────────────┬───────┬───────────────────────────────────────┤
+│ Opportunity          │ Count │ Notes                                 │
+├──────────────────────┼───────┼───────────────────────────────────────┤
+│ 🔴 HIGH              │  ~32  │ Most impactful refactorings            │
+│ 🟡 MEDIUM            │  ~38  │ Nice improvements                     │
+│ 🟢 LOW               │  ~16  │ Cosmetic / near-threshold             │
+│ ⛔ SKIP               │  ~15  │ False positives / framework limits     │
+│ ✅ FIXED (Batch 15)   │  ~15  │ S1188 lambda extraction               │
+│ ⚠️ STALE (pre-B15)    │   ~1  │ APIRoutes CC needs rescan             │
+│ (S6229 batch — 🟡)   │  ~20  │ All same pattern, one-batch fix       │
+├──────────────────────┼───────┼───────────────────────────────────────┤
+│ TOTAL                │  120  │                                       │
+└──────────────────────┴───────┴───────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ SKIP CANDIDATES — 15 issues (recommend disable/NOSONAR)            │
+├──────────────────────┬───────┬───────────────────────────────────────┤
+│ Rule                 │ Count │ Reason                                │
+├──────────────────────┼───────┼───────────────────────────────────────┤
+│ cpp:S6018            │  10   │ Meyer's Singleton, ESP32 init order   │
+│ cpp:S5008            │   3   │ FreeRTOS void* API requirement        │
+│ cpp:S1448 (Utility)  │   1   │ Facade pattern by design              │
+│ javascript:S7785     │   1   │ Classic scripts, not ES modules       │
+├──────────────────────┼───────┼───────────────────────────────────────┤
+│ TOTAL SKIPPABLE      │  15   │ →  Issue count drops to 90 remaining  │
+└──────────────────────┴───────┴───────────────────────────────────────┘
+
+
+################################################################################
+#  PRIORITIZED REFACTORING ROADMAP                                             #
+################################################################################
+
+Priority based on: (Opportunity × Issues_Fixed_Per_Effort) ÷ Risk
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PRIORITY 1 — CommandDispatcher (5 × S3776)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Opportunity: 🔴 HIGH | Difficulty: ★★★☆ | Issues fixed: 5
+ Approach: Command handler map/table for all 5 dispatch functions.
+ One architectural pattern fixes the highest single-file issue count.
+ Total CC reduction: ~229 → ~60-80. Risk: MEDIUM (needs full test pass).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PRIORITY 2 — CalibrationManager (3 × S3776 + 9 × S134 = 12 issues)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Opportunity: 🔴 HIGH | Difficulty: ★★★☆ | Issues fixed: 12
+ Approach: RAII WebSocket service guard + phase extraction.
+ HIGHEST issue-per-effort ratio: 12 issues from one structural pattern.
+ Risk: HIGH (calibration is safety-critical, needs physical testing).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PRIORITY 3 — OscillationController::calculatePosition (S3776 CC=52)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Opportunity: 🔴 HIGH | Difficulty: ★★★☆ | Issues fixed: 1
+ Approach: Per-waveform pure function extraction.
+ Perfect for unit testing — pure math with no side effects.
+ Risk: LOW (pure functions, easily verified by tests).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PRIORITY 4 — ChaosController::process (S3776 CC=47)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Opportunity: 🔴 HIGH | Difficulty: ★★★☆ | Issues fixed: 1
+ Approach: Per-state handler extraction from state machine.
+ Risk: MEDIUM (state transitions must be preserved exactly).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PRIORITY 5 — S6229 std::chrono batch (20 issues)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Opportunity: 🟡 MEDIUM | Difficulty: ★★☆☆ | Issues fixed: 20
+ Approach: Create TimeUtils wrapper, replace all 20 call sites.
+ HIGHEST raw issue count: 20 issues from mechanical replacement.
+ Risk: LOW (behavioral equivalent, just wrapping existing calls).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PRIORITY 6 — JS S3776 HIGH targets (updateZoneEffectUI, updateUI,
+              validateSequencerLinePure, syncInputsFromBackend)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Opportunity: 🔴 HIGH | Difficulty: ★★★☆-★★★★ | Issues fixed: 8-10
+ Approach: Per-function decomposition (see individual entries above).
+ These are the 🔴 HIGH JS functions. Each is independently tackable.
+ Risk: MEDIUM (UI testing needed, no automated JS tests).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PRIORITY 7 — NetworkManager::checkConnectionHealth (S3776 CC=42)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Opportunity: 🔴 HIGH | Difficulty: ★★★☆ | Issues fixed: 1
+ Approach: Per-concern extraction (WiFi/SNTP/reconnect/fallback).
+ Risk: HIGH (network reliability is critical, hard to test).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PRIORITY 8 — BaseMovementController::doStep (S3776 CC=34)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Opportunity: 🔴 HIGH | Difficulty: ★★★☆ | Issues fixed: 1 (+2 S134)
+ Approach: Extract accel/decel/contact helpers.
+ Risk: HIGH (innermost hot loop, timing-sensitive).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PRIORITY 9 — Remaining 🟡 MEDIUM C++ S3776 (6 issues)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ WiFiConfigManager CC=30, FileSystem CC=39, StepperController CC=34,
+ BaseMovement CC=28, BaseMovement CC=27, SequenceExecutor CC=32.
+ All moderate CC, moderate opportunity. Fix when touching these files.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PRIORITY 10 — SKIP CANDIDATES (15 issues)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Add to SonarLint exclusions:
+   cpp:S6018  (10 singletons — Meyer's pattern, ESP32 init order)
+   cpp:S5008  (3 void* — FreeRTOS API mandate)
+   cpp:S1448  (1 UtilityEngine — facade by design)
+   javascript:S7785  (1 — classic scripts, not ES modules)
+ → Instantly reduces visible issue count by 15.
+
+
+################################################################################
+#  BEST "COMPLEX BUT INTERESTING" REFACTORINGS                                 #
+################################################################################
+
+These are HARD refactorings that deliver outsized value despite complexity:
+
+1. 🏆 CalibrationManager RAII WS Guard (★★★☆, fixes 12 issues)
+   One pattern → 3 S3776 + 9 S134 gone. Transforms the most failure-prone
+   code (calibration) from deeply-nested polling into clean phase-based
+   logic. This is the single highest-ROI refactoring in the codebase.
+
+2. 🏆 CommandDispatcher Command Table (★★★☆, fixes 5 issues)
+   CC drops from ~229 to ~60-80. Makes adding new commands trivial.
+   The dispatch pattern is identical across all 5 functions — one
+   architectural decision propagates everywhere.
+
+3. 🏆 OscillationController::calculatePosition (★★★☆, fixes 1 issue)
+   Pure math decomposition. Each waveform becomes a pure function that
+   can be PERFECTLY unit tested. The kind of refactoring that catches
+   math bugs before they reach hardware.
+
+4. 🏆 JS validateSequencerLinePure + getAllInvalidFieldsPure (★★★★, fixes 2)
+   ALREADY pure functions (no DOM!) — just need decomposition. These are
+   the ideal "split into sub-validators" candidates. Would enable
+   comprehensive validation testing without any UI infrastructure.
+
+5. 🏆 S6229 TimeUtils Wrapper (★★☆☆, fixes 20 issues)
+   The easiest batch fix: one utility class, 20 mechanical call site
+   replacements. Highest issue-count-per-effort ratio.
 
 ================================================================================
- C++ FILES (19 S3776 + 24 S134 + 17 S1188)
+ END OF ASSESSMENT
 ================================================================================
-
-─── src/communication/APIRoutes.cpp ────────────────────────────────────────────
-
-  S3776  L244   setupAPIRoutes()          CC=251 (limit 25)     ★★★★ VERY HARD
-    CC reduced substantially by Batch 15 lambda extraction (16 lambdas
-    → 16 named static functions). Remaining CC still high due to route
-    registration + small inline lambdas. Further reduction would require
-    splitting into multiple setup functions (e.g., setupStatsRoutes()).
-
-  S1188  L303   λ /api/stats GET              23 lines          ✅ FIXED (Batch 15)
-  S1188  L336   λ /api/stats/increment POST   21 lines          ✅ FIXED (Batch 15)
-  S1188  L378   λ /api/stats/export GET       36 lines          ✅ FIXED (Batch 15)
-  S1188  L426   λ /api/stats/import POST      51 lines          ✅ FIXED (Batch 15)
-  S1188  L505   λ /api/playlists GET          40 lines          ✅ FIXED (Batch 15)
-  S1188  L559   λ /api/playlists/add POST     82 lines          ✅ FIXED (Batch 15)
-  S1188  L670   λ /api/playlists/delete POST  32 lines          ✅ FIXED (Batch 15)
-  S1188  L714   λ /api/playlists/update POST  33 lines          ✅ FIXED (Batch 15)
-  S1188  L803   λ /logs/clear POST            27 lines          ✅ FIXED (Batch 15)
-  S1188  L898   λ /logging/preferences POST   27 lines          ✅ FIXED (Batch 15)
-  S1188  L940   λ /api/system/dumps GET       21 lines          ✅ FIXED (Batch 15)
-  S1188  L965   λ /api/system/dumps/latest    21 lines          ✅ FIXED (Batch 15)
-  S1188  L995   λ /api/wifi/scan GET          25 lines          ✅ FIXED (Batch 15)
-  S1188  L1046  λ /api/wifi/save POST         34 lines          ✅ FIXED (Batch 15)
-  S1188  L1092  λ /api/wifi/connect POST      66 lines          ✅ FIXED (Batch 15)
-  S1188  L1289  λ onNotFound                  26 lines          ✅ FIXED (Batch 15)
-    All 16 lambdas extracted to named static void handleXxx() functions.
-    No parameters needed — all use extern globals (server, engine, etc.).
-
-  S134   L820   inside /logs/clear            nesting=4         ✅ FIXED (Batch 13)
-  S134   L975   inside /dumps/latest          nesting=4         ✅ FIXED (Batch 13)
-
-─── src/movement/BaseMovementController.cpp ────────────────────────────────────
-
-  S3776  L264   checkAndTriggerRandomTurnback()  CC=28 (25)     ★★☆☆ MEDIUM
-    State machine for random turnback: check enabled → pending → dice roll.
-    Extract shouldTriggerTurnback() and handlePendingTurnback() helpers.
-
-  S134   L282   inside above                  nesting=4         ★★☆☆ MEDIUM
-  S134   L286   inside above                  nesting=4         ★★☆☆ MEDIUM
-    Tied to the same function. Fixed together.
-
-  S3776  L698   process()                     CC=27 (25)        ★★☆☆ MEDIUM
-    Main loop: check state, handle pause, delegate to doStep.
-    Barely over limit (27/25). Extract handlePauseState() helper.
-
-  S3776  L802   doStep()                      CC=34 (25)        ★★★☆ HARD
-    Core stepping: forward/backward movement, zone effects, contact sensing.
-    Interleaved forward/back logic with zone checks. Splitting risks
-    breaking tight timing on ESP32 stepper motor ISR interactions.
-
-─── src/movement/CalibrationManager.cpp ────────────────────────────────────────
-
-  S3776  L77    findContact()                 CC=31 (25)        ★★★☆ HARD
-    Blocking motor loop with hardware sensor polling + backoff.
-    Must maintain exact timing for contact detection reliability.
-
-  S3776  L200   startCalibration()            CC=57 (25)        ★★★★ VERY HARD
-    Full calibration: find start → find end → measure → validate.
-    Multi-step blocking hardware procedure with retry loop, many failure
-    paths. Each step depends on previous. ~160 lines of sequential hw ops.
-
-  S3776  L363   returnToStart()               CC=44 (25)        ★★★☆ HARD
-    Move motor back to start contact with emergency decontact.
-    Blocking motor movement loop interacting with sensors.
-
-  S134   L115-116, L258, L298, L336,         nesting=4 (×9)    ★★★☆ HARD
-         L383-384, L412-413
-    All inside calibration functions. Nested error-handling paths in
-    hardware interaction sequences. Tied to the S3776 refactors above.
-
-─── src/movement/ChaosController.cpp ──────────────────────────────────────────
-
-  S3776  L729   process()                     CC=47 (25)        ★★★★ VERY HARD
-    ~240 lines. Main chaos loop: pause handling, duration check, pattern
-    switching, step execution. Multi-pattern dispatch with timing, pauses,
-    boundary checks. Touching this risks breaking pattern behavior.
-
-─── src/communication/CommandDispatcher.cpp ────────────────────────────────────
-
-  S3776  L126   handleBasicCommands()         CC=47 (25)        ★★☆☆ MEDIUM
-    if/else chain dispatching: calibrate, start, stop, pause, setConfig...
-    Mechanical: extract each command to its own handleXyz() method.
-    ~15 commands × ~15 lines each. Tedious but straightforward.
-
-  S3776  L338   handleDecelZoneCommands()     CC=59 (25)        ★★☆☆ MEDIUM
-    Parse 15+ JSON fields into zoneEffect config struct.
-    Long but repetitive. Extract parseZoneEffectConfig() helper.
-
-  S3776  L571   handleChaosCommands()         CC=40 (25)        ★★☆☆ MEDIUM
-    startChaos/stopChaos/setChaosConfig. 3 sub-commands.
-    Split into handleStartChaos(), handleSetChaosConfig().
-
-  S134   L604   inside handleChaosCommands    nesting=4         ✅ FIXED (Batch 13)
-  S134   L646   inside handleChaosCommands    nesting=4         ✅ FIXED (Batch 13)
-
-  S3776  L676   handleOscillationCommands()   CC=42 (25)        ★★☆☆ MEDIUM
-    Large config parsing + live-update transitions.
-    Extract parseOscillationConfig() helper.
-
-  S3776  L804   handleSequencerCommands()     CC=49 (25)        ★★☆☆ MEDIUM
-    CRUD: addLine/deleteLine/editLine/start/stop/etc.
-    Each sub-command is short. Split into per-action handlers.
-
-─── src/core/filesystem/FileSystem.cpp ─────────────────────────────────────────
-
-  S3776  L23    mount()                       CC=42 (25)        ★★☆☆ MEDIUM
-    Mount LittleFS with fallback format+retry, health check.
-    Sequential steps. Extract mountWithRetry() and healthCheck().
-
-  S134   L46    inside mount()                nesting=4         ✅ FIXED (Batch 13)
-  S134   L49    inside mount()                nesting=4         ✅ FIXED (Batch 13)
-
-─── src/communication/FilesystemManager.cpp ────────────────────────────────────
-
-  S1188  L138   λ listDir (recursive)         27 lines          ✅ FIXED (Batch 13)
-
-  S134   L313   inside handleUploadFile       nesting=4         ✅ FIXED (Batch 13)
-
-─── src/core/logger/Logger.cpp ─────────────────────────────────────────────────
-
-  S134   L58    inside initializeLogFile()    nesting=4         ✅ FIXED (Batch 13)
-  S134   L277   inside generateLogFilename()  nesting=4         ✅ FIXED (Batch 13)
-
-─── src/communication/NetworkManager.cpp ───────────────────────────────────────
-
-  S3776  L444   checkConnectionHealth()       CC=42 (25)        ★★★☆ HARD
-    WiFi watchdog state machine: mDNS re-announce, ping gateway,
-    3-tier recovery escalation. Multi-state transitions.
-    Extract handleTier1Recovery(), handleTier2Recovery() etc.
-
-─── src/movement/OscillationController.cpp ─────────────────────────────────────
-
-  S3776  L255   calculatePosition()           CC=52 (25)        ★★★★ VERY HARD
-    Waveform position math: phase accumulation, ramp in/out,
-    center/amplitude transition, waveform selection.
-    Tightly coupled math with interleaved state transitions.
-    Splitting risks introducing subtle oscillation glitches.
-
-─── src/movement/SequenceExecutor.cpp ──────────────────────────────────────────
-
-  S3776  L642   process()                     CC=32 (25)        ★★☆☆ MEDIUM
-    Sequencer main loop: wait-pause, start next cycle/line.
-    Extract handlePauseEnd() and handleCycleComplete().
-
-  S134   L333   inside blockingMoveToStep()   nesting=4         ★★☆☆ MEDIUM
-    while → if(mutex) → if(ws) → if(time). Extract serviceLoop().
-
-─── src/StepperController.cpp ──────────────────────────────────────────────────
-
-  S3776  L363   motorTask()                   CC=37 (25)        ★★☆☆ MEDIUM
-    FreeRTOS task: calibration request + movement type switch.
-    Extract dispatchMovement(type) helper.
-
-  S134   L425   inside motorTask              nesting=4         ✅ FIXED (Batch 13)
-  S134   L511   inside motorTask              nesting=4         ✅ FIXED (Batch 13)
-
-─── src/communication/WiFiConfigManager.cpp ────────────────────────────────────
-
-  S3776  L137   scanNetworks()                CC=31 (25)        ★★☆☆ MEDIUM
-    Scan + deduplicate by SSID + sort by signal.
-    Extract deduplicateNetworks() helper.
-
-  S134   L180   inside scanNetworks           nesting=4         ✅ FIXED (Batch 13)
-
-================================================================================
- JAVASCRIPT FILES (25 S3776)
-================================================================================
-
-─── data/js/controllers/ChaosController.js ─────────────────────────────────────
-
-  S3776  L145   updateChaosUI(data)           CC=17 (15)        ★★☆☆ MEDIUM
-    ~140 lines syncing all chaos UI elements. Split by section:
-    updateChaosStatus(), updateChaosControls(), updateChaosPatterns().
-
-─── data/js/main.js ────────────────────────────────────────────────────────────
-
-  S3776  L18    updateSpeedDisplay(data)      CC=33 (15)        ★★☆☆ MEDIUM
-    Speed display per mode. Extract updateSpeedForOscillation(),
-    updateSpeedForChaos(), updateSpeedForSequence(), etc.
-
-  S3776  L151   syncInputsFromBackend(data)   CC=47 (15)        ★★☆☆ MEDIUM
-    Sync inputs without overwriting focused fields.
-    Repetitive activeElement checks. Extract syncFieldIfNotFocused().
-
-  S3776  L205   updateControlsState(data)     CC=21 (15)        ★★☆☆ MEDIUM
-    Update max values, button states, preset badges. Extract helpers.
-
-  S3776  L273   updateUI(data)                CC=75 (15)        ★★★★ VERY HARD
-    ~320 lines. Master UI dispatcher. Touches position, state, buttons,
-    all sub-controllers, tab auto-switching. Central coordination point.
-    Splitting requires careful dependency management.
-
-─── data/js/controllers/OscillationController.js ──────────────────────────────
-
-  S3776  L213   updateOscillationUI(data)     CC=47 (15)        ★★☆☆ MEDIUM
-    ~160 lines syncing oscillation UI. Split by section:
-    updateOscState(), updateOscRamp(), updateOscCyclePause().
-
-─── data/js/controllers/PlaylistController.js ──────────────────────────────────
-
-  S3776  L505   loadSimplePreset(config)      CC=58 (15)        ★★☆☆ MEDIUM
-    ~170 lines populating form. Split by param group:
-    loadZoneEffects(), loadPauseConfig(), loadSpeedConfig().
-
-  S3776  L680   loadOscillationPreset(cfg)    CC=24 (15)        ✅ FIXED (Batch 14)
-    Extracted loadOscCyclePausePreset() for cycle pause logic.
-
-  S3776  L877   loadPresetIntoSequencerModal  CC=31 (15)        ★★☆☆ MEDIUM
-    Switch on mode, load preset. Extract per-mode loaders.
-
-─── data/js/utils/PlaylistUtils.js ─────────────────────────────────────────────
-
-  S3776  L64    generatePresetTooltipPure()   CC=39 (15)        ✅ FIXED (Batch 13)
-    Split into simplePresetTooltip, oscillationPresetTooltip, chaosPresetTooltip.
-
-  S3776  L114   generateSequenceLineTooltip() CC=42 (15)        ✅ FIXED (Batch 13)
-    Split into simpleLineTooltip, oscillationLineTooltip, chaosLineTooltip.
-
-  S3776  NEW    simplePresetTooltip()         CC=19 (15)        ✅ FIXED (Batch 14)
-    Emerged from Batch 13 split. Extracted zoneEffectPresetTooltip().
-
-  S3776  NEW    simpleLineTooltip()           CC=21 (15)        ✅ FIXED (Batch 14)
-    Emerged from Batch 13 split. Extracted zoneEffectLineTooltip().
-
-─── data/js/controllers/SequenceController.js ──────────────────────────────────
-
-  S3776  L358   editSequenceLine(lineId)      CC=17 (15)        ★★☆☆ MEDIUM
-    Populate edit form from line data. Per-type field mapping.
-
-  S3776  L549   validateEditForm()            CC=44 (15)        ★★☆☆ MEDIUM
-    Validate fields by movement type. Extract per-type validators.
-
-  S3776  L885   updateSequenceStatus(status)  CC=24 (15)        ✅ FIXED (Batch 14)
-    Extracted updateSequenceButtons() and highlightActiveSequenceLine().
-
-─── data/js/utils/SequenceUtils.js ─────────────────────────────────────────────
-
-  S3776  L386   validateSequencerLinePure()   CC=78 (15)        ★★★☆ HARD
-    ~165 lines. Physics validation per movement type. Many branching rules.
-    But pure function → safe to split into validateSimpleLine(),
-    validateOscillationLine(), etc. Risk is only correctness.
-
-  S3776  L553   getAllInvalidFieldsPure()     CC=51 (15)        ★★☆☆ MEDIUM
-    Map errors → field IDs. Extract per-type field mappers.
-
-─── data/js/controllers/SimpleController.js ────────────────────────────────────
-
-  S3776  L487   updateZoneEffectUI(zoneEff)   CC=87 (15)        ★★★☆ HARD
-    ~180 lines. Complex UI sync: checkboxes, sliders, radios, preview.
-    Extract updateDecelSection(), updateAccelSection(), updatePreview().
-
-─── data/js/utils/SimpleUtils.js ───────────────────────────────────────────────
-
-  S3776  L98    drawZoneEffectPreviewPure()   CC=55 (15)        ★★★☆ HARD
-    ~100+ lines canvas 2D drawing. Sequential draw calls but tightly
-    coupled to geometry calculations. Extract drawAxis(), drawZones(),
-    drawSpeedCurve(), drawTurnbackMarkers().
-
-─── data/js/ui/StatsController.js ──────────────────────────────────────────────
-
-  S3776  L571   updateMilestones(totalMM)     CC=23 (15)        ✅ FIXED (Batch 14)
-    Extracted buildMilestoneTooltip() and trackMilestoneChange().
-
-─── data/js/ui/ToolsController.js ──────────────────────────────────────────────
-
-  S3776  L643   updateSystemStats(system)     CC=46 (15)        ★★☆☆ MEDIUM
-    ~100+ lines updating system stats cards. Repetitive per-card updates.
-    Extract updateCpuCard(), updateMemoryCard(), etc.
-
-─── data/js/ui/UIController.js ─────────────────────────────────────────────────
-
-  S3776  L26    switchTab(tabName)            CC=22 (15)        ★★☆☆ MEDIUM
-    Tab switching with safety stop + limits modal + CSS + command.
-    Mixed concerns but small function. Extract confirmTabSwitch().
-
-─── data/js/utils/utils.js ─────────────────────────────────────────────────────
-
-  S3776  L270   updateCenterAmplitudePresets  CC=18 (15)        ✅ FIXED (Batch 14)
-    Extracted updateLinkedCheckboxState() helper.
-
-  S3776  L367   syncCyclePauseUI()            CC=19 (15)        ✅ FIXED (Batch 14)
-    Extracted syncPauseControlsToBackend() helper.
-
-  S3776  L689   fetchWithRetry()              CC=21 (15)        ✅ FIXED (Batch 14)
-    Extracted isRetryableError() helper.
-
-─── data/js/core/websocket.js ──────────────────────────────────────────────────
-
-  S3776  L163   handleWebSocketMessage(data)  CC=16 (15)        ✅ FIXED (Batch 13)
-    Converted to dispatch map pattern (CC 16→5).
-
-================================================================================
- PYTHON FILES (5 S3776)
-================================================================================
-
-─── analyze_sonarqube.py ───────────────────────────────────────────────────────
-
-  S3776  L275   diff_reports()                CC=21 (15)        ✅ FIXED (Batch 14)
-    Extracted format_rule_deltas() and format_file_changes().
-
-─── find_dead_code.py ──────────────────────────────────────────────────────────
-
-  S3776  L110   extract_symbols()             CC=18 (15)        ✅ FIXED (Batch 14)
-    Split into _extract_functions(), _extract_defines(), _extract_classes().
-
-  S3776  L181   analyze_header_includes()     CC=47 (15)        ★★☆☆ MEDIUM
-    Check if headers are needed. Extract check_single_header().
-
-  S3776  L249   main()                        CC=71 (15)        ★★☆☆ MEDIUM
-    CLI main. Sequential pipeline. Extract print_dead_symbols(),
-    print_unused_headers(), print_summary().
-
-─── upload_html.py ─────────────────────────────────────────────────────────────
-
-  S3776  L483   main()                        CC=42 (15)        ★★☆☆ MEDIUM
-    Argparse + dispatch. Each mode independent.
-    Extract handle_watch(), handle_upload(), handle_sync(), etc.
-
-================================================================================
- SUMMARY BY DIFFICULTY (updated post-Batch 14)
-================================================================================
-
-★☆☆☆ EASY — All 30 FIXED ✅ (Batch 13: 17, Batch 14: 10, new from split: 3→fixed)
-  C++:  [B13] S1188 ×1 (FilesystemManager), S134 ×13
-  JS:   [B13] generatePresetTooltipPure, generateSequenceLineTooltipPure,
-              handleWebSocketMessage
-        [B14] simplePresetTooltip (new→fixed), simpleLineTooltip (new→fixed),
-              loadOscillationPreset, updateSequenceStatus, updateMilestones,
-              updateCenterAmplitudePresets, syncCyclePauseUI, fetchWithRetry
-  Py:   [B14] diff_reports, extract_symbols
-
-  C++:  S1188 ×16 (APIRoutes lambdas) — moved to dedicated batch (Phase 1b)
-
-★★☆☆ MEDIUM (37 issues — moderate effort, 30min-2h each):
-  C++:  checkAndTriggerRandomTurnback (+2 S134), process (BMC), mount,
-        handleBasicCommands, handleDecelZoneCommands, handleChaosCommands,
-        handleOscillationCommands, handleSequencerCommands, scanNetworks,
-        process (SequenceExec), blockingMoveToStep (S134), motorTask,
-        S1188 ×4 MEDIUM APIRoutes lambdas
-  JS:   updateChaosUI, updateSpeedDisplay, syncInputsFromBackend,
-        updateControlsState, updateOscillationUI, loadSimplePreset,
-        loadPresetIntoSequencerModal, editSequenceLine, validateEditForm,
-        getAllInvalidFieldsPure, updateSystemStats, switchTab
-  Py:   analyze_header_includes, main (find_dead_code), main (upload_html)
-
-★★★☆ HARD (10 issues — significant effort, regression risk):
-  C++:  doStep, findContact, returnToStart, checkConnectionHealth
-        CalibrationManager S134 ×9 (tied to calibration refactor)
-  JS:   validateSequencerLinePure, updateZoneEffectUI, drawZoneEffectPreviewPure
-
-★★★★ VERY HARD (4 issues — skip recommended):
-  C++:  setupAPIRoutes (CC=251), startCalibration (CC=57),
-        ChaosController::process (CC=47), calculatePosition (CC=52)
-  JS:   updateUI (CC=75, master dispatcher)

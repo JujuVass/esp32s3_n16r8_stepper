@@ -159,6 +159,12 @@ private:
     void setupNTP();
     void setupOTA();
 
+    // Health check sub-routines
+    void handleHealthyConnection();                  // Reset watchdog + re-sync NTP
+    void handleRecoveryTier1();                      // WiFi.reconnect()
+    bool handleRecoveryTier2();                      // Full disconnect + re-associate
+    void handleRecoveryTier3();                      // Emergency reboot
+
     // State
     NetworkMode _mode = NetworkMode::NET_AP_DIRECT;
     bool _otaConfigured = false;

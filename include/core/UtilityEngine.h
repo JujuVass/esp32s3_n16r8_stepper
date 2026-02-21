@@ -79,7 +79,7 @@ struct SystemConfig {
 // ============================================================================
 // UTILITY ENGINE CLASS
 // ============================================================================
-class UtilityEngine {
+class UtilityEngine { // NOSONAR(cpp:S1448) Facade pattern — all methods are one-line forwarders
 
 public:
   // ========================================================================

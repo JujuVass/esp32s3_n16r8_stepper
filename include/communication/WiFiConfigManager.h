@@ -98,7 +98,11 @@ private:
     WiFiConfigManager& operator=(const WiFiConfigManager&) = delete;
 
     void ensureInitialized();
+    /** First-pass dedup: keep strongest RSSI per SSID, returns unique count */
+    static int deduplicateNetworks(WiFiNetworkInfo* networks, int rawCount, int maxNetworks);
 
+    /** In-place sort by signal strength (strongest first) */
+    static void sortNetworksBySignal(WiFiNetworkInfo* networks, int count);
     Preferences _prefs;
     bool _initialized = false;
     static constexpr const char* NVS_NAMESPACE = "wifi_cfg";

@@ -35,7 +35,7 @@ volatile MovementType currentMovement = MOVEMENT_VAET;  // Default: Va-et-vient
 // ============================================================================
 
 SequenceExecutor& SequenceExecutor::getInstance() {
-    static SequenceExecutor instance;
+    static SequenceExecutor instance; // NOSONAR(cpp:S6018)
     return instance;
 }
 
@@ -636,6 +636,44 @@ void SequenceExecutor::startCalibrationLine([[maybe_unused]] const SequenceLine*
 }
 
 // ============================================================================
+// SEQUENCE PROCESS HELPERS
+// ============================================================================
+
+bool SequenceExecutor::handleLineCompletion(const SequenceLine* line) {
+    engine->debug("🏁 Line complete: cycle " + String(seqState.currentCycleInLine) +
+                  " >= effectiveCycles");
+
+    if (line->pauseAfterMs > 0) {
+        seqState.isWaitingPause = true;
+        seqState.pauseEndTime = millis() + line->pauseAfterMs;
+        engine->info("⏸️ Line pause: " + String(static_cast<float>(line->pauseAfterMs) / 1000.0f, 1) + "s");
+        sendStatus();
+        return false;  // Caller should return (pause active)
+    }
+
+    return checkAndHandleSequenceEnd();
+}
+
+void SequenceExecutor::startNextCycle() {
+    const SequenceLine* currentLine = &sequenceTable[seqState.currentLineIndex];
+
+    if (seqState.currentCycleInLine == 0) {
+        positionForNextLine();
+    }
+
+    switch (currentLine->movementType) {
+        case MOVEMENT_VAET:       startVaEtVientLine(currentLine); break;
+        case MOVEMENT_OSC:        startOscillationLine(currentLine); break;
+        case MOVEMENT_CHAOS:      startChaosLine(currentLine); break;
+        case MOVEMENT_CALIBRATION: startCalibrationLine(currentLine); break;
+        default:
+            engine->warn("⚠️ Unknown movement type: " + String(static_cast<int>(currentLine->movementType)));
+            seqState.currentCycleInLine++;
+            break;
+    }
+}
+
+// ============================================================================
 // MAIN PROCESSING LOOP
 // ============================================================================
 
@@ -648,15 +686,10 @@ void SequenceExecutor::process() {
     if (seqState.isWaitingPause) {
         if (millis() >= seqState.pauseEndTime) {
             seqState.isWaitingPause = false;
-
-            // Use helper to advance to next line (DRY)
             if (!checkAndHandleSequenceEnd()) {
-                return;  // Sequence ended
+                return;
             }
-
-            // Continue to start the next line's first cycle
         } else {
-            // Still waiting, send status update every 500ms
             if (millis() - _lastPauseStatusSend > SEQUENCE_STATUS_UPDATE_MS) {
                 sendStatus();
                 _lastPauseStatusSend = millis();
@@ -665,75 +698,22 @@ void SequenceExecutor::process() {
         }
     }
 
-    // Check if current movement is complete and we can start next action
+    // Check if current movement is complete
     if (config.currentState == STATE_READY && !seqState.isWaitingPause) {
-
         const SequenceLine* currentLine = &sequenceTable[seqState.currentLineIndex];
 
-        // Determine effective cycle count for sequencer
-        // OSC and CHAOS manage their own internal cycles, so sequencer sees them as 1 cycle
+        // OSC and CHAOS manage their own internal cycles → sequencer sees 1
         int effectiveCycleCount = currentLine->cycleCount;
         if (currentLine->movementType == MOVEMENT_OSC || currentLine->movementType == MOVEMENT_CHAOS) {
-            effectiveCycleCount = 1;  // They handle cycles internally
+            effectiveCycleCount = 1;
         }
 
-        // Check if all cycles for current line are complete
         if (seqState.currentCycleInLine >= effectiveCycleCount) {
-            // Line complete - all cycles executed
-            engine->debug("🏁 Line complete: cycle " + String(seqState.currentCycleInLine) +
-                          " >= " + String(effectiveCycleCount) + " (effectiveCycles)");
-
-            // Apply pause after line if configured
-            if (currentLine->pauseAfterMs > 0) {
-                seqState.isWaitingPause = true;
-                seqState.pauseEndTime = millis() + currentLine->pauseAfterMs;
-
-                engine->info("⏸️ Line pause: " + String(static_cast<float>(currentLine->pauseAfterMs) / 1000.0f, 1) + "s");
-
-                sendStatus();
+            if (!handleLineCompletion(currentLine)) {
                 return;
             }
-
-            // Move to next line
-            if (!checkAndHandleSequenceEnd()) {
-                return;  // Sequence ended
-            }
-
-            // Next line loaded below via currentLine assignment
-        }
-        // Execute next cycle for current line
-        else {
-            // Load current line configuration
-            currentLine = &sequenceTable[seqState.currentLineIndex];
-
-            // POSITIONING: Move to start position on first cycle of each line
-            if (seqState.currentCycleInLine == 0) {
-                positionForNextLine();
-            }
-
-            // Start appropriate movement type
-            switch (currentLine->movementType) {
-                case MOVEMENT_VAET:
-                    startVaEtVientLine(currentLine);
-                    break;
-
-                case MOVEMENT_OSC:
-                    startOscillationLine(currentLine);
-                    break;
-
-                case MOVEMENT_CHAOS:
-                    startChaosLine(currentLine);
-                    break;
-
-                case MOVEMENT_CALIBRATION:
-                    startCalibrationLine(currentLine);
-                    break;
-
-                default:
-                    engine->warn("⚠️ Unknown movement type: " + String(static_cast<int>(currentLine->movementType)));
-                    seqState.currentCycleInLine++;  // Skip this line
-                    break;
-            }
+        } else {
+            startNextCycle();
         }
     }
 }

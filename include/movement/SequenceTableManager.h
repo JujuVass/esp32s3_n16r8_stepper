@@ -37,7 +37,7 @@ class SequenceTableManager {
 public:
   // Singleton access
   static SequenceTableManager& getInstance() {
-    static SequenceTableManager instance;
+    static SequenceTableManager instance; // NOSONAR(cpp:S6018) Meyer's Singleton intentional for ESP32 init order
     return instance;
   }
 

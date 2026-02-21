@@ -35,7 +35,7 @@ void WiFiConfigManager::ensureInitialized() {
 // ============================================================================
 
 WiFiConfigManager& WiFiConfigManager::getInstance() {
-    static WiFiConfigManager instance;
+    static WiFiConfigManager instance; // NOSONAR(cpp:S6018)
     return instance;
 }
 
@@ -131,24 +131,64 @@ bool WiFiConfigManager::clearConfig() {
 }
 
 // ============================================================================
+// NETWORK DEDUP & SORT HELPERS
+// ============================================================================
+
+int WiFiConfigManager::deduplicateNetworks(WiFiNetworkInfo* networks, int rawCount, int maxNetworks) {
+    int uniqueCount = 0;
+    for (int i = 0; i < rawCount && uniqueCount < maxNetworks; i++) {
+        String currentSSID = WiFi.SSID(i);
+        int32_t currentRSSI = WiFi.RSSI(i);
+        if (currentSSID.isEmpty()) continue;
+
+        // Find existing entry with same SSID
+        int existingIdx = -1;
+        for (int j = 0; j < uniqueCount; j++) {
+            if (networks[j].ssid == currentSSID) { existingIdx = j; break; }
+        }
+
+        if (existingIdx >= 0) {
+            if (currentRSSI > networks[existingIdx].rssi) {
+                networks[existingIdx].rssi = currentRSSI;
+                networks[existingIdx].encryptionType = WiFi.encryptionType(i);
+                networks[existingIdx].channel = WiFi.channel(i);
+            }
+            continue;
+        }
+
+        networks[uniqueCount].ssid = currentSSID;
+        networks[uniqueCount].rssi = currentRSSI;
+        networks[uniqueCount].encryptionType = WiFi.encryptionType(i);
+        networks[uniqueCount].channel = WiFi.channel(i);
+        uniqueCount++;
+    }
+    return uniqueCount;
+}
+
+void WiFiConfigManager::sortNetworksBySignal(WiFiNetworkInfo* networks, int count) {
+    for (int i = 0; i < count - 1; i++) {
+        for (int j = i + 1; j < count; j++) {
+            if (networks[j].rssi > networks[i].rssi) {
+                WiFiNetworkInfo temp = networks[i];
+                networks[i] = networks[j];
+                networks[j] = temp;
+            }
+        }
+    }
+}
+
+// ============================================================================
 // SCAN NETWORKS
 // ============================================================================
 
 int WiFiConfigManager::scanNetworks(WiFiNetworkInfo* networks, int maxNetworks) {
-    if (engine) {
-        engine->info("📡 Scanning WiFi networks...");
-    }
+    if (engine) engine->info("📡 Scanning WiFi networks...");
 
-    // We're already in AP_STA mode (set in startAPMode), so we can scan directly
-    // DO NOT change WiFi mode here - it disconnects all AP clients!
-
-    // Perform scan (blocking, with longer timeout for stability)
     if (engine) engine->info("📡 Starting network scan (AP stays active)...");
-    int numNetworks = WiFi.scanNetworks(false, false, false, 300);  // async=false, showHidden=false, passive=false, max_ms_per_chan=300
+    int numNetworks = WiFi.scanNetworks(false, false, false, 300);
 
     if (numNetworks < 0) {
         if (engine) engine->error("❌ WiFi scan failed with code: " + String(numNetworks));
-        // Try again with different settings
         delay(500);
         numNetworks = WiFi.scanNetworks(false, false);
     }
@@ -160,64 +200,12 @@ int WiFiConfigManager::scanNetworks(WiFiNetworkInfo* networks, int maxNetworks) 
 
     if (engine) engine->info("📡 Raw scan found " + String(numNetworks) + " networks");
 
-    // First pass: collect all networks with deduplication (mesh support)
-    // For duplicate SSIDs, keep only the one with strongest signal
-    int uniqueCount = 0;
+    int uniqueCount = deduplicateNetworks(networks, numNetworks, maxNetworks);
+    sortNetworksBySignal(networks, uniqueCount);
 
-    for (int i = 0; i < numNetworks && uniqueCount < maxNetworks; i++) {
-        String currentSSID = WiFi.SSID(i);
-        int32_t currentRSSI = WiFi.RSSI(i);
-
-        // Skip empty SSIDs
-        if (currentSSID.isEmpty()) continue;
-
-        // Find existing entry with same SSID
-        int existingIdx = -1;
-        for (int j = 0; j < uniqueCount; j++) {
-            if (networks[j].ssid == currentSSID) {
-                existingIdx = j;
-                break;
-            }
-        }
-
-        // Duplicate: keep strongest signal
-        if (existingIdx >= 0) {
-            if (currentRSSI > networks[existingIdx].rssi) {
-                networks[existingIdx].rssi = currentRSSI;
-                networks[existingIdx].encryptionType = WiFi.encryptionType(i);
-                networks[existingIdx].channel = WiFi.channel(i);
-            }
-            continue;
-        }
-
-        // New network, add to list
-        networks[uniqueCount].ssid = currentSSID;
-        networks[uniqueCount].rssi = currentRSSI;
-        networks[uniqueCount].encryptionType = WiFi.encryptionType(i);
-        networks[uniqueCount].channel = WiFi.channel(i);
-        uniqueCount++;
-    }
-
-    // Sort by signal strength (strongest first)
-    for (int i = 0; i < uniqueCount - 1; i++) {
-        for (int j = i + 1; j < uniqueCount; j++) {
-            if (networks[j].rssi > networks[i].rssi) {
-                WiFiNetworkInfo temp = networks[i];
-                networks[i] = networks[j];
-                networks[j] = temp;
-            }
-        }
-    }
-
-    // Clean up scan results
     WiFi.scanDelete();
 
-    // NO mode change here - we stay in AP_STA to keep clients connected
-
-    if (engine) {
-        engine->info("📡 Found " + String(uniqueCount) + " unique WiFi networks");
-    }
-
+    if (engine) engine->info("📡 Found " + String(uniqueCount) + " unique WiFi networks");
     return uniqueCount;
 }
 

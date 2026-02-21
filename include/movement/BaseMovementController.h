@@ -238,6 +238,15 @@ private:
      * Initialize pending changes struct with current values
      */
     void initPendingFromCurrent();
+
+    /** Forward stepping: drift check + target check + end pause trigger */
+    void doStepForward();
+
+    /** Backward stepping: drift check + start check + cycle completion */
+    void doStepBackward();
+
+    /** Apply zone speed effects and random turnback, returns adjusted delay */
+    unsigned long applyZoneEffects(unsigned long baseDelay);
 };
 
 // ============================================================================

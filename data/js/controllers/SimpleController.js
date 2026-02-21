@@ -480,6 +480,104 @@ function sendZoneEffectConfig(isInitialOpen = false) {
   updateZoneEffectHeaderText();
 }
 
+// ── Zone Effect UI sub-helpers (reduce S3776 cognitive complexity) ──
+
+/** Update start/end/mirror checkboxes (only if value actually changed to avoid flickering) */
+function updateZoneCheckboxes(ze) {
+  const startCb = document.getElementById('zoneEffectStart');
+  const endCb = document.getElementById('zoneEffectEnd');
+  if (startCb && ze.enableStart !== undefined && startCb.checked !== ze.enableStart) {
+    startCb.checked = ze.enableStart;
+  }
+  if (endCb && ze.enableEnd !== undefined && endCb.checked !== ze.enableEnd) {
+    endCb.checked = ze.enableEnd;
+  }
+  const mirrorCb = document.getElementById('zoneEffectMirror');
+  if (mirrorCb && ze.mirrorOnReturn !== undefined && mirrorCb.checked !== ze.mirrorOnReturn) {
+    mirrorCb.checked = ze.mirrorOnReturn;
+  }
+}
+
+/** Update zone size input + show notification if ESP32 adapted the value */
+function updateZoneSize(ze) {
+  const zoneInput = document.getElementById('zoneEffectMM');
+  if (!zoneInput || ze.zoneMM === undefined) return;
+
+  const requestedZone = AppState.lastZoneEffectRequest;
+  const receivedZone = ze.zoneMM;
+  if (requestedZone !== undefined && Math.abs(requestedZone - receivedZone) > 0.1) {
+    showNotification(`⚠️ ${t('simple.zoneAdjusted', {requested: requestedZone.toFixed(0), received: receivedZone.toFixed(0)})}`, 'warning', 4000);
+    AppState.lastZoneEffectRequest = undefined;
+  }
+  zoneInput.value = receivedZone;
+}
+
+/** Update speed effect type / curve / intensity controls */
+function updateZoneSpeedEffect(ze) {
+  if (ze.speedEffect !== undefined) {
+    const sel = document.getElementById('speedEffectType');
+    if (sel) sel.value = ze.speedEffect.toString();
+  }
+  if (ze.speedCurve !== undefined) {
+    const sel = document.getElementById('speedCurveSelect');
+    if (sel) sel.value = ze.speedCurve.toString();
+  }
+  if (ze.speedIntensity !== undefined) {
+    const inp = document.getElementById('speedIntensity');
+    const val = document.getElementById('speedIntensityValue');
+    if (inp) inp.value = ze.speedIntensity;
+    if (val) val.textContent = ze.speedIntensity.toFixed(0) + '%';
+  }
+}
+
+/** Update random turnback enabled + chance controls */
+function updateZoneTurnback(ze) {
+  if (ze.randomTurnbackEnabled !== undefined) {
+    const cb = document.getElementById('randomTurnbackEnabled');
+    if (cb) cb.checked = ze.randomTurnbackEnabled;
+  }
+  if (ze.turnbackChance !== undefined) {
+    const inp = document.getElementById('turnbackChance');
+    const val = document.getElementById('turnbackChanceValue');
+    if (inp) inp.value = ze.turnbackChance;
+    if (val) val.textContent = ze.turnbackChance + '%';
+  }
+}
+
+/** Update end pause mode / duration / min / max controls */
+function updateZoneEndPause(ze) {
+  if (ze.endPauseEnabled !== undefined) {
+    const cb = document.getElementById('endPauseEnabled');
+    if (cb) cb.checked = ze.endPauseEnabled;
+  }
+  if (ze.endPauseIsRandom !== undefined) {
+    const fixedRadio = document.getElementById('endPauseModeFixed');
+    const randomRadio = document.getElementById('endPauseModeRandom');
+    if (fixedRadio && randomRadio) {
+      fixedRadio.checked = !ze.endPauseIsRandom;
+      randomRadio.checked = ze.endPauseIsRandom;
+      const fixedCtrl = document.getElementById('endPauseFixedControls');
+      const randomCtrl = document.getElementById('endPauseRandomControls');
+      if (fixedCtrl && randomCtrl) {
+        fixedCtrl.classList.toggle('hidden', ze.endPauseIsRandom);
+        randomCtrl.classList.toggle('hidden', !ze.endPauseIsRandom);
+      }
+    }
+  }
+  if (ze.endPauseDurationSec !== undefined) {
+    const inp = document.getElementById('endPauseDuration');
+    if (inp) inp.value = ze.endPauseDurationSec;
+  }
+  if (ze.endPauseMinSec !== undefined) {
+    const inp = document.getElementById('endPauseMin');
+    if (inp) inp.value = ze.endPauseMinSec;
+  }
+  if (ze.endPauseMaxSec !== undefined) {
+    const inp = document.getElementById('endPauseMax');
+    if (inp) inp.value = ze.endPauseMaxSec;
+  }
+}
+
 /**
  * Update zone effects UI from server data
  * @param {Object} zoneEffect - Zone effects data from backend
@@ -491,101 +589,15 @@ function updateZoneEffectUI(zoneEffect) {
   const headerText = document.getElementById('zoneEffectHeaderText');
   
   if (zoneEffect.enabled) {
-    // Section is enabled
     if (section && headerText) {
       section.classList.remove('collapsed');
     }
     
-    // Update start/end checkboxes (only if value actually changed to avoid flickering)
-    const startCheckbox = document.getElementById('zoneEffectStart');
-    const endCheckbox = document.getElementById('zoneEffectEnd');
-    if (startCheckbox && zoneEffect.enableStart !== undefined && startCheckbox.checked !== zoneEffect.enableStart) {
-      startCheckbox.checked = zoneEffect.enableStart;
-    }
-    if (endCheckbox && zoneEffect.enableEnd !== undefined && endCheckbox.checked !== zoneEffect.enableEnd) {
-      endCheckbox.checked = zoneEffect.enableEnd;
-    }
-    const mirrorCheckbox = document.getElementById('zoneEffectMirror');
-    if (mirrorCheckbox && zoneEffect.mirrorOnReturn !== undefined && mirrorCheckbox.checked !== zoneEffect.mirrorOnReturn) {
-      mirrorCheckbox.checked = zoneEffect.mirrorOnReturn;
-    }
-    
-    // Update zone size
-    const zoneInput = document.getElementById('zoneEffectMM');
-    if (zoneInput && zoneEffect.zoneMM !== undefined) {
-      // Check if zone value was adapted by ESP32
-      const requestedZone = AppState.lastZoneEffectRequest;
-      const receivedZone = zoneEffect.zoneMM;
-      
-      if (requestedZone !== undefined && Math.abs(requestedZone - receivedZone) > 0.1) {
-        showNotification(`⚠️ ${t('simple.zoneAdjusted', {requested: requestedZone.toFixed(0), received: receivedZone.toFixed(0)})}`, 'warning', 4000);
-        AppState.lastZoneEffectRequest = undefined;
-      }
-      
-      zoneInput.value = receivedZone;
-    }
-    
-    // Update speed effect controls
-    if (zoneEffect.speedEffect !== undefined) {
-      const speedEffectSelect = document.getElementById('speedEffectType');
-      if (speedEffectSelect) speedEffectSelect.value = zoneEffect.speedEffect.toString();
-    }
-    if (zoneEffect.speedCurve !== undefined) {
-      const curveSelect = document.getElementById('speedCurveSelect');
-      if (curveSelect) curveSelect.value = zoneEffect.speedCurve.toString();
-    }
-    if (zoneEffect.speedIntensity !== undefined) {
-      const intensityInput = document.getElementById('speedIntensity');
-      const intensityValue = document.getElementById('speedIntensityValue');
-      if (intensityInput) intensityInput.value = zoneEffect.speedIntensity;
-      if (intensityValue) intensityValue.textContent = zoneEffect.speedIntensity.toFixed(0) + '%';
-    }
-    
-    // Update random turnback controls
-    if (zoneEffect.randomTurnbackEnabled !== undefined) {
-      const turnbackCheckbox = document.getElementById('randomTurnbackEnabled');
-      if (turnbackCheckbox) turnbackCheckbox.checked = zoneEffect.randomTurnbackEnabled;
-    }
-    if (zoneEffect.turnbackChance !== undefined) {
-      const chanceInput = document.getElementById('turnbackChance');
-      const chanceValue = document.getElementById('turnbackChanceValue');
-      if (chanceInput) chanceInput.value = zoneEffect.turnbackChance;
-      if (chanceValue) chanceValue.textContent = zoneEffect.turnbackChance + '%';
-    }
-    
-    // Update end pause controls
-    if (zoneEffect.endPauseEnabled !== undefined) {
-      const pauseCheckbox = document.getElementById('endPauseEnabled');
-      if (pauseCheckbox) pauseCheckbox.checked = zoneEffect.endPauseEnabled;
-    }
-    if (zoneEffect.endPauseIsRandom !== undefined) {
-      const fixedRadio = document.getElementById('endPauseModeFixed');
-      const randomRadio = document.getElementById('endPauseModeRandom');
-      if (fixedRadio && randomRadio) {
-        fixedRadio.checked = !zoneEffect.endPauseIsRandom;
-        randomRadio.checked = zoneEffect.endPauseIsRandom;
-        
-        // Show/hide controls based on mode
-        const fixedControls = document.getElementById('endPauseFixedControls');
-        const randomControls = document.getElementById('endPauseRandomControls');
-        if (fixedControls && randomControls) {
-          fixedControls.classList.toggle('hidden', zoneEffect.endPauseIsRandom);
-          randomControls.classList.toggle('hidden', !zoneEffect.endPauseIsRandom);
-        }
-      }
-    }
-    if (zoneEffect.endPauseDurationSec !== undefined) {
-      const durationInput = document.getElementById('endPauseDuration');
-      if (durationInput) durationInput.value = zoneEffect.endPauseDurationSec;
-    }
-    if (zoneEffect.endPauseMinSec !== undefined) {
-      const minInput = document.getElementById('endPauseMin');
-      if (minInput) minInput.value = zoneEffect.endPauseMinSec;
-    }
-    if (zoneEffect.endPauseMaxSec !== undefined) {
-      const maxInput = document.getElementById('endPauseMax');
-      if (maxInput) maxInput.value = zoneEffect.endPauseMaxSec;
-    }
+    updateZoneCheckboxes(zoneEffect);
+    updateZoneSize(zoneEffect);
+    updateZoneSpeedEffect(zoneEffect);
+    updateZoneTurnback(zoneEffect);
+    updateZoneEndPause(zoneEffect);
     
     // Update zone preset active state
     document.querySelectorAll('[data-zone-mm]').forEach(btn => {
@@ -601,7 +613,6 @@ function updateZoneEffectUI(zoneEffect) {
       drawZoneEffectPreview();
     }
   } else if (section && headerText) {
-    // Disabled state
     section.classList.add('collapsed');
     headerText.textContent = t('simple.zoneEffectsDisabled');
   }

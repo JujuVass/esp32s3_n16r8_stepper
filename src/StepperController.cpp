@@ -188,6 +188,41 @@ void logDebugDiagnostics() {
 }
 
 // ============================================================================
+// SETUP HELPERS (reduce S3776 CC of setup())
+// ============================================================================
+
+/** Initialize hardware subsystems (motor, contacts, calibration) in STA/AP modes */
+static void initHardwareAndCalibration() {
+  Motor.init();
+  Contacts.init();
+  Motor.setDirection(false);
+  engine->info("✅ Hardware initialized (Motor + Contacts)");
+
+  Calibration.init(&webSocket, &server);
+  Calibration.setStatusCallback(sendStatus);
+  Calibration.setErrorCallback([](const String& msg) { Status.sendError(msg); });
+  Calibration.setCompletionCallback([]() { SeqExecutor.onMovementComplete(); });
+  engine->info("✅ CalibrationManager ready");
+}
+
+/** Create FreeRTOS mutexes and tasks for dual-core operation */
+static void initDualCoreTasks() {
+  motionMutex = xSemaphoreCreateMutex();
+  stateMutex  = xSemaphoreCreateMutex();
+  statsMutex  = xSemaphoreCreateMutex();
+  wsMutex     = xSemaphoreCreateRecursiveMutex();
+
+  if (motionMutex == NULL || stateMutex == NULL || statsMutex == NULL || wsMutex == NULL) {
+    engine->error("❌ Failed to create FreeRTOS mutexes!");
+    return;
+  }
+
+  xTaskCreatePinnedToCore(motorTask,   "MotorTask",   6144,  NULL, 10, &motorTaskHandle,   1);
+  xTaskCreatePinnedToCore(networkTask, "NetworkTask", 12288, NULL,  1, &networkTaskHandle, 0);
+  engine->info("✅ DUAL-CORE initialized: Motor=Core1(P10), StepperNetwork=Core0(P1)");
+}
+
+// ============================================================================
 // SETUP - INITIALIZATION
 // ============================================================================
 
@@ -195,22 +230,15 @@ void setup() {
   Serial.begin(115200);
   delay(100);  // Brief pause for Serial stability
 
-  // ============================================================================
-  // RESET REASON (logged ASAP — before anything else, helps diagnose reboots)
-  // ============================================================================
+  // ── Reset reason ──
   esp_reset_reason_t resetReason = esp_reset_reason();
   Serial.printf("\n🔄 RESET REASON: %s (code %d)\n",
                 CrashDiagnostics::getResetReasonName(resetReason), (int)resetReason);
 
-  // ============================================================================
-  // 0. RGB LED INITIALIZATION (Early for visual feedback) - OFF initially
-  // ============================================================================
+  // ── RGB LED (off initially) ──
   setRgbLed(0, 0, 0);
 
-  // ============================================================================
-  // 1. FILESYSTEM & LOGGING (First for early logging capability)
-  // ============================================================================
-  // Static instance: lives forever (ESP32 never frees — reboot = cleanup)
+  // ── 1. Filesystem & Logging ──
   static UtilityEngine engineInstance(webSocket);
   engine = &engineInstance;
   if (!engine->initialize()) {
@@ -219,40 +247,29 @@ void setup() {
     engine->info("✅ UtilityEngine initialized (LittleFS + Logging ready)");
   }
 
-  // ============================================================================
-  // 2. CRASH DIAGNOSTICS (reads coredump, saves dump file if PANIC)
-  // ============================================================================
+  // ── 2. Crash diagnostics ──
   CrashDiagnostics::processBootReason(engine);
-
   engine->info("\n=== ESP32-S3 Stepper Controller ===");
   randomSeed(analogRead(0) + esp_random());
 
-  // ============================================================================
-  // 3. NETWORK (WiFi - determines AP or STA mode)
-  // ============================================================================
+  // ── 3. Network ──
   StepperNetwork.begin();
 
-  // ============================================================================
-  // 4. WEB SERVERS (HTTP + WebSocket)
-  // ============================================================================
+  // ── 4. Web servers ──
   server.begin();
   webSocket.begin();
   webSocket.onEvent([](uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
     Dispatcher.onWebSocketEvent(num, type, payload, length);
   });
 
-  // ============================================================================
-  // 5. API ROUTES (WiFi config routes needed in both modes)
-  // ============================================================================
+  // ── 5. API routes ──
   filesystemManager.registerRoutes();
   setupAPIRoutes();
   engine->info("✅ HTTP (80) + WebSocket (81) servers started");
 
-  // ============================================================================
-  // AP_SETUP MODE: Minimal setup complete - WiFi configuration only
-  // ============================================================================
+  // ── AP_SETUP: Minimal setup complete ──
   if (StepperNetwork.isAPSetupMode()) {
-    setRgbLed(0, 0, 50);  // Start with BLUE (dimmed) - waiting for config
+    setRgbLed(0, 0, 50);
     engine->info("\n╔════════════════════════════════════════════════════════╗");
     engine->info("║  MODE AP_SETUP - WiFi CONFIGURATION                    ║");
     engine->info("║  Access: http://192.168.4.1                            ║");
@@ -260,48 +277,26 @@ void setup() {
     engine->info("║  LED: Blue/Red blinking (awaiting config)              ║");
     engine->info("║       Solid Green = config OK, Solid Red = failure     ║");
     engine->info("╚════════════════════════════════════════════════════════╝\n");
-    return;  // Skip stepper initialization in AP_SETUP mode
+    return;
   }
 
-  // ============================================================================
-  // STA+AP or AP_DIRECT: Full stepper controller initialization
-  // ============================================================================
-
-  // LED color based on mode
+  // ── STA+AP or AP_DIRECT: Full initialization ──
   if (StepperNetwork.isSTAMode()) {
-    setRgbLed(0, 50, 0);  // GREEN = WiFi connected + AP
+    setRgbLed(0, 50, 0);
   } else {
-    setRgbLed(0, 25, 50);  // CYAN = AP Direct mode
+    setRgbLed(0, 25, 50);
   }
 
-  // Command dispatcher and status broadcaster
   Dispatcher.begin(&webSocket);
   Status.begin(&webSocket);
-  SeqExecutor.begin(&webSocket);  // SequenceExecutor needs WebSocket for status updates
+  SeqExecutor.begin(&webSocket);
   engine->info("✅ Command dispatcher + Status broadcaster ready");
 
-  // ============================================================================
-  // 6. HARDWARE (Motor + Contacts) - STA mode only
-  // ============================================================================
-  Motor.init();
-  Contacts.init();
-  Motor.setDirection(false);
-  engine->info("✅ Hardware initialized (Motor + Contacts)");
+  // ── 6-7. Hardware + Calibration ──
+  initHardwareAndCalibration();
 
-  // ============================================================================
-  // 7. CALIBRATION MANAGER - STA mode only
-  // ============================================================================
-  Calibration.init(&webSocket, &server);
-  Calibration.setStatusCallback(sendStatus);
-  Calibration.setErrorCallback([](const String& msg) { Status.sendError(msg); });
-  Calibration.setCompletionCallback([]() { SeqExecutor.onMovementComplete(); });
-  engine->info("✅ CalibrationManager ready");
-
-  // ============================================================================
-  // 8. STARTUP COMPLETE - STA mode
-  // ============================================================================
+  // ── 8. Startup complete ──
   engine->printStatus();
-
   config.currentState = SystemState::STATE_READY;
   engine->info("\n╔════════════════════════════════════════════════════════╗");
   if (StepperNetwork.isSTAMode()) {
@@ -317,50 +312,14 @@ void setup() {
   engine->info("║  Auto-calibration starts in 1 second...               ║");
   engine->info("╚════════════════════════════════════════════════════════╝\n");
 
-  // ============================================================================
-  // 9. DUAL-CORE FREERTOS INITIALIZATION - STA mode only
-  // ============================================================================
-
-  // Create mutexes for shared data protection
-  motionMutex = xSemaphoreCreateMutex();
-  stateMutex = xSemaphoreCreateMutex();
-  statsMutex = xSemaphoreCreateMutex();
-  wsMutex = xSemaphoreCreateRecursiveMutex();  // Recursive: Logger::log() may re-enter from WS callback
-
-  if (motionMutex == NULL || stateMutex == NULL || statsMutex == NULL || wsMutex == NULL) {
-    engine->error("❌ Failed to create FreeRTOS mutexes!");
-    return;
-  }
-
-  // Create MOTOR task on Core 1 (PRO_CPU) - HIGH priority for real-time stepping
-  xTaskCreatePinnedToCore(
-    motorTask,           // Task function
-    "MotorTask",         // Name
-    6144,                // Stack size (bytes)
-    NULL,                // Parameters
-    10,                  // Priority (10 = high, ensures motor runs first)
-    &motorTaskHandle,    // Task handle
-    1                    // Core 1 (PRO_CPU)
-  );
-
-  // Create NETWORK task on Core 0 (APP_CPU) - Normal priority for network ops
-  xTaskCreatePinnedToCore(
-    networkTask,         // Task function
-    "NetworkTask",       // Name
-    12288,                // Stack size (larger for JSON serialization)
-    NULL,                // Parameters
-    1,                   // Priority (1 = normal)
-    &networkTaskHandle,  // Task handle
-    0                    // Core 0 (APP_CPU)
-  );
-
-  engine->info("✅ DUAL-CORE initialized: Motor=Core1(P10), StepperNetwork=Core0(P1)");
+  // ── 9. Dual-core FreeRTOS ──
+  initDualCoreTasks();
 }
 
 // ============================================================================
 // MOTOR TASK - Core 1 (PRO_CPU) - Real-time stepping
 // ============================================================================
-void motorTask(void* param) {
+void motorTask(void* param) { // NOSONAR(cpp:S5008) FreeRTOS task signature requires void*
   engine->info("🔧 MotorTask started on Core " + String(xPortGetCoreID()));
 
   // Initial calibration (with delay for web interface access)
@@ -481,7 +440,7 @@ void motorTask(void* param) {
 // ============================================================================
 // NETWORK TASK - Core 0 (APP_CPU) - StepperNetwork operations (can block)
 // ============================================================================
-void networkTask(void* param) {
+void networkTask(void* param) { // NOSONAR(cpp:S5008) FreeRTOS task signature requires void*
   engine->info("🌐 NetworkTask started on Core " + String(xPortGetCoreID()));
 
   while (true) {

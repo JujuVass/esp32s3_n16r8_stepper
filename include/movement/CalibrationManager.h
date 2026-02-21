@@ -150,6 +150,24 @@ private:
      */
     void serviceWebSocket(unsigned long durationMs);
 
+    /**
+     * Conditionally service WebSocket every N steps (reduces nesting in step loops)
+     * @param stepCount Current step counter
+     */
+    void serviceWebSocketIfDue(unsigned long stepCount);
+
+    /**
+     * Position motor at a target step offset from current (with WS service)
+     * @param targetSteps Target step position
+     */
+    void positionAtOffset(long targetSteps);
+
+    /**
+     * Emergency decontact from END sensor
+     * @return true if successfully decontacted, false on failure
+     */
+    bool emergencyDecontactEnd();
+
     // ========================================================================
     // MEMBER VARIABLES
     // ========================================================================

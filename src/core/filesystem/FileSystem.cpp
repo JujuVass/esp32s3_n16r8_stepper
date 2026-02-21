@@ -9,6 +9,19 @@
 // Forward declaration — engine is set after UtilityEngine constructor
 extern UtilityEngine* engine;
 
+// Dual-path logging helper (reduces S3776 CC from repeated if(engine)/else Serial)
+namespace {
+  void fsLog(const char* level, const String& msg) {
+    if (engine) {
+      if (level[0] == 'E') engine->error(msg);
+      else if (level[0] == 'W') engine->warn(msg);
+      else engine->info(msg);
+    } else {
+      Serial.println("[FileSystem] " + msg);
+    }
+  }
+} // namespace
+
 // ============================================================================
 // CONSTRUCTOR
 // ============================================================================
@@ -21,47 +34,32 @@ FileSystem::FileSystem()
 // ============================================================================
 
 bool FileSystem::mount() {
-  if (engine) engine->info("Attempting LittleFS mount with safety checks...");
-  else Serial.println("[FileSystem] Attempting LittleFS mount with safety checks...");
+  fsLog("I", "Attempting LittleFS mount with safety checks...");
 
   // STEP 1: Try mounting WITHOUT auto-format (safer)
   _mounted = LittleFS.begin(false);
 
   if (!_mounted) {
-    if (engine) engine->warn("LittleFS mount failed - filesystem may be corrupted");
-    else Serial.println("[FileSystem] LittleFS mount failed - filesystem may be corrupted");
+    fsLog("W", "LittleFS mount failed - filesystem may be corrupted");
 
     // STEP 2: Try manual format in controlled way
-    if (engine) engine->info("Attempting manual LittleFS format...");
-    else Serial.println("[FileSystem] Attempting manual LittleFS format...");
-
+    fsLog("I", "Attempting manual LittleFS format...");
     const bool formatted = LittleFS.format();
     if (formatted) {
-      if (engine) engine->info("Format successful, remounting...");
-      else Serial.println("[FileSystem] Format successful, remounting...");
+      fsLog("I", "Format successful, remounting...");
       _mounted = LittleFS.begin(false);
     }
 
-    // Report result (flattened to avoid deep nesting)
+    // Report result
     if (_mounted) {
-      if (engine) engine->info("LittleFS mounted after format");
-      else Serial.println("[FileSystem] LittleFS mounted after format");
+      fsLog("I", "LittleFS mounted after format");
     } else if (formatted) {
-      if (engine) engine->error("CRITICAL: LittleFS still won't mount after format! Running in DEGRADED mode");
-      else {
-        Serial.println("[FileSystem] CRITICAL: LittleFS still won't mount after format!");
-        Serial.println("[FileSystem] Running in DEGRADED mode (no filesystem)");
-      }
+      fsLog("E", "CRITICAL: LittleFS still won't mount after format! Running in DEGRADED mode");
     } else {
-      if (engine) engine->error("Format failed - hardware issue or severe corruption. Running in DEGRADED mode");
-      else {
-        Serial.println("[FileSystem] Format failed - hardware issue or severe corruption");
-        Serial.println("[FileSystem] Running in DEGRADED mode (no filesystem)");
-      }
+      fsLog("E", "Format failed - hardware issue or severe corruption. Running in DEGRADED mode");
     }
   } else {
-    if (engine) engine->info("LittleFS mounted successfully");
-    else Serial.println("[FileSystem] LittleFS mounted successfully");
+    fsLog("I", "LittleFS mounted successfully");
   }
 
   // STEP 4: If mounted, verify filesystem health
@@ -71,8 +69,7 @@ bool FileSystem::mount() {
     String msg = "LittleFS: " + String(totalBytes / 1024) + " KB total, " +
                  String(usedBytes / 1024) + " KB used (" +
                  String((static_cast<float>(usedBytes) * 100.0f) / static_cast<float>(totalBytes), 1) + "%)";
-    if (engine) engine->info(msg);
-    else Serial.println("[FileSystem] " + msg);
+    fsLog("I", msg);
   }
 
   return _mounted;

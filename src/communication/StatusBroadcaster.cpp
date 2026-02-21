@@ -25,7 +25,7 @@ using enum MovementType;
 // ============================================================================
 
 StatusBroadcaster& StatusBroadcaster::getInstance() {
-    static StatusBroadcaster instance;
+    static StatusBroadcaster instance; // NOSONAR(cpp:S6018)
     return instance;
 }
 

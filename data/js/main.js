@@ -144,58 +144,56 @@
       }
     }
     
+    // ── syncInputsFromBackend sub-helpers (reduce S3776 cognitive complexity) ──
+
+    /** Sync speed inputs for separate or unified mode */
+    function syncSpeedInputs(motion) {
+      const isSeparateMode = DOM.speedModeSeparate?.checked || false;
+      if (isSeparateMode) {
+        if (AppState.editing.input !== 'speedForward' && document.activeElement !== DOM.speedForward && motion.speedLevelForward !== undefined) {
+          DOM.speedForward.value = motion.speedLevelForward.toFixed(1);
+        }
+        if (AppState.editing.input !== 'speedBackward' && document.activeElement !== DOM.speedBackward && motion.speedLevelBackward !== undefined) {
+          DOM.speedBackward.value = motion.speedLevelBackward.toFixed(1);
+        }
+        if (DOM.speedForwardInfo && motion.cyclesPerMinForward !== undefined) {
+          DOM.speedForwardInfo.textContent = '≈ ' + Number.parseFloat(motion.cyclesPerMinForward).toFixed(0) + ' cycles/min';
+        }
+        if (DOM.speedBackwardInfo && motion.cyclesPerMinBackward !== undefined) {
+          DOM.speedBackwardInfo.textContent = '≈ ' + Number.parseFloat(motion.cyclesPerMinBackward).toFixed(0) + ' cycles/min';
+        }
+      } else {
+        if (AppState.editing.input !== 'speedUnified' && document.activeElement !== DOM.speedUnified) {
+          if (motion.speedLevelBackward !== undefined) {
+            DOM.speedUnified.value = motion.speedLevelBackward.toFixed(1);
+          }
+          if (motion.speedLevelForward !== undefined) {
+            DOM.speedForward.value = motion.speedLevelForward.toFixed(1);
+          }
+          if (motion.speedLevelBackward !== undefined) {
+            DOM.speedBackward.value = motion.speedLevelBackward.toFixed(1);
+          }
+        }
+        if (DOM.speedUnifiedInfo && motion.cyclesPerMinForward !== undefined && motion.cyclesPerMinBackward !== undefined) {
+          const avgCyclesPerMin = (Number.parseFloat(motion.cyclesPerMinForward) + Number.parseFloat(motion.cyclesPerMinBackward)) / 2;
+          DOM.speedUnifiedInfo.textContent = '≈ ' + avgCyclesPerMin.toFixed(0) + ' cycles/min';
+        }
+      }
+    }
+
     /**
      * Sync input values with server state (but not if user is editing)
      * @param {Object} data - Status data from backend
      */
     function syncInputsFromBackend(data) {
-      // Defense: Check data.motion exists before accessing fields
-      if (data.motion) {
-        if (AppState.editing.input !== 'startPosition' && document.activeElement !== DOM.startPosition && data.motion.startPositionMM !== undefined) {
-          DOM.startPosition.value = data.motion.startPositionMM.toFixed(1);
-        }
-        if (data.motion.targetDistanceMM !== undefined && AppState.editing.input !== 'distance' && document.activeElement !== DOM.distance) {
-          DOM.distance.value = Number.parseFloat(data.motion.targetDistanceMM).toFixed(1);
-        }
+      if (!data.motion) return;
+      if (AppState.editing.input !== 'startPosition' && document.activeElement !== DOM.startPosition && data.motion.startPositionMM !== undefined) {
+        DOM.startPosition.value = data.motion.startPositionMM.toFixed(1);
       }
-      
-      // Update speed values based on unified/separate mode
-      const isSeparateMode = DOM.speedModeSeparate?.checked || false;
-      
-      if (data.motion) {
-        if (isSeparateMode) {
-          // SEPARATE MODE: update forward and backward individually
-          if (AppState.editing.input !== 'speedForward' && document.activeElement !== DOM.speedForward && data.motion.speedLevelForward !== undefined) {
-            DOM.speedForward.value = data.motion.speedLevelForward.toFixed(1);
-          }
-          if (AppState.editing.input !== 'speedBackward' && document.activeElement !== DOM.speedBackward && data.motion.speedLevelBackward !== undefined) {
-            DOM.speedBackward.value = data.motion.speedLevelBackward.toFixed(1);
-          }
-          if (DOM.speedForwardInfo && data.motion.cyclesPerMinForward !== undefined) {
-            DOM.speedForwardInfo.textContent = '≈ ' + Number.parseFloat(data.motion.cyclesPerMinForward).toFixed(0) + ' cycles/min';
-          }
-          if (DOM.speedBackwardInfo && data.motion.cyclesPerMinBackward !== undefined) {
-            DOM.speedBackwardInfo.textContent = '≈ ' + Number.parseFloat(data.motion.cyclesPerMinBackward).toFixed(0) + ' cycles/min';
-          }
-        } else {
-          // UNIFIED MODE: show current speed (should be same for both directions)
-          if (AppState.editing.input !== 'speedUnified' && document.activeElement !== DOM.speedUnified) {
-            if (data.motion.speedLevelBackward !== undefined) {
-              DOM.speedUnified.value = data.motion.speedLevelBackward.toFixed(1);
-            }
-            if (data.motion.speedLevelForward !== undefined) {
-              DOM.speedForward.value = data.motion.speedLevelForward.toFixed(1);
-            }
-            if (data.motion.speedLevelBackward !== undefined) {
-              DOM.speedBackward.value = data.motion.speedLevelBackward.toFixed(1);
-            }
-          }
-          if (DOM.speedUnifiedInfo && data.motion.cyclesPerMinForward !== undefined && data.motion.cyclesPerMinBackward !== undefined) {
-            const avgCyclesPerMin = (Number.parseFloat(data.motion.cyclesPerMinForward) + Number.parseFloat(data.motion.cyclesPerMinBackward)) / 2;
-            DOM.speedUnifiedInfo.textContent = '≈ ' + avgCyclesPerMin.toFixed(0) + ' cycles/min';
-          }
-        }
+      if (data.motion.targetDistanceMM !== undefined && AppState.editing.input !== 'distance' && document.activeElement !== DOM.distance) {
+        DOM.distance.value = Number.parseFloat(data.motion.targetDistanceMM).toFixed(1);
       }
+      syncSpeedInputs(data.motion);
     }
     
     /**
@@ -267,137 +265,64 @@
     }
     
     // ============================================================================
-    // UI UPDATE - MAIN FUNCTION
+    // UI UPDATE - HELPERS (reduce S3776 cognitive complexity of updateUI)
     // ============================================================================
-    
-    function updateUI(data) {
-      // Defensive check: only process status-like messages which contain positionMM
-      // Some incoming messages (logs, fsList, etc.) can be generic JSON and should
-      // not be passed to updateUI. Guard against missing fields to avoid runtime
-      // errors like "cannot read property 'toFixed' of undefined".
-      if (!data || !('positionMM' in data)) {
-        return;
-      }
-      
-      // Guard: DOM cache must be initialized before we can update the UI
-      if (!DOM.state) {
-        return;
-      }
-      // Update global state for mode change logic
-      AppState.system.currentState = data.state;
-      AppState.system.canStart = data.canStart || false;
-      
-      // AUTO-SWITCH TAB: If movement is running/paused, switch to corresponding tab
-      // This handles reconnection scenarios where user returns to find movement in progress
-      // Skip if running from sequencer (executionContext === 1) — stay on sequencer tab
+
+    /** Auto-switch to the tab corresponding to the active movement type */
+    function autoSwitchToActiveTab(data) {
       const isActiveMovement = (data.state === SystemState.RUNNING || data.state === SystemState.PAUSED);
-      if (isActiveMovement && data.movementType !== undefined && data.executionContext !== 1) {
-        const tabFromMovement = {
-          0: 'simple',      // MOVEMENT_VAET
-          1: 'oscillation', // MOVEMENT_OSC
-          2: 'chaos',       // MOVEMENT_CHAOS
-          3: 'pursuit'      // MOVEMENT_PURSUIT
-        };
-        const targetTab = tabFromMovement[data.movementType];
-        if (targetTab && AppState.system.currentMode !== targetTab) {
-          console.debug('🔄 Auto-switching to ' + targetTab + ' tab (movement in progress)');
-          // Use direct tab switch without stopping movement (since it's already running)
-          switchTabWithoutStop(targetTab);
-        }
+      if (!isActiveMovement || data.movementType === undefined || data.executionContext === 1) return;
+      const tabFromMovement = { 0: 'simple', 1: 'oscillation', 2: 'chaos', 3: 'pursuit' };
+      const targetTab = tabFromMovement[data.movementType];
+      if (targetTab && AppState.system.currentMode !== targetTab) {
+        console.debug('🔄 Auto-switching to ' + targetTab + ' tab (movement in progress)');
+        switchTabWithoutStop(targetTab);
       }
-      
-      const stateText = t('states') || ['Needs calibration', 'Calibrating', 'Ready', 'Running', 'Paused', 'Error'];
-      const stateClass = ['state-init', 'state-calibrating', 'state-ready', 'state-running', 'state-paused', 'state-error'];
-      
-      let displayText = stateText[data.state] || t('common.error');
-      if (data.errorMessage && data.errorMessage !== '') {
-        displayText += ' ⚠️ ' + data.errorMessage;
+    }
+
+    /** Show tabs and controls after first successful calibration */
+    function revealInterfaceIfCalibrated(data) {
+      if (!AppState.system.canStart || data.totalDistMM <= 0) return;
+      const welcomeMessage = DOM.welcomeMessage;
+      if (welcomeMessage && !welcomeMessage.classList.contains('hidden')) {
+        welcomeMessage.classList.add('hidden');
       }
-      
-      DOM.state.textContent = displayText;
-      DOM.state.className = 'status-value ' + (stateClass[data.state] || '');
-      
-      // Check if calibrating (used in multiple places below)
-      const isCalibrating = data.state === SystemState.CALIBRATING;
-      
-      // Show/hide calibration overlay
-      if (DOM.calibrationOverlay) {
-        if (isCalibrating) {
-          DOM.calibrationOverlay.classList.add('active');
-        } else {
-          DOM.calibrationOverlay.classList.remove('active');
-        }
+      if (DOM.tabsContainer?.classList.contains('hidden-until-calibrated')) {
+        DOM.tabsContainer.classList.remove('hidden-until-calibrated');
       }
-      
-      // Show tabs and controls after first successful calibration
-      // Once calibrated (canStart = true), reveal the interface
-      if (AppState.system.canStart && data.totalDistMM > 0) {
-        const tabsContainer = DOM.tabsContainer;
-        const allTabContents = document.querySelectorAll('.tab-content');
-        const welcomeMessage = DOM.welcomeMessage;
-        
-        // Hide welcome message
-        if (welcomeMessage && !welcomeMessage.classList.contains('hidden')) {
-          welcomeMessage.classList.add('hidden');
-        }
-        
-        // Show tabs
-        if (tabsContainer?.classList.contains('hidden-until-calibrated')) {
-          tabsContainer.classList.remove('hidden-until-calibrated');
-        }
-        
-        // Show all tab contents
-        allTabContents.forEach(tabContent => {
-          if (tabContent.classList.contains('hidden-until-calibrated')) {
-            tabContent.classList.remove('hidden-until-calibrated');
-          }
-        });
-      }
-      
-      // Extra safety: check fields exist before accessing (defense-in-depth)
-      if (data.positionMM !== undefined && data.currentStep !== undefined) {
-        currentPositionMM = data.positionMM; // Update global position tracker
-        DOM.position.textContent = 
-          data.positionMM.toFixed(2) + ' mm (' + data.currentStep + ' steps)';
-      }
-      
+      document.querySelectorAll('.tab-content').forEach(tc => {
+        if (tc.classList.contains('hidden-until-calibrated')) tc.classList.remove('hidden-until-calibrated');
+      });
+    }
+
+    /** Update total distance text, max dist slider, and pursuit gauge limit line */
+    function updateDistanceAndGauge(data) {
       if (data.totalDistMM !== undefined) {
-        // Display total distance with limit info if applicable
         let totalDistText = data.totalDistMM.toFixed(2) + ' mm';
         if (data.maxDistLimitPercent && data.maxDistLimitPercent < 100) {
-          totalDistText += ' (' + data.effectiveMaxDistMM.toFixed(2) + ' mm @ ' + 
+          totalDistText += ' (' + data.effectiveMaxDistMM.toFixed(2) + ' mm @ ' +
                           data.maxDistLimitPercent.toFixed(0) + '%)';
         }
         DOM.totalDist.textContent = totalDistText;
-        if (DOM.maxDist) {
-          DOM.maxDist.textContent = data.totalDistMM.toFixed(2);
-        }
-        
-        // Update max dist limit slider if data received (but NOT while user is editing!)
+        if (DOM.maxDist) DOM.maxDist.textContent = data.totalDistMM.toFixed(2);
+
         if (data.maxDistLimitPercent && !AppState.pursuit.isEditingMaxDistLimit) {
           DOM.maxDistLimitSlider.value = data.maxDistLimitPercent.toFixed(0);
           updateMaxDistLimitUI();
         }
-      }
-      
-      // Update pursuit mode variables
-      if (data.totalDistMM !== undefined) {
+
+        // Pursuit mode variables + gauge limit line
         AppState.pursuit.totalDistanceMM = data.totalDistMM;
-        
-        // Store max distance limit percent in AppState (but not while user is editing!)
         if (data.maxDistLimitPercent !== undefined && !AppState.pursuit.isEditingMaxDistLimit) {
           AppState.pursuit.maxDistLimitPercent = data.maxDistLimitPercent;
         }
-        
-        // Update gauge limit line
         if (data.maxDistLimitPercent && data.maxDistLimitPercent < 100 && data.effectiveMaxDistMM) {
           const limitPercent = (data.effectiveMaxDistMM / data.totalDistMM);
           const containerHeight = DOM.gaugeContainer ? DOM.gaugeContainer.offsetHeight : 500;
           const limitPixelPosition = containerHeight - (limitPercent * containerHeight);
-          
           if (DOM.gaugeLimitLine) {
-          DOM.gaugeLimitLine.style.top = limitPixelPosition + 'px';
-          DOM.gaugeLimitLine.style.display = 'block';
+            DOM.gaugeLimitLine.style.top = limitPixelPosition + 'px';
+            DOM.gaugeLimitLine.style.display = 'block';
           }
         } else if (DOM.gaugeLimitLine) {
           DOM.gaugeLimitLine.style.display = 'none';
@@ -407,105 +332,114 @@
         AppState.pursuit.currentPositionMM = data.positionMM;
         updateGaugePosition(AppState.pursuit.currentPositionMM);
       }
+    }
+
+    /** Show/hide pending changes indicator */
+    function updatePendingChangesDisplay(data) {
+      const el = DOM.pendingChanges;
+      if (!el) return;
+      if (data.hasPending && data.pendingMotion) {
+        const pm = data.pendingMotion;
+        const startPos = Number.parseFloat(pm.startPositionMM);
+        const dist = Number.parseFloat(pm.distanceMM);
+        el.style.display = 'block';
+        el.textContent = '⏳ ' + t('status.pendingChanges') + ': ' +
+          startPos.toFixed(1) + ' mm → ' +
+          (startPos + dist).toFixed(1) + ' mm (' +
+          dist.toFixed(1) + 'mm) @ ' +
+          t('simple.forward') + ' ' + Number.parseFloat(pm.speedLevelForward).toFixed(1) + '/20, ' +
+          t('simple.backward') + ' ' + Number.parseFloat(pm.speedLevelBackward).toFixed(1) + '/20';
+      } else {
+        el.style.display = 'none';
+      }
+    }
+
+    /** Re-enable sequencer start buttons if system is READY and on sequencer tab */
+    function syncSequencerButtons(data) {
+      const isReady = (data.state === SystemState.READY);
+      if (!isReady || !AppState.system.canStart || AppState.system.currentMode !== 'sequencer') return;
+      if (AppState.sequence.isTestingLine) {
+        AppState.sequence.isTestingLine = false;
+      }
+      if (DOM.btnStartSequence?.disabled) {
+        setButtonState(DOM.btnStartSequence, true);
+        setButtonState(DOM.btnLoopSequence, true);
+      }
+    }
+
+    // ============================================================================
+    // UI UPDATE - MAIN FUNCTION
+    // ============================================================================
+    
+    function updateUI(data) {
+      if (!data || !('positionMM' in data)) return;
+      if (!DOM.state) return;
+
+      // Update global state for mode change logic
+      AppState.system.currentState = data.state;
+      AppState.system.canStart = data.canStart || false;
       
-      // Update speed display (delegated to helper function)
+      autoSwitchToActiveTab(data);
+      
+      // State display
+      const stateText = t('states') || ['Needs calibration', 'Calibrating', 'Ready', 'Running', 'Paused', 'Error'];
+      const stateClass = ['state-init', 'state-calibrating', 'state-ready', 'state-running', 'state-paused', 'state-error'];
+      let displayText = stateText[data.state] || t('common.error');
+      if (data.errorMessage && data.errorMessage !== '') {
+        displayText += ' ⚠️ ' + data.errorMessage;
+      }
+      DOM.state.textContent = displayText;
+      DOM.state.className = 'status-value ' + (stateClass[data.state] || '');
+      
+      // Calibration overlay
+      if (DOM.calibrationOverlay) {
+        DOM.calibrationOverlay.classList.toggle('active', data.state === SystemState.CALIBRATING);
+      }
+      
+      revealInterfaceIfCalibrated(data);
+      
+      // Position display
+      if (data.positionMM !== undefined && data.currentStep !== undefined) {
+        currentPositionMM = data.positionMM;
+        DOM.position.textContent = data.positionMM.toFixed(2) + ' mm (' + data.currentStep + ' steps)';
+      }
+      
+      updateDistanceAndGauge(data);
       updateSpeedDisplay(data);
       
-      // Update milestones (delegated to helper function)
       if (data.totalTraveled !== undefined) {
         updateMilestones(data.totalTraveled);
         updateRealSpeed(data.totalTraveled);
       }
       
+      // Progress bar
       if (data.totalDistMM > 0 && data.positionMM !== undefined) {
         const progress = (data.positionMM / data.totalDistMM) * 100;
-        const progressMini = DOM.progressMini;
-        const progressPct = DOM.progressPct;
-        if (progressMini) progressMini.style.width = progress + '%';
-        if (progressPct) progressPct.textContent = progress.toFixed(1) + '%';
+        if (DOM.progressMini) DOM.progressMini.style.width = progress + '%';
+        if (DOM.progressPct) DOM.progressPct.textContent = progress.toFixed(1) + '%';
       }
       
-      // Sync input values with server state (delegated to helper function)
       syncInputsFromBackend(data);
-      
-      // Update max values, presets and button states (delegated to helper function)
       updateControlsState(data);
+      if (data.decelZone) updateZoneEffectUI(data.decelZone);
+      updatePendingChangesDisplay(data);
       
-      // Update zone effect configuration from server
-      if (data.decelZone) {
-        updateZoneEffectUI(data.decelZone);
-      }
-      
-      // Show pending changes indicator
-      const pendingChanges = DOM.pendingChanges;
-      if (pendingChanges) {
-      if (data.hasPending && data.pendingMotion) {
-        const pm = data.pendingMotion;
-        const startPos = Number.parseFloat(pm.startPositionMM);
-        const dist = Number.parseFloat(pm.distanceMM);
-        pendingChanges.style.display = 'block';
-        pendingChanges.textContent = '⏳ ' + t('status.pendingChanges') + ': ' + 
-          startPos.toFixed(1) + ' mm → ' + 
-          (startPos + dist).toFixed(1) + ' mm (' +
-          dist.toFixed(1) + 'mm) @ ' + 
-          t('simple.forward') + ' ' + Number.parseFloat(pm.speedLevelForward).toFixed(1) + '/20, ' +
-          t('simple.backward') + ' ' + Number.parseFloat(pm.speedLevelBackward).toFixed(1) + '/20';
-      } else {
-        pendingChanges.style.display = 'none';
-      }
-      }
-      
-      // Update oscillation UI (delegated to OscillationController.js)
+      // Delegated controller updates
       updateOscillationUI(data);
-      
-      // Update Simple mode UI (delegated to SimpleController.js)
       updateSimpleUI(data);
-      
-      // Note: Cycle pause oscillation UI update is handled by updateOscillationUI() above
-      
-      // Update chaos UI (delegated to ChaosController.js)
       updateChaosUI(data);
       
-      // SEQUENCER MODE: Re-enable start buttons when system is READY and not running
-      // This catches cases where sequenceStatus WebSocket message was missed
-      const isReady = (data.state === SystemState.READY);
-      if (isReady && AppState.system.canStart && AppState.system.currentMode === 'sequencer') {
-        // Reset test mode flag if system is ready (safety cleanup)
-        if (AppState.sequence.isTestingLine) {
-          AppState.sequence.isTestingLine = false;
-        }
-        // Re-enable sequencer buttons
-        if (DOM.btnStartSequence?.disabled) {
-          setButtonState(DOM.btnStartSequence, true);
-          setButtonState(DOM.btnLoopSequence, true);
-        }
-      }
+      syncSequencerButtons(data);
       
-      // Note: Sequence start buttons are NOT managed here anymore
-      // They are controlled ONLY by:
-      // 1. User click (immediate disable)
-      // 2. Backend sequenceStatus (re-enable when stopped)
-      // This prevents flickering/desync issues
+      if (data.system) updateSystemStats(data.system);
+      if (data.statsRecordingEnabled !== undefined) updateStatsRecordingUI(data.statsRecordingEnabled);
       
-      // Update system stats (delegated to ToolsController.js)
-      if (data.system) {
-        updateSystemStats(data.system);
-      }
-      
-      // Update stats recording UI (delegated to StatsController.js)
-      if (data.statsRecordingEnabled !== undefined) {
-        updateStatsRecordingUI(data.statsRecordingEnabled);
-      }
-      
-      // Update sensors inverted UI
+      // Sensors inverted UI
       if (data.sensorsInverted !== undefined) {
         DOM.chkSensorsInverted.checked = data.sensorsInverted;
         DOM.sensorsInvertedStatus.textContent = data.sensorsInverted ? '(' + t('common.inverted') + ')' : '(' + t('common.normal') + ')';
-        // Update icon next to "Course:"
         const invertedIcon = DOM.sensorsInvertedIcon;
-        if (invertedIcon) {
-          invertedIcon.style.display = data.sensorsInverted ? 'inline' : 'none';
-        }
+        if (invertedIcon) invertedIcon.style.display = data.sensorsInverted ? 'inline' : 'none';
       }
     }
     
@@ -516,7 +450,7 @@
     // Initialize application immediately (DOM is already parsed, all scripts loaded)
     // Note: No need for 'load' event — the script loader guarantees all scripts
     // are executed in order, and main.js is last. The DOM is ready.
-    (async function boot() {
+    (async function boot() { // NOSONAR(javascript:S7785) Classic script, not ES module
       try {
         // Initialize DOM cache FIRST (performance optimization)
         initDOMCache();

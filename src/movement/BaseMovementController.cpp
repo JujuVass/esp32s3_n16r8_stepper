@@ -550,7 +550,6 @@ void BaseMovementControllerClass::stop() {
 }
 
 void BaseMovementControllerClass::start(float distMM, float speedLevel) {
-    // Use both mutexes - motion config AND state change
     MutexGuard motionGuard(motionMutex);
     MutexGuard stateGuard(stateMutex);
     if (!motionGuard || !stateGuard) {
@@ -558,7 +557,7 @@ void BaseMovementControllerClass::start(float distMM, float speedLevel) {
         return;
     }
 
-    // ✅ Stop sequence if running (user manually starts simple mode)
+    // Stop sequence if running (user manually starts simple mode)
     if (seqState.isRunning) {
         engine->debug("start(): stopping sequence because user manually started movement");
         SeqExecutor.stop();
@@ -571,17 +570,16 @@ void BaseMovementControllerClass::start(float distMM, float speedLevel) {
         if (config.totalDistanceMM == 0) return;
     }
 
-    // Block start if in error state
+    // State guard
     if (config.currentState == STATE_ERROR) {
         Status.sendError("❌ Cannot start: System in ERROR state - Use 'Return to Start' or recalibrate");
         return;
     }
-
     if (config.currentState != STATE_READY && config.currentState != STATE_PAUSED && config.currentState != STATE_RUNNING) {
         return;
     }
 
-    // Validate and limit distance if needed
+    // Validate and limit distance
     if (motion.startPositionMM + distMM > config.totalDistanceMM) {
         if (motion.startPositionMM >= config.totalDistanceMM) {
             Status.sendError("❌ ERROR: Start position exceeds maximum");
@@ -600,6 +598,7 @@ void BaseMovementControllerClass::start(float distMM, float speedLevel) {
         return;
     }
 
+    // ── Begin new movement ──
     motion.targetDistanceMM = distMM;
     motion.speedLevelForward = speedLevel;
     motion.speedLevelBackward = speedLevel;
@@ -608,41 +607,26 @@ void BaseMovementControllerClass::start(float distMM, float speedLevel) {
           String(speedLevel, 1) + " (" + String(MovementMath::speedLevelToCPM(speedLevel), 0) + " c/min)");
 
     calculateStepDelay();
-
-    // CRITICAL: Initialize step timing BEFORE setting STATE_RUNNING
     lastStepMicros = micros();
-
-    // Calculate step positions
     recalcStepPositions();
 
-    // NOW set running state - lastStepMicros is properly initialized
-    // config.currentState is single source of truth (no separate isPaused variable)
     config.currentState = STATE_RUNNING;
-    currentMovement = MOVEMENT_VAET;  // Reset to Simple mode (va-et-vient)
+    currentMovement = MOVEMENT_VAET;
 
     // Determine starting direction based on current position
     if (currentStep <= startStep) {
-        movingForward = true;  // Need to go forward to start position
+        movingForward = true;
     } else if (currentStep >= targetStep) {
-        movingForward = false;  // Already past target, go backward
+        movingForward = false;
     } else {
-        movingForward = true;  // Continue forward to target
+        movingForward = true;
     }
 
-    // Initialize PIN_DIR based on starting direction
     Motor.setDirection(movingForward);
-
-    // Initialize distance tracking
     stats.syncPosition(currentStep);
-
-    // Reset speed measurement
     resetCycleTiming();
-
-    // Reset PEND tracking (prevents false lag warnings at movement start)
     Motor.resetPendTracking();
 
-    // Reset startStep reached flag
-    // If we're already at or past startStep, mark it as reached
     hasReachedStartStep = (currentStep >= startStep);
 
     if (engine->isDebugEnabled()) {
@@ -695,27 +679,63 @@ void BaseMovementControllerClass::returnToStart() {
 // MAIN LOOP PROCESSING
 // ============================================================================
 
+unsigned long BaseMovementControllerClass::applyZoneEffects(unsigned long baseDelay) {
+    float currentPositionMM = MovementMath::stepsToMM(currentStep - startStep);
+
+    // Mirror mode: swap enableStart/enableEnd on return trip (spatial effect only)
+    bool effectiveEnableStart = zoneEffect.enableStart;
+    bool effectiveEnableEnd = zoneEffect.enableEnd;
+    if (zoneEffect.mirrorOnReturn && !movingForward) {
+        effectiveEnableStart = zoneEffect.enableEnd;
+        effectiveEnableEnd = zoneEffect.enableStart;
+    }
+
+    float movementStartMM;
+    float movementEndMM;
+    if (movingForward) {
+        movementStartMM = 0.0f;
+        movementEndMM = motion.targetDistanceMM;
+    } else {
+        movementStartMM = motion.targetDistanceMM;
+        movementEndMM = 0.0f;
+    }
+
+    float distanceFromEnd = abs(movementEndMM - currentPositionMM);
+
+    // Check random turnback in START zone (backward)
+    if (!movingForward && effectiveEnableStart && distanceFromEnd <= zoneEffect.zoneMM) {
+        checkAndTriggerRandomTurnback(zoneEffect.zoneMM - distanceFromEnd, false);
+        if (zoneEffectState.isPausing) return baseDelay;
+    }
+
+    // Check random turnback in END zone (forward)
+    if (movingForward && effectiveEnableEnd && distanceFromEnd <= zoneEffect.zoneMM) {
+        checkAndTriggerRandomTurnback(zoneEffect.zoneMM - distanceFromEnd, true);
+        if (zoneEffectState.isPausing) return baseDelay;
+    }
+
+    return calculateAdjustedDelay(currentPositionMM, movementStartMM, movementEndMM, baseDelay, effectiveEnableStart, effectiveEnableEnd);
+}
+
 void BaseMovementControllerClass::process() {
-    // Guard: Only process if running (STATE_PAUSED is handled via config.currentState)
+    // Guard: Only process if running
     if (config.currentState != STATE_RUNNING) [[unlikely]] {
         return;
     }
 
-    // Check if in cycle pause (between cycles)
+    // Check if in cycle pause
     if (motionPauseState.isPausing) [[unlikely]] {
         if (auto elapsedMs = millis() - motionPauseState.pauseStartMs; elapsedMs >= motionPauseState.currentPauseDuration) {
-            // End of pause, resume movement
             motionPauseState.isPausing = false;
-            movingForward = true;  // Resume forward direction
+            movingForward = true;
             engine->debug("▶️ End cycle pause VAET");
         }
-        // During pause, don't step
         return;
     }
 
     // Check if in end pause (zone effect)
     if (checkAndHandleEndPause()) [[unlikely]] {
-        return;  // Still pausing, don't step
+        return;
     }
 
     // Calculate current step delay
@@ -724,57 +744,8 @@ void BaseMovementControllerClass::process() {
 
     // Apply zone effects if enabled
     if (zoneEffect.enabled && hasReachedStartStep) {
-        float currentPositionMM = MovementMath::stepsToMM(currentStep - startStep);
-
-        // Mirror mode: swap enableStart/enableEnd on return trip
-        // Affects SPATIAL zone effects (speed curve + random turnback)
-        // Does NOT affect endpoint effects (endPause uses physical flags in doStep)
-        bool effectiveEnableStart = zoneEffect.enableStart;
-        bool effectiveEnableEnd = zoneEffect.enableEnd;
-        if (zoneEffect.mirrorOnReturn && !movingForward) {
-            effectiveEnableStart = zoneEffect.enableEnd;
-            effectiveEnableEnd = zoneEffect.enableStart;
-        }
-
-        // CRITICAL: Direction matters for zones!
-        float movementStartMM;
-        float movementEndMM;
-        if (movingForward) {
-            movementStartMM = 0.0f;
-            movementEndMM = motion.targetDistanceMM;
-        } else {
-            // Inverted for backward movement
-            movementStartMM = motion.targetDistanceMM;
-            movementEndMM = 0.0f;
-        }
-
-        // Calculate distance into each zone
-        float distanceFromEnd = abs(movementEndMM - currentPositionMM);
-
-        // Check for random turnback in START zone (when moving backward)
-        // Uses effective (mirrored) flags - turnback is a spatial zone effect
-        if (!movingForward && effectiveEnableStart && distanceFromEnd <= zoneEffect.zoneMM) {
-            float distanceIntoZone = zoneEffect.zoneMM - distanceFromEnd;
-            checkAndTriggerRandomTurnback(distanceIntoZone, false);
-            // If pause was triggered, exit early
-            if (zoneEffectState.isPausing) {
-                return;
-            }
-        }
-
-        // Check for random turnback in END zone (when moving forward)
-        // Uses effective (mirrored) flags - turnback is a spatial zone effect
-        if (movingForward && effectiveEnableEnd && distanceFromEnd <= zoneEffect.zoneMM) {
-            float distanceIntoZone = zoneEffect.zoneMM - distanceFromEnd;
-            checkAndTriggerRandomTurnback(distanceIntoZone, true);
-            // If pause was triggered, exit early
-            if (zoneEffectState.isPausing) {
-                return;
-            }
-        }
-
-        // Apply speed effect (decel or accel) - pass effective flags directly
-        currentDelay = calculateAdjustedDelay(currentPositionMM, movementStartMM, movementEndMM, currentDelay, effectiveEnableStart, effectiveEnableEnd);
+        currentDelay = applyZoneEffects(currentDelay);
+        if (zoneEffectState.isPausing) return;  // Turnback triggered pause
     }
 
     // Check if enough time has passed for next step
@@ -801,95 +772,86 @@ void BaseMovementControllerClass::initPendingFromCurrent() {
 
 void BaseMovementControllerClass::doStep() {
     if (movingForward) {
-        // ═══════════════════════════════════════════════════════════════════
-        // MOVING FORWARD (startStep → targetStep)
-        // ═══════════════════════════════════════════════════════════════════
-
-        // Drift detection & correction (delegated to ContactSensors)
-        if (Contacts.checkAndCorrectDriftEnd()) [[unlikely]] {
-            movingForward = false;  // Reverse direction after correction
-            resetRandomTurnback();  // Reset turnback state on direction change
-            return;
-        }
-
-        // Hard drift check (critical error)
-        if (!Contacts.checkHardDriftEnd()) [[unlikely]] {
-            return;  // Error state, stop processing
-        }
-
-        // Check if reached target position
-        if (currentStep + 1 > targetStep) [[unlikely]] {
-            if (engine->isDebugEnabled()) {
-                engine->debug("🎯 Reached targetStep=" + String(targetStep) + " (currentStep=" +
-                      String(currentStep) + ", pos=" + String(MovementMath::stepsToMM(currentStep), 1) + "mm)");
-            }
-            // Trigger end pause if enabled (at END extremity)
-            // Note: end pause uses PHYSICAL zone flags (no mirror swap)
-            if (zoneEffect.enabled && zoneEffect.endPauseEnabled && zoneEffect.enableEnd) {
-                triggerEndPause();
-            }
-            movingForward = false;
-            resetRandomTurnback();  // Reset turnback state on direction change
-            return;
-        }
-
-        // Check if we've reached startStep for the first time (initial approach phase)
-        if (!hasReachedStartStep && currentStep >= startStep) [[unlikely]] {
-            hasReachedStartStep = true;
-        }
-
-        // Execute step
-        Motor.setDirection(true);  // Forward
-        Motor.step();
-        currentStep = currentStep + 1;
-
-        // Track distance
-        stats.trackDelta(currentStep);
-
+        doStepForward();
     } else {
-        // ═══════════════════════════════════════════════════════════════════
-        // MOVING BACKWARD (targetStep → startStep)
-        // ═══════════════════════════════════════════════════════════════════
+        doStepBackward();
+    }
+}
 
-        // Drift detection & correction (delegated to ContactSensors)
-        if (Contacts.checkAndCorrectDriftStart()) [[unlikely]] {
-            return;  // Correction done, wait for next step
+void BaseMovementControllerClass::doStepForward() {
+    // Drift detection & correction (delegated to ContactSensors)
+    if (Contacts.checkAndCorrectDriftEnd()) [[unlikely]] {
+        movingForward = false;
+        resetRandomTurnback();
+        return;
+    }
+
+    // Hard drift check (critical error)
+    if (!Contacts.checkHardDriftEnd()) [[unlikely]] {
+        return;
+    }
+
+    // Check if reached target position
+    if (currentStep + 1 > targetStep) [[unlikely]] {
+        if (engine->isDebugEnabled()) {
+            engine->debug("🎯 Reached targetStep=" + String(targetStep) + " (currentStep=" +
+                  String(currentStep) + ", pos=" + String(MovementMath::stepsToMM(currentStep), 1) + "mm)");
         }
-
-        // Hard drift check (critical error)
-        if (!Contacts.checkHardDriftStart()) [[unlikely]] {
-            return;  // Error state, stop processing
+        // Trigger end pause if enabled (at END extremity — physical flags, no mirror swap)
+        if (zoneEffect.enabled && zoneEffect.endPauseEnabled && zoneEffect.enableEnd) {
+            triggerEndPause();
         }
+        movingForward = false;
+        resetRandomTurnback();
+        return;
+    }
 
-        // Reset wasAtStart flag when far from start
-        if (currentStep > config.minStep + WASATSTART_THRESHOLD_STEPS) {
-            wasAtStart = false;
+    // Check if we've reached startStep for the first time (initial approach phase)
+    if (!hasReachedStartStep && currentStep >= startStep) [[unlikely]] {
+        hasReachedStartStep = true;
+    }
+
+    // Execute step
+    Motor.setDirection(true);
+    Motor.step();
+    currentStep = currentStep + 1;
+    stats.trackDelta(currentStep);
+}
+
+void BaseMovementControllerClass::doStepBackward() {
+    // Drift detection & correction (delegated to ContactSensors)
+    if (Contacts.checkAndCorrectDriftStart()) [[unlikely]] {
+        return;
+    }
+
+    // Hard drift check (critical error)
+    if (!Contacts.checkHardDriftStart()) [[unlikely]] {
+        return;
+    }
+
+    // Reset wasAtStart flag when far from start
+    if (currentStep > config.minStep + WASATSTART_THRESHOLD_STEPS) {
+        wasAtStart = false;
+    }
+
+    // Execute step
+    Motor.setDirection(false);
+    Motor.step();
+    currentStep = currentStep - 1;
+    stats.trackDelta(currentStep);
+
+    // Check if reached startStep (end of backward movement)
+    if (currentStep <= startStep && hasReachedStartStep) [[unlikely]] {
+        if (engine->isDebugEnabled()) {
+            engine->debug("🏠 Reached startStep=" + String(startStep) + " (currentStep=" +
+                  String(currentStep) + ", pos=" + String(MovementMath::stepsToMM(currentStep), 1) + "mm)");
         }
-
-        // Execute step
-        Motor.setDirection(false);  // Backward
-        Motor.step();
-        currentStep = currentStep - 1;
-
-        // Track distance
-        stats.trackDelta(currentStep);
-
-        // Check if reached startStep (end of backward movement)
-        // ONLY reverse if we've already been to startStep once (va-et-vient mode active)
-        if (currentStep <= startStep && hasReachedStartStep) [[unlikely]] {
-            if (engine->isDebugEnabled()) {
-                engine->debug("🏠 Reached startStep=" + String(startStep) + " (currentStep=" +
-                      String(currentStep) + ", pos=" + String(MovementMath::stepsToMM(currentStep), 1) + "mm)");
-            }
-            // Trigger end pause if enabled (at START extremity)
-            // Note: end pause uses PHYSICAL zone flags (no mirror swap)
-            // Mirror only affects speed effect curve, not pause triggers
-            if (zoneEffect.enabled && zoneEffect.endPauseEnabled && zoneEffect.enableStart) {
-                triggerEndPause();
-            }
-            resetRandomTurnback();  // Reset turnback state on direction change
-            processCycleCompletion();
+        // Trigger end pause if enabled (at START extremity — physical flags, no mirror swap)
+        if (zoneEffect.enabled && zoneEffect.endPauseEnabled && zoneEffect.enableStart) {
+            triggerEndPause();
         }
+        resetRandomTurnback();
+        processCycleCompletion();
     }
 }
 

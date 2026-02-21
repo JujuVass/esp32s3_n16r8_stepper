@@ -20,7 +20,7 @@ void IRAM_ATTR pendISR() {
 // ============================================================================
 
 MotorDriver& MotorDriver::getInstance() {
-    static MotorDriver instance;
+    static MotorDriver instance; // NOSONAR(cpp:S6018)
     return instance;
 }
 

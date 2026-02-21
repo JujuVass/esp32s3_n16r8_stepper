@@ -5,7 +5,7 @@
 #include "core/logger/Logger.h"
 #include "core/filesystem/FileSystem.h"
 #include "core/UtilityEngine.h"  // For LogLevel enum values
-#include <time.h>
+#include "core/TimeUtils.h"
 
 // WebSocket mutex — declared in GlobalState.h, defined in StepperController.cpp
 // Used here to guard broadcastTXT from cross-core races
@@ -72,16 +72,12 @@ bool Logger::initializeLogFile() {
   Serial.println("[Logger] ✅ Log file opened: " + _currentLogFileName);
 
   // Write session header
-  std::array<char, 30> ts{};
-  time_t now = time(nullptr);
-  struct tm tmstruct;
-  localtime_r(&now, &tmstruct);
-  strftime(ts.data(), ts.size(), "%Y-%m-%d %H:%M:%S", &tmstruct);
+  auto ts = TimeUtils::format("%Y-%m-%d %H:%M:%S");
 
   _logFile.println("");
   _logFile.println("========================================");
   _logFile.print("SESSION START: ");
-  _logFile.println(ts.data());
+  _logFile.println(ts.c_str());
   _logFile.println("========================================");
   _logFile.flush();
 
@@ -204,21 +200,16 @@ void Logger::flushLogBuffer(bool forceFlush) {
   xSemaphoreGive(_logMutex);
 
   // Get current time for timestamps
-  time_t currentTime = time(nullptr);
-  struct tm tmstruct;
-  localtime_r(&currentTime, &tmstruct);
-  bool timeValid = (tmstruct.tm_year > (2020 - 1900));
+  time_t currentTime = TimeUtils::epochSeconds();
+  bool timeValid = TimeUtils::isSynchronized();
 
   // Write all valid entries in one batch (no mutex needed - local copy)
   for (int i = 0; i < localCount; i++) {
       if (timeValid) {
-        std::array<char, 30> ts{};
         time_t logTime = currentTime - ((now - localBuffer[i].timestamp) / 1000);
-        struct tm logTm;
-        localtime_r(&logTime, &logTm);
-        strftime(ts.data(), ts.size(), "%Y-%m-%d %H:%M:%S", &logTm);
+        auto tsStr = TimeUtils::format("%Y-%m-%d %H:%M:%S", logTime);
         _logFile.print("[");
-        _logFile.print(ts.data());
+        _logFile.print(tsStr.c_str());
         _logFile.print("] ");
       } else {
         _logFile.print("[T+");
@@ -246,13 +237,7 @@ void Logger::flushLogBuffer(bool forceFlush) {
 // ============================================================================
 
 String Logger::generateLogFilename() {
-  time_t now = time(nullptr);
-  struct tm tmstruct;
-  localtime_r(&now, &tmstruct);
-
-  std::array<char, 20> dateBuf{};
-  strftime(dateBuf.data(), dateBuf.size(), "%Y%m%d", &tmstruct);
-  auto dateStr = String(dateBuf.data());
+  auto dateStr = TimeUtils::format("%Y%m%d");
 
   // Find max suffix by scanning /logs directory
   int maxSuffix = -1;
@@ -285,8 +270,5 @@ const char* Logger::getLevelPrefix(LogLevel level) const {
 }
 
 bool Logger::isTimeSynchronized() const {
-  time_t now = time(nullptr);
-  struct tm timeinfo;
-  localtime_r(&now, &timeinfo);
-  return (timeinfo.tm_year > (2020 - 1900));
+  return TimeUtils::isSynchronized();
 }

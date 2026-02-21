@@ -6,8 +6,8 @@
 // ============================================================================
 
 #include "core/UtilityEngine.h"
+#include "core/TimeUtils.h"
 #include "core/GlobalState.h"  // For sensorsInverted, effectiveMaxDistanceMM, etc.
-#include <time.h>
 
 // ============================================================================
 // CONSTRUCTOR
@@ -108,19 +108,11 @@ void UtilityEngine::saveSensorsInverted() {
 // ============================================================================
 
 String UtilityEngine::getFormattedTime(const char* format) const {
-  time_t now = time(nullptr);
-  struct tm timeinfo;
-  localtime_r(&now, &timeinfo);
-  std::array<char, 64> buffer{};
-  strftime(buffer.data(), buffer.size(), format, &timeinfo);
-  return String(buffer.data());
+  return TimeUtils::format(format);
 }
 
 bool UtilityEngine::isTimeSynchronized() const {
-  time_t now = time(nullptr);
-  struct tm timeinfo;
-  localtime_r(&now, &timeinfo);
-  return (timeinfo.tm_year > (2020 - 1900));
+  return TimeUtils::isSynchronized();
 }
 
 // ============================================================================

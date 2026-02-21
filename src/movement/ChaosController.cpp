@@ -30,7 +30,7 @@ constinit ChaosExecutionState chaosState;
 // ============================================================================
 
 ChaosController& ChaosController::getInstance() {
-    static ChaosController instance;
+    static ChaosController instance; // NOSONAR(cpp:S6018)
     return instance;
 }
 

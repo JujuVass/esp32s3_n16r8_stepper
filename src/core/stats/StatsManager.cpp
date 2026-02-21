@@ -8,6 +8,7 @@
 #include "core/Config.h"        // For STEPS_PER_MM
 #include "core/MovementMath.h"  // For mmToSteps/stepsToMM
 #include "core/GlobalState.h"   // For stats (StatsTracking), statsMutex, effectiveMaxDistanceMM, etc.
+#include "core/TimeUtils.h"
 #include "core/UtilityEngine.h" // For engine->info/debug/error logging
 #include <time.h>
 
@@ -106,15 +107,11 @@ void StatsManager::incrementDailyStats(float distanceMM) {
   }
 
   // Guard against NTP not synced yet (would record under "1970-01-01")
-  time_t now = time(nullptr);
-  struct tm timeinfo;
-  localtime_r(&now, &timeinfo);
-  if (timeinfo.tm_year <= (2020 - 1900)) {
+  if (!TimeUtils::isSynchronized()) {
     if (engine) engine->debug("📊 NTP not synced - deferring stats save");
     return;
   }
-  std::array<char, 11> dateStr{};
-  strftime(dateStr.data(), dateStr.size(), "%Y-%m-%d", &timeinfo);
+  auto dateStr = TimeUtils::format("%Y-%m-%d");
 
   // Load existing stats
   JsonDocument statsDoc;
@@ -128,7 +125,7 @@ void StatsManager::incrementDailyStats(float distanceMM) {
 
   bool found = false;
   for (JsonObject entry : statsArray) {
-    if (strcmp(entry["date"], dateStr.data()) == 0) {
+    if (dateStr == entry["date"].as<const char*>()) {
       float current = entry["distanceMM"] | 0.0f;
       entry["distanceMM"] = current + distanceMM;
       found = true;
@@ -138,7 +135,7 @@ void StatsManager::incrementDailyStats(float distanceMM) {
 
   if (!found) {
     JsonObject newEntry = statsArray.add<JsonObject>();
-    newEntry["date"] = dateStr.data();
+    newEntry["date"] = dateStr.c_str();
     newEntry["distanceMM"] = distanceMM;
   }
 
@@ -148,16 +145,12 @@ void StatsManager::incrementDailyStats(float distanceMM) {
     return;
   }
 
-  if (engine) engine->debug(String("📊 Stats: +") + String(distanceMM, 1) + "mm on " + String(dateStr.data()));
+  if (engine) engine->debug(String("📊 Stats: +") + String(distanceMM, 1) + "mm on " + dateStr);
 }
 
 float StatsManager::getTodayDistance() {
   // Get current date
-  time_t now = time(nullptr);
-  struct tm timeinfo;
-  localtime_r(&now, &timeinfo);
-  std::array<char, 11> dateStr{};
-  strftime(dateStr.data(), dateStr.size(), "%Y-%m-%d", &timeinfo);
+  auto dateStr = TimeUtils::format("%Y-%m-%d");
 
   // Load stats
   JsonDocument statsDoc;
@@ -168,7 +161,7 @@ float StatsManager::getTodayDistance() {
   // Find today's entry
   JsonArray statsArray = statsDoc.as<JsonArray>();
   for (JsonObject entry : statsArray) {
-    if (strcmp(entry["date"], dateStr.data()) == 0) {
+    if (dateStr == entry["date"].as<const char*>()) {
       return entry["distanceMM"] | 0.0f;
     }
   }
