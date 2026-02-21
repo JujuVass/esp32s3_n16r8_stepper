@@ -143,55 +143,64 @@ function updatePatternToggleButton() {
  * @param {object} data - Status data from backend
  */
 function updateChaosUI(data) {
-  // chaosState may be absent when chaos is stopped - handle both cases
   const chaosState = data.chaosState || {};
   
   const isRunning = chaosState.isRunning || false;
-  const wasRunning = DOM.chaosStats.style.display === 'block';  // Track previous state
+  const wasRunning = DOM.chaosStats.style.display === 'block';
   const isCalibrating = data.state === SystemState.CALIBRATING;
   const isPaused = data.state === SystemState.PAUSED;
   const isRunningOrPaused = isRunning || isPaused;
   const isError = data.state === SystemState.ERROR;
   
-  // Show/hide stats panel
   DOM.chaosStats.style.display = isRunning ? 'block' : 'none';
   
-  // CRITICAL FIX: Reset patterns flag when chaos stops
-  // This allows patterns to be re-synced from backend after each run
   if (wasRunning && !isRunning) {
     console.debug('🔄 Chaos stopped - resetting patterns flag for next sync');
     AppState.flags.patternsInitialized = false;
   }
   
-  // Update button states (disable if not calibrated or calibrating)
+  updateChaosButtons(isRunning, isPaused, isRunningOrPaused, isError, isCalibrating);
+  
+  // Restore pattern states from backend ONLY on first load
+  if (!AppState.flags.patternsInitialized && !isRunning && data.chaos?.patternsEnabled) {
+    CHAOS_PATTERNS.forEach((patternId, index) => {
+      const el = document.getElementById(patternId);
+      if (el && data.chaos.patternsEnabled[index] !== undefined) {
+        el.checked = data.chaos.patternsEnabled[index];
+      }
+    });
+    AppState.flags.patternsInitialized = true;
+  }
+  
+  if (isRunning && data.chaosState) {
+    updateChaosStats(data, chaosState);
+  }
+  
+  updateChaosPresets();
+}
+
+/** Update chaos button states and input enable/disable */
+function updateChaosButtons(isRunning, isPaused, isRunningOrPaused, isError, isCalibrating) {
   const canStart = canStartOperation() && !isRunning;
   setButtonState(DOM.btnStartChaos, canStart);
   
-  // Pause button
   const btnPauseChaos = document.getElementById('btnPauseChaos');
   if (btnPauseChaos) {
     btnPauseChaos.disabled = !isRunningOrPaused;
-    if (isPaused) {
-      btnPauseChaos.innerHTML = '▶ ' + t('common.resume');
-    } else {
-      btnPauseChaos.innerHTML = '⏸ ' + t('common.pause');
-    }
+    btnPauseChaos.innerHTML = isPaused 
+      ? ('▶ ' + t('common.resume')) 
+      : ('⏸ ' + t('common.pause'));
   }
   
-  // Stop button - ALSO enabled in ERROR state for recovery
   DOM.btnStopChaos.disabled = !(isRunningOrPaused || isError);
   
-  // Allow live config changes while running (except seed)
-  // Config inputs remain enabled for real-time adjustments
   document.getElementById('chaosCenterPos').disabled = false;
   document.getElementById('chaosAmplitude').disabled = false;
   document.getElementById('chaosMaxSpeed').disabled = false;
   document.getElementById('chaosCraziness').disabled = false;
   document.getElementById('chaosDuration').disabled = false;
-  document.getElementById('chaosSeed').disabled = isRunning;  // Only disable seed while running
+  document.getElementById('chaosSeed').disabled = isRunning;
   
-  // Enable/disable pattern checkboxes and preset buttons based on running state
-  // Checkboxes: ALWAYS disabled while running, ALWAYS enabled when stopped
   const patternDisabled = isRunning || isCalibrating;
   CHAOS_PATTERNS.forEach(patternId => {
     const el = document.getElementById(patternId);
@@ -200,47 +209,31 @@ function updateChaosUI(data) {
   document.getElementById('btnEnableAllPatterns').disabled = patternDisabled;
   document.getElementById('btnEnableSoftPatterns').disabled = patternDisabled;
   document.getElementById('btnEnableDynamicPatterns').disabled = patternDisabled;
+}
+
+/** Update chaos running statistics display */
+function updateChaosStats(data, chaosState) {
+  document.getElementById('statPattern').textContent = chaosState.patternName || '-';
+  document.getElementById('statPosition').textContent = data.positionMM.toFixed(2) + ' mm';
   
-  // Restore pattern states from backend ONLY on first load (not on every status update)
-  // This prevents user's checkbox changes from being overwritten during runtime config changes
-  if (!AppState.flags.patternsInitialized && !isRunning && data.chaos?.patternsEnabled) {
-    CHAOS_PATTERNS.forEach((patternId, index) => {
-      const el = document.getElementById(patternId);
-      if (el && data.chaos.patternsEnabled[index] !== undefined) {
-        el.checked = data.chaos.patternsEnabled[index];
-      }
-    });
-    AppState.flags.patternsInitialized = true;  // Mark as initialized
+  const range = (chaosState.maxReachedMM || 0) - (chaosState.minReachedMM || 0);
+  document.getElementById('statRange').textContent = 
+    (chaosState.minReachedMM || 0).toFixed(1) + ' - ' + 
+    (chaosState.maxReachedMM || 0).toFixed(1) + ' mm (' + 
+    range.toFixed(1) + ' mm)';
+  
+  document.getElementById('statCount').textContent = chaosState.patternsExecuted || 0;
+  
+  if (data.chaos && data.chaos.durationSeconds > 0 && chaosState.elapsedSeconds !== undefined) {
+    document.getElementById('statTimer').style.display = 'block';
+    document.getElementById('statElapsed').textContent = 
+      chaosState.elapsedSeconds + ' / ' + data.chaos.durationSeconds;
+  } else if (chaosState.elapsedSeconds === undefined) {
+    document.getElementById('statTimer').style.display = 'none';
+  } else {
+    document.getElementById('statTimer').style.display = 'block';
+    document.getElementById('statElapsed').textContent = chaosState.elapsedSeconds;
   }
-  
-  if (isRunning && data.chaosState) {
-    // Update stats
-    document.getElementById('statPattern').textContent = chaosState.patternName || '-';
-    document.getElementById('statPosition').textContent = data.positionMM.toFixed(2) + ' mm';
-    
-    const range = (chaosState.maxReachedMM || 0) - (chaosState.minReachedMM || 0);
-    document.getElementById('statRange').textContent = 
-      (chaosState.minReachedMM || 0).toFixed(1) + ' - ' + 
-      (chaosState.maxReachedMM || 0).toFixed(1) + ' mm (' + 
-      range.toFixed(1) + ' mm)';
-    
-    document.getElementById('statCount').textContent = chaosState.patternsExecuted || 0;
-    
-    // Update timer
-    if (data.chaos && data.chaos.durationSeconds > 0 && chaosState.elapsedSeconds !== undefined) {
-      document.getElementById('statTimer').style.display = 'block';
-      document.getElementById('statElapsed').textContent = 
-        chaosState.elapsedSeconds + ' / ' + data.chaos.durationSeconds;
-    } else if (chaosState.elapsedSeconds === undefined) {
-      document.getElementById('statTimer').style.display = 'none';
-    } else {
-      document.getElementById('statTimer').style.display = 'block';
-      document.getElementById('statElapsed').textContent = chaosState.elapsedSeconds;
-    }
-  }
-  
-  // Update preset buttons visual state
-  updateChaosPresets();
 }
 
 /**

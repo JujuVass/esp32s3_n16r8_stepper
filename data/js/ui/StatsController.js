@@ -27,7 +27,7 @@
 
 // Day names for display - functions using i18n
 const DEFAULT_DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-function getDayNames() {
+function getDayNames() { // NOSONAR S3800 — both branches return string[], isArray guard ensures it
   const names = t('stats.dayNames');
   if (!Array.isArray(names)) return DEFAULT_DAY_NAMES;
   return names;

@@ -105,28 +105,18 @@ function drawZoneEffectPreviewPure(canvas, config) {
   const plotWidth = width - 2 * padding;
   const plotHeight = height - 2 * padding;
   
-  // Clear canvas
   ctx.clearRect(0, 0, width, height);
   
-  // Destructure config with defaults
   const {
-    enableStart = true,
-    enableEnd = true,
-    zoneMM = 50,
-    speedEffect = 1,        // 0=none, 1=decel, 2=accel
-    speedCurve = 1,         // 0=linear, 1=sine, 2=tri_inv, 3=sine_inv
-    speedIntensity = 75,
-    randomTurnbackEnabled = false,
-    turnbackChance = 30,
-    endPauseEnabled = false,
-    movementAmplitude = 150
+    enableStart = true, enableEnd = true, zoneMM = 50,
+    speedEffect = 1, speedCurve = 1, speedIntensity = 75,
+    randomTurnbackEnabled = false, turnbackChance = 30,
+    endPauseEnabled = false, movementAmplitude = 150
   } = config;
   
-  // Check if any effect is active
   const hasSpeedEffect = speedEffect !== 0;
   const hasAnyEffect = hasSpeedEffect || randomTurnbackEnabled || endPauseEnabled;
   
-  // Show disabled message if nothing is enabled
   if (!hasAnyEffect) {
     ctx.font = '14px Arial';
     ctx.fillStyle = '#999';
@@ -135,160 +125,134 @@ function drawZoneEffectPreviewPure(canvas, config) {
     return;
   }
   
-  // Calculate max slowdown/speedup from intensity
-  const maxFactor = 1 + (speedIntensity / 100) * 9;  // 1× to 10×
+  const plotCtx = { ctx, width, height, padding, plotWidth, plotHeight };
   
-  // Draw axes
-  ctx.strokeStyle = '#ccc';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(padding, padding);
-  ctx.lineTo(padding, height - padding);
-  ctx.lineTo(width - padding, height - padding);
-  ctx.stroke();
+  drawPreviewAxes(plotCtx);
+  if (hasSpeedEffect) drawPreviewSpeedCurve(plotCtx, config);
+  drawPreviewZoneBoundaries(plotCtx, enableStart, enableEnd, zoneMM, movementAmplitude);
+  if (randomTurnbackEnabled) drawPreviewTurnback(plotCtx, enableStart, enableEnd, zoneMM, movementAmplitude, turnbackChance);
+  if (endPauseEnabled) drawPreviewEndPause(plotCtx, enableStart, enableEnd);
+  drawPreviewLabels(plotCtx, hasSpeedEffect, speedEffect);
+}
+
+/** Draw axes and horizontal baseline */
+function drawPreviewAxes(p) {
+  p.ctx.strokeStyle = '#ccc';
+  p.ctx.lineWidth = 1;
+  p.ctx.beginPath();
+  p.ctx.moveTo(p.padding, p.padding);
+  p.ctx.lineTo(p.padding, p.height - p.padding);
+  p.ctx.lineTo(p.width - p.padding, p.height - p.padding);
+  p.ctx.stroke();
   
-  // Draw horizontal line for normal speed (y = 0.5 * plotHeight)
-  ctx.strokeStyle = '#ddd';
-  ctx.setLineDash([2, 2]);
-  ctx.beginPath();
-  const normalY = height - padding - (0.5 * plotHeight);
-  ctx.moveTo(padding, normalY);
-  ctx.lineTo(width - padding, normalY);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  p.ctx.strokeStyle = '#ddd';
+  p.ctx.setLineDash([2, 2]);
+  p.ctx.beginPath();
+  const normalY = p.height - p.padding - (0.5 * p.plotHeight);
+  p.ctx.moveTo(p.padding, normalY);
+  p.ctx.lineTo(p.width - p.padding, normalY);
+  p.ctx.stroke();
+  p.ctx.setLineDash([]);
+}
+
+/** Draw the speed effect curve */
+function drawPreviewSpeedCurve(p, config) {
+  const { enableStart, enableEnd, zoneMM, speedEffect, speedCurve, speedIntensity, movementAmplitude = 150 } = config;
+  const isAccel = speedEffect === 2;
+  const maxFactor = 1 + (speedIntensity / 100) * 9;
   
-  // Draw speed curve if speed effect is active
+  p.ctx.strokeStyle = isAccel ? '#2196F3' : '#4CAF50';
+  p.ctx.lineWidth = 2;
+  p.ctx.beginPath();
+  
+  for (let x = 0; x <= p.plotWidth; x++) {
+    const positionMM = (x / p.plotWidth) * movementAmplitude;
+    let speedFactor = 1;
+    
+    if (enableStart && positionMM <= zoneMM) {
+      speedFactor = calculateSlowdownFactorPure(positionMM / zoneMM, maxFactor, speedCurve);
+      if (isAccel) speedFactor = 1 / speedFactor;
+    }
+    if (enableEnd && positionMM >= (movementAmplitude - zoneMM)) {
+      speedFactor = calculateSlowdownFactorPure((movementAmplitude - positionMM) / zoneMM, maxFactor, speedCurve);
+      if (isAccel) speedFactor = 1 / speedFactor;
+    }
+    
+    const normalizedSpeed = isAccel
+      ? 0.5 + (1 - speedFactor) * 0.5
+      : 0.5 / speedFactor;
+    const y = p.height - p.padding - (normalizedSpeed * p.plotHeight);
+    
+    if (x === 0) p.ctx.moveTo(p.padding + x, y);
+    else p.ctx.lineTo(p.padding + x, y);
+  }
+  p.ctx.stroke();
+}
+
+/** Draw dashed zone boundary lines */
+function drawPreviewZoneBoundaries(p, enableStart, enableEnd, zoneMM, movementAmplitude) {
+  if (!enableStart && !enableEnd) return;
+  p.ctx.setLineDash([5, 3]);
+  p.ctx.strokeStyle = '#FF9800';
+  p.ctx.lineWidth = 1;
+  
+  if (enableStart) {
+    const startX = p.padding + (zoneMM / movementAmplitude) * p.plotWidth;
+    p.ctx.beginPath();
+    p.ctx.moveTo(startX, p.padding);
+    p.ctx.lineTo(startX, p.height - p.padding);
+    p.ctx.stroke();
+  }
+  if (enableEnd) {
+    const endX = p.padding + ((movementAmplitude - zoneMM) / movementAmplitude) * p.plotWidth;
+    p.ctx.beginPath();
+    p.ctx.moveTo(endX, p.padding);
+    p.ctx.lineTo(endX, p.height - p.padding);
+    p.ctx.stroke();
+  }
+  p.ctx.setLineDash([]);
+}
+
+/** Draw turnback overlay and percentage labels */
+function drawPreviewTurnback(p, enableStart, enableEnd, zoneMM, movementAmplitude, turnbackChance) {
+  const zoneWidth = (zoneMM / movementAmplitude) * p.plotWidth;
+  p.ctx.fillStyle = 'rgba(156, 39, 176, 0.2)';
+  
+  if (enableStart) p.ctx.fillRect(p.padding, p.padding, zoneWidth, p.plotHeight);
+  if (enableEnd) {
+    const endStartX = p.padding + ((movementAmplitude - zoneMM) / movementAmplitude) * p.plotWidth;
+    p.ctx.fillRect(endStartX, p.padding, zoneWidth, p.plotHeight);
+  }
+  
+  p.ctx.fillStyle = '#9C27B0';
+  p.ctx.font = '12px Arial';
+  p.ctx.textAlign = 'center';
+  if (enableStart) p.ctx.fillText('🔄 ' + turnbackChance + '%', p.padding + 20, p.padding + 15);
+  if (enableEnd) p.ctx.fillText('🔄 ' + turnbackChance + '%', p.width - p.padding - 20, p.padding + 15);
+}
+
+/** Draw end pause icons */
+function drawPreviewEndPause(p, enableStart, enableEnd) {
+  p.ctx.fillStyle = '#FFC107';
+  p.ctx.font = 'bold 14px Arial';
+  p.ctx.textAlign = 'center';
+  if (enableStart) p.ctx.fillText('⏸', p.padding + 8, p.height - p.padding - 5);
+  if (enableEnd) p.ctx.fillText('⏸', p.width - p.padding - 8, p.height - p.padding - 5);
+}
+
+/** Draw axis labels and speed indicators */
+function drawPreviewLabels(p, hasSpeedEffect, speedEffect) {
+  p.ctx.font = '10px Arial';
+  p.ctx.fillStyle = '#666';
+  p.ctx.textAlign = 'center';
+  p.ctx.fillText(t('utils.startLabel'), p.padding, p.height - 5);
+  p.ctx.fillText(t('utils.endLabel'), p.width - p.padding, p.height - 5);
+  
   if (hasSpeedEffect) {
     const isAccel = speedEffect === 2;
-    ctx.strokeStyle = isAccel ? '#2196F3' : '#4CAF50';  // Blue for accel, green for decel
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    
-    for (let x = 0; x <= plotWidth; x++) {
-      const positionMM = (x / plotWidth) * movementAmplitude;
-      let speedFactor = 1;  // Normal speed
-      
-      // Check START zone
-      if (enableStart && positionMM <= zoneMM) {
-        const zoneProgress = positionMM / zoneMM;
-        speedFactor = calculateSlowdownFactorPure(zoneProgress, maxFactor, speedCurve);
-        if (isAccel) {
-          // For acceleration: invert the slowdown to speedup
-          speedFactor = 1 / speedFactor;
-        }
-      }
-      // Check END zone
-      if (enableEnd && positionMM >= (movementAmplitude - zoneMM)) {
-        const distanceFromEnd = movementAmplitude - positionMM;
-        const zoneProgress = distanceFromEnd / zoneMM;
-        speedFactor = calculateSlowdownFactorPure(zoneProgress, maxFactor, speedCurve);
-        if (isAccel) {
-          speedFactor = 1 / speedFactor;
-        }
-      }
-      
-      // Convert speed factor to Y coordinate
-      // For decel: slower = higher value = lower on graph (towards bottom)
-      // For accel: faster = lower value (< 1) = higher on graph
-      let normalizedSpeed;
-      if (isAccel) {
-        // Accel: values range from 1 (normal) to < 1 (faster)
-        // Map to 0.5 (normal) to 1 (fast) for display
-        normalizedSpeed = 0.5 + (1 - speedFactor) * 0.5;
-      } else {
-        // Decel: values range from 1 (normal) to > 1 (slower)
-        // Map to 0.5 (normal) to 0 (slow) for display
-        normalizedSpeed = 0.5 / speedFactor;
-      }
-      
-      const y = height - padding - (normalizedSpeed * plotHeight);
-      
-      if (x === 0) {
-        ctx.moveTo(padding + x, y);
-      } else {
-        ctx.lineTo(padding + x, y);
-      }
-    }
-    
-    ctx.stroke();
-  }
-  
-  // Draw zone boundaries
-  if (enableStart || enableEnd) {
-    ctx.setLineDash([5, 3]);
-    ctx.strokeStyle = '#FF9800';
-    ctx.lineWidth = 1;
-    
-    if (enableStart) {
-      const startX = padding + (zoneMM / movementAmplitude) * plotWidth;
-      ctx.beginPath();
-      ctx.moveTo(startX, padding);
-      ctx.lineTo(startX, height - padding);
-      ctx.stroke();
-    }
-    
-    if (enableEnd) {
-      const endX = padding + ((movementAmplitude - zoneMM) / movementAmplitude) * plotWidth;
-      ctx.beginPath();
-      ctx.moveTo(endX, padding);
-      ctx.lineTo(endX, height - padding);
-      ctx.stroke();
-    }
-    
-    ctx.setLineDash([]);
-  }
-  
-  // Draw random turnback indicator
-  if (randomTurnbackEnabled) {
-    ctx.fillStyle = 'rgba(156, 39, 176, 0.2)';  // Purple with transparency
-    
-    if (enableStart) {
-      ctx.fillRect(padding, padding, (zoneMM / movementAmplitude) * plotWidth, plotHeight);
-    }
-    if (enableEnd) {
-      const endStartX = padding + ((movementAmplitude - zoneMM) / movementAmplitude) * plotWidth;
-      ctx.fillRect(endStartX, padding, (zoneMM / movementAmplitude) * plotWidth, plotHeight);
-    }
-    
-    // Draw turnback symbol
-    ctx.fillStyle = '#9C27B0';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
-    if (enableStart) {
-      ctx.fillText('🔄 ' + turnbackChance + '%', padding + 20, padding + 15);
-    }
-    if (enableEnd) {
-      ctx.fillText('🔄 ' + turnbackChance + '%', width - padding - 20, padding + 15);
-    }
-  }
-  
-  // Draw end pause indicator
-  if (endPauseEnabled) {
-    ctx.fillStyle = '#FFC107';  // Amber
-    ctx.font = 'bold 14px Arial';
-    ctx.textAlign = 'center';
-    
-    if (enableStart) {
-      ctx.fillText('⏸', padding + 8, height - padding - 5);
-    }
-    if (enableEnd) {
-      ctx.fillText('⏸', width - padding - 8, height - padding - 5);
-    }
-  }
-  
-  // Draw labels
-  ctx.font = '10px Arial';
-  ctx.fillStyle = '#666';
-  ctx.textAlign = 'center';
-  ctx.fillText(t('utils.startLabel'), padding, height - 5);
-  ctx.fillText(t('utils.endLabel'), width - padding, height - 5);
-  
-  // Draw speed indicators
-  ctx.textAlign = 'left';
-  if (hasSpeedEffect) {
-    const isAccel = speedEffect === 2;
-    ctx.fillText(isAccel ? t('utils.fast') : t('utils.normal'), padding + 5, padding + 10);
-    ctx.fillText(isAccel ? t('utils.normal') : t('utils.slow'), padding + 5, height - padding - 5);
+    p.ctx.textAlign = 'left';
+    p.ctx.fillText(isAccel ? t('utils.fast') : t('utils.normal'), p.padding + 5, p.padding + 10);
+    p.ctx.fillText(isAccel ? t('utils.normal') : t('utils.slow'), p.padding + 5, p.height - p.padding - 5);
   }
 }
 

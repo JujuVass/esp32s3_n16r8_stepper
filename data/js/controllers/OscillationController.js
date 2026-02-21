@@ -218,120 +218,113 @@ function updateOscillationUI(data) {
   const isRunningOrPaused = isRunning || isPaused;
   const isError = data.state === SystemState.ERROR;
   
-  // ===== OSCILLATION STATE DISPLAY =====
   if (data.oscillation && data.oscillationState) {
-    DOM.oscCurrentAmplitude.textContent = 
-      (data.oscillationState.currentAmplitude ?? data.oscillation.amplitudeMM).toFixed(2);
-    DOM.oscCompletedCycles.textContent = 
-      data.oscillationState.completedCycles;
-    
-    let rampStatus = t('common.none');
-    if (data.oscillationState.isTransitioning) {
-      rampStatus = t('oscillation.rampTransition');
-    } else if (data.oscillationState.isRampingIn) {
-      rampStatus = t('oscillation.rampInLabel');
-    } else if (data.oscillationState.isRampingOut) {
-      rampStatus = '📉 ' + t('oscillation.rampOut');
-    } else if (data.movementType === 3 && data.state === SystemState.RUNNING) {
-      rampStatus = t('oscillation.rampStable');
-    }
-    DOM.oscRampStatus.textContent = rampStatus;
-    
-    // 🔒 DISABLE frequency controls during transition (500ms smooth change)
-    const isTransitioning = data.oscillationState.isTransitioning || false;
-    DOM.oscFrequency.disabled = isTransitioning;
-    
-    // Apply visual feedback during transition
-    if (isTransitioning) {
-      DOM.oscFrequency.style.backgroundColor = '#fff3cd';
-      DOM.oscFrequency.style.cursor = 'not-allowed';
-    } else {
-      DOM.oscFrequency.style.backgroundColor = '';
-      DOM.oscFrequency.style.cursor = '';
-    }
-    
-    // Also disable preset buttons during transition
-    document.querySelectorAll('[data-osc-frequency]').forEach(btn => {
-      btn.disabled = isTransitioning;
-      btn.style.opacity = isTransitioning ? '0.5' : '1';
-      btn.style.cursor = isTransitioning ? 'not-allowed' : 'pointer';
-    });
-    
-    // Sync oscillation config to UI (skip fields being edited OR having focus)
-    if (AppState.editing.oscField !== 'oscCenter' && document.activeElement !== DOM.oscCenter) {
-      DOM.oscCenter.value = data.oscillation.centerPositionMM.toFixed(1);
-    }
-    
-    if (AppState.editing.oscField !== 'oscAmplitude' && document.activeElement !== DOM.oscAmplitude) {
-      DOM.oscAmplitude.value = data.oscillation.amplitudeMM.toFixed(1);
-    }
-    
-    if (AppState.editing.oscField !== 'oscWaveform' && document.activeElement !== DOM.oscWaveform) {
-      DOM.oscWaveform.value = data.oscillation.waveform;
-    }
-    
-    if (AppState.editing.oscField !== 'oscFrequency' && document.activeElement !== DOM.oscFrequency && !isTransitioning) {
-      // Use effective frequency if available (accounts for speed limiting)
-      const displayFreq = data.oscillation.effectiveFrequencyHz || data.oscillation.frequencyHz;
-      const isFreqLimited = data.oscillation.effectiveFrequencyHz && 
-                            Math.abs(data.oscillation.effectiveFrequencyHz - data.oscillation.frequencyHz) > 0.001;
-      
-      DOM.oscFrequency.value = displayFreq.toFixed(3);
-      
-      // Visual feedback if frequency is limited
-      if (isFreqLimited) {
-        DOM.oscFrequency.style.backgroundColor = '#ffe8e8';
-        DOM.oscFrequency.style.fontWeight = 'bold';
-        DOM.oscFrequency.style.color = '#d32f2f';
-        DOM.oscFrequency.title = '⚠️ ' + t('oscillation.freqLimitTitle', {from: data.oscillation.frequencyHz.toFixed(2), to: displayFreq.toFixed(2)});
-      } else {
-        DOM.oscFrequency.style.backgroundColor = '';
-        DOM.oscFrequency.style.fontWeight = '';
-        DOM.oscFrequency.style.color = '';
-        DOM.oscFrequency.title = '';
-      }
-    }
-    
-    if (AppState.editing.oscField !== 'oscRampInDuration' && document.activeElement !== DOM.oscRampInDuration) {
-      DOM.oscRampInDuration.value = data.oscillation.rampInDurationMs;
-    }
-    
-    if (AppState.editing.oscField !== 'oscRampOutDuration' && document.activeElement !== DOM.oscRampOutDuration) {
-      DOM.oscRampOutDuration.value = data.oscillation.rampOutDurationMs;
-    }
-    
-    if (AppState.editing.oscField !== 'oscCycleCount' && document.activeElement !== DOM.oscCycleCount) {
-      DOM.oscCycleCount.value = data.oscillation.cycleCount;
-    }
-    
-    // Checkboxes (not edited via focus)
-    DOM.oscRampInEnable.checked = data.oscillation.enableRampIn;
-    DOM.oscRampOutEnable.checked = data.oscillation.enableRampOut;
-    DOM.oscReturnCenter.checked = data.oscillation.returnToCenter;
-    
-    // Validate limits (only if not editing center or amplitude)
-    if (AppState.editing.oscField !== 'oscCenter' && AppState.editing.oscField !== 'oscAmplitude') {
-      validateOscillationLimits();
-    }
-    
-    // Update preset buttons visual state
-    updateOscillationPresets();
+    updateOscillationStateDisplay(data);
+    syncOscillationInputs(data);
   }
   
-  // ===== CYCLE PAUSE DISPLAY (MODE OSCILLATION) =====
   if (data.oscillation?.cyclePause) {
     syncCyclePauseUI(data.oscillation.cyclePause, 'Osc', getCyclePauseOscSection, 'oscillation');
   }
   
-  // ===== PAUSE/STOP BUTTONS =====
+  updateOscillationButtons(isRunningOrPaused, isPaused, isError);
+}
+
+/** Update oscillation state display: amplitude, cycles, ramp status, transition visual feedback */
+function updateOscillationStateDisplay(data) {
+  DOM.oscCurrentAmplitude.textContent = 
+    (data.oscillationState.currentAmplitude ?? data.oscillation.amplitudeMM).toFixed(2);
+  DOM.oscCompletedCycles.textContent = data.oscillationState.completedCycles;
+  
+  let rampStatus = t('common.none');
+  if (data.oscillationState.isTransitioning) {
+    rampStatus = t('oscillation.rampTransition');
+  } else if (data.oscillationState.isRampingIn) {
+    rampStatus = t('oscillation.rampInLabel');
+  } else if (data.oscillationState.isRampingOut) {
+    rampStatus = '📉 ' + t('oscillation.rampOut');
+  } else if (data.movementType === 3 && data.state === SystemState.RUNNING) {
+    rampStatus = t('oscillation.rampStable');
+  }
+  DOM.oscRampStatus.textContent = rampStatus;
+  
+  const isTransitioning = data.oscillationState.isTransitioning || false;
+  DOM.oscFrequency.disabled = isTransitioning;
+  DOM.oscFrequency.style.backgroundColor = isTransitioning ? '#fff3cd' : '';
+  DOM.oscFrequency.style.cursor = isTransitioning ? 'not-allowed' : '';
+  
+  document.querySelectorAll('[data-osc-frequency]').forEach(btn => {
+    btn.disabled = isTransitioning;
+    btn.style.opacity = isTransitioning ? '0.5' : '1';
+    btn.style.cursor = isTransitioning ? 'not-allowed' : 'pointer';
+  });
+}
+
+/** Sync oscillation config inputs from backend data */
+function syncOscillationInputs(data) {
+  const isTransitioning = data.oscillationState.isTransitioning || false;
+  
+  if (AppState.editing.oscField !== 'oscCenter' && document.activeElement !== DOM.oscCenter) {
+    DOM.oscCenter.value = data.oscillation.centerPositionMM.toFixed(1);
+  }
+  if (AppState.editing.oscField !== 'oscAmplitude' && document.activeElement !== DOM.oscAmplitude) {
+    DOM.oscAmplitude.value = data.oscillation.amplitudeMM.toFixed(1);
+  }
+  if (AppState.editing.oscField !== 'oscWaveform' && document.activeElement !== DOM.oscWaveform) {
+    DOM.oscWaveform.value = data.oscillation.waveform;
+  }
+  
+  syncOscillationFrequencyInput(data, isTransitioning);
+  
+  if (AppState.editing.oscField !== 'oscRampInDuration' && document.activeElement !== DOM.oscRampInDuration) {
+    DOM.oscRampInDuration.value = data.oscillation.rampInDurationMs;
+  }
+  if (AppState.editing.oscField !== 'oscRampOutDuration' && document.activeElement !== DOM.oscRampOutDuration) {
+    DOM.oscRampOutDuration.value = data.oscillation.rampOutDurationMs;
+  }
+  if (AppState.editing.oscField !== 'oscCycleCount' && document.activeElement !== DOM.oscCycleCount) {
+    DOM.oscCycleCount.value = data.oscillation.cycleCount;
+  }
+  
+  DOM.oscRampInEnable.checked = data.oscillation.enableRampIn;
+  DOM.oscRampOutEnable.checked = data.oscillation.enableRampOut;
+  DOM.oscReturnCenter.checked = data.oscillation.returnToCenter;
+  
+  if (AppState.editing.oscField !== 'oscCenter' && AppState.editing.oscField !== 'oscAmplitude') {
+    validateOscillationLimits();
+  }
+  updateOscillationPresets();
+}
+
+/** Sync frequency input with limited/normal visual feedback */
+function syncOscillationFrequencyInput(data, isTransitioning) {
+  if (AppState.editing.oscField === 'oscFrequency' || document.activeElement === DOM.oscFrequency || isTransitioning) return;
+  
+  const displayFreq = data.oscillation.effectiveFrequencyHz || data.oscillation.frequencyHz;
+  const isFreqLimited = data.oscillation.effectiveFrequencyHz && 
+                        Math.abs(data.oscillation.effectiveFrequencyHz - data.oscillation.frequencyHz) > 0.001;
+  
+  DOM.oscFrequency.value = displayFreq.toFixed(3);
+  
+  if (isFreqLimited) {
+    DOM.oscFrequency.style.backgroundColor = '#ffe8e8';
+    DOM.oscFrequency.style.fontWeight = 'bold';
+    DOM.oscFrequency.style.color = '#d32f2f';
+    DOM.oscFrequency.title = '⚠️ ' + t('oscillation.freqLimitTitle', {from: data.oscillation.frequencyHz.toFixed(2), to: displayFreq.toFixed(2)});
+  } else {
+    DOM.oscFrequency.style.backgroundColor = '';
+    DOM.oscFrequency.style.fontWeight = '';
+    DOM.oscFrequency.style.color = '';
+    DOM.oscFrequency.title = '';
+  }
+}
+
+/** Update pause/stop button states */
+function updateOscillationButtons(isRunningOrPaused, isPaused, isError) {
   const btnPauseOsc = document.getElementById('btnPauseOscillation');
   if (btnPauseOsc) {
     btnPauseOsc.disabled = !isRunningOrPaused;
-    if (isPaused) {
-      btnPauseOsc.innerHTML = '▶ ' + t('common.resume');
-    } else {
-      btnPauseOsc.innerHTML = '⏸ ' + t('common.pause');
-    }
+    btnPauseOsc.innerHTML = isPaused ? '▶ ' + t('common.resume') : '⏸ ' + t('common.pause');
   }
   
   const btnStopOsc = document.getElementById('btnStopOscillation');

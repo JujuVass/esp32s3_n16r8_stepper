@@ -20,56 +20,66 @@
       const cpmSpan = speedElement ? speedElement.nextElementSibling : null;
       const currentMode = AppState.system.currentMode;
       
-      if (currentMode === 'oscillation' && data.oscillation?.frequencyHz !== undefined && data.oscillation?.amplitudeMM !== undefined) {
-        // OSCILLATION MODE: Show ACTUAL speed (backend calculates with hardware limits)
-        let displaySpeed;
-        let isLimited = false;
-        
-        if (data.oscillation.actualSpeedMMS !== undefined && data.oscillation.actualSpeedMMS > 0) {
-          displaySpeed = Number.parseFloat(data.oscillation.actualSpeedMMS);
-          const theoreticalSpeed = 2 * Math.PI * data.oscillation.frequencyHz * data.oscillation.amplitudeMM;
-          isLimited = (displaySpeed < theoreticalSpeed - 1);
-        } else {
-          displaySpeed = 2 * Math.PI * data.oscillation.frequencyHz * data.oscillation.amplitudeMM;
-        }
-        
-        speedElement.innerHTML = '🌊 ' + displaySpeed.toFixed(0) + ' mm/s' + (isLimited ? ' ⚠️' : '');
-        if (cpmSpan) {
-          cpmSpan.textContent = '(pic, f=' + data.oscillation.frequencyHz.toFixed(2) + ' Hz' + (isLimited ? ', ' + t('status.speedLimited') : '') + ')';
-        }
-      } else if (currentMode === 'chaos' && data.chaos?.maxSpeedLevel !== undefined) {
-        // CHAOS MODE: Show max speed level
-        const speedMMPerSec = data.chaos.maxSpeedLevel * SPEED_LEVEL_TO_MM_S;
-        speedElement.innerHTML = '⚡ ' + data.chaos.maxSpeedLevel.toFixed(1);
-        if (cpmSpan) {
-          cpmSpan.textContent = '(max ' + speedMMPerSec.toFixed(0) + ' mm/s)';
-        }
-      } else if (currentMode === 'pursuit' && AppState.pursuit.maxSpeedLevel !== undefined) {
-        // PURSUIT MODE: Show max speed level from UI variable
-        const speedMMPerSec = AppState.pursuit.maxSpeedLevel * SPEED_LEVEL_TO_MM_S;
-        speedElement.innerHTML = '⚡ ' + AppState.pursuit.maxSpeedLevel.toFixed(1);
-        if (cpmSpan) {
-          cpmSpan.textContent = '(max ' + speedMMPerSec.toFixed(0) + ' mm/s)';
-        }
+      if (currentMode === 'oscillation') {
+        updateSpeedDisplayOscillation(data, speedElement, cpmSpan);
+      } else if (currentMode === 'chaos') {
+        updateSpeedDisplayChaos(data, speedElement, cpmSpan);
+      } else if (currentMode === 'pursuit') {
+        updateSpeedDisplayPursuit(speedElement, cpmSpan);
       } else if (currentMode === 'sequencer') {
-        // SEQUENCER MODE: Show mode indicator
         speedElement.innerHTML = '- ' + t('status.sequenceMode');
-        if (cpmSpan) {
-          cpmSpan.textContent = '';
-        }
-      } else if (currentMode === 'simple' && data.motion?.cyclesPerMinForward !== undefined && data.motion?.cyclesPerMinBackward !== undefined) {
-        // SIMPLE MODE: Show forward/backward speeds with cycles/min
-        if (data.motion.speedLevelForward !== undefined && data.motion.speedLevelBackward !== undefined) {
-          const avgCpm = ((Number.parseFloat(data.motion.cyclesPerMinForward) + Number.parseFloat(data.motion.cyclesPerMinBackward)) / 2).toFixed(0);
-          speedElement.innerHTML = 
-            '↗️ ' + data.motion.speedLevelForward.toFixed(1) + 
-            '&nbsp;&nbsp;•&nbsp;&nbsp;' +
-            '↙️ ' + data.motion.speedLevelBackward.toFixed(1);
-          if (cpmSpan) {
-            cpmSpan.textContent = '(' + avgCpm + ' c/min)';
-          }
-        }
+        if (cpmSpan) cpmSpan.textContent = '';
+      } else if (currentMode === 'simple') {
+        updateSpeedDisplaySimple(data, speedElement, cpmSpan);
       }
+    }
+
+    /** Oscillation mode speed display */
+    function updateSpeedDisplayOscillation(data, speedElement, cpmSpan) {
+      if (!(data.oscillation?.frequencyHz !== undefined && data.oscillation?.amplitudeMM !== undefined)) return;
+      let displaySpeed;
+      let isLimited = false;
+      
+      if (data.oscillation.actualSpeedMMS !== undefined && data.oscillation.actualSpeedMMS > 0) {
+        displaySpeed = Number.parseFloat(data.oscillation.actualSpeedMMS);
+        const theoreticalSpeed = 2 * Math.PI * data.oscillation.frequencyHz * data.oscillation.amplitudeMM;
+        isLimited = (displaySpeed < theoreticalSpeed - 1);
+      } else {
+        displaySpeed = 2 * Math.PI * data.oscillation.frequencyHz * data.oscillation.amplitudeMM;
+      }
+      
+      speedElement.innerHTML = '🌊 ' + displaySpeed.toFixed(0) + ' mm/s' + (isLimited ? ' ⚠️' : '');
+      if (cpmSpan) {
+        cpmSpan.textContent = '(pic, f=' + data.oscillation.frequencyHz.toFixed(2) + ' Hz' + (isLimited ? ', ' + t('status.speedLimited') : '') + ')';
+      }
+    }
+
+    /** Chaos mode speed display */
+    function updateSpeedDisplayChaos(data, speedElement, cpmSpan) {
+      if (data.chaos?.maxSpeedLevel === undefined) return;
+      const speedMMPerSec = data.chaos.maxSpeedLevel * SPEED_LEVEL_TO_MM_S;
+      speedElement.innerHTML = '⚡ ' + data.chaos.maxSpeedLevel.toFixed(1);
+      if (cpmSpan) cpmSpan.textContent = '(max ' + speedMMPerSec.toFixed(0) + ' mm/s)';
+    }
+
+    /** Pursuit mode speed display */
+    function updateSpeedDisplayPursuit(speedElement, cpmSpan) {
+      if (AppState.pursuit.maxSpeedLevel === undefined) return;
+      const speedMMPerSec = AppState.pursuit.maxSpeedLevel * SPEED_LEVEL_TO_MM_S;
+      speedElement.innerHTML = '⚡ ' + AppState.pursuit.maxSpeedLevel.toFixed(1);
+      if (cpmSpan) cpmSpan.textContent = '(max ' + speedMMPerSec.toFixed(0) + ' mm/s)';
+    }
+
+    /** Simple mode speed display */
+    function updateSpeedDisplaySimple(data, speedElement, cpmSpan) {
+      if (!(data.motion?.cyclesPerMinForward !== undefined && data.motion?.cyclesPerMinBackward !== undefined)) return;
+      if (data.motion.speedLevelForward === undefined || data.motion.speedLevelBackward === undefined) return;
+      const avgCpm = ((Number.parseFloat(data.motion.cyclesPerMinForward) + Number.parseFloat(data.motion.cyclesPerMinBackward)) / 2).toFixed(0);
+      speedElement.innerHTML = 
+        '↗️ ' + data.motion.speedLevelForward.toFixed(1) + 
+        '&nbsp;&nbsp;•&nbsp;&nbsp;' +
+        '↙️ ' + data.motion.speedLevelBackward.toFixed(1);
+      if (cpmSpan) cpmSpan.textContent = '(' + avgCpm + ' c/min)';
     }
     
     /**
@@ -150,34 +160,44 @@
     function syncSpeedInputs(motion) {
       const isSeparateMode = DOM.speedModeSeparate?.checked || false;
       if (isSeparateMode) {
-        if (AppState.editing.input !== 'speedForward' && document.activeElement !== DOM.speedForward && motion.speedLevelForward !== undefined) {
+        syncSeparateSpeedInputs(motion);
+      } else {
+        syncUnifiedSpeedInputs(motion);
+      }
+    }
+
+    /** Sync separate forward/backward speed inputs + info */
+    function syncSeparateSpeedInputs(motion) {
+      if (AppState.editing.input !== 'speedForward' && document.activeElement !== DOM.speedForward && motion.speedLevelForward !== undefined) {
+        DOM.speedForward.value = motion.speedLevelForward.toFixed(1);
+      }
+      if (AppState.editing.input !== 'speedBackward' && document.activeElement !== DOM.speedBackward && motion.speedLevelBackward !== undefined) {
+        DOM.speedBackward.value = motion.speedLevelBackward.toFixed(1);
+      }
+      if (DOM.speedForwardInfo && motion.cyclesPerMinForward !== undefined) {
+        DOM.speedForwardInfo.textContent = '≈ ' + Number.parseFloat(motion.cyclesPerMinForward).toFixed(0) + ' cycles/min';
+      }
+      if (DOM.speedBackwardInfo && motion.cyclesPerMinBackward !== undefined) {
+        DOM.speedBackwardInfo.textContent = '≈ ' + Number.parseFloat(motion.cyclesPerMinBackward).toFixed(0) + ' cycles/min';
+      }
+    }
+
+    /** Sync unified speed input + info */
+    function syncUnifiedSpeedInputs(motion) {
+      if (AppState.editing.input !== 'speedUnified' && document.activeElement !== DOM.speedUnified) {
+        if (motion.speedLevelBackward !== undefined) {
+          DOM.speedUnified.value = motion.speedLevelBackward.toFixed(1);
+        }
+        if (motion.speedLevelForward !== undefined) {
           DOM.speedForward.value = motion.speedLevelForward.toFixed(1);
         }
-        if (AppState.editing.input !== 'speedBackward' && document.activeElement !== DOM.speedBackward && motion.speedLevelBackward !== undefined) {
+        if (motion.speedLevelBackward !== undefined) {
           DOM.speedBackward.value = motion.speedLevelBackward.toFixed(1);
         }
-        if (DOM.speedForwardInfo && motion.cyclesPerMinForward !== undefined) {
-          DOM.speedForwardInfo.textContent = '≈ ' + Number.parseFloat(motion.cyclesPerMinForward).toFixed(0) + ' cycles/min';
-        }
-        if (DOM.speedBackwardInfo && motion.cyclesPerMinBackward !== undefined) {
-          DOM.speedBackwardInfo.textContent = '≈ ' + Number.parseFloat(motion.cyclesPerMinBackward).toFixed(0) + ' cycles/min';
-        }
-      } else {
-        if (AppState.editing.input !== 'speedUnified' && document.activeElement !== DOM.speedUnified) {
-          if (motion.speedLevelBackward !== undefined) {
-            DOM.speedUnified.value = motion.speedLevelBackward.toFixed(1);
-          }
-          if (motion.speedLevelForward !== undefined) {
-            DOM.speedForward.value = motion.speedLevelForward.toFixed(1);
-          }
-          if (motion.speedLevelBackward !== undefined) {
-            DOM.speedBackward.value = motion.speedLevelBackward.toFixed(1);
-          }
-        }
-        if (DOM.speedUnifiedInfo && motion.cyclesPerMinForward !== undefined && motion.cyclesPerMinBackward !== undefined) {
-          const avgCyclesPerMin = (Number.parseFloat(motion.cyclesPerMinForward) + Number.parseFloat(motion.cyclesPerMinBackward)) / 2;
-          DOM.speedUnifiedInfo.textContent = '≈ ' + avgCyclesPerMin.toFixed(0) + ' cycles/min';
-        }
+      }
+      if (DOM.speedUnifiedInfo && motion.cyclesPerMinForward !== undefined && motion.cyclesPerMinBackward !== undefined) {
+        const avgCyclesPerMin = (Number.parseFloat(motion.cyclesPerMinForward) + Number.parseFloat(motion.cyclesPerMinBackward)) / 2;
+        DOM.speedUnifiedInfo.textContent = '≈ ' + avgCyclesPerMin.toFixed(0) + ' cycles/min';
       }
     }
 
@@ -380,30 +400,9 @@
       AppState.system.canStart = data.canStart || false;
       
       autoSwitchToActiveTab(data);
-      
-      // State display
-      const stateText = t('states') || ['Needs calibration', 'Calibrating', 'Ready', 'Running', 'Paused', 'Error'];
-      const stateClass = ['state-init', 'state-calibrating', 'state-ready', 'state-running', 'state-paused', 'state-error'];
-      let displayText = stateText[data.state] || t('common.error');
-      if (data.errorMessage && data.errorMessage !== '') {
-        displayText += ' ⚠️ ' + data.errorMessage;
-      }
-      DOM.state.textContent = displayText;
-      DOM.state.className = 'status-value ' + (stateClass[data.state] || '');
-      
-      // Calibration overlay
-      if (DOM.calibrationOverlay) {
-        DOM.calibrationOverlay.classList.toggle('active', data.state === SystemState.CALIBRATING);
-      }
-      
+      updateStateDisplay(data);
       revealInterfaceIfCalibrated(data);
-      
-      // Position display
-      if (data.positionMM !== undefined && data.currentStep !== undefined) {
-        currentPositionMM = data.positionMM;
-        DOM.position.textContent = data.positionMM.toFixed(2) + ' mm (' + data.currentStep + ' steps)';
-      }
-      
+      updatePositionDisplay(data);
       updateDistanceAndGauge(data);
       updateSpeedDisplay(data);
       
@@ -412,13 +411,7 @@
         updateRealSpeed(data.totalTraveled);
       }
       
-      // Progress bar
-      if (data.totalDistMM > 0 && data.positionMM !== undefined) {
-        const progress = (data.positionMM / data.totalDistMM) * 100;
-        if (DOM.progressMini) DOM.progressMini.style.width = progress + '%';
-        if (DOM.progressPct) DOM.progressPct.textContent = progress.toFixed(1) + '%';
-      }
-      
+      updateProgressBar(data);
       syncInputsFromBackend(data);
       updateControlsState(data);
       if (data.decelZone) updateZoneEffectUI(data.decelZone);
@@ -433,14 +426,48 @@
       
       if (data.system) updateSystemStats(data.system);
       if (data.statsRecordingEnabled !== undefined) updateStatsRecordingUI(data.statsRecordingEnabled);
-      
-      // Sensors inverted UI
-      if (data.sensorsInverted !== undefined) {
-        DOM.chkSensorsInverted.checked = data.sensorsInverted;
-        DOM.sensorsInvertedStatus.textContent = data.sensorsInverted ? '(' + t('common.inverted') + ')' : '(' + t('common.normal') + ')';
-        const invertedIcon = DOM.sensorsInvertedIcon;
-        if (invertedIcon) invertedIcon.style.display = data.sensorsInverted ? 'inline' : 'none';
+      updateSensorsInvertedUI(data);
+    }
+
+    /** Update state text, CSS class, and error message display */
+    function updateStateDisplay(data) {
+      const stateText = t('states') || ['Needs calibration', 'Calibrating', 'Ready', 'Running', 'Paused', 'Error'];
+      const stateClass = ['state-init', 'state-calibrating', 'state-ready', 'state-running', 'state-paused', 'state-error'];
+      let displayText = stateText[data.state] || t('common.error');
+      if (data.errorMessage && data.errorMessage !== '') {
+        displayText += ' ⚠️ ' + data.errorMessage;
       }
+      DOM.state.textContent = displayText;
+      DOM.state.className = 'status-value ' + (stateClass[data.state] || '');
+      if (DOM.calibrationOverlay) {
+        DOM.calibrationOverlay.classList.toggle('active', data.state === SystemState.CALIBRATING);
+      }
+    }
+
+    /** Update position text display */
+    function updatePositionDisplay(data) {
+      if (data.positionMM !== undefined && data.currentStep !== undefined) {
+        currentPositionMM = data.positionMM;
+        DOM.position.textContent = data.positionMM.toFixed(2) + ' mm (' + data.currentStep + ' steps)';
+      }
+    }
+
+    /** Update progress bar width and percentage text */
+    function updateProgressBar(data) {
+      if (data.totalDistMM > 0 && data.positionMM !== undefined) {
+        const progress = (data.positionMM / data.totalDistMM) * 100;
+        if (DOM.progressMini) DOM.progressMini.style.width = progress + '%';
+        if (DOM.progressPct) DOM.progressPct.textContent = progress.toFixed(1) + '%';
+      }
+    }
+
+    /** Update sensors inverted checkbox and indicator */
+    function updateSensorsInvertedUI(data) {
+      if (data.sensorsInverted === undefined) return;
+      DOM.chkSensorsInverted.checked = data.sensorsInverted;
+      DOM.sensorsInvertedStatus.textContent = data.sensorsInverted ? '(' + t('common.inverted') + ')' : '(' + t('common.normal') + ')';
+      const invertedIcon = DOM.sensorsInvertedIcon;
+      if (invertedIcon) invertedIcon.style.display = data.sensorsInverted ? 'inline' : 'none';
     }
     
     // ============================================================================

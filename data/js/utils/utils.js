@@ -306,56 +306,47 @@ function updateCenterAmplitudePresets(cfg) {
   const currentCenter = Number.parseFloat(document.getElementById(cfg.centerInputId).value) || 0;
   const currentAmplitude = Number.parseFloat(document.getElementById(cfg.amplitudeInputId).value) || 0;
   const isLinked = document.getElementById(cfg.linkedCheckboxId)?.checked || false;
-  const dp = cfg.dataPrefix; // shorthand
+  const dp = cfg.dataPrefix;
   
-  // Validate center presets (must allow current amplitude)
-  document.querySelectorAll('[data-' + dp + '-center]').forEach(btn => {
-    const centerValue = Number.parseFloat(btn.getAttribute('data-' + dp + '-center'));
-    const minPos = centerValue - currentAmplitude;
-    const maxPos = centerValue + currentAmplitude;
-    const isValid = minPos >= 0 && maxPos <= effectiveMax;
-    btn.disabled = !isValid;
-    btn.style.opacity = isValid ? '1' : '0.3';
-    btn.style.cursor = isValid ? 'pointer' : 'not-allowed';
-  });
+  /** Check if center+amplitude pair stays within [0, effectiveMax] */
+  const inBounds = (center, amplitude) => (center - amplitude) >= 0 && (center + amplitude) <= effectiveMax;
   
-  // Validate amplitude presets (must respect current center)
-  document.querySelectorAll('[data-' + dp + '-amplitude]').forEach(btn => {
-    const amplitudeValue = Number.parseFloat(btn.getAttribute('data-' + dp + '-amplitude'));
-    const minPos = currentCenter - amplitudeValue;
-    const maxPos = currentCenter + amplitudeValue;
-    const isValid = minPos >= 0 && maxPos <= effectiveMax;
-    btn.disabled = !isValid || isLinked;
-    btn.style.opacity = (isValid && !isLinked) ? '1' : '0.3';
-    btn.style.cursor = (isValid && !isLinked) ? 'pointer' : 'not-allowed';
-  });
+  // Validate center presets
+  applyPresetValidity('[data-' + dp + '-center]', btn => {
+    const v = Number.parseFloat(btn.getAttribute('data-' + dp + '-center'));
+    return inBounds(v, currentAmplitude);
+  }, false, '0.3');
+  
+  // Validate amplitude presets
+  applyPresetValidity('[data-' + dp + '-amplitude]', btn => {
+    const v = Number.parseFloat(btn.getAttribute('data-' + dp + '-amplitude'));
+    return inBounds(currentCenter, v);
+  }, isLinked, '0.3');
   
   // Validate relative center presets
-  document.querySelectorAll('[data-' + dp + '-center-rel]').forEach(btn => {
-    const relValue = Number.parseInt(btn.getAttribute('data-' + dp + '-center-rel'));
-    const newCenter = currentCenter + relValue;
-    const minPos = newCenter - currentAmplitude;
-    const maxPos = newCenter + currentAmplitude;
-    const isValid = newCenter >= 0 && minPos >= 0 && maxPos <= effectiveMax;
-    btn.disabled = !isValid;
-    btn.style.opacity = isValid ? '1' : '0.5';
-    btn.style.cursor = isValid ? 'pointer' : 'not-allowed';
-  });
+  applyPresetValidity('[data-' + dp + '-center-rel]', btn => {
+    const newCenter = currentCenter + Number.parseInt(btn.getAttribute('data-' + dp + '-center-rel'));
+    return newCenter >= 0 && inBounds(newCenter, currentAmplitude);
+  }, false, '0.5');
   
   // Validate relative amplitude presets
-  document.querySelectorAll('[data-' + dp + '-amplitude-rel]').forEach(btn => {
-    const relValue = Number.parseInt(btn.getAttribute('data-' + dp + '-amplitude-rel'));
-    const newAmplitude = currentAmplitude + relValue;
-    const minPos = currentCenter - newAmplitude;
-    const maxPos = currentCenter + newAmplitude;
-    const isValid = newAmplitude >= 1 && minPos >= 0 && maxPos <= effectiveMax;
-    btn.disabled = !isValid || isLinked;
-    btn.style.opacity = (isValid && !isLinked) ? '1' : '0.5';
-    btn.style.cursor = (isValid && !isLinked) ? 'pointer' : 'not-allowed';
-  });
+  applyPresetValidity('[data-' + dp + '-amplitude-rel]', btn => {
+    const newAmp = currentAmplitude + Number.parseInt(btn.getAttribute('data-' + dp + '-amplitude-rel'));
+    return newAmp >= 1 && inBounds(currentCenter, newAmp);
+  }, isLinked, '0.5');
   
-  // Handle amplitude input and linked checkbox state
   updateLinkedCheckboxState(cfg, currentCenter, effectiveMax, isLinked);
+}
+
+/** Apply validity styling to a set of preset buttons. Extracted from updateCenterAmplitudePresets (S3776). */
+function applyPresetValidity(selector, isValidFn, forceDisable, inactiveOpacity) {
+  document.querySelectorAll(selector).forEach(btn => {
+    const valid = isValidFn(btn);
+    const disabled = !valid || forceDisable;
+    btn.disabled = disabled;
+    btn.style.opacity = disabled ? inactiveOpacity : '1';
+    btn.style.cursor = disabled ? 'not-allowed' : 'pointer';
+  });
 }
 
 // ============================================================================

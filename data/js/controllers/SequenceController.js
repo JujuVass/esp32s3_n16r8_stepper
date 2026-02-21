@@ -355,7 +355,7 @@ function restoreSequenceAfterTest() {
 // EDIT MODAL
 // ========================================================================
 
-function editSequenceLine(lineId) {
+function editSequenceLine(lineId) { // NOSONAR — sequential form population, low branching depth
   console.debug('🔍 editSequenceLine called with lineId:', lineId);
   const line = sequenceLines.find(l => l.lineId === lineId);
   if (!line) {
@@ -551,40 +551,61 @@ function validateEditForm() {
   
   const form = getEditDOM().form;
   const movementType = Number.parseInt(form.movementType.value);
-  const emptyFieldErrors = [];
+  const emptyFieldErrors = checkEmptyFields(form, movementType);
+  const line = parseEditFormValues(form, movementType);
   
-  if (movementType === 0) {
-    if (form.startPositionMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.startPosIncorrect'));
-    if (form.distanceMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.distanceIncorrect'));
-    if (form.speedForward.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.speedFwdIncorrect'));
-    if (form.speedBackward.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.speedBwdIncorrect'));
-    if (form.zoneMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.zoneIncorrect'));
+  const validationErrors = validateSequencerLine(line, movementType);
+  const errors = emptyFieldErrors.concat(validationErrors);
+  
+  displayValidationResult(errors, movementType, line, emptyFieldErrors);
+}
+
+/** Check for empty required fields based on movement type */
+function checkEmptyFields(form, movementType) {
+  const fieldChecks = {
+    0: [  // VA-ET-VIENT
+      ['startPositionMM', 'sequencer.startPosIncorrect'],
+      ['distanceMM', 'sequencer.distanceIncorrect'],
+      ['speedForward', 'sequencer.speedFwdIncorrect'],
+      ['speedBackward', 'sequencer.speedBwdIncorrect'],
+      ['zoneMM', 'sequencer.zoneIncorrect']
+    ],
+    1: [  // OSCILLATION
+      ['oscCenterPositionMM', 'sequencer.oscCenterIncorrect'],
+      ['oscAmplitudeMM', 'sequencer.oscAmplitudeIncorrect'],
+      ['oscFrequencyHz', 'sequencer.freqIncorrect'],
+      ['oscRampInDurationMs', 'sequencer.rampInIncorrect'],
+      ['oscRampOutDurationMs', 'sequencer.rampOutIncorrect']
+    ],
+    2: [  // CHAOS
+      ['chaosCenterPositionMM', 'sequencer.chaosCenterIncorrect'],
+      ['chaosAmplitudeMM', 'sequencer.chaosAmplitudeIncorrect'],
+      ['chaosMaxSpeedLevel', 'sequencer.chaosSpeedIncorrect'],
+      ['chaosCrazinessPercent', 'sequencer.crazinessIncorrect'],
+      ['chaosDurationSeconds', 'sequencer.durationIncorrect'],
+      ['chaosSeed', 'sequencer.seedIncorrect']
+    ]
+  };
+  
+  const errors = [];
+  const checks = fieldChecks[movementType] || [];
+  for (const [fieldName, i18nKey] of checks) {
+    if (form[fieldName].value.trim() === '') errors.push('⚠️ ' + t(i18nKey));
   }
   
-  if (movementType === 1) {
-    if (form.oscCenterPositionMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.oscCenterIncorrect'));
-    if (form.oscAmplitudeMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.oscAmplitudeIncorrect'));
-    if (form.oscFrequencyHz.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.freqIncorrect'));
-    if (form.oscRampInDurationMs.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.rampInIncorrect'));
-    if (form.oscRampOutDurationMs.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.rampOutIncorrect'));
-  }
-  
-  if (movementType === 2) {
-    if (form.chaosCenterPositionMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.chaosCenterIncorrect'));
-    if (form.chaosAmplitudeMM.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.chaosAmplitudeIncorrect'));
-    if (form.chaosMaxSpeedLevel.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.chaosSpeedIncorrect'));
-    if (form.chaosCrazinessPercent.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.crazinessIncorrect'));
-    if (form.chaosDurationSeconds.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.durationIncorrect'));
-    if (form.chaosSeed.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.seedIncorrect'));
-  }
-  
+  // Common fields (not for PAUSE type=4, cycleCount not for CHAOS type=2)
   if (movementType !== 4) {
-    if (movementType !== 2 && form.cycleCount.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.cyclesIncorrect'));
-    if (form.pauseAfterSec.value.trim() === '') emptyFieldErrors.push('⚠️ ' + t('sequencer.pauseIncorrect'));
+    if (movementType !== 2 && form.cycleCount.value.trim() === '') errors.push('⚠️ ' + t('sequencer.cyclesIncorrect'));
+    if (form.pauseAfterSec.value.trim() === '') errors.push('⚠️ ' + t('sequencer.pauseIncorrect'));
   }
   
-  const line = {
-    movementType: movementType,
+  return errors;
+}
+
+/** Parse all form fields into a line object */
+function parseEditFormValues(form, movementType) {
+  return {
+    movementType,
     startPositionMM: Number.parseFloat(form.startPositionMM.value) || 0,
     distanceMM: Number.parseFloat(form.distanceMM.value) || 0,
     speedForward: Number.parseFloat(form.speedForward.value) || 0,
@@ -604,10 +625,10 @@ function validateEditForm() {
     cycleCount: Number.parseInt(form.cycleCount.value) || 0,
     pauseAfterMs: Math.round(Number.parseFloat(form.pauseAfterSec.value) * 1000) || 0
   };
-  
-  const validationErrors = validateSequencerLine(line, movementType);
-  const errors = emptyFieldErrors.concat(validationErrors);
-  
+}
+
+/** Show or hide validation errors and update save button */
+function displayValidationResult(errors, movementType, line, emptyFieldErrors) {
   const ed = getEditDOM();
   const errorContainer = ed.validationErrors;
   const errorList = ed.validationErrorsList;

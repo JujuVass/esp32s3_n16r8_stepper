@@ -190,56 +190,49 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
         return true;
     }
 
+    if (handleSystemSettingsCommands(cmd, doc)) return true;
+
+    return handleDebugAndStatsCommands(cmd, doc);
+}
+
+bool CommandDispatcher::handleSystemSettingsCommands(const char* cmd, JsonDocument& doc) {
     if (strcmp(cmd, "setMaxDistanceLimit") == 0) {
         float percent = doc["percent"] | 100.0f;
-
         if (percent < 50.0f || percent > 100.0f) {
             Status.sendError("⚠️ Limit must be between 50% and 100% (received: " + String(percent, 0) + "%)");
             return true;
         }
-
         if (config.currentState != STATE_READY) {
             Status.sendError("⚠️ Cannot change limit - System must be in READY state");
             return true;
         }
-
         maxDistanceLimitPercent = percent;
         engine->updateEffectiveMaxDistance();
-
         engine->info(String("✅ Travel limit: ") + String(percent, 0) + "% (" +
-              String(effectiveMaxDistanceMM, 1) + " mm / " +
-              String(config.totalDistanceMM, 1) + " mm)");
-
+              String(effectiveMaxDistanceMM, 1) + " mm / " + String(config.totalDistanceMM, 1) + " mm)");
         sendStatus();
         return true;
     }
 
     if (strcmp(cmd, "setSensorsInverted") == 0) {
         bool inverted = doc["inverted"] | false;
-
-        // Allow change only when stopped (READY, INIT, or ERROR states)
         if (config.currentState == STATE_RUNNING || config.currentState == STATE_CALIBRATING) {
             Status.sendError("⚠️ Stop movement before changing sensor mode");
             return true;
         }
-
         sensorsInverted = inverted;
         engine->saveSensorsInverted();
-
-        // Force recalibration (physical positions have changed meaning)
         config.currentState = STATE_INIT;
-
         engine->info(String("🔄 Sensor mode: ") + (inverted ? "INVERTED (START↔END)" : "NORMAL"));
         engine->warn("⚠️ Recalibration required after sensor mode change");
-
         sendStatus();
         return true;
     }
 
-    // ========================================================================
-    // DEBUG & STATS
-    // ========================================================================
+    return false;
+}
 
+bool CommandDispatcher::handleDebugAndStatsCommands(const char* cmd, JsonDocument& doc) {
     if (strcmp(cmd, "toggleDebug") == 0) {
         if (engine) {
             using enum LogLevel;
@@ -254,14 +247,11 @@ bool CommandDispatcher::handleBasicCommands(const char* cmd, JsonDocument& doc) 
     if (strcmp(cmd, "requestStats") == 0) {
         bool enable = doc["enable"] | false;
         statsRequested = enable;
-
         engine->debug(String("📊 Stats tracking: ") + (enable ? "ENABLED" : "DISABLED"));
-
         if (enable) {
             engine->saveCurrentSessionStats();
             sendStatus();
         }
-
         return true;
     }
 
@@ -337,78 +327,71 @@ bool CommandDispatcher::handleDecelZoneCommands(const char* cmd, JsonDocument& d
     return false;
 }
 
-void CommandDispatcher::applyZoneEffectConfig(JsonDocument& doc) {
-    // === Zone Settings ===
+void CommandDispatcher::applyZoneSettings(JsonDocument& doc) {
     zoneEffect.enabled = doc["enabled"] | false;
     zoneEffect.enableStart = doc["enableStart"] | zoneEffect.enableStart;
     zoneEffect.enableEnd = doc["enableEnd"] | zoneEffect.enableEnd;
     if (doc["mirrorOnReturn"].is<bool>()) {
         zoneEffect.mirrorOnReturn = doc["mirrorOnReturn"].as<bool>();
     }
+    if (float zoneMM = doc["zoneMM"] | zoneEffect.zoneMM; zoneMM > 0) {
+        zoneEffect.zoneMM = zoneMM;
+    }
+}
 
-    float zoneMM = doc["zoneMM"] | zoneEffect.zoneMM;
-    if (zoneMM > 0) zoneEffect.zoneMM = zoneMM;
-
-    // === Speed Effect ===
-    // Use is<T>() to handle value 0 correctly (containsKey is deprecated)
+void CommandDispatcher::applySpeedEffectConfig(JsonDocument& doc) {
     if (doc["speedEffect"].is<int>()) {
-        int speedEffectValue = doc["speedEffect"].as<int>();
-        if (speedEffectValue >= 0 && speedEffectValue <= 2) {
-            zoneEffect.speedEffect = (SpeedEffect)speedEffectValue;
+        if (int v = doc["speedEffect"].as<int>(); v >= 0 && v <= 2) {
+            zoneEffect.speedEffect = (SpeedEffect)v;
         }
     }
-
-    // Legacy: "mode" maps to speedCurve, "effectPercent" maps to speedIntensity
-    // Use is<T>() to handle value 0 correctly (containsKey is deprecated)
+    // speedCurve with legacy "mode" fallback
     if (doc["speedCurve"].is<int>()) {
-        int curveValue = doc["speedCurve"].as<int>();
-        if (curveValue >= 0 && curveValue <= 3) {
-            zoneEffect.speedCurve = (SpeedCurve)curveValue;
+        if (int v = doc["speedCurve"].as<int>(); v >= 0 && v <= 3) {
+            zoneEffect.speedCurve = (SpeedCurve)v;
         }
     } else if (doc["mode"].is<int>()) {
-        int curveValue = doc["mode"].as<int>();
-        if (curveValue >= 0 && curveValue <= 3) {
-            zoneEffect.speedCurve = (SpeedCurve)curveValue;
+        if (int v = doc["mode"].as<int>(); v >= 0 && v <= 3) {
+            zoneEffect.speedCurve = (SpeedCurve)v;
         }
     }
-
-    float intensity = doc["speedIntensity"] | doc["effectPercent"] | zoneEffect.speedIntensity;
-    if (intensity >= 0 && intensity <= 100) {
+    if (float intensity = doc["speedIntensity"] | doc["effectPercent"] | zoneEffect.speedIntensity;
+        intensity >= 0 && intensity <= 100) {
         zoneEffect.speedIntensity = intensity;
     }
+}
 
-    // === Random Turnback ===
+void CommandDispatcher::applyTurnbackConfig(JsonDocument& doc) {
     if (doc["randomTurnbackEnabled"].is<bool>()) {
         zoneEffect.randomTurnbackEnabled = doc["randomTurnbackEnabled"].as<bool>();
     }
-    int turnbackChance = doc["turnbackChance"] | static_cast<int>(zoneEffect.turnbackChance);
-    if (turnbackChance >= 0 && turnbackChance <= 100) {
-        zoneEffect.turnbackChance = static_cast<uint8_t>(turnbackChance);
+    if (int chance = doc["turnbackChance"] | static_cast<int>(zoneEffect.turnbackChance);
+        chance >= 0 && chance <= 100) {
+        zoneEffect.turnbackChance = static_cast<uint8_t>(chance);
     }
+}
 
-    // === End Pause ===
+void CommandDispatcher::applyEndPauseConfig(JsonDocument& doc) {
     if (doc["endPauseEnabled"].is<bool>()) {
         zoneEffect.endPauseEnabled = doc["endPauseEnabled"].as<bool>();
     }
     if (doc["endPauseIsRandom"].is<bool>()) {
         zoneEffect.endPauseIsRandom = doc["endPauseIsRandom"].as<bool>();
     }
-    float endPauseDuration = doc["endPauseDurationSec"] | zoneEffect.endPauseDurationSec;
-    if (endPauseDuration >= 0.1f) zoneEffect.endPauseDurationSec = endPauseDuration;
-
+    if (float d = doc["endPauseDurationSec"] | zoneEffect.endPauseDurationSec; d >= 0.1f) {
+        zoneEffect.endPauseDurationSec = d;
+    }
     float endPauseMin = doc["endPauseMinSec"] | zoneEffect.endPauseMinSec;
     float endPauseMax = doc["endPauseMaxSec"] | zoneEffect.endPauseMaxSec;
     if (endPauseMin >= 0.1f) zoneEffect.endPauseMinSec = endPauseMin;
     if (endPauseMax >= endPauseMin) zoneEffect.endPauseMaxSec = endPauseMax;
+}
 
-    // Validate zone
-    BaseMovement.validateZoneEffect();
-
-    // Build debug log
+void CommandDispatcher::logZoneEffectDebug() {
     constexpr std::array speedEffectNames = {"NONE", "DECEL", "ACCEL"};
     constexpr std::array curveNames = {"LINEAR", "SINE", "TRI_INV", "SINE_INV"};
 
-    String zones = "";
+    String zones;
     if (zoneEffect.enableStart) zones += "START ";
     if (zoneEffect.enableEnd) zones += "END";
     if (zoneEffect.mirrorOnReturn) zones += " PHYS_POS";
@@ -427,6 +410,15 @@ void CommandDispatcher::applyZoneEffectConfig(JsonDocument& doc) {
         }
     }
     engine->debug(zoneDebug);
+}
+
+void CommandDispatcher::applyZoneEffectConfig(JsonDocument& doc) {
+    applyZoneSettings(doc);
+    applySpeedEffectConfig(doc);
+    applyTurnbackConfig(doc);
+    applyEndPauseConfig(doc);
+    BaseMovement.validateZoneEffect();
+    logZoneEffectDebug();
 }
 
 // ============================================================================
@@ -708,21 +700,20 @@ bool CommandDispatcher::handleOscillationCommands(const char* cmd, JsonDocument&
 // ============================================================================
 
 bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& doc, [[maybe_unused]] const String& message) {
+    if (handleSequencerCRUD(cmd, doc)) return true;
+    if (handleSequencerControl(cmd)) return true;
+    if (handleSequencerIO(cmd, doc)) return true;
+    return false;
+}
 
-    // ========================================================================
-    // SEQUENCE TABLE MANAGEMENT (CRUD)
-    // ========================================================================
-
-    if (strcmp(cmd, "addSequenceLine") == 0) {
-        return cmdAddSequenceLine(doc);
-    }
+bool CommandDispatcher::handleSequencerCRUD(const char* cmd, JsonDocument& doc) {
+    if (strcmp(cmd, "addSequenceLine") == 0)       return cmdAddSequenceLine(doc);
+    if (strcmp(cmd, "getSequenceTable") == 0)       { SeqTable.broadcast(); return true; }
+    if (strcmp(cmd, "clearSequence") == 0)           { SeqTable.clear(); SeqTable.broadcast(); return true; }
 
     if (strcmp(cmd, "deleteSequenceLine") == 0) {
         int lineId = doc["lineId"] | -1;
-        if (lineId < 0) {
-            Status.sendError("❌ Invalid Line ID");
-            return true;
-        }
+        if (lineId < 0) { Status.sendError("❌ Invalid Line ID"); return true; }
         SeqTable.deleteLine(lineId);
         SeqTable.broadcast();
         return true;
@@ -731,97 +722,52 @@ bool CommandDispatcher::handleSequencerCommands(const char* cmd, JsonDocument& d
     if (strcmp(cmd, "updateSequenceLine") == 0) {
         int lineId = doc["lineId"] | -1;
         SequenceLine updatedLine = SeqTable.parseFromJson(doc);
-
-        if (auto validationError = SeqTable.validatePhysics(updatedLine); !validationError.isEmpty()) {
-            Status.sendError("❌ Invalid line: " + validationError);
+        if (auto err = SeqTable.validatePhysics(updatedLine); !err.isEmpty()) {
+            Status.sendError("❌ Invalid line: " + err);
             return true;
         }
-
         SeqTable.updateLine(lineId, updatedLine);
         SeqTable.broadcast();
         return true;
     }
 
     if (strcmp(cmd, "moveSequenceLine") == 0) {
-        int lineId = doc["lineId"] | -1;
-        int direction = doc["direction"] | 0;
-        SeqTable.moveLine(lineId, direction);
+        SeqTable.moveLine(doc["lineId"] | -1, doc["direction"] | 0);
         SeqTable.broadcast();
         return true;
     }
 
     if (strcmp(cmd, "reorderSequenceLine") == 0) {
-        int lineId = doc["lineId"] | -1;
-        int newIndex = doc["newIndex"] | -1;
-        SeqTable.reorderLine(lineId, newIndex);
+        SeqTable.reorderLine(doc["lineId"] | -1, doc["newIndex"] | -1);
         SeqTable.broadcast();
         return true;
     }
 
     if (strcmp(cmd, "duplicateSequenceLine") == 0) {
-        int lineId = doc["lineId"] | -1;
-        SeqTable.duplicateLine(lineId);
+        SeqTable.duplicateLine(doc["lineId"] | -1);
         SeqTable.broadcast();
         return true;
     }
 
     if (strcmp(cmd, "toggleSequenceLine") == 0) {
-        int lineId = doc["lineId"] | -1;
-        bool enabled = doc["enabled"] | false;
-        SeqTable.toggleLine(lineId, enabled);
+        SeqTable.toggleLine(doc["lineId"] | -1, doc["enabled"] | false);
         SeqTable.broadcast();
         return true;
     }
 
-    if (strcmp(cmd, "clearSequence") == 0) {
-        SeqTable.clear();
-        SeqTable.broadcast();
-        return true;
-    }
+    return false;
+}
 
-    if (strcmp(cmd, "getSequenceTable") == 0) {
-        SeqTable.broadcast();
-        return true;
-    }
+bool CommandDispatcher::handleSequencerControl(const char* cmd) {
+    if (strcmp(cmd, "startSequence") == 0)       { SeqExecutor.start(false); SeqExecutor.sendStatus(); return true; }
+    if (strcmp(cmd, "loopSequence") == 0)        { SeqExecutor.start(true);  SeqExecutor.sendStatus(); return true; }
+    if (strcmp(cmd, "stopSequence") == 0)        { SeqExecutor.stop();        SeqExecutor.sendStatus(); return true; }
+    if (strcmp(cmd, "toggleSequencePause") == 0) { SeqExecutor.togglePause(); SeqExecutor.sendStatus(); return true; }
+    if (strcmp(cmd, "skipSequenceLine") == 0)    { SeqExecutor.skipToNextLine(); SeqExecutor.sendStatus(); return true; }
+    return false;
+}
 
-    // ========================================================================
-    // SEQUENCE EXECUTION CONTROL
-    // ========================================================================
-
-    if (strcmp(cmd, "startSequence") == 0) {
-        SeqExecutor.start(false);
-        SeqExecutor.sendStatus();
-        return true;
-    }
-
-    if (strcmp(cmd, "loopSequence") == 0) {
-        SeqExecutor.start(true);
-        SeqExecutor.sendStatus();
-        return true;
-    }
-
-    if (strcmp(cmd, "stopSequence") == 0) {
-        SeqExecutor.stop();
-        SeqExecutor.sendStatus();
-        return true;
-    }
-
-    if (strcmp(cmd, "toggleSequencePause") == 0) {
-        SeqExecutor.togglePause();
-        SeqExecutor.sendStatus();
-        return true;
-    }
-
-    if (strcmp(cmd, "skipSequenceLine") == 0) {
-        SeqExecutor.skipToNextLine();
-        SeqExecutor.sendStatus();
-        return true;
-    }
-
-    // ========================================================================
-    // IMPORT/EXPORT
-    // ========================================================================
-
+bool CommandDispatcher::handleSequencerIO(const char* cmd, JsonDocument& doc) {
     if (strcmp(cmd, "exportSequence") == 0) {
         SeqTable.sendJsonResponse("exportData", SeqTable.exportToJson());
         return true;
@@ -907,41 +853,45 @@ bool CommandDispatcher::applyOscillationConfig(JsonDocument& doc) {
         return true;
     }
 
+    applyOscillationLiveTransitions(oldCenter, oldAmplitude, oldFrequency, oldWaveform);
+
+    sendStatus();
+    return true;
+}
+
+void CommandDispatcher::applyOscillationLiveTransitions(float oldCenter, float oldAmplitude,
+                                                         float oldFrequency, OscillationWaveform oldWaveform) {
     bool paramsChanged = (oldCenter != oscillation.centerPositionMM ||
                           oldAmplitude != oscillation.amplitudeMM ||
                           oldFrequency != oscillation.frequencyHz ||
                           oldWaveform != oscillation.waveform);
+    if (!paramsChanged) return;
 
     bool isOscRunning = (currentMovement == MOVEMENT_OSC && config.currentState == STATE_RUNNING);
 
-    if (paramsChanged) {
-        engine->debug("📝 OSC config: center=" + String(oscillation.centerPositionMM, 1) +
-              "mm | amp=" + String(oscillation.amplitudeMM, 1) +
-              "mm | freq=" + String(oscillation.frequencyHz, 3) + "Hz" +
-              (isOscRunning ? " | ⚡ Live update" : ""));
+    engine->debug("📝 OSC config: center=" + String(oscillation.centerPositionMM, 1) +
+          "mm | amp=" + String(oscillation.amplitudeMM, 1) +
+          "mm | freq=" + String(oscillation.frequencyHz, 3) + "Hz" +
+          (isOscRunning ? " | ⚡ Live update" : ""));
 
-        if (isOscRunning && oldCenter != oscillation.centerPositionMM) {
-            oscillationState.isCenterTransitioning = true;
-            oscillationState.centerTransitionStartMs = millis();
-            oscillationState.oldCenterMM = oldCenter;
-            oscillationState.targetCenterMM = oscillation.centerPositionMM;
-        }
+    if (!isOscRunning) return;
 
-        if (isOscRunning && oldAmplitude != oscillation.amplitudeMM) {
-            oscillationState.isAmplitudeTransitioning = true;
-            oscillationState.amplitudeTransitionStartMs = millis();
-            oscillationState.oldAmplitudeMM = oldAmplitude;
-            oscillationState.targetAmplitudeMM = oscillation.amplitudeMM;
-        }
-
-        if (isOscRunning) {
-            oscillationState.isRampingIn = false;
-            oscillationState.isRampingOut = false;
-        }
+    if (oldCenter != oscillation.centerPositionMM) {
+        oscillationState.isCenterTransitioning = true;
+        oscillationState.centerTransitionStartMs = millis();
+        oscillationState.oldCenterMM = oldCenter;
+        oscillationState.targetCenterMM = oscillation.centerPositionMM;
     }
 
-    sendStatus();
-    return true;
+    if (oldAmplitude != oscillation.amplitudeMM) {
+        oscillationState.isAmplitudeTransitioning = true;
+        oscillationState.amplitudeTransitionStartMs = millis();
+        oscillationState.oldAmplitudeMM = oldAmplitude;
+        oscillationState.targetAmplitudeMM = oscillation.amplitudeMM;
+    }
+
+    oscillationState.isRampingIn = false;
+    oscillationState.isRampingOut = false;
 }
 
 bool CommandDispatcher::cmdAddSequenceLine(JsonDocument& doc) {

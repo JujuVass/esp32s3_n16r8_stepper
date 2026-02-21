@@ -503,11 +503,19 @@ function loadPresetInMode(mode, id) {
  * Load simple mode preset
  */
 function loadSimplePreset(config) {
-  // Load basic parameters
+  loadSimplePresetBasicParams(config);
+  
+  const ze = getZoneEffectConfig(config);
+  loadSimplePresetZoneEffect(ze);
+  loadSimplePresetCyclePause(config);
+  sendSimplePresetCommands(config, ze);
+}
+
+/** Load basic parameters (position, distance, speed) into the form */
+function loadSimplePresetBasicParams(config) {
   document.getElementById('startPosition').value = config.startPositionMM || 0;
   document.getElementById('distance').value = config.distanceMM || 50;
   
-  // Check if unified or separate speed mode
   const isSeparate = document.getElementById('speedModeSeparate').checked;
   if (isSeparate) {
     document.getElementById('speedForward').value = config.speedLevelForward || 5;
@@ -515,11 +523,10 @@ function loadSimplePreset(config) {
   } else {
     document.getElementById('speedUnified').value = config.speedLevelForward || 5;
   }
-  
-  // Load Zone Effects parameters (new format: vaetZoneEffect, or legacy: decel*)
-  const ze = getZoneEffectConfig(config);
-  
-  // Apply Zone Effects to UI
+}
+
+/** Apply zone effect configuration to the UI elements */
+function loadSimplePresetZoneEffect(ze) {
   const zoneEffectSection = document.getElementById('zoneEffectSection');
   const zoneEffectHeaderText = document.getElementById('zoneEffectHeaderText');
   
@@ -552,6 +559,17 @@ function loadSimplePreset(config) {
   if (turnbackChanceValueEl) turnbackChanceValueEl.textContent = (ze.turnbackChance || 30) + '%';
   
   // End pause
+  loadSimplePresetEndPause(ze);
+  
+  // Auto-expand Zone Effects section if enabled
+  if (ze.enabled && zoneEffectSection && zoneEffectHeaderText) {
+    autoExpandSection(zoneEffectSection);
+    zoneEffectHeaderText.textContent = '🎯 ' + t('simple.zoneEffectsEnabled').replace('🎯 ', '');
+  }
+}
+
+/** Load end pause settings into the UI */
+function loadSimplePresetEndPause(ze) {
   const endPauseEnabledEl = document.getElementById('endPauseEnabled');
   const endPauseModeFixedEl = document.getElementById('endPauseModeFixed');
   const endPauseModeRandomEl = document.getElementById('endPauseModeRandom');
@@ -560,110 +578,85 @@ function loadSimplePreset(config) {
   const endPauseMaxEl = document.getElementById('endPauseMax');
   
   if (endPauseEnabledEl) endPauseEnabledEl.checked = ze.endPauseEnabled || false;
-  if (endPauseModeFixedEl && endPauseModeRandomEl) {
-    if (ze.endPauseIsRandom) {
-      endPauseModeRandomEl.checked = true;
-      endPauseModeFixedEl.checked = false;
-    } else {
-      endPauseModeFixedEl.checked = true;
-      endPauseModeRandomEl.checked = false;
-    }
-  }
+  setRadioPair(endPauseModeFixedEl, endPauseModeRandomEl, ze.endPauseIsRandom);
   if (endPauseDurationEl) endPauseDurationEl.value = ze.endPauseDurationSec || 1;
   if (endPauseMinEl) endPauseMinEl.value = ze.endPauseMinSec || 0.5;
   if (endPauseMaxEl) endPauseMaxEl.value = ze.endPauseMaxSec || 2;
   
-  // Toggle end pause fixed/random visibility
-  const endPauseFixedControls = document.getElementById('endPauseFixedControls');
-  const endPauseRandomControls = document.getElementById('endPauseRandomControls');
-  if (endPauseFixedControls && endPauseRandomControls) {
-    if (ze.endPauseIsRandom) {
-      endPauseFixedControls.classList.add('hidden');
-      endPauseRandomControls.classList.remove('hidden');
-    } else {
-      endPauseFixedControls.classList.remove('hidden');
-      endPauseRandomControls.classList.add('hidden');
-    }
-  }
-  
-  // Auto-expand Zone Effects section if enabled
-  if (ze.enabled && zoneEffectSection && zoneEffectHeaderText) {
-    if (zoneEffectSection.classList.contains('collapsed')) {
-      zoneEffectSection.classList.remove('collapsed');
-      const chevron = zoneEffectSection.querySelector('.collapse-icon');
-      if (chevron) chevron.textContent = '▼';
-    }
-    zoneEffectHeaderText.textContent = '🎯 ' + t('simple.zoneEffectsEnabled').replace('🎯 ', '');
-  }
-  
-  // Load cycle pause parameters
+  toggleFixedRandomControls('endPauseFixedControls', 'endPauseRandomControls', ze.endPauseIsRandom);
+}
+
+/** Load cycle pause configuration into the UI */
+function loadSimplePresetCyclePause(config) {
   const pauseEnabled = config.cyclePauseEnabled || false;
   const pauseIsRandom = config.cyclePauseIsRandom || false;
   
-  // Set radio buttons for pause mode
   const pauseModeFixedEl = document.getElementById('pauseModeFixed');
   const pauseModeRandomEl = document.getElementById('pauseModeRandom');
-  if (pauseModeFixedEl && pauseModeRandomEl) {
-    if (pauseIsRandom) {
-      pauseModeRandomEl.checked = true;
-      pauseModeFixedEl.checked = false;
-    } else {
-      pauseModeFixedEl.checked = true;
-      pauseModeRandomEl.checked = false;
-    }
-  }
+  setRadioPair(pauseModeFixedEl, pauseModeRandomEl, pauseIsRandom);
   
-  // Set pause duration values
   const cyclePauseDurationEl = document.getElementById('cyclePauseDuration');
   const cyclePauseMinEl = document.getElementById('cyclePauseMin');
   const cyclePauseMaxEl = document.getElementById('cyclePauseMax');
-  
   if (cyclePauseDurationEl) cyclePauseDurationEl.value = config.cyclePauseDurationSec || 0;
   if (cyclePauseMinEl) cyclePauseMinEl.value = config.cyclePauseMinSec || 0.5;
   if (cyclePauseMaxEl) cyclePauseMaxEl.value = config.cyclePauseMaxSec || 3;
   
-  // Force toggle visibility (fixed/random)
-  const fixedDiv = document.getElementById('pauseFixedControls');
-  const randomDiv = document.getElementById('pauseRandomControls');
-  if (fixedDiv && randomDiv) {
-    if (pauseIsRandom) {
-      fixedDiv.style.display = 'none';
-      randomDiv.style.display = 'block';
-    } else {
-      fixedDiv.style.display = 'flex';
-      randomDiv.style.display = 'none';
-    }
-  }
+  toggleFixedRandomControls('pauseFixedControls', 'pauseRandomControls', pauseIsRandom, true);
   
-  // Auto-expand pause section if enabled
   if (pauseEnabled) {
     const pauseSection = document.querySelector('.section-collapsible:has(#cyclePauseHeaderText)');
     const pauseHeaderText = document.getElementById('cyclePauseHeaderText');
     if (pauseSection && pauseHeaderText) {
-      if (pauseSection.classList.contains('collapsed')) {
-        pauseSection.classList.remove('collapsed');
-        const chevron = pauseSection.querySelector('.collapse-icon');
-        if (chevron) chevron.textContent = '▼';
-      }
+      autoExpandSection(pauseSection);
       pauseHeaderText.textContent = t('simple.cyclePauseEnabled');
     }
   }
-  
-  // Send commands to backend
+}
+
+/** Set a fixed/random radio button pair */
+function setRadioPair(fixedEl, randomEl, isRandom) {
+  if (!fixedEl || !randomEl) return;
+  fixedEl.checked = !isRandom;
+  randomEl.checked = isRandom;
+}
+
+/** Toggle visibility of fixed/random control divs */
+function toggleFixedRandomControls(fixedId, randomId, isRandom, useFlex = false) {
+  const fixedDiv = document.getElementById(fixedId);
+  const randomDiv = document.getElementById(randomId);
+  if (!fixedDiv || !randomDiv) return;
+  if (useFlex) {
+    fixedDiv.style.display = isRandom ? 'none' : 'flex';
+    randomDiv.style.display = isRandom ? 'block' : 'none';
+  } else {
+    fixedDiv.classList.toggle('hidden', isRandom);
+    randomDiv.classList.toggle('hidden', !isRandom);
+  }
+}
+
+/** Expand a collapsed section */
+function autoExpandSection(section) {
+  if (section.classList.contains('collapsed')) {
+    section.classList.remove('collapsed');
+    const chevron = section.querySelector('.collapse-icon');
+    if (chevron) chevron.textContent = '▼';
+  }
+}
+
+/** Send all simple preset commands to backend */
+function sendSimplePresetCommands(config, ze) {
   sendCommand(WS_CMD.SET_START_POSITION, {startPosition: config.startPositionMM || 0});
   sendCommand(WS_CMD.SET_DISTANCE, {distance: config.distanceMM || 50});
   sendCommand(WS_CMD.SET_SPEED_FORWARD, {speed: config.speedLevelForward || 5});
   sendCommand(WS_CMD.SET_SPEED_BACKWARD, {speed: config.speedLevelBackward || 5});
   
-  // Send Zone Effects config to backend (use new format)
-  const zoneEffectCmd = ze;  // ze is already built above
-  console.debug('🔧 Sending setZoneEffect:', zoneEffectCmd);
-  sendCommand(WS_CMD.SET_ZONE_EFFECT, zoneEffectCmd);
+  console.debug('🔧 Sending setZoneEffect:', ze);
+  sendCommand(WS_CMD.SET_ZONE_EFFECT, ze);
   
-  // Send cycle pause config to backend (unified API)
   const pauseCmd = {
-    enabled: pauseEnabled,
-    isRandom: pauseIsRandom,
+    enabled: config.cyclePauseEnabled || false,
+    isRandom: config.cyclePauseIsRandom || false,
     pauseDurationSec: config.cyclePauseDurationSec || 0,
     minPauseSec: config.cyclePauseMinSec || 0.5,
     maxPauseSec: config.cyclePauseMaxSec || 3
@@ -903,78 +896,72 @@ function loadPresetIntoSequencerModal(mode) {
   
   const config = preset.config;
   
-  // Fill sequencer modal fields based on mode
-  if (mode === 'simple') {
-    document.getElementById('editStartPos').value = config.startPositionMM || 0;
-    document.getElementById('editDistance').value = config.distanceMM || 50;
-    document.getElementById('editSpeedFwd').value = config.speedLevelForward || 5;
-    document.getElementById('editSpeedBack').value = config.speedLevelBackward || 5;
-    
-    // Load Zone Effects into sequencer modal
-    const ze = config.vaetZoneEffect;
-    if (ze) {
-      document.getElementById('editZoneEnableStart').checked = ze.enableStart ?? true;
-      document.getElementById('editZoneEnableEnd').checked = ze.enableEnd ?? true;
-      document.getElementById('editZoneMirror').checked = ze.mirrorOnReturn || false;
-      document.getElementById('editZoneMM').value = ze.zoneMM || 50;
-      document.getElementById('editSpeedEffect').value = ze.speedEffect ?? 1;
-      document.getElementById('editSpeedCurve').value = ze.speedCurve ?? 1;
-      document.getElementById('editSpeedIntensity').value = ze.speedIntensity || 75;
-      const intensityVal = document.getElementById('editSpeedIntensityValue');
-      if (intensityVal) intensityVal.textContent = (ze.speedIntensity || 75) + '%';
-      document.getElementById('editRandomTurnback').checked = ze.randomTurnbackEnabled || false;
-      document.getElementById('editTurnbackChance').value = ze.turnbackChance || 30;
-      const turnbackVal = document.getElementById('editTurnbackChanceValue');
-      if (turnbackVal) turnbackVal.textContent = (ze.turnbackChance || 30) + '%';
-      document.getElementById('editEndPauseEnabled').checked = ze.endPauseEnabled || false;
-      const endPauseFixedEl = document.getElementById('editEndPauseModeFixed');
-      const endPauseRandomEl = document.getElementById('editEndPauseModeRandom');
-      if (endPauseFixedEl && endPauseRandomEl) {
-        endPauseFixedEl.checked = !ze.endPauseIsRandom;
-        endPauseRandomEl.checked = ze.endPauseIsRandom || false;
-      }
-      document.getElementById('editEndPauseDuration').value = ze.endPauseDurationSec || 1;
-      document.getElementById('editEndPauseMin').value = ze.endPauseMinSec || 0.5;
-      document.getElementById('editEndPauseMax').value = ze.endPauseMaxSec || 2;
-    }
-  } else if (mode === 'oscillation') {
-    document.getElementById('editOscCenter').value = config.centerPositionMM || 100;
-    document.getElementById('editOscAmplitude').value = config.amplitudeMM || 20;
-    document.getElementById('editOscWaveform').value = config.waveform || 0;
-    document.getElementById('editOscFrequency').value = config.frequencyHz || 1;
-    document.getElementById('editOscRampIn').checked = config.enableRampIn || false;
-    document.getElementById('editOscRampInDur').value = config.rampInDurationMs || 2000;
-    document.getElementById('editOscRampOut').checked = config.enableRampOut || false;
-    document.getElementById('editOscRampOutDur').value = config.rampOutDurationMs || 2000;
-    
-    // Cycles (0 = infinite not allowed in sequencer, use stored value or default to 10)
-    const cycleValue = config.cycleCount === 0 ? 10 : config.cycleCount;
-    document.getElementById('editCycles').value = cycleValue;
-  } else if (mode === 'chaos') {
-    document.getElementById('editChaosCenter').value = config.centerPositionMM || 100;
-    document.getElementById('editChaosAmplitude').value = config.amplitudeMM || 40;
-    document.getElementById('editChaosSpeed').value = config.maxSpeedLevel || 15;
-    document.getElementById('editChaosCraziness').value = config.crazinessPercent || 50;
-    document.getElementById('editChaosDuration').value = config.durationSeconds || 30;
-    document.getElementById('editChaosSeed').value = 0; // Default seed
-    
-    // Set pattern checkboxes
-    if (config.patternsEnabled && Array.isArray(config.patternsEnabled)) {
-      for (let i = 0; i < config.patternsEnabled.length && i < 11; i++) {
-        const checkbox = document.querySelector(`#chaosFields input[name="chaosPattern${i}"]`);
-        if (checkbox) {
-          checkbox.checked = config.patternsEnabled[i];
-        }
-      }
-    }
-  }
+  if (mode === 'simple') loadSimplePresetIntoModal(config);
+  else if (mode === 'oscillation') loadOscPresetIntoModal(config);
+  else if (mode === 'chaos') loadChaosPresetIntoModal(config);
   
-  // Trigger validation to update UI state (if available)
-  if (typeof validateEditForm === 'function') {
-    validateEditForm();
-  }
-  
+  if (typeof validateEditForm === 'function') validateEditForm();
   showNotification('✅ ' + t('playlist.valuesLoaded') + ' ' + preset.name, 'success', 2000);
+}
+
+/** Fill sequencer modal fields for simple mode */
+function loadSimplePresetIntoModal(config) {
+  document.getElementById('editStartPos').value = config.startPositionMM || 0;
+  document.getElementById('editDistance').value = config.distanceMM || 50;
+  document.getElementById('editSpeedFwd').value = config.speedLevelForward || 5;
+  document.getElementById('editSpeedBack').value = config.speedLevelBackward || 5;
+  
+  const ze = config.vaetZoneEffect;
+  if (!ze) return;
+  
+  document.getElementById('editZoneEnableStart').checked = ze.enableStart ?? true;
+  document.getElementById('editZoneEnableEnd').checked = ze.enableEnd ?? true;
+  document.getElementById('editZoneMirror').checked = ze.mirrorOnReturn || false;
+  document.getElementById('editZoneMM').value = ze.zoneMM || 50;
+  document.getElementById('editSpeedEffect').value = ze.speedEffect ?? 1;
+  document.getElementById('editSpeedCurve').value = ze.speedCurve ?? 1;
+  document.getElementById('editSpeedIntensity').value = ze.speedIntensity || 75;
+  const intensityVal = document.getElementById('editSpeedIntensityValue');
+  if (intensityVal) intensityVal.textContent = (ze.speedIntensity || 75) + '%';
+  document.getElementById('editRandomTurnback').checked = ze.randomTurnbackEnabled || false;
+  document.getElementById('editTurnbackChance').value = ze.turnbackChance || 30;
+  const turnbackVal = document.getElementById('editTurnbackChanceValue');
+  if (turnbackVal) turnbackVal.textContent = (ze.turnbackChance || 30) + '%';
+  document.getElementById('editEndPauseEnabled').checked = ze.endPauseEnabled || false;
+  setRadioPair(document.getElementById('editEndPauseModeFixed'), document.getElementById('editEndPauseModeRandom'), ze.endPauseIsRandom);
+  document.getElementById('editEndPauseDuration').value = ze.endPauseDurationSec || 1;
+  document.getElementById('editEndPauseMin').value = ze.endPauseMinSec || 0.5;
+  document.getElementById('editEndPauseMax').value = ze.endPauseMaxSec || 2;
+}
+
+/** Fill sequencer modal fields for oscillation mode */
+function loadOscPresetIntoModal(config) {
+  document.getElementById('editOscCenter').value = config.centerPositionMM || 100;
+  document.getElementById('editOscAmplitude').value = config.amplitudeMM || 20;
+  document.getElementById('editOscWaveform').value = config.waveform || 0;
+  document.getElementById('editOscFrequency').value = config.frequencyHz || 1;
+  document.getElementById('editOscRampIn').checked = config.enableRampIn || false;
+  document.getElementById('editOscRampInDur').value = config.rampInDurationMs || 2000;
+  document.getElementById('editOscRampOut').checked = config.enableRampOut || false;
+  document.getElementById('editOscRampOutDur').value = config.rampOutDurationMs || 2000;
+  document.getElementById('editCycles').value = config.cycleCount === 0 ? 10 : config.cycleCount;
+}
+
+/** Fill sequencer modal fields for chaos mode */
+function loadChaosPresetIntoModal(config) {
+  document.getElementById('editChaosCenter').value = config.centerPositionMM || 100;
+  document.getElementById('editChaosAmplitude').value = config.amplitudeMM || 40;
+  document.getElementById('editChaosSpeed').value = config.maxSpeedLevel || 15;
+  document.getElementById('editChaosCraziness').value = config.crazinessPercent || 50;
+  document.getElementById('editChaosDuration').value = config.durationSeconds || 30;
+  document.getElementById('editChaosSeed').value = 0;
+  
+  if (config.patternsEnabled && Array.isArray(config.patternsEnabled)) {
+    for (let i = 0; i < config.patternsEnabled.length && i < 11; i++) {
+      const checkbox = document.querySelector(`#chaosFields input[name="chaosPattern${i}"]`);
+      if (checkbox) checkbox.checked = config.patternsEnabled[i];
+    }
+  }
 }
 
 // ============================================================================

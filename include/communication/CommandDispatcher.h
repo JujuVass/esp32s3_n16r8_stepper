@@ -179,6 +179,44 @@ private:
 
     /** setChaosConfig command body */
     bool cmdSetChaosConfig(JsonDocument& doc);
+
+    // ========================================================================
+    // SUB-HANDLERS (extracted to reduce cognitive complexity)
+    // ========================================================================
+
+    /** handleBasicCommands sub: system settings (maxDistanceLimit, sensorsInverted) */
+    bool handleSystemSettingsCommands(const char* cmd, JsonDocument& doc);
+
+    /** handleBasicCommands sub: debug & stats (toggleDebug, requestStats) */
+    bool handleDebugAndStatsCommands(const char* cmd, JsonDocument& doc);
+
+    /** applyZoneEffectConfig sub: zone enable/disable + mirror + zoneSize */
+    void applyZoneSettings(JsonDocument& doc);
+
+    /** applyZoneEffectConfig sub: speedEffect + speedCurve + intensity */
+    void applySpeedEffectConfig(JsonDocument& doc);
+
+    /** applyZoneEffectConfig sub: randomTurnback + turnbackChance */
+    void applyTurnbackConfig(JsonDocument& doc);
+
+    /** applyZoneEffectConfig sub: endPause settings */
+    void applyEndPauseConfig(JsonDocument& doc);
+
+    /** applyZoneEffectConfig sub: debug logging of zone config */
+    void logZoneEffectDebug();
+
+    /** handleSequencerCommands sub: CRUD operations (add/delete/update/move/reorder/duplicate/toggle/clear/get) */
+    bool handleSequencerCRUD(const char* cmd, JsonDocument& doc);
+
+    /** handleSequencerCommands sub: execution control (start/loop/stop/pause/skip) */
+    bool handleSequencerControl(const char* cmd);
+
+    /** handleSequencerCommands sub: import/export */
+    bool handleSequencerIO(const char* cmd, JsonDocument& doc);
+
+    /** applyOscillationConfig sub: live transitions for center/amplitude changes */
+    void applyOscillationLiveTransitions(float oldCenter, float oldAmplitude,
+                                          float oldFrequency, OscillationWaveform oldWaveform);
 };
 
 // ============================================================================

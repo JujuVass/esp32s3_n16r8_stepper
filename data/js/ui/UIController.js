@@ -24,110 +24,79 @@
  * @param {string} tabName - Target tab name (simple, pursuit, oscillation, chaos, tableau)
  */
 function switchTab(tabName) {
-  // Save statistics before mode change
   sendCommand(WS_CMD.SAVE_STATS, {});
   
-  // SAFETY: Stop any running movement before switching tabs
-  // This prevents confusion when switching modes while paused
   const isRunningOrPaused = (AppState.system.currentState === SystemState.RUNNING || 
                               AppState.system.currentState === SystemState.PAUSED);
-  
   if (isRunningOrPaused) {
     console.debug('Stopping movement before tab switch');
     sendCommand(WS_CMD.STOP);
-    // Note: UI will update via WebSocket status message
   }
   
-  // PRE-CHECK: If switching to sequencer with limit active, show modal and abort
-  if (tabName === 'tableau') {
-    const currentLimit = AppState.pursuit.maxDistLimitPercent || 100;
-    
-    if (currentLimit < 100) {
-      const limitedCourse = AppState.pursuit.effectiveMaxDistMM || 0;
-      const totalCourse = AppState.pursuit.totalDistanceMM || 0;
-      
-      // Update modal content with current values
-      document.getElementById('seqModalCurrentLimit').textContent = 
-        currentLimit.toFixed(0) + '% (' + limitedCourse.toFixed(1) + ' mm)';
-      document.getElementById('seqModalAfterLimit').textContent = 
-        '100% (' + totalCourse.toFixed(1) + ' mm)';
-      
-      // Show modal and ABORT tab switch
-      DOM.sequencerLimitModal.classList.add('active');
-      return; // Don't switch tab yet!
-    }
-  }
+  if (checkSequencerLimitBlock(tabName)) return;
   
-  // Hide all tab contents
-  document.querySelectorAll('.tab-content').forEach(content => {
-    content.classList.remove('active');
-  });
-  
-  // Remove active class from all tabs
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.classList.remove('active');
-  });
-  
-  // Show selected tab content
-  const tabMap = {
-    'simple': 'tabSimple',
-    'pursuit': 'tabPursuit',
-    'oscillation': 'tabOscillation',
-    'chaos': 'tabChaos',
-    'tableau': 'tabTableau'
-  };
-  
-  document.getElementById(tabMap[tabName]).classList.add('active');
-  
-  // Add active class to selected tab
-  document.querySelector('[data-tab="' + tabName + '"]').classList.add('active');
-  
+  activateTabUI(tabName);
   AppState.system.currentMode = tabName;
   console.debug('Switched to mode: ' + tabName);
   
-  // Handle mode-specific initialization
+  initTabMode(tabName);
+}
+
+/** Show sequencer limit modal if switching to tableau with limit < 100%. Returns true if blocked. */
+function checkSequencerLimitBlock(tabName) {
+  if (tabName !== 'tableau') return false;
+  const currentLimit = AppState.pursuit.maxDistLimitPercent || 100;
+  if (currentLimit >= 100) return false;
+  
+  document.getElementById('seqModalCurrentLimit').textContent = 
+    currentLimit.toFixed(0) + '% (' + (AppState.pursuit.effectiveMaxDistMM || 0).toFixed(1) + ' mm)';
+  document.getElementById('seqModalAfterLimit').textContent = 
+    '100% (' + (AppState.pursuit.totalDistanceMM || 0).toFixed(1) + ' mm)';
+  DOM.sequencerLimitModal.classList.add('active');
+  return true;
+}
+
+/** Switch DOM active states for tabs and tab contents */
+function activateTabUI(tabName) {
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  
+  const tabMap = { 'simple': 'tabSimple', 'pursuit': 'tabPursuit', 'oscillation': 'tabOscillation', 'chaos': 'tabChaos', 'tableau': 'tabTableau' };
+  document.getElementById(tabMap[tabName]).classList.add('active');
+  document.querySelector('[data-tab="' + tabName + '"]').classList.add('active');
+}
+
+/** Calculate effective max distance */
+function getEffectiveMax() {
+  const totalMM = AppState.pursuit.totalDistanceMM || 0;
+  return (AppState.pursuit.maxDistLimitPercent && AppState.pursuit.maxDistLimitPercent < 100)
+    ? (totalMM * AppState.pursuit.maxDistLimitPercent / 100)
+    : totalMM;
+}
+
+/** Run mode-specific initialization after tab switch */
+function initTabMode(tabName) {
   if (tabName === 'pursuit') {
-    // Switching TO pursuit mode
-    setGaugeTarget(0);  // Start at 0mm
+    setGaugeTarget(0);
   } else if (tabName === 'simple') {
-    // Switching TO simple mode - disable pursuit if active
-    if (isPursuitActive()) {
-      disablePursuitMode();
-    }
+    if (isPursuitActive()) disablePursuitMode();
   } else if (tabName === 'oscillation') {
-    // Switching TO oscillation mode - always update center with effective max
-    const totalMM = AppState.pursuit.totalDistanceMM || 0;
-    const effectiveMax = (AppState.pursuit.maxDistLimitPercent && AppState.pursuit.maxDistLimitPercent < 100)
-      ? (totalMM * AppState.pursuit.maxDistLimitPercent / 100)
-      : totalMM;
-    
-    const oscCenterField = DOM.oscCenter;
-    if (oscCenterField && effectiveMax > 0) {
-      // Always set to effective center
-      oscCenterField.value = (effectiveMax / 2).toFixed(1);
-      // Also send to backend (use sendOscillationConfig function)
+    const effectiveMax = getEffectiveMax();
+    if (DOM.oscCenter && effectiveMax > 0) {
+      DOM.oscCenter.value = (effectiveMax / 2).toFixed(1);
       sendOscillationConfig();
     }
-    
     validateOscillationLimits();
-    updateOscillationPresets();  // Update preset buttons state
+    updateOscillationPresets();
   } else if (tabName === 'chaos') {
-    // Switching TO chaos mode - always update center with effective max
-    const totalMM = AppState.pursuit.totalDistanceMM || 0;
-    const effectiveMax = (AppState.pursuit.maxDistLimitPercent && AppState.pursuit.maxDistLimitPercent < 100)
-      ? (totalMM * AppState.pursuit.maxDistLimitPercent / 100)
-      : totalMM;
-    
+    const effectiveMax = getEffectiveMax();
     const chaosCenterField = document.getElementById('chaosCenterPos');
     if (chaosCenterField && effectiveMax > 0) {
-      // Always set to effective center
       chaosCenterField.value = (effectiveMax / 2).toFixed(1);
     }
-    
     validateChaosLimits();
-    updateChaosPresets();  // Update preset buttons state
+    updateChaosPresets();
   }
-  // Note: tableau (sequencer) pre-check is done at the start of switchTab()
 }
 
 /**

@@ -641,90 +641,75 @@ function saveLoggingPreferences() {
  * @param {Object} system - System stats object from backend status message
  */
 function updateSystemStats(system) {
-  // Defense: Check system object exists before accessing fields
   if (!system) {
     console.warn('updateSystemStats: system object is undefined');
     return;
   }
   
-  // CPU frequency
+  updateSystemHardwareStats(system);
+  updateSystemNetworkStats(system);
+}
+
+/** Update CPU, temperature, RAM, PSRAM, WiFi, uptime display */
+function updateSystemHardwareStats(system) {
   if (system.cpuFreqMHz !== undefined) {
     DOM.sysCpuFreq.textContent = system.cpuFreqMHz + ' MHz';
   }
   
-  // Temperature
   if (system.temperatureC !== undefined) {
     const temp = Number.parseFloat(system.temperatureC);
     DOM.sysTemp.textContent = temp.toFixed(1) + ' °C';
-    // Color coding based on temperature
-    if (temp > 80) {
-      DOM.sysTemp.style.color = '#f44336'; // Red - hot
-    } else if (temp > 70) {
-      DOM.sysTemp.style.color = '#FF9800'; // Orange - warm
-    } else {
-      DOM.sysTemp.style.color = '#333'; // Normal
-    }
+    DOM.sysTemp.style.color = temp > 80 ? '#f44336' : temp > 70 ? '#FF9800' : '#333';
   }
   
-  // RAM
   if (system.heapFree !== undefined && system.heapTotal !== undefined && system.heapUsedPercent !== undefined) {
-    const ramFreeKB = (system.heapFree / 1024).toFixed(1);
-    const ramTotalKB = (system.heapTotal / 1024).toFixed(1);
-    const ramUsedPercent = Number.parseFloat(system.heapUsedPercent);
-    DOM.sysRam.textContent = ramFreeKB + ' KB ' + t('tools.free') + ' / ' + ramTotalKB + ' KB';
-    DOM.sysRamPercent.textContent = ramUsedPercent.toFixed(1) + '% ' + t('tools.used');
+    DOM.sysRam.textContent = (system.heapFree / 1024).toFixed(1) + ' KB ' + t('tools.free') + ' / ' + (system.heapTotal / 1024).toFixed(1) + ' KB';
+    DOM.sysRamPercent.textContent = Number.parseFloat(system.heapUsedPercent).toFixed(1) + '% ' + t('tools.used');
   }
   
-  // PSRAM
   if (system.psramFree !== undefined && system.psramTotal !== undefined && system.psramUsedPercent !== undefined) {
-    const psramFreeMB = (system.psramFree / 1024 / 1024).toFixed(1);
-    const psramTotalMB = (system.psramTotal / 1024 / 1024).toFixed(1);
-    const psramUsedPercent = Number.parseFloat(system.psramUsedPercent);
-    DOM.sysPsram.textContent = psramFreeMB + ' MB ' + t('tools.free') + ' / ' + psramTotalMB + ' MB';
-    DOM.sysPsramPercent.textContent = psramUsedPercent.toFixed(1) + '% ' + t('tools.used');
+    DOM.sysPsram.textContent = (system.psramFree / 1024 / 1024).toFixed(1) + ' MB ' + t('tools.free') + ' / ' + (system.psramTotal / 1024 / 1024).toFixed(1) + ' MB';
+    DOM.sysPsramPercent.textContent = Number.parseFloat(system.psramUsedPercent).toFixed(1) + '% ' + t('tools.used');
   }
   
-  // WiFi - delegate to pure function
   if (system.wifiRssi !== undefined) {
-    const rssi = system.wifiRssi;
-    DOM.sysWifi.textContent = rssi + ' dBm';
-    
-    let quality, qualityColor;
-    if (rssi >= -50) { quality = t('wifi.qualityExcellent'); qualityColor = '#4CAF50'; }
-    else if (rssi >= -60) { quality = t('wifi.qualityVeryGood'); qualityColor = '#8BC34A'; }
-    else if (rssi >= -70) { quality = t('wifi.qualityGood'); qualityColor = '#FFC107'; }
-    else if (rssi >= -80) { quality = t('wifi.qualityWeak'); qualityColor = '#FF9800'; }
-    else { quality = t('wifi.qualityVeryWeak'); qualityColor = '#f44336'; }
-    
-    DOM.sysWifiQuality.textContent = quality;
-    DOM.sysWifiQuality.style.color = qualityColor;
+    updateWifiDisplay(system.wifiRssi);
   }
   
-  // Uptime - delegate to pure function
   if (system.uptimeSeconds !== undefined) {
-    const uptimeSec = system.uptimeSeconds;
-    const hours = Math.floor(uptimeSec / 3600);
-    const minutes = Math.floor((uptimeSec % 3600) / 60);
-    const seconds = uptimeSec % 60;
-    let uptimeStr;
-    if (hours > 0) {
-      uptimeStr = `${hours}h ${minutes}m ${seconds}s`;
-    } else if (minutes > 0) {
-      uptimeStr = `${minutes}m ${seconds}s`;
-    } else {
-      uptimeStr = `${seconds}s`;
-    }
-    DOM.sysUptime.textContent = uptimeStr;
+    DOM.sysUptime.textContent = formatUptime(system.uptimeSeconds);
   }
-  
-  // Network info (IP addresses, hostname)
+}
+
+/** Update WiFi RSSI and quality display */
+function updateWifiDisplay(rssi) {
+  DOM.sysWifi.textContent = rssi + ' dBm';
+  let quality, qualityColor;
+  if (rssi >= -50) { quality = t('wifi.qualityExcellent'); qualityColor = '#4CAF50'; }
+  else if (rssi >= -60) { quality = t('wifi.qualityVeryGood'); qualityColor = '#8BC34A'; }
+  else if (rssi >= -70) { quality = t('wifi.qualityGood'); qualityColor = '#FFC107'; }
+  else if (rssi >= -80) { quality = t('wifi.qualityWeak'); qualityColor = '#FF9800'; }
+  else { quality = t('wifi.qualityVeryWeak'); qualityColor = '#f44336'; }
+  DOM.sysWifiQuality.textContent = quality;
+  DOM.sysWifiQuality.style.color = qualityColor;
+}
+
+/** Format uptime seconds to human-readable string */
+function formatUptime(uptimeSec) {
+  const hours = Math.floor(uptimeSec / 3600);
+  const minutes = Math.floor((uptimeSec % 3600) / 60);
+  const seconds = uptimeSec % 60;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
+/** Update network info: IP addresses, hostname, SSID, AP mode */
+function updateSystemNetworkStats(system) {
   if (system.ipSta !== undefined) {
     DOM.sysIpSta.textContent = system.ipSta;
-    // Gray out if degraded mode (0.0)
     DOM.sysIpSta.style.color = (system.ipSta === '0.0') ? '#999' : '#333';
     
-    // Cache IP for faster WebSocket reconnection (avoids mDNS resolution delay)
-    // Only cache if on same subnet as current page (prevents STA IP on AP network)
     if (system.ipSta !== '0.0' && !AppState.espIpAddress) {
       if (typeof isSameSubnet === 'function' && isSameSubnet(system.ipSta, globalThis.location.hostname)) {
         AppState.espIpAddress = system.ipSta;
@@ -737,14 +722,8 @@ function updateSystemStats(system) {
   }
   if (system.hostname !== undefined) {
     DOM.sysHostname.textContent = system.hostname + '.local';
-    DOM.sysHostname.title = 'http://' + system.hostname + '.local';
-    // Disable mDNS link in AP mode
-    if (system.apMode) {
-      DOM.sysHostname.style.color = '#999';
-      DOM.sysHostname.title = t('wifi.mdnsUnavailable');
-    } else {
-      DOM.sysHostname.style.color = '#2196F3';
-    }
+    DOM.sysHostname.title = system.apMode ? t('wifi.mdnsUnavailable') : 'http://' + system.hostname + '.local';
+    DOM.sysHostname.style.color = system.apMode ? '#999' : '#2196F3';
   }
   if (system.ssid !== undefined) {
     DOM.sysSsid.textContent = system.ssid || t('wifi.notConnected');
@@ -754,18 +733,11 @@ function updateSystemStats(system) {
     DOM.sysApClients.style.color = system.apClients > 0 ? '#4CAF50' : '#999';
   }
   
-  // AP Mode indicator
   if (system.apMode !== undefined) {
-    if (system.apMode) {
-      DOM.sysDegradedBadge.style.display = '';
-      DOM.sysDegradedBadge.textContent = t('tools.apModeBadge');
-      DOM.networkInfoSection.style.borderLeftColor = '#FF9800';
-      DOM.networkInfoSection.style.background = '#fff3e0';
-    } else {
-      DOM.sysDegradedBadge.style.display = 'none';
-      DOM.networkInfoSection.style.borderLeftColor = '#2196F3';
-      DOM.networkInfoSection.style.background = '#e3f2fd';
-    }
+    DOM.sysDegradedBadge.style.display = system.apMode ? '' : 'none';
+    if (system.apMode) DOM.sysDegradedBadge.textContent = t('tools.apModeBadge');
+    DOM.networkInfoSection.style.borderLeftColor = system.apMode ? '#FF9800' : '#2196F3';
+    DOM.networkInfoSection.style.background = system.apMode ? '#fff3e0' : '#e3f2fd';
   }
 }
 
