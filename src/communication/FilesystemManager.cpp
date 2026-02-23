@@ -342,6 +342,9 @@ void FilesystemManager::handleUploadFile() {
       // 🛡️ PROTECTION: Flush before closing
       uploadFile.flush();
       uploadFile.close();
+
+      // 🛡️ STABILITY: Let LittleFS GC + TCP stack settle before next request
+      vTaskDelay(pdMS_TO_TICKS(UPLOAD_POST_CLOSE_DELAY_MS));
     }
     // Keep upload activity timestamp fresh for batch detection
     lastUploadActivityTime = millis();
