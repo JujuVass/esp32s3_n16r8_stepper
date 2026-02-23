@@ -303,9 +303,8 @@ bool StepperNetworkManager::setupMDNS(bool includeOtaService) {
 // ============================================================================
 
 void StepperNetworkManager::setupNTP() {
-    // TODO: Make timezone configurable (currently hardcoded to GMT+1/CET)
-    configTime(3600, 0, "pool.ntp.org", "time.nist.gov");  // GMT+1
-    engine->info("⏰ NTP configured (GMT+1)");
+    configTime(NTP_GMT_OFFSET_SEC, NTP_DAYLIGHT_OFFSET_SEC, "pool.ntp.org", "time.nist.gov");
+    engine->info("⏰ NTP configured (GMT" + String(NTP_GMT_OFFSET_SEC >= 0 ? "+" : "") + String(NTP_GMT_OFFSET_SEC / 3600) + ")");
 
     delay(1000);
     if (TimeUtils::isSynchronized()) {
@@ -561,7 +560,7 @@ void StepperNetworkManager::checkConnectionHealth() {
         delay(100);
         setupMDNS(true);
         _lastMdnsRefresh = now;
-        engine->info("\xF0\x9F\x94\x84 mDNS: Delayed re-announce (boot +" + String(now / 1000) + "s)");
+        engine->info("🔄 mDNS: Delayed re-announce (boot +" + String(now / 1000) + "s)");
     }
 
     // ── ASYNC PING IN PROGRESS: check result without blocking ──

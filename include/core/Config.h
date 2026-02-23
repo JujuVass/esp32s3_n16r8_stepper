@@ -241,6 +241,10 @@ constexpr uint32_t WIFI_RECONNECT_INTERVAL_MS = 5000;   // WiFi reconnection del
 constexpr uint32_t STATS_SAVE_INTERVAL_MS = 60000;      // Auto-save stats to filesystem
 constexpr uint32_t WEBSOCKET_RECONNECT_MS = 2000;       // Client-side WS reconnect delay
 
+// NTP timezone configuration
+constexpr long     NTP_GMT_OFFSET_SEC      = 0;      // GMT+0 (UTC). Change to your timezone offset in seconds
+constexpr int      NTP_DAYLIGHT_OFFSET_SEC = 0;         // DST offset (3600 for CEST summer time, 0 to disable)
+
 // ============================================================================
 // CONFIGURATION - Connection Watchdog (STA mode auto-recovery)
 // ============================================================================

@@ -469,9 +469,9 @@ def sync_files(esp32_ip=ESP32_IP, delete_orphans=True, force=False):
             local_path = local_files[esp_path]
             if upload_file(local_path, esp32_ip, esp_path):
                 success_count += 1
-            # Small delay between files to let the ESP32 process
-            if i < len(to_upload) - 1:
-                time.sleep(0.3)
+                # Small delay after successful upload to let the ESP32 process
+                if i < len(to_upload) - 1:
+                    time.sleep(0.2)
         print(f"   ✅ {success_count}/{len(to_upload)} uploaded")
     else:
         print("✅ All files up to date — nothing to upload")
@@ -672,9 +672,9 @@ Examples:
         for i, file_path in enumerate(files_to_upload):
             if upload_file(file_path, args.ip):
                 success += 1
-            # Small delay between files to let the ESP32 process
-            if i < len(files_to_upload) - 1:
-                time.sleep(0.3)
+                # Small delay after successful upload to let the ESP32 process
+                if i < len(files_to_upload) - 1:
+                    time.sleep(0.2)
         
         print()
         print(f"{'✅' if success == len(files_to_upload) else '⚠️ '} {success}/{len(files_to_upload)} files uploaded")
