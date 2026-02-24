@@ -88,6 +88,12 @@ private:
     // ========================================================================
 
     /**
+     * Add cycle pause config & state to a parent JSON object
+     * DRY: shared between Va-et-Vient and Oscillation modes
+     */
+    void addCyclePauseFields(JsonObject parentObj, const CyclePauseConfig& config, const CyclePauseState& state);
+
+    /**
      * Add VA-ET-VIENT / Pursuit mode specific fields to JSON
      */
     void addVaEtVientFields(JsonDocument& doc);

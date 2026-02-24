@@ -30,6 +30,28 @@ StatusBroadcaster& StatusBroadcaster::getInstance() {
 }
 
 // ============================================================================
+// DRY HELPERS
+// ============================================================================
+
+void StatusBroadcaster::addCyclePauseFields(JsonObject parentObj, const CyclePauseConfig& config, const CyclePauseState& state) {
+    JsonObject pauseObj = parentObj["cyclePause"].to<JsonObject>();
+    pauseObj["enabled"] = config.enabled;
+    pauseObj["isRandom"] = config.isRandom;
+    pauseObj["pauseDurationSec"] = serialized(String(config.pauseDurationSec, 1));
+    pauseObj["minPauseSec"] = serialized(String(config.minPauseSec, 1));
+    pauseObj["maxPauseSec"] = serialized(String(config.maxPauseSec, 1));
+    pauseObj["isPausing"] = state.isPausing;
+
+    if (state.isPausing) {
+        unsigned long elapsedMs = millis() - state.pauseStartMs;
+        long remainingMs = (long)state.currentPauseDuration - (long)elapsedMs;
+        pauseObj["remainingMs"] = max(0L, remainingMs);
+    } else {
+        pauseObj["remainingMs"] = 0;
+    }
+}
+
+// ============================================================================
 // INITIALIZATION
 // ============================================================================
 
@@ -250,23 +272,8 @@ void StatusBroadcaster::addVaEtVientFields(JsonDocument& doc) {
     motionObj["cyclesPerMinForward"] = serialized(String(cyclesPerMinForward, 1));
     motionObj["cyclesPerMinBackward"] = serialized(String(cyclesPerMinBackward, 1));
 
-    // Cycle pause config & state
-    JsonObject pauseObj = motionObj["cyclePause"].to<JsonObject>();
-    pauseObj["enabled"] = motion.cyclePause.enabled;
-    pauseObj["isRandom"] = motion.cyclePause.isRandom;
-    pauseObj["pauseDurationSec"] = serialized(String(motion.cyclePause.pauseDurationSec, 1));
-    pauseObj["minPauseSec"] = serialized(String(motion.cyclePause.minPauseSec, 1));
-    pauseObj["maxPauseSec"] = serialized(String(motion.cyclePause.maxPauseSec, 1));
-    pauseObj["isPausing"] = motionPauseState.isPausing;
-
-    // Calculate remaining time (server-side)
-    if (motionPauseState.isPausing) {
-        unsigned long elapsedMs = millis() - motionPauseState.pauseStartMs;
-        long remainingMs = (long)motionPauseState.currentPauseDuration - (long)elapsedMs;
-        pauseObj["remainingMs"] = max(0L, remainingMs);
-    } else {
-        pauseObj["remainingMs"] = 0;
-    }
+    // Cycle pause config & state (DRY helper)
+    addCyclePauseFields(motionObj, motion.cyclePause, motionPauseState);
 
     // Pending motion
     doc["hasPending"] = pendingMotion.hasChanges;
@@ -330,23 +337,8 @@ void StatusBroadcaster::addOscillationFields(JsonDocument& doc) {
     oscObj["cycleCount"] = oscillation.cycleCount;
     oscObj["returnToCenter"] = oscillation.returnToCenter;
 
-    // Cycle pause config & state
-    JsonObject oscPauseObj = oscObj["cyclePause"].to<JsonObject>();
-    oscPauseObj["enabled"] = oscillation.cyclePause.enabled;
-    oscPauseObj["isRandom"] = oscillation.cyclePause.isRandom;
-    oscPauseObj["pauseDurationSec"] = serialized(String(oscillation.cyclePause.pauseDurationSec, 1));
-    oscPauseObj["minPauseSec"] = serialized(String(oscillation.cyclePause.minPauseSec, 1));
-    oscPauseObj["maxPauseSec"] = serialized(String(oscillation.cyclePause.maxPauseSec, 1));
-    oscPauseObj["isPausing"] = oscPauseState.isPausing;
-
-    // Calculate remaining time (server-side)
-    if (oscPauseState.isPausing) {
-        unsigned long elapsedMs = millis() - oscPauseState.pauseStartMs;
-        long remainingMs = (long)oscPauseState.currentPauseDuration - (long)elapsedMs;
-        oscPauseObj["remainingMs"] = max(0L, remainingMs);
-    } else {
-        oscPauseObj["remainingMs"] = 0;
-    }
+    // Cycle pause config & state (DRY helper)
+    addCyclePauseFields(oscObj, oscillation.cyclePause, oscPauseState);
 
     // Oscillation state (minimal if no ramping, full if ramping)
     JsonObject oscStateObj = doc["oscillationState"].to<JsonObject>();
