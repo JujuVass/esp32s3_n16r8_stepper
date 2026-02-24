@@ -66,14 +66,4 @@ inline String format(const char* fmt, time_t epochSec) {       // NOSONAR(cpp:S6
     return String(buffer.data());
 }
 
-/**
- * Get current local time struct (for advanced use)
- */
-inline struct tm localTime() {
-    auto t = epochSeconds();
-    struct tm timeinfo;
-    localtime_r(&t, &timeinfo);
-    return timeinfo;
-}
-
 } // namespace TimeUtils

@@ -407,18 +407,6 @@ bool FilesystemManager::fileExists(const String& path) {
   return LittleFS.exists(normalizePath(path));
 }
 
-long FilesystemManager::getFileSize(const String& path) {
-  String normalizedPath = normalizePath(path);
-  if (!LittleFS.exists(normalizedPath)) return -1;
-
-  File file = LittleFS.open(normalizedPath, "r");
-  if (!file) return -1;
-
-  long size = file.size();
-  file.close();
-  return size;
-}
-
 bool FilesystemManager::createDirectory(const String& path) {
   return LittleFS.mkdir(normalizePath(path));
 }
@@ -447,32 +435,5 @@ void FilesystemManager::createParentDirs(const String& path) {
   }
 }
 
-void FilesystemManager::getFilesystemStats(uint32_t& usedBytes, uint32_t& totalBytes, uint32_t& freeBytes) {
-  totalBytes = LittleFS.totalBytes();
-  // Calculate used bytes by scanning filesystem (files only, not directories)
-  usedBytes = 0;
-
-  function<void(const char*)> calculateUsage = [&](const char* dirname) {
-    File root = LittleFS.open(dirname);
-    if (!root || !root.isDirectory()) return;
-
-    File file = root.openNextFile();
-    while (file) {
-      if (!file.isDirectory()) {
-        // Only count file sizes, not directory entries
-        usedBytes += file.size();
-      } else {
-        // Recurse into subdirectories
-        String path = String(dirname) + "/" + String(file.name());
-        if (path.startsWith("//")) path = path.substring(1);
-        calculateUsage(path.c_str());
-      }
-      file = root.openNextFile();
-    }
-  };
-
-  calculateUsage("/");
-  freeBytes = totalBytes - usedBytes;
-}
 
 

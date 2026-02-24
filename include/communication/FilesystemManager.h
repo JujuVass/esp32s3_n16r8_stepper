@@ -99,13 +99,6 @@ public:
   bool fileExists(const String& path);
 
   /**
-   * Get file size
-   * @param path File path
-   * @return File size in bytes, or -1 if not found
-   */
-  long getFileSize(const String& path);
-
-  /**
    * Create directory
    * @param path Directory path
    * @return true on success
@@ -118,13 +111,6 @@ public:
    */
   void createParentDirs(const String& path);
 
-  /**
-   * Get filesystem stats with hierarchical calculation
-   * @param usedBytes Output: bytes used
-   * @param totalBytes Output: total bytes
-   * @param freeBytes Output: free bytes
-   */
-  void getFilesystemStats(uint32_t& usedBytes, uint32_t& totalBytes, uint32_t& freeBytes);
 
 };
 
